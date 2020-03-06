@@ -535,6 +535,8 @@ final class Client {
 
 		$jquery_confirm_version = '3.3.4';
 
+		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
+
 		wp_register_style(
 			'jquery-confirm',
 			'https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/' . $jquery_confirm_version . '/jquery-confirm.min.css',
@@ -553,7 +555,7 @@ final class Client {
 
 		wp_register_script(
 			'trustedlogin',
-			trailingslashit( $this->get_setting( 'path/js_dir_url' ) ) . 'trustedlogin.js',
+			trailingslashit( $this->get_setting( 'path/js_dir_url', $default_asset_dir_url ) ) . 'trustedlogin.js',
 			array( 'jquery', 'jquery-confirm' ),
 			self::version,
 			true
@@ -561,7 +563,7 @@ final class Client {
 
 		wp_register_style(
 			'trustedlogin',
-			trailingslashit( $this->get_setting( 'path/css_dir_url' ) ) . 'trustedlogin.css',
+			trailingslashit( $this->get_setting( 'path/css_dir_url', $default_asset_dir_url ) ) . 'trustedlogin.css',
 			array( 'jquery-confirm' ),
 			self::version,
 			'all'
