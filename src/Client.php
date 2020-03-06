@@ -160,7 +160,7 @@ final class Client {
 			return;
 		}
 
-		if ( 'TrustedLogin' === __NAMESPACE__ && ! defined('TL_DOING_TESTS') ) {
+		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.' );
 		}
 
