@@ -1,6 +1,6 @@
 {
     "name": "trustedlogin/trustedlogin-client",
-    "type": "wordpress-dropin",
+    "type": "library",
     "description": "Easily and securely log in to your customers sites when providing support.",
     "keywords": [
         "login",
@@ -8,7 +8,7 @@
         "support"
     ],
     "homepage": "https://www.trustedlogin.com",
-    "license": "GPL-2.0",
+    "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "TrustedLogin",
