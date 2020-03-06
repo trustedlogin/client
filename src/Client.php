@@ -1149,7 +1149,7 @@ final class Client {
 			}
 		}
 
-		if ( isset( $slug, $this->settings ) ) {
+		if ( isset( $this->settings[ $slug ] ) ) {
 			return $this->settings[ $slug ];
 		}
 
