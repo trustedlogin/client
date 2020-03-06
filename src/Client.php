@@ -1144,12 +1144,12 @@ final class Client {
 				$array_ptr = &$array_ptr[ $arr_key ];
 			}
 
-			if ( array_key_exists( $last_key, $array_ptr ) ) {
+			if ( isset( $array_ptr[ $last_key ] ) ) {
 				return $array_ptr[ $last_key ];
 			}
 		}
 
-		if ( array_key_exists( $slug, $this->settings ) ) {
+		if ( isset( $slug, $this->settings ) ) {
 			return $this->settings[ $slug ];
 		}
 
