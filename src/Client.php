@@ -539,7 +539,7 @@ final class Client {
 
 		wp_register_style(
 			'jquery-confirm',
-			'https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/' . $jquery_confirm_version . '/jquery-confirm.min.css',
+			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
 			array(),
 			$jquery_confirm_version,
 			'all'
@@ -547,7 +547,7 @@ final class Client {
 
 		wp_register_script(
 			'jquery-confirm',
-			'https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/' . $jquery_confirm_version . '/jquery-confirm.min.js',
+			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
 			array( 'jquery' ),
 			$jquery_confirm_version,
 			true

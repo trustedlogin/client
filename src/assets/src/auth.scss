@@ -1,0 +1,87 @@
+/**
+ * Grant TrustedLogin Dialog
+ */
+
+#trustedlogin-auth {
+
+	min-width: 300px;
+	max-width: 960px;
+	display: block;
+	margin: 30px auto;
+	font-size: 1em;
+
+	p {
+		font-size: 16px;
+		line-height: 1.5;
+		margin: 1em 0;
+	}
+
+	.tl-auth-header {
+		text-align: center;
+	}
+
+	/** @see .about-wrap .lead-description */
+	.tl-auth-intro {
+		padding: 1rem 0;
+		font-size: 1.5em;
+		line-height: 1.5;
+	}
+
+	.tl-auth-logo {
+		width: 400px;
+		max-width: 90%;
+		max-height: 400px;
+	}
+
+	.tl-auth-body {
+		background: #fff;
+		padding: 10px;
+		/*border: 2px solid #ddd;*/
+		margin-top: 20px;
+		margin-left: 0;
+		padding: 26px 24px 46px;
+		font-weight: 400;
+		overflow: hidden;
+		background: #fff;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
+		border-radius: 3px;
+	}
+
+	ul.tl-details li {
+		border-bottom: 1px solid #eee;
+		padding: 10px;
+	}
+
+	.tl-auth-footer,
+	.tl-auth-actions {
+		text-align: center;
+		padding: 10px;
+		margin: 10px 0 40px;
+	}
+
+	.tl-auth-footer {
+
+		ul {
+			list-style: none;
+		}
+
+		li {
+			display: inline-block;
+
+			&:after {
+				color: lighten( #555d66, 20% ); // #wp-footer color
+				content: '•';
+				padding: 0 .75rem;
+			}
+
+			&:last-child:after {
+				content: '';
+				padding: 0;
+			}
+		}
+	}
+
+	.tl-toggle-caps {
+		cursor: pointer;
+	}
+}
