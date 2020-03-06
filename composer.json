@@ -16,6 +16,11 @@
             "homepage": "https://www.trustedlogin.com"
         }
     ],
+    "autoload": {
+        "psr-4": {
+            "TrustedLogin\\Client\\": "src/"
+        }
+    },
     "require": {
         "composer/installers": "~1.0",
         "php": ">=5.3.0",
