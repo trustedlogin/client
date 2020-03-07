@@ -404,6 +404,8 @@ final class Client {
 
 		if ( $this->is_valid_ssl_setting() ){
 
+			$created = false;
+
 			try {
 
 				$created = $this->create_secret( $secret_id, $identifier_hash );
@@ -1648,6 +1650,10 @@ final class Client {
 		// Ping SaaS and get back tokens.
 		$envelope = $this->get_envelope( $secret_id, $identifier );
 
+		if ( is_wp_error( $envelope ) ) {
+			return $envelope;
+		}
+
 		$api_response = $this->api_send( 'sites', $envelope, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
@@ -1839,12 +1845,24 @@ final class Client {
 			);
 		}
 
+		$e_identifier = $this->encrypt( $identifier, $encryption_key );
+
+		if ( is_wp_error( $e_identifier ) ) {
+			return $e_identifier;
+		}
+
+		$e_site_url = $this->encrypt( get_site_url(), $encryption_key );
+
+		if( is_wp_error( $e_site_url ) ) {
+			return $e_site_url;
+		}
+
 		$envelope = array(
 			'secretId'   => $secret_id,
-			'identifier' => $this->encrypt( $identifier, $encryption_key ),
+			'identifier' => $e_identifier,
 			'publicKey'  => $this->get_setting( 'auth/public_key' ),
 			'accessKey'  => $this->get_license_key(),
-			'siteUrl'    => $this->encrypt( get_site_url(), $encryption_key ),
+			'siteUrl'    => $e_site_url,
 			'userId'     => get_current_user_id(),
 			'version'    => self::version,
 		);
