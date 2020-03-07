@@ -1978,17 +1978,20 @@ final class Client {
 	 * @since 0.4.0
 	 *
 	 * @param string $path - the path for the REST API request (no initial or trailing slash needed)
-	 * @param array $data
-	 * @param array $addition_header - any additional headers required for auth/etc
+	 * @param array $data Data passed as JSON-encoded body for
+	 * @param string $method
+	 * @param array $additional_headers - any additional headers required for auth/etc
 	 *
 	 * @return array|WP_Error|false wp_remote_post() response, or false if `$method` isn't valid
 	 */
-	public function api_send( $path, $data, $method, $additional_headers = array() ) {
+	public function api_send( $path, $data, $method = 'POST', $additional_headers = array() ) {
 
-		if ( ! in_array( $method, array( 'POST', 'PUT', 'GET', 'PUSH', 'DELETE' ) ) ) {
-			$this->log( "Error: Method not in allowed array list ($method)", __METHOD__, 'critical' );
+		$method = strtoupper( $method );
 
-			return false;
+		if ( ! in_array( $method, array( 'POST', 'PUT', 'GET', 'HEAD', 'PUSH', 'DELETE' ), true ) ) {
+			$this->log( sprintf( 'Error: Method not in allowed array list (%s)', esc_attr( $method ) ), __METHOD__, 'critical' );
+
+			return new WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s "not in allowed', esc_attr( $method ) ) );
 		}
 
 		$headers = array(
