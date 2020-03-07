@@ -425,6 +425,8 @@ final class Client {
 
 		}
 
+		do_action( 'trustedlogin/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+
 		wp_send_json_success( $return_data, 201 );
 
 	}
