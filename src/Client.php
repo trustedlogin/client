@@ -2016,6 +2016,18 @@ final class Client {
 			$request_options['body'] = json_encode( $data );
 		}
 
+
+	/**
+	 * Builds URL to API endpoints
+	 *
+	 * @since 0.9.3
+	 *
+	 * @param string $endpoint Endpoint to hit on the API; example "sites" or "sites/{$site_identifier}"
+	 *
+	 * @return string
+	 */
+	private function build_api_url( $endpoint = '' ) {
+
 		/**
 		 * Modifies the endpoint URL for the TrustedLogin service.
 		 *
@@ -2023,15 +2035,15 @@ final class Client {
 		 *
 		 * @internal This allows pointing requests to testing servers
 		 */
-		$url = apply_filters( 'trustedlogin/api-url', self::saas_api_url ) . $path;
+		$base_url = apply_filters( 'trustedlogin/' . $this->ns . '/api-url', self::saas_api_url );
 
-		$this->log( sprintf( 'Sending to %s: %s', $url, print_r( $request_options, true ) ), __METHOD__, 'debug' );
+		if ( is_string( $endpoint ) ) {
+			$url = trailingslashit( $base_url ) . $endpoint;
+		} else {
+			$url = trailingslashit( $base_url );
+		}
 
-		$response = wp_remote_request( $url, $request_options );
-
-		$this->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
-
-		return $response;
+		return $url;
 	}
 
 	/**

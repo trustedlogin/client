@@ -71,3 +71,30 @@
 		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', array( 'test', 'array' ), 'DELETE' ) );
 
 		remove_filter( 'http_request_args', $filter_args );
+
+	/**
+	 * @throws ReflectionException
+	 * @covers TrustedLogin\Client::build_api_url
+	 */
+	public function test_build_api_url() {
+
+		$method = $this->_get_public_method( 'build_api_url' );
+
+		$this->assertEquals( $this->TrustedLogin::saas_api_url, $method->invoke( $this->TrustedLogin ) );
+
+		$this->assertEquals( $this->TrustedLogin::saas_api_url, $method->invoke( $this->TrustedLogin, array('not-a-string') ) );
+
+		$this->assertEquals( $this->TrustedLogin::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
+
+		add_filter( 'trustedlogin/not-my-namespace/api-url', function () { return 'https://www.google.com'; } );
+
+		$this->assertEquals( $this->TrustedLogin::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
+
+		remove_all_filters( 'trustedlogin/not-my-namespace/api-url' );
+
+		add_filter( 'trustedlogin/gravityview/api-url', function () { return 'https://www.google.com'; } );
+
+		$this->assertEquals( 'https://www.google.com/pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
+
+		remove_all_filters( 'trustedlogin/gravityview/api-url' );
+	}
