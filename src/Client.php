@@ -1878,14 +1878,14 @@ final class Client {
 	 */
 	public function revoke_site( $identifier ) {
 
-		$body = array(
-			'publicKey' => $this->get_setting( 'auth/public_key' ),
-		);
-
 		if ( ! $this->is_valid_ssl_setting() ){
 			$this->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
 			return true;
 		}
+
+		$body = array(
+			'publicKey' => $this->get_setting( 'auth/public_key' ),
+		);
 
 		$api_response = $this->api_send(  'sites/' . $identifier, $body, 'DELETE' );
 
