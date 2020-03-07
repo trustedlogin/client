@@ -1074,41 +1074,60 @@ final class Client {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $slug - the setting to fetch, nested results are delimited with periods (eg vendor/name => settings['vendor']['name']
+	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name'])
 	 * @param mixed $default - if no setting found or settings not init, return this value.
+	 * @param array $settings Pass an array to fetch value for instead of using the default settings array
 	 *
 	 * @return string|array
 	 */
-	public function get_setting( $slug, $default = false ) {
+	public function get_setting( $key, $default = false, $settings = array() ) {
 
-		if ( ! isset( $this->settings ) || ! is_array( $this->settings ) ) {
+		if ( empty( $settings ) ) {
+			$settings = $this->settings;
+		}
 
+		if ( empty( $settings ) || ! is_array( $settings ) ) {
 			$this->log( 'Settings have not been configured, returning default value', __METHOD__, 'critical' );
-
 			return $default;
 		}
 
-		$keys = explode( '/', $slug );
+		return $this->get_multi_array_value( $settings, $key, $default );
+	}
 
-		if ( count( $keys ) > 1 ) {
+	/**
+	 * Gets a specific property value within a multidimensional array.
+	 *
+	 * @param array  $array   The array to search in.
+	 * @param string $name    The name of the property to find.
+	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
+	 *
+	 * @return null|string|mixed The value
+	 */
+	private function get_multi_array_value( $array, $name, $default = null ) {
 
-			$array_ptr = $this->settings;
+		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
+		}
 
-			$last_key = array_pop( $keys );
+		$names = explode( '/', $name );
+		$val   = $array;
+		foreach ( $names as $current_name ) {
+			$val = $this->get_array_value( $val, $current_name, $default );
+		}
 
-			while ( $arr_key = array_shift( $keys ) ) {
-				if ( ! array_key_exists( $arr_key, $array_ptr ) ) {
-					$this->log( 'Could not find multi-dimension setting. Keys: ' . print_r( $keys, true ), __METHOD__, 'error' );
+		return $val;
+	}
 
-					return $default;
-				}
-
-				$array_ptr = &$array_ptr[ $arr_key ];
 			}
-
-			if ( isset( $array_ptr[ $last_key ] ) ) {
-				return $array_ptr[ $last_key ];
-			}
+	 * Get a specific property of an array without needing to check if that property exists.
+	 *
+	 * Provide a default value if you want to return a specific value if the property is not set.
+	 *
+	 * @param array  $array   Array from which the property's value should be retrieved.
+	 * @param string $prop    Name of the property to be retrieved.
+	 * @return null|string|mixed The value
+	 */
+	private function get_array_value( $array, $prop, $default = null ) {
+		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof \ArrayAccess ) ) {
 		}
 
 		if ( isset( $this->settings[ $slug ] ) ) {

@@ -1,3 +1,52 @@
+
+	/**
+	 * @covers \TrustedLogin\Client::get_setting()
+	 */
+	public function test_get_setting() {
+
+		$config = array(
+			'auth' => array(
+				'public_key' => 'not empty',
+			),
+			'webhook_url' => 'https://www.google.com',
+			'vendor' => array(
+				'namespace' => 'jones-party',
+				'title' => 'Jones Beach Party',
+				'first_name' => null,
+				'last_name' => '',
+				'email' => 'beach@example.com',
+				'website' => 'https://example.com',
+				'support_url' => 'https://asdasdsd.example.com/support/',
+			),
+		);
+
+		$TL = new \TrustedLogin\Client( $config );
+
+		$this->assertEquals( 'https://www.google.com', $TL->get_setting( 'webhook_url') );
+
+		$this->assertEquals( 'Jones Beach Party', $TL->get_setting( 'vendor/title') );
+
+		$this->assertFalse( $TL->get_setting( 'non-existent key') );
+
+		$this->assertEquals( 'default override', $TL->get_setting( 'non-existent key', 'default override' ) );
+
+		$this->assertFalse( $TL->get_setting( 'vendor/first_name' ), 'Should use method default value (false) when returned value is NULL' );
+
+		$this->assertEquals( 'default override', $TL->get_setting( 'vendor/first_name', 'default override' ), 'should use default override if value is NULL' );
+
+		$this->assertEquals( '', $TL->get_setting( 'vendor/last_name' ) );
+
+		// Test passed array values
+		$passed_array = array(
+			'try' => 'and try again',
+			'first' => array(
+				'three_positive_integers' => 123,
+			),
+		);
+		$this->assertEquals( 'and try again', $TL->get_setting( 'try', null, $passed_array ) );
+		$this->assertEquals( null, $TL->get_setting( 'missssing', null, $passed_array ) );
+		$this->assertEquals( '123', $TL->get_setting( 'first/three_positive_integers', null, $passed_array ) );
+	}
 		$this->assertWPError( $this->TrustedLogin->api_send( 'any-path', 'any data', 'not supported http method' ) );
 
 		// Make sure the body has been removed from methods that don't support it
