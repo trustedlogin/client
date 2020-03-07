@@ -2009,8 +2009,11 @@ final class Client {
 			'timeout'     => 45,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
-			'body'        => ( $data ? json_encode( $data ) : null ),
 		);
+
+		if ( ! empty( $data ) && ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
+			$request_options['body'] = json_encode( $data );
+		}
 
 		/**
 		 * Modifies the endpoint URL for the TrustedLogin service.
