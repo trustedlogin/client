@@ -271,7 +271,7 @@ final class Client {
 	 */
 	public function add_support_endpoint() {
 
-		$endpoint = get_option( $this->endpoint_option );
+		$endpoint = get_site_option( $this->endpoint_option );
 
 		if ( ! $endpoint ) {
 			return;
@@ -281,7 +281,7 @@ final class Client {
 
 		$this->log( "Endpoint {$endpoint} added.", __METHOD__, 'debug' );
 
-		if ( $endpoint && ! get_option( 'tl_permalinks_flushed' ) ) {
+		if ( $endpoint && ! get_site_option( 'tl_permalinks_flushed' ) ) {
 
 			flush_rewrite_rules( false );
 
@@ -298,7 +298,7 @@ final class Client {
 	 */
 	public function maybe_login_support() {
 
-		$endpoint = get_option( $this->endpoint_option );
+		$endpoint = get_site_option( $this->endpoint_option );
 
 		$identifier = get_query_var( $endpoint, false );
 
@@ -1276,9 +1276,9 @@ final class Client {
 				$this->log( "Role " . $this->support_role . " removed.", __METHOD__, 'info' );
 			}
 
-			if ( get_option( $this->endpoint_option ) ) {
+			if ( get_site_option( $this->endpoint_option ) ) {
 
-				delete_option( $this->endpoint_option );
+				delete_site_option( $this->endpoint_option );
 
 				flush_rewrite_rules( false );
 
