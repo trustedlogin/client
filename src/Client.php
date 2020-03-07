@@ -140,16 +140,12 @@ final class Client {
 		 */
 		$this->debug_mode = apply_filters( 'trustedlogin_debug_enabled', true );
 
-		// TODO: Show error when config hasn't happened.
 		if ( empty( $config ) ) {
-
-			$this->log( 'No config settings passed to constructor', __METHOD__, 'critical' );
-
-			return;
+			throw new \Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
 		}
 
 		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
-			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.' );
+			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
 		}
 
 		$initialized = $this->init_settings( $config );
