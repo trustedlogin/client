@@ -180,12 +180,11 @@ final class Client {
 			$level = 'notice'; // Continue processing original log
 		}
 
-		do_action( 'trustedlogin/log', $text, $method, $level );
-		do_action( 'trustedlogin/log/' . $level, $text, $method );
+		do_action( 'trustedlogin/' . $this->ns . '/log', $text, $method, $level );
+		do_action( 'trustedlogin/' . $this->ns . '/log/' . $level, $text, $method );
 
 		// If logging is in place, don't use the error_log
-		// TODO: Rename actions to use namespacing
-		if ( has_action( 'trustedlogin/log' ) || has_action( 'trustedlogin/log/' . $level ) ) {
+		if ( has_action( 'trustedlogin/' . $this->ns . '/log' ) || has_action( 'trustedlogin/' . $this->ns . '/log/' . $level ) ) {
 			return;
 		}
 
@@ -243,8 +242,8 @@ final class Client {
 		add_action( 'init', array( $this, 'add_support_endpoint' ), 10 );
 		add_action( 'template_redirect', array( $this, 'maybe_login_support' ), 99 );
 
-		add_action( 'trustedlogin/access/created', array( $this, 'maybe_send_webhook' ) );
-		add_action( 'trustedlogin/access/revoked', array( $this, 'maybe_send_webhook' ) );
+		add_action( 'trustedlogin/' . $this->ns . '/access/created', array( $this, 'maybe_send_webhook' ) );
+		add_action( 'trustedlogin/' . $this->ns . '/access/revoked', array( $this, 'maybe_send_webhook' ) );
 	}
 
 	/**
@@ -410,7 +409,7 @@ final class Client {
 
 		}
 
-		do_action( 'trustedlogin/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+		do_action( 'trustedlogin/' . $this->ns . '/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
 
 		wp_send_json_success( $return_data, 201 );
 
@@ -831,7 +830,7 @@ final class Client {
 
 			$decay_diff = human_time_diff( $decay_time );
 
-			$decay_tag = apply_filters('trustedlogin/tags/decay','h4');
+			$decay_tag = apply_filters('trustedlogin/' . $this->ns . '/tags/decay','h4');
 			$decay_output = '<'.$decay_tag.'>' . sprintf( esc_html__( 'Access will be granted for %1$s and can be revoked at any time.', 'trustedlogin' ), $decay_diff ) . '</'.$decay_tag.'>';
 		} else {
 			$decay_output = '';
@@ -840,7 +839,7 @@ final class Client {
 		$details_output = sprintf(
 			wp_kses(
 				apply_filters(
-					'trustedlogin/template/details',
+					'trustedlogin/' . $this->ns . '/template/details',
 					'<ul class="tl-details tl-roles">%1$s</ul><ul class="tl-details tl-caps">%2$s</ul>%3$s'
 				),
 				array(
@@ -896,7 +895,7 @@ final class Client {
 		 *   @type string $message What error should be sent to the support system.
 		 * }
 		 */
-		$query_args = apply_filters( 'trustedlogin/support_url/query_args',	array(
+		$query_args = apply_filters( 'trustedlogin/' . $this->ns . '/support_url/query_args',	array(
 				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' )
 			)
 		);
