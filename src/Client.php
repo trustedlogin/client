@@ -2353,6 +2353,10 @@ final class Client {
 			return new WP_Error( 'no_data', 'No data provided.' );
 		}
 
+		if ( ! function_exists( 'openssl_public_encrypt' ) ) {
+			return new WP_Error( 'openssl_public_encrypt_not_available', 'OpenSSL not available' );
+		}
+
 		/**
 		 * Note about encryption padding:
 		 *
