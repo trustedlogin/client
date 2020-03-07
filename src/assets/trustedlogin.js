@@ -59,7 +59,7 @@
 			var settings = {
 				icon: 'dashicons dashicons-yes',
 				title: tl_obj.lang.status.accesskey.title,
-				content: tl_obj.lang.status.accesskey.content + '<pre>' + accessKey + '</pre>', 
+				content: tl_obj.lang.status.accesskey.content + '<pre>' + accessKey + '</pre>',
 				escapeKey: 'close',
 				type: 'green',
 				theme: 'material',
@@ -106,7 +106,7 @@
 
 				if ( response.success && typeof response.data == 'object' ) {
 
-					if ( response.data.ssl_checked ){
+					if ( response.data.is_ssl ){
 						$.alert( {
 							icon: 'dashicons dashicons-yes',
 							theme: 'material',
@@ -127,9 +127,9 @@
 					if ( response.data.access_key ){
 						$( tl_obj.selector ).data('accesskey', response.data.access_key );
 					}
-					
 
-					
+
+
 				} else {
 					outputErrorAlert( response, tl_obj );
 				}
