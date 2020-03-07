@@ -1623,7 +1623,12 @@ final class Client {
 
 		$webhook_url = $this->get_setting( 'webhook_url' );
 
-		if ( empty( $webhook_url ) || ! filter_var( $webhook_url, FILTER_VALIDATE_URL ) ) {
+		if ( ! $webhook_url ) {
+			return;
+		}
+
+		if ( ! wp_http_validate_url( $webhook_url ) ) {
+			$this->log( 'An invalid `webhook_url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ), __METHOD__, 'error' );
 			return;
 		}
 
