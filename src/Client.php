@@ -89,12 +89,6 @@ final class Client {
 	private $debug_mode;
 
 	/**
-	 * @var bool $is_initialized - if the settings have been initialized from the config object
-	 * @since 0.1.0
-	 */
-	private $is_initialized = false;
-
-	/**
 	 * @var string $ns - plugin's namespace for use in namespacing variables and strings
 	 * @since 0.4.0
 	 */
@@ -158,7 +152,7 @@ final class Client {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.' );
 		}
 
-		$this->is_initialized = $this->init_settings( $config );
+		$initialized = $this->init_settings( $config );
 
 		$this->init_hooks();
 
@@ -201,17 +195,6 @@ final class Client {
 				error_log( $method . ' (' . $level . '): ' . $text );
 			}
 		}
-	}
-
-	/**
-	 * Returns whether class has been initialized
-	 *
-	 * @since 0.7.0
-	 *
-	 * @return bool Whether the class has initialized successfully (configuration settings were set)
-	 */
-	public function is_initialized() {
-		return $this->is_initialized;
 	}
 
 	/**
