@@ -1114,12 +1114,15 @@ final class Client {
 	}
 
 			}
+	/**
 	 * Get a specific property of an array without needing to check if that property exists.
 	 *
 	 * Provide a default value if you want to return a specific value if the property is not set.
 	 *
 	 * @param array  $array   Array from which the property's value should be retrieved.
 	 * @param string $prop    Name of the property to be retrieved.
+	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
+	 *
 	 * @return null|string|mixed The value
 	 */
 	private function get_array_value( $array, $prop, $default = null ) {
@@ -1995,9 +1998,9 @@ final class Client {
 		}
 
 		$headers = array(
-			'Accept'       => 'application/json',
-			'Content-Type' => 'application/json',
-			'Authorization' => 'Bearer '. $this->get_setting( 'auth/public_key' ),
+			'Accept'        => 'application/json',
+			'Content-Type'  => 'application/json',
+			'Authorization' => 'Bearer ' . $this->get_setting( 'auth/public_key' ),
 		);
 
 		if ( ! empty( $additional_headers ) ) {
@@ -2278,6 +2281,9 @@ final class Client {
 
 		$vendor_url   = $this->get_setting( 'vendor/website' );
 
+		/**
+		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
+		 */
 		$key_endpoint = apply_filters( 'trustedlogin/vendor/public-key-endpoint', 'wp-json/trustedlogin/v1/public_key' );
 
 		$url = trailingslashit( $vendor_url ) . $key_endpoint;
@@ -2333,16 +2339,21 @@ final class Client {
 	 */
 	public function get_encryption_key() {
 
+		// Already stored locally in options table
 		$local_key = $this->get_local_encryption_key();
+
 		if ( ! is_wp_error( $local_key ) ) {
 			return $local_key;
 		}
 
+		// Fetch a key
 		$remote_key = $this->get_remote_encryption_key();
+
 		if ( is_wp_error( $remote_key ) ) {
 			return $remote_key;
 		}
 
+		// Store it in the DB
 		$saved = $this->update_encryption_key( $remote_key );
 		if ( is_wp_error( $saved ) ) {
 			return $saved;
