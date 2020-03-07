@@ -146,7 +146,7 @@
 
 				if ( typeof response.data == 'object' ) {
 					console.log( 'TrustedLogin support login URL:' );
-					console.log( response.data.siteurl + '/' + response.data.endpoint + '/' + response.data.identifier );
+					console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
 				}
 			});
 		}

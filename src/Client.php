@@ -393,7 +393,7 @@ final class Client {
 		$secret_id = $this->generate_secret_id( $identifier_hash, $endpoint );
 
 		$return_data = array(
-			'siteurl'    => get_site_url(),
+			'site_url'    => get_site_url(),
 			'endpoint'   => $endpoint,
 			'identifier' => $identifier_hash,
 			'user_id'    => $support_user_id,
