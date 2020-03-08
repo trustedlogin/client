@@ -52,7 +52,7 @@ final class Client {
 	 * @var array $settings - instance of the initialised plugin config object
 	 * @since 0.1.0
 	 */
-	private $settings;
+	private $settings = array();
 
 	/**
 	 * @var string $support_role - the namespaced name of the new Role to be created for Support Agents
@@ -86,7 +86,7 @@ final class Client {
 	 * @var bool $debug_mode - whether to output debug information to a debug text file
 	 * @since 0.1.0
 	 */
-	private $debug_mode;
+	private $debug_mode = false;
 
 	/**
 	 * @var string $ns - plugin's namespace for use in namespacing variables and strings
@@ -129,18 +129,30 @@ final class Client {
 	 *
 	 * @throws Exception;
 	 */
-	public function __construct( $config ) {
+	public function __construct( $config = array() ) {
 
-		/**
-		 * Filter: Whether debug logging is enabled in trustedlogin drop-in
-		 *
-		 * @since 0.4.2
-		 *
-		 * @param bool $debug_mode
-		 */
-		$this->debug_mode = apply_filters( 'trustedlogin_debug_enabled', true );
+		$settings = $this->parse_settings( $config );
 
-		if ( empty( $config ) ) {
+		$is_valid = $this->is_valid_configuration( $config, $settings );
+
+		if ( ! $is_valid ) {
+			return;
+		}
+
+		$this->init_properties( $settings );
+		$this->init_hooks();
+	}
+
+	/**
+	 * @param array $config
+	 * @param array $settings
+	 * @param bool  $throw_exception
+	 *
+	 * @throws \Exception
+	 */
+	private function is_valid_configuration( $passed_config, $settings ) {
+
+		if ( empty( $passed_config ) ) {
 			throw new \Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
 		}
 
@@ -148,10 +160,47 @@ final class Client {
 			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
 		}
 
-		$initialized = $this->init_settings( $config );
+		$errors = array();
 
-		$this->init_hooks();
+		if ( ! isset( $passed_config['auth']['public_key'] ) ) {
+			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
+		}
 
+		foreach( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
+			if ( ! isset( $passed_config['vendor'][ $required_vendor_field ] ) ) {
+				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
+			}
+		}
+
+		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
+			$value = $this->get_setting( $settings_key, null, $passed_config );
+			$url = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
+			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+				$errors[] = new WP_Error(
+					'invalid_configuration',
+					sprintf( 'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
+						$settings_key,
+						print_r( $this->get_setting( $settings_key, null, $passed_config ), true )
+					)
+				);
+			}
+		}
+
+		if ( $errors ) {
+			$error_text = array();
+			foreach ( $errors as $error ) {
+				if ( is_wp_error( $error ) ) {
+					$error_text[] = $error->get_error_message();
+				}
+			}
+
+			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			$exception_text .= "\n- " . implode( "\n- ", $error_text );
+
+			throw new \Exception( $exception_text, 3 );
+		}
+
+		return true;
 	}
 
 	/**
@@ -784,8 +833,6 @@ final class Client {
 			__( 'By clicking Confirm, the following will happen automatically:', 'trustedlogin' )
 		);
 
-
-
 		// Roles
 		$roles_output = '';
 		foreach ( $this->get_setting( 'role' ) as $role => $reason ) {
@@ -968,39 +1015,20 @@ final class Client {
 		return $secondary_alert_translations;
 	}
 
-	/**
-	 * Init all the settings from the provided TL_Config array.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param array as per TL_Config specification
-	 *
-	 * @return bool Initialization succeeded
-	 */
-	protected function init_settings( $config ) {
+	protected function init_properties( $settings ) {
 
-		if ( is_string( $config ) ) {
-			$config = json_decode( $config, true );
-		}
-
-		if ( ! is_array( $config ) || empty( $config ) ) {
-			return false;
-		}
-
-		/**
-		 * Filter: Initilizing TrustedLogin settings
-		 *
-		 * @param array $config {
-		 *
-		 * @since 0.1.0
-		 *
-		 * @see trustedlogin-button.php for documentation of array parameters
-		 * @todo Move the array documentation here
-		 * }
-		 */
-		$this->settings = apply_filters( 'trustedlogin/init_settings', $config );
+		$this->settings = $settings;
 
 		$this->ns = $this->get_setting( 'vendor/namespace' );
+
+		/**
+		 * Filter: Whether debug logging is enabled in TrustedLogin Client
+		 *
+		 * @since 0.4.2
+		 *
+		 * @param bool $debug_mode Default: false
+		 */
+		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->ns . '/debug/enabled', $this->get_setting( 'debug' ) );
 
 		/**
 		 * Filter: Set support_role value
@@ -1061,8 +1089,64 @@ final class Client {
 			'tl_' . $this->ns . '_shared_accesskey',
 			$this
 		);
+	}
 
-		return true;
+	/**
+	 * Validate and initialize settings array passed to the Client contructor
+	 *
+	 * @param array|string $config Configuration array or JSON-encoded configuration array
+	 *
+	 * @return bool|WP_Error[] true: Initialization succeeded; array of WP_Error objects if there are any issues.
+	 */
+	protected function parse_settings( $config ) {
+
+		if ( is_string( $config ) ) {
+			$config = json_decode( $config, true );
+		}
+
+		if ( ! is_array( $config ) || empty( $config ) ) {
+			return array( new WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
+		}
+
+		$default_settings = array(
+			'debug' => false,
+			'auth' => array(
+				'public_key' => null,
+				'private_key' => null,
+			),
+			'decay' => WEEK_IN_SECONDS,
+			'role' => 'editor',
+			'caps' => array(
+				'excluded' => array(
+				),
+				'custom' => array(
+				)
+			),
+			'webhook_url' => null,
+			'vendor' => array(
+				'namespace' => null,
+				'title' => null,
+				'first_name' => null,
+				'last_name' => null,
+				'email' => null,
+				'website' => null,
+				'support_url' => null,
+				'logo_url' => null,
+			),
+			'path' => array(
+				'css_dir_url' => null,
+				'js_dir_url'  => null,
+			),
+			'menu' => array(
+				'slug' => null,
+				'title' => null,
+				'priority' => null,
+			),
+			'reassign_posts' => true,
+			'require_ssl' => true,
+		);
+
+		return wp_parse_args( $config, $default_settings );
 	}
 
 	/**
@@ -1102,6 +1186,7 @@ final class Client {
 	private function get_multi_array_value( $array, $name, $default = null ) {
 
 		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
+			return $default;
 		}
 
 		$names = explode( '/', $name );
@@ -1113,7 +1198,6 @@ final class Client {
 		return $val;
 	}
 
-			}
 	/**
 	 * Get a specific property of an array without needing to check if that property exists.
 	 *
@@ -1127,15 +1211,16 @@ final class Client {
 	 */
 	private function get_array_value( $array, $prop, $default = null ) {
 		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof \ArrayAccess ) ) {
+			return $default;
 		}
 
-		if ( isset( $this->settings[ $slug ] ) ) {
-			return $this->settings[ $slug ];
+		if ( isset( $array[ $prop ] ) ) {
+			$value = $array[ $prop ];
+		} else {
+			$value = '';
 		}
 
-		$this->log( 'Setting for slug ' . $slug . ' not found.', __METHOD__, 'error' );
-
-		return $default;
+		return empty( $value ) && $default !== null ? $default : $value;
 	}
 
 	/**
