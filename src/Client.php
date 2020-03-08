@@ -1401,7 +1401,7 @@ final class Client {
 	 * @param string $identifier_hash
 	 * @param string $endpoint_hash
 	 *
-	 * @return string This hash will be used as an identifier in the Vault
+	 * @return string This hash will be used as an identifier in TrustedLogin SaaS
 	 */
 	private function generate_secret_id( $identifier_hash, $endpoint_hash = '' ) {
 
@@ -1770,7 +1770,7 @@ final class Client {
 	 *
 	 * @param string $identifier Unique ID or "all"
 	 *
-	 * @return bool Both saas and vault synced. False: either or both failed to sync.
+	 * @return bool|WP_Error True: Synced to SaaS. False: empty identifier. WP_Error: failed to revoke site in SaaS.
 	 */
 	public function revoke_access( $identifier = '' ) {
 
@@ -1782,7 +1782,7 @@ final class Client {
 
 		$endpoint_hash = $this->get_endpoint_hash( $identifier );
 
-		// Ping SaaS to notify of revoke
+		// Revoke site in SaaS
 		$site_revoked = $this->revoke_site( $endpoint_hash );
 
 		if ( is_wp_error( $site_revoked ) ) {
