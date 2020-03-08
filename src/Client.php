@@ -101,10 +101,10 @@ final class Client {
 	private $public_key_option;
 
 	/**
-	 * @var string $shared_accesskey_option - where the plugin should store the shareable access key
+	 * @var string $sharable_accesskey_option - where the plugin should store the shareable access key
 	 * @since 0.9.2
 	 */
-	private $shared_accesskey_option;
+	private $sharable_accesskey_option;
 
 	/**
 	 * TrustedLogin constructor.
@@ -1081,12 +1081,12 @@ final class Client {
 		 *
 		 * @since 0.9.2
 		 *
-		 * @param string $shared_accesskey_option
+		 * @param string $sharable_accesskey_option
 		 * @param Client $this
 		 */
-		$this->shared_accesskey_option = apply_filters(
-			'tl_' . $this->ns . '_shared_accesskey',
+		$this->sharable_accesskey_option = apply_filters(
 			'trustedlogin/' . $this->ns . '/options/sharable_accesskey',
+			'tl_' . $this->ns . '_sharable_accesskey',
 			$this
 		);
 	}
@@ -1845,7 +1845,7 @@ final class Client {
 		$length 			= strlen( $access_key_prefix );
 		$access_key 		= $access_key_prefix . substr( $hash, $length );
 
-		update_site_option( $this->shared_accesskey_option, $access_key );
+		update_site_option( $this->sharable_accesskey_option, $access_key );
 
 		return $access_key;
 	}
@@ -1885,7 +1885,7 @@ final class Client {
 	 */
 	public function get_accesskey(){
 
-		$access_key = get_site_option( $this->shared_accesskey_option, false );
+		$access_key = get_site_option( $this->sharable_accesskey_option, false );
 
 		if ( $access_key ){
 			return $access_key;
@@ -1987,7 +1987,7 @@ final class Client {
 			return $response;
 		}
 
-		delete_site_option( $this->shared_accesskey_option );
+		delete_site_option( $this->sharable_accesskey_option );
 
 		return true;
 	}
