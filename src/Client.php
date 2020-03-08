@@ -341,13 +341,13 @@ final class Client {
 
 		$support_user = $users[0];
 
-		$expires = get_user_meta( $support_user->ID, $this->expires_meta_key, true );
+		$expires = get_user_option( $this->expires_meta_key, $support_user->ID );
 
 		// This user has expired, but the cron didn't run...
 		if ( $expires && time() > (int) $expires ) {
 			$this->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
 
-			$identifier = get_user_meta( $support_user->ID, $this->identifier_meta_key, true );
+			$identifier = get_user_option( $this->identifier_meta_key, $support_user->ID );
 
 			$this->remove_support_user( $identifier );
 
@@ -523,14 +523,14 @@ final class Client {
 
 			$this->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
 
-			add_user_meta( $user_id, $this->expires_meta_key, $expiration_timestamp );
+			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
 		}
 
-		add_user_meta( $user_id, $this->identifier_meta_key, md5( $identifier_hash ), true );
-		add_user_meta( $user_id, 'tl_created_by', get_current_user_id() );
+		update_user_option( $user_id, $this->identifier_meta_key, md5( $identifier_hash ), true );
+		update_user_option( $user_id, 'tl_created_by', get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
-		return get_user_meta( $user_id, $this->identifier_meta_key, true );
+		return get_user_option( $this->identifier_meta_key, $user_id );
 	}
 
 	/**
@@ -777,7 +777,7 @@ final class Client {
 
 		foreach ( $support_users as $support_user ) {
 
-			$_user_creator = get_user_by( 'id', get_user_meta( $support_user->ID, 'tl_created_by', true ) );
+			$_user_creator = get_user_by( 'id', get_user_option( 'tl_created_by', $support_user->ID ) );
 
 			$return .= '<tr>';
 			$return .= '<th scope="row"><a href="' . esc_url( admin_url( 'user-edit.php?user_id=' . $support_user->ID ) ) . '">';
@@ -785,7 +785,7 @@ final class Client {
 			$return .= '</th>';
 
 			$return .= '<td>' . sprintf( esc_html__( '%s ago', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ) ) . '</td>';
-			$return .= '<td>' . sprintf( esc_html__( 'In %s', 'trustedlogin' ), human_time_diff( get_user_meta( $support_user->ID, $this->expires_meta_key, true ) ) ) . '</td>';
+			$return .= '<td>' . sprintf( esc_html__( 'In %s', 'trustedlogin' ), human_time_diff( get_user_option( $this->expires_meta_key, $support_user->ID ) ) ) . '</td>';
 
 			if ( $_user_creator && $_user_creator->exists() ) {
 				$return .= '<td>' . ( $_user_creator->exists() ? esc_html( $_user_creator->display_name ) : esc_html__( 'Unknown', 'trustedlogin' ) ) . '</td>';
@@ -1344,7 +1344,7 @@ final class Client {
 		foreach ( $users as $_u ) {
 			$this->log( "Processing user ID " . $_u->ID, __METHOD__, 'debug' );
 
-			$tlid = get_user_meta( $_u->ID, $this->identifier_meta_key, true );
+			$tlid = get_user_option( $this->identifier_meta_key, $_u->ID );
 
 			// Remove auto-cleanup hook
 			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
@@ -1633,7 +1633,7 @@ final class Client {
 			return false;
 		}
 
-		$identifier = get_user_meta( $user_object->ID, $this->identifier_meta_key, true );
+		$identifier = get_user_option( $this->identifier_meta_key, $user_object->ID );
 
 		if ( empty( $identifier ) ) {
 			return false;

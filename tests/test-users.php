@@ -282,8 +282,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$expiry = $this->TrustedLogin->get_expiration_timestamp( DAY_IN_SECONDS );
 
 		$this->assertSame( $hash_md5, $this->TrustedLogin->support_user_setup( $user->ID, $hash, $expiry ) );
-		$this->assertSame( (string) $expiry, get_user_meta( $user->ID, $this->_get_public_property('expires_meta_key' )->getValue( $this->TrustedLogin ), true ) );
-		$this->assertSame( (string) $current->ID, get_user_meta( $user->ID, 'tl_created_by', true ) );
+		$this->assertSame( (string) $expiry, get_user_option( $this->_get_public_property('expires_meta_key' )->getValue( $this->TrustedLogin ), $user->ID ) );
+		$this->assertSame( (string) $current->ID, get_user_option( 'tl_created_by', $user->ID ) );
 
 		// We are scheduling a single event cron, so it will return `false` when using wp_get_schedule().
 		// False is the same result as an error, so we're doing more legwork here to validate.

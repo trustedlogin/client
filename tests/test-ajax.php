@@ -137,6 +137,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		// Cause support_user_setup() to fail to trigger an error.
 		add_filter( 'get_user_metadata', $cause_error = function( $return = null, $object_id, $meta_key, $single ) {
+
+			// Force any user meta key starting with tl_ to return false
 			if ( false !== strpos( $meta_key, 'tl_' ) ) {
 				return false;
 			}
