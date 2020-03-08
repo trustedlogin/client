@@ -542,6 +542,7 @@ final class Client {
 
 		$jquery_confirm_version = '3.3.4';
 
+		// TODO: Remove this if/when switching away from jQuery Confirm
 		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
 
 		wp_register_style(
@@ -562,7 +563,7 @@ final class Client {
 
 		wp_register_script(
 			'trustedlogin',
-			trailingslashit( $this->get_setting( 'path/js_dir_url', $default_asset_dir_url ) ) . 'trustedlogin.js',
+			$this->get_setting( 'paths/js' ),
 			array( 'jquery', 'jquery-confirm' ),
 			self::version,
 			true
@@ -570,7 +571,7 @@ final class Client {
 
 		wp_register_style(
 			'trustedlogin',
-			trailingslashit( $this->get_setting( 'path/css_dir_url', $default_asset_dir_url ) ) . 'trustedlogin.css',
+			$this->get_setting( 'paths/css' ),
 			array( 'jquery-confirm' ),
 			self::version,
 			'all'
@@ -1108,6 +1109,8 @@ final class Client {
 			return array( new WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
 		}
 
+		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
+
 		$default_settings = array(
 			'debug' => false,
 			'auth' => array(
@@ -1133,9 +1136,9 @@ final class Client {
 				'support_url' => null,
 				'logo_url' => null,
 			),
-			'path' => array(
-				'css_dir_url' => null,
-				'js_dir_url'  => null,
+			'paths' => array(
+				'css' => $default_asset_dir_url . 'trustedlogin.css',
+				'js'  => $default_asset_dir_url . 'trustedlogin.js',
 			),
 			'menu' => array(
 				'slug' => null,
