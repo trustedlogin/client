@@ -349,7 +349,7 @@ final class Client {
 
 			$identifier = get_user_option( $this->identifier_meta_key, $support_user->ID );
 
-			$this->remove_support_user( $identifier );
+			$this->delete_support_user( $identifier );
 
 			return;
 		}
@@ -1314,15 +1314,13 @@ final class Client {
 
 	/**
 	 *
-	 * @param string $identifier - Unique Identifier of the user to delete, or 'all' to remove all support users.
+	 * @param string $identifier Unique Identifier of the user to delete, or 'all' to remove all support users.
+	 * @param bool   $delete_endpoint Should the TrustedLogin-created user role be deleted also? Default: `true`
+	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint be deleted also? Default: `true`
 	 *
-	 * @since 0.1.0
-	 *
-	 * @todo get rid of "all" option, since it makes things confusing
-	 *
-	 * @return bool|WP_Error
+	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users; WP_Error: something went wrong.
 	 */
-	private function remove_support_user( $identifier = 'all' ) {
+	private function delete_support_user( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
 		if ( 'all' === $identifier ) {
 			$users = $this->get_support_users();
@@ -1423,7 +1421,7 @@ final class Client {
 
 		$this->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$this->remove_support_user( $identifier_hash );
+		$this->delete_support_user( $identifier_hash );
 	}
 
 	/**
@@ -1675,10 +1673,10 @@ final class Client {
 			$identifier = 'all';
 		}
 
-		$removed_user = $this->remove_support_user( $identifier );
+		$deleted_user = $this->delete_support_user( $identifier );
 
-		if ( is_wp_error( $removed_user ) ) {
-			$this->log( 'Removing user failed: ' . $removed_user->get_error_message(), __METHOD__, 'error' );
+		if ( is_wp_error( $deleted_user ) ) {
+			$this->log( 'Removing user failed: ' . $deleted_user->get_error_message(), __METHOD__, 'error' );
 		}
 
 		if ( ! is_user_logged_in() || ! current_user_can( 'delete_users' ) ) {
