@@ -86,6 +86,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	function test_ajax_generate_support() {
 
+		$this->_delete_all_support_users();
+
 		$this->_setRole('administrator' );
 		$current_user = wp_get_current_user();
 		if ( function_exists( 'grant_super_admin' ) ) {
