@@ -279,15 +279,15 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 
 		$method = $this->_get_public_method( 'build_api_url' );
 
-		$this->assertEquals( $this->TrustedLogin::saas_api_url, $method->invoke( $this->TrustedLogin ) );
+		$this->assertEquals( \TrustedLogin\Client::saas_api_url, $method->invoke( $this->TrustedLogin ) );
 
-		$this->assertEquals( $this->TrustedLogin::saas_api_url, $method->invoke( $this->TrustedLogin, array('not-a-string') ) );
+		$this->assertEquals( \TrustedLogin\Client::saas_api_url, $method->invoke( $this->TrustedLogin, array('not-a-string') ) );
 
-		$this->assertEquals( $this->TrustedLogin::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
+		$this->assertEquals( \TrustedLogin\Client::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
 
 		add_filter( 'trustedlogin/not-my-namespace/api-url', function () { return 'https://www.google.com'; } );
 
-		$this->assertEquals( $this->TrustedLogin::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
+		$this->assertEquals( \TrustedLogin\Client::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
 
 		remove_all_filters( 'trustedlogin/not-my-namespace/api-url' );
 
