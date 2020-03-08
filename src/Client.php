@@ -1313,6 +1313,7 @@ final class Client {
 	}
 
 	/**
+	 * Deletes support user(s) with options to delete the TrustedLogin-created user role and endpoint as well
 	 *
 	 * @param string $identifier Unique Identifier of the user to delete, or 'all' to remove all support users.
 	 * @param bool   $delete_endpoint Should the TrustedLogin-created user role be deleted also? Default: `true`
@@ -1357,24 +1358,26 @@ final class Client {
 			}
 		}
 
-		if ( count( $users ) < 2 || $identifier == 'all' ) {
+		if ( $delete_role && get_role( $this->support_role ) ) {
 
-			if ( get_role( $this->support_role ) ) {
-				remove_role( $this->support_role );
+			// Returns void; no way to tell if successful
+			remove_role( $this->support_role );
+
+			if( get_role( $this->support_role ) ) {
+				$this->log( "Role " . $this->support_role . " was not removed successfully.", __METHOD__, 'error' );
+			} else {
 				$this->log( "Role " . $this->support_role . " removed.", __METHOD__, 'info' );
 			}
 
-			if ( get_site_option( $this->endpoint_option ) ) {
+		if ( $delete_endpoint && get_site_option( $this->endpoint_option ) ) {
 
-				delete_site_option( $this->endpoint_option );
+			delete_site_option( $this->endpoint_option );
 
-				flush_rewrite_rules( false );
+			flush_rewrite_rules( false );
 
-				update_option( 'tl_permalinks_flushed', 0 );
+			update_option( 'tl_permalinks_flushed', 0 );
 
-				$this->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
-			}
-
+			$this->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
 		}
 
 		return $this->revoke_access( $identifier );
