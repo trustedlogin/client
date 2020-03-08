@@ -2173,7 +2173,7 @@ final class Client {
 
 		$ns = $this->get_setting( 'vendor/namespace' );
 
-		$slug = apply_filters( 'trustedlogin/admin/grantaccess/slug', 'grant-' . $ns . '-access', $ns );
+		$slug = apply_filters( 'trustedlogin/' . $this->ns . '/admin/grantaccess/slug', 'grant-' . $ns . '-access', $ns );
 
 		$parent_slug = $this->get_setting( 'menu/slug', null );
 
@@ -2249,7 +2249,7 @@ final class Client {
 		 * @param string $ns - the namespace of the plugin initializing TrustedLogin
 		 **/
 		$footer_links = apply_filters(
-			'trustedlogin/template/grantlink/footer-links',
+			'trustedlogin/' . $this->ns . '/template/grantlink/footer-links',
 			array(
 				__( 'Learn about TrustedLogin', 'trustedlogin' )                    => 'https://www.trustedlogin.com/about/easy-and-safe/',
 				sprintf( 'Visit %s Support', $this->get_setting( 'vendor/title' ) ) => $this->get_setting( 'vendor/support_url' ),
@@ -2292,7 +2292,7 @@ final class Client {
         ';
 
 		/**
-		 * Filters trustedlogin/template/grantlink/outer-tag and /trustedlogin/template/grantlink/inner-tag
+		 * Filters trustedlogin/{$this->ns}/template/grantlink/outer-tag and /trustedlogin/template/grantlink/inner-tag
 		 *
 		 * Used to change the innerTags and outerTags of the grandlink template
 		 *
@@ -2301,8 +2301,8 @@ final class Client {
 		 * @param string the html tag to use for each tag, default: div
 		 * @param string $ns - the namespace of the plugin. initializing TrustedLogin
 		 **/
-		$output_html = str_replace( '{{outerTag}}', apply_filters( 'trustedlogin/template/grantlink/outer-tag', 'div', $ns ), $output_html );
-		$output_html = str_replace( '{{innerTag}}', apply_filters( 'trustedlogin/template/grantlink/inner-tag', 'div', $ns ), $output_html );
+		$output_html = str_replace( '{{outerTag}}', apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/outer-tag', 'div', $ns ), $output_html );
+		$output_html = str_replace( '{{innerTag}}', apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/inner-tag', 'div', $ns ), $output_html );
 
 		$output_template = sprintf(
 			wp_kses(
@@ -2317,7 +2317,7 @@ final class Client {
 			 * @param string $output_html
 			 * @param string $ns - the namespace of the plugin. initializing TrustedLogin
 			 **/
-				apply_filters( 'trustedlogin/template/grantlink', $output_html, $ns ),
+				apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink', $output_html, $ns ),
 				array(
 					'ul'     => array( 'class' => array(), 'id' => array() ),
 					'p'      => array( 'class' => array(), 'id' => array() ),
@@ -2333,13 +2333,13 @@ final class Client {
 					'a'      => array( 'class' => array(), 'id' => array(), 'href' => array(), 'title' => array() ),
 				)
 			),
-			apply_filters( 'trustedlogin/template/grantlink/outer-class', '', $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/logo', $logo_output, $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/intro', $intro_output, $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/details', $description_output, $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/details', $details_output, $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/actions', $actions_output, $ns ),
-			apply_filters( 'trustedlogin/template/grantlink/footer', $footer_output, $ns )
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/outer-class', '', $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/logo', $logo_output, $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/intro', $intro_output, $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/details', $description_output, $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/details', $details_output, $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/actions', $actions_output, $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/footer', $footer_output, $ns )
 		);
 
 		return $output_template;
@@ -2383,7 +2383,7 @@ final class Client {
 		/**
 		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
 		 */
-		$key_endpoint = apply_filters( 'trustedlogin/vendor/public-key-endpoint', 'wp-json/trustedlogin/v1/public_key' );
+		$key_endpoint = apply_filters( 'trustedlogin/' . $this->ns . '/vendor/public-key-endpoint', 'wp-json/trustedlogin/v1/public_key' );
 
 		$url = trailingslashit( $vendor_url ) . $key_endpoint;
 
