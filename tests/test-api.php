@@ -285,17 +285,17 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 
 		$this->assertEquals( \TrustedLogin\Client::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
 
-		add_filter( 'trustedlogin/not-my-namespace/api-url', function () { return 'https://www.google.com'; } );
+		add_filter( 'trustedlogin/not-my-namespace/api_url', function () { return 'https://www.google.com'; } );
 
 		$this->assertEquals( \TrustedLogin\Client::saas_api_url . 'pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
 
-		remove_all_filters( 'trustedlogin/not-my-namespace/api-url' );
+		remove_all_filters( 'trustedlogin/not-my-namespace/api_url' );
 
-		add_filter( 'trustedlogin/gravityview/api-url', function () { return 'https://www.google.com'; } );
+		add_filter( 'trustedlogin/gravityview/api_url', function () { return 'https://www.google.com'; } );
 
 		$this->assertEquals( 'https://www.google.com/pathy-path', $method->invoke( $this->TrustedLogin, 'pathy-path' ) );
 
-		remove_all_filters( 'trustedlogin/gravityview/api-url' );
+		remove_all_filters( 'trustedlogin/gravityview/api_url' );
 	}
 
 	/**
