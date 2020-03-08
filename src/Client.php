@@ -873,7 +873,7 @@ final class Client {
 
 			$decay_diff = human_time_diff( $decay_time );
 
-			$decay_tag = apply_filters('trustedlogin/' . $this->ns . '/tags/decay','h4');
+			$decay_tag = apply_filters('trustedlogin/' . $this->ns . '/template/tags/decay','h4');
 			$decay_output = '<'.$decay_tag.'>' . sprintf( esc_html__( 'Access will be granted for %1$s and can be revoked at any time.', 'trustedlogin' ), $decay_diff ) . '</'.$decay_tag.'>';
 		} else {
 			$decay_output = '';
@@ -1040,7 +1040,7 @@ final class Client {
 		 *
 		 */
 		$this->support_role = apply_filters(
-			'trustedlogin/' . $this->ns . '/support_role/slug',
+			'trustedlogin/' . $this->ns . '/support_role',
 			$this->ns . '-support',
 			$this
 		);
@@ -1054,7 +1054,7 @@ final class Client {
 		 * @param Client $this
 		 */
 		$this->endpoint_option = apply_filters(
-			'trustedlogin_' . $this->ns . '_endpoint_option_title',
+			'trustedlogin/' . $this->ns . '/options/endpoint',
 			'tl_' . $this->ns . '_endpoint',
 			$this
 		);
@@ -1068,7 +1068,7 @@ final class Client {
 		 * @param Client $this
 		 */
 		$this->public_key_option = apply_filters(
-			'trustedlogin/' . $this->ns . '/public-key-option',
+			'trustedlogin/' . $this->ns . '/options/public_key',
 			$this->ns . '_public_key',
 			$this
 		);
@@ -1085,8 +1085,8 @@ final class Client {
 		 * @param Client $this
 		 */
 		$this->shared_accesskey_option = apply_filters(
-			'trustedlogin/' . $this->ns . '/shareable-accesskey-option',
 			'tl_' . $this->ns . '_shared_accesskey',
+			'trustedlogin/' . $this->ns . '/options/sharable_accesskey',
 			$this
 		);
 	}
@@ -1755,7 +1755,7 @@ final class Client {
 			return new WP_Error( 'sync_error', __( 'Could not sync to TrustedLogin server', 'trustedlogin' ) );
 		}
 
-		do_action( 'trustedlogin/secret/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+		do_action( 'trustedlogin/' . $this->ns . '/secret/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
 
 		return true;
 	}
@@ -1789,7 +1789,7 @@ final class Client {
 			return $site_revoked;
 		}
 
-		do_action( 'trustedlogin/access/revoked', array( 'url' => get_site_url(), 'action' => 'revoke' ) );
+		do_action( 'trustedlogin/' . $this->ns . '/access/revoked', array( 'url' => get_site_url(), 'action' => 'revoke' ) );
 
 		return $site_revoked;
 	}
@@ -2136,7 +2136,7 @@ final class Client {
 		 *
 		 * @internal This allows pointing requests to testing servers
 		 */
-		$base_url = apply_filters( 'trustedlogin/' . $this->ns . '/api-url', self::saas_api_url );
+		$base_url = apply_filters( 'trustedlogin/' . $this->ns . '/api_url', self::saas_api_url );
 
 		if ( is_string( $endpoint ) ) {
 			$url = trailingslashit( $base_url ) . $endpoint;
@@ -2249,7 +2249,7 @@ final class Client {
 		 * @param string $ns - the namespace of the plugin initializing TrustedLogin
 		 **/
 		$footer_links = apply_filters(
-			'trustedlogin/' . $this->ns . '/template/grantlink/footer-links',
+			'trustedlogin/' . $this->ns . '/template/grantlink/footer_links',
 			array(
 				__( 'Learn about TrustedLogin', 'trustedlogin' )                    => 'https://www.trustedlogin.com/about/easy-and-safe/',
 				sprintf( 'Visit %s Support', $this->get_setting( 'vendor/title' ) ) => $this->get_setting( 'vendor/support_url' ),
@@ -2292,7 +2292,7 @@ final class Client {
         ';
 
 		/**
-		 * Filters trustedlogin/{$this->ns}/template/grantlink/outer-tag and /trustedlogin/template/grantlink/inner-tag
+		 * Filters trustedlogin/{$this->ns}/template/grantlink/outer_tag and /trustedlogin/template/grantlink/inner_tag
 		 *
 		 * Used to change the innerTags and outerTags of the grandlink template
 		 *
@@ -2333,7 +2333,7 @@ final class Client {
 					'a'      => array( 'class' => array(), 'id' => array(), 'href' => array(), 'title' => array() ),
 				)
 			),
-			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/outer-class', '', $ns ),
+			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/outer_class', '', $ns ),
 			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/logo', $logo_output, $ns ),
 			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/intro', $intro_output, $ns ),
 			apply_filters( 'trustedlogin/' . $this->ns . '/template/grantlink/details', $description_output, $ns ),
@@ -2383,7 +2383,7 @@ final class Client {
 		/**
 		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
 		 */
-		$key_endpoint = apply_filters( 'trustedlogin/' . $this->ns . '/vendor/public-key-endpoint', 'wp-json/trustedlogin/v1/public_key' );
+		$key_endpoint = apply_filters( 'trustedlogin/' . $this->ns . '/vendor/public_key/endpoint', 'wp-json/trustedlogin/v1/public_key' );
 
 		$url = trailingslashit( $vendor_url ) . $key_endpoint;
 
