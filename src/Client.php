@@ -1319,7 +1319,7 @@ final class Client {
 	 *
 	 * @return bool|WP_Error
 	 */
-	public function remove_support_user( $identifier = 'all' ) {
+	private function remove_support_user( $identifier = 'all' ) {
 
 		if ( 'all' === $identifier ) {
 			$users = $this->get_support_users();
