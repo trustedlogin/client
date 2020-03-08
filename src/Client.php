@@ -1333,7 +1333,7 @@ final class Client {
 
 		$this->log( count( $users ) . " support users found", __METHOD__, 'debug' );
 
-		if ( $this->settings['reassign_posts'] ) {
+		if ( $this->get_setting( 'reassign_posts' ) ) {
 			$reassign_id = $this->get_reassign_user_id();
 		} else {
 			$reassign_id = null;
@@ -2107,6 +2107,16 @@ final class Client {
 			$request_options['body'] = json_encode( $data );
 		}
 
+		$api_url = $this->build_api_url( $path );
+
+		$this->log( sprintf( 'Sending to %s: %s', $api_url, print_r( $request_options, true ) ), __METHOD__, 'debug' );
+
+		$response = wp_remote_request( $api_url, $request_options );
+
+		$this->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
+
+		return $response;
+	}
 
 	/**
 	 * Builds URL to API endpoints
