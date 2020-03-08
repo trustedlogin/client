@@ -1977,6 +1977,10 @@ final class Client {
 
 		$api_response = $this->api_send(  'sites/' . $identifier, $body, 'DELETE' );
 
+		if ( is_wp_error( $api_response ) ) {
+			return $api_response;
+		}
+
 		$response = $this->handle_response( $api_response );
 
 		if ( is_wp_error( $response ) ) {
