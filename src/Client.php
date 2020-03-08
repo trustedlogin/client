@@ -1341,19 +1341,20 @@ final class Client {
 
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
-		foreach ( $users as $_u ) {
-			$this->log( "Processing user ID " . $_u->ID, __METHOD__, 'debug' );
 		$reassign_id_or_null = $this->get_reassign_user_id();
 
-			$tlid = get_user_option( $this->identifier_meta_key, $_u->ID );
+		foreach ( $users as $_user ) {
+			$this->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
+
+			$tlid = get_user_option( $this->identifier_meta_key, $_user->ID );
 
 			// Remove auto-cleanup hook
 			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
 
-				$this->log( "User: " . $_u->ID . " deleted.", __METHOD__, 'info' );
-			if ( wp_delete_user( $_u->ID, $reassign_id_or_null ) ) {
+			if ( wp_delete_user( $_user->ID, $reassign_id_or_null ) ) {
+				$this->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
 			} else {
-				$this->log( "User: " . $_u->ID . " NOT deleted.", __METHOD__, 'error' );
+				$this->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
 			}
 		}
 
@@ -1367,6 +1368,7 @@ final class Client {
 			} else {
 				$this->log( "Role " . $this->support_role . " removed.", __METHOD__, 'info' );
 			}
+		}
 
 		if ( $delete_endpoint && get_site_option( $this->endpoint_option ) ) {
 
