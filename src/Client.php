@@ -359,7 +359,7 @@ final class Client {
 
 		do_action( 'wp_login', $support_user->user_login, $support_user );
 
-		wp_redirect( admin_url() );
+		wp_safe_redirect( admin_url() );
 		exit();
 	}
 
@@ -1679,7 +1679,7 @@ final class Client {
 		}
 
 		if ( ! is_user_logged_in() || ! current_user_can( 'delete_users' ) ) {
-			wp_redirect( home_url() );
+			wp_safe_redirect( home_url() );
 			exit;
 		}
 
