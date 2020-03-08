@@ -1856,6 +1856,8 @@ final class Client {
 	/**
 	 * Checks if a license key is a shareable accessKey
 	 *
+	 * @todo This isn't being used. Hector, what's this for?
+	 *
 	 * @since 0.9.2
 	 *
 	 * @param string  $license
