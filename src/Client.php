@@ -441,7 +441,7 @@ final class Client {
 
 				$exception_error = new WP_Error( $e->getCode(), $e->getMessage() );
 
-				wp_send_json_error( $exception_error, 503 );
+				wp_send_json_error( $exception_error, 500 );
 			}
 
 			if ( is_wp_error( $created ) ) {
