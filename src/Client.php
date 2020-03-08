@@ -13,7 +13,7 @@
  * Thanks for integrating TrustedLogin.
  *
  * 0. If you haven't already, sign up for a TrustedLogin account {@see https://www.trustedlogin.com}
- * 1. Rename the namespace below to something other than `TrustedLogin`
+ * 1. Prefix the namespace below with your own namespace (`namespace \ReplaceThisExample\TrustedLogin;`)
  * 2. Instantiate this class with a configuration array ({@see https://www.trustedlogin.com/configuration/} for more info)
  */
 namespace TrustedLogin;
