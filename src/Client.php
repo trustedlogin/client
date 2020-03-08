@@ -1293,9 +1293,13 @@ final class Client {
 	 *
 	 * @since 0.7.0
 	 *
-	 * @return int|false User ID if there are admins, false if not
+	 * @return int|null User ID if there are admins, null if not
 	 */
 	private function get_reassign_user_id() {
+
+		if( ! $this->get_setting( 'reassign_posts' ) ) {
+			return null;
+		}
 
 		// TODO: Filter here?
 		$admins = get_users( array(
@@ -1335,24 +1339,19 @@ final class Client {
 
 		$this->log( count( $users ) . " support users found", __METHOD__, 'debug' );
 
-		if ( $this->get_setting( 'reassign_posts' ) ) {
-			$reassign_id = $this->get_reassign_user_id();
-		} else {
-			$reassign_id = null;
-		}
-
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
 		foreach ( $users as $_u ) {
 			$this->log( "Processing user ID " . $_u->ID, __METHOD__, 'debug' );
+		$reassign_id_or_null = $this->get_reassign_user_id();
 
 			$tlid = get_user_option( $this->identifier_meta_key, $_u->ID );
 
 			// Remove auto-cleanup hook
 			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
 
-			if ( wp_delete_user( $_u->ID, $reassign_id ) ) {
 				$this->log( "User: " . $_u->ID . " deleted.", __METHOD__, 'info' );
+			if ( wp_delete_user( $_u->ID, $reassign_id_or_null ) ) {
 			} else {
 				$this->log( "User: " . $_u->ID . " NOT deleted.", __METHOD__, 'error' );
 			}
