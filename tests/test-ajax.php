@@ -208,6 +208,11 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		if( $user ) {
 			wp_delete_user( $user->ID );
 		}
+
+		global $wpdb;
+
+		$wpdb->query( 'DELETE FROM wp_usermeta WHERE 1=1' );
+		$wpdb->query( 'DELETE FROM wp_users WHERE 1=1' );
 	}
 
 	/**
