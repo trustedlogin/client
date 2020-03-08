@@ -25,7 +25,9 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 	 */
 	private $config;
 
-	public function __construct() {
+	public function setUp() {
+
+		parent::setUp();
 
 		$this->config = array(
 			'role'           => array(
@@ -56,6 +58,10 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+	}
+
+	public function tearDown() {
+		parent::tearDown();
 	}
 
 	/**

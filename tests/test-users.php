@@ -22,10 +22,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 	private $config = array();
 
-	/**
-	 * SampleTest constructor.
-	 */
-	public function __construct() {
+	public function setUp() {
+
+		parent::setUp();
 
 		$this->config = array(
 			'role'             => array(
@@ -56,6 +55,10 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+	}
+
+	public function tearDown() {
+		parent::tearDown();
 	}
 
 	private function _get_public_property( $name ) {
