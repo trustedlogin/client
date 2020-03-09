@@ -34,16 +34,22 @@ use \WP_Admin_Bar;
 final class Client {
 
 	/**
-	 * @var string $version The current drop-in file version
+	 * @var string The current drop-in file version
 	 * @since 0.1.0
 	 */
 	const version = '0.9.6';
 
 	/**
-	 * @var string self::saas_api_url The API url for the TrustedLogin SaaS Platform (with trailing slash)
+	 * @var string The API url for the TrustedLogin SaaS Platform (with trailing slash)
 	 * @since 0.4.0
 	 */
 	const saas_api_url = 'https://app.trustedlogin.com/api/';
+
+	/**
+	 * @var string The version of jQuery Confirm currently being used
+	 * @internal Don't rely on jQuery Confirm existing!
+	 */
+	const jquery_confirm_version = '3.3.4';
 
 	/**
 	 * @var array These capabilities will never be allowed for users created by TrustedLogin
@@ -596,42 +602,48 @@ final class Client {
 	 */
 	public function register_assets() {
 
-		$jquery_confirm_version = '3.3.4';
-
 		// TODO: Remove this if/when switching away from jQuery Confirm
 		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
 
-		wp_register_style(
+		$registered = array();
+
+		$registered['jquery-confirm-css'] = wp_register_style(
 			'jquery-confirm',
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
 			array(),
-			$jquery_confirm_version,
+			self::jquery_confirm_version,
 			'all'
 		);
 
-		wp_register_script(
+		$registered['jquery-confirm-js'] = wp_register_script(
 			'jquery-confirm',
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
 			array( 'jquery' ),
-			$jquery_confirm_version,
+			self::jquery_confirm_version,
 			true
 		);
 
-		wp_register_script(
+		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin',
 			$this->get_setting( 'paths/js' ),
-			array( 'jquery', 'jquery-confirm' ),
+			array( 'jquery-confirm' ),
 			self::version,
 			true
 		);
 
-		wp_register_style(
+		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin',
 			$this->get_setting( 'paths/css' ),
 			array( 'jquery-confirm' ),
 			self::version,
 			'all'
 		);
+
+		$registered = array_filter( $registered );
+
+		if ( 4 !== count( $registered ) ) {
+			$this->log( 'Not all scripts and styles were registered: ' . print_r( $registered, true ), __METHOD__, 'error' );
+		}
 
 	}
 
