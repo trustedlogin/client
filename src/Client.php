@@ -849,16 +849,16 @@ final class Client {
 
 		// Extra Caps
 		$caps_output = '';
-		foreach ( $this->get_setting( 'extra_caps' ) as $cap => $reason ) {
-			$caps_output .= sprintf( '<li class="extra-caps"> %1$s <br /><small>%2$s</small></li>',
+		foreach ( $this->get_setting( 'caps/add' ) as $cap => $reason ) {
+			$caps_output .= sprintf( '<li class="caps-added"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'With the additional \'%1$s\' Capability.', 'trustedlogin' ),
 					$cap
 				),
 				$reason
 			);
 		}
-		foreach ( $this->get_setting( 'excluded_caps' ) as $cap => $reason ) {
-			$caps_output .= sprintf( '<li class="excluded-caps"> %1$s <br /><small>%2$s</small></li>',
+		foreach ( $this->get_setting( 'caps/remove' ) as $cap => $reason ) {
+			$caps_output .= sprintf( '<li class="caps-removed"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'The \'%1$s\' Capability will not be granted.', 'trustedlogin' ),
 					$cap
 				),
@@ -1120,10 +1120,10 @@ final class Client {
 			'decay' => WEEK_IN_SECONDS,
 			'role' => 'editor',
 			'caps' => array(
-				'excluded' => array(
+				'add' => array(
 				),
-				'custom' => array(
-				)
+				'remove' => array(
+				),
 			),
 			'webhook_url' => null,
 			'vendor' => array(
@@ -1465,10 +1465,10 @@ final class Client {
 
 		$capabilities = $old_role->capabilities;
 
-		$extra_caps = $this->get_setting( 'extra_caps' );
+		$add_caps = $this->get_setting( 'caps/add' );
 
-		foreach ( (array) $extra_caps as $extra_cap => $reason ) {
-			$capabilities[ $extra_cap ] = true;
+		foreach ( (array) $add_caps as $add_cap => $reason ) {
+			$capabilities[ $add_cap ] = true;
 		}
 
 		// These roles should never be assigned to TrustedLogin roles.
@@ -1503,13 +1503,13 @@ final class Client {
 
 		}
 
-		$excluded_caps = $this->get_setting( 'excluded_caps' );
+		$remove_caps = $this->get_setting( 'caps/remove' );
 
-		if ( ! empty( $excluded_caps ) ){
+		if ( ! empty( $remove_caps ) ){
 
-			foreach ( $excluded_caps as $excluded_cap => $description ){
-				$new_role->remove_cap( $excluded_cap );
-				$this->log( 'Capability '. $excluded_cap .' removed from role.', __METHOD__, 'info' );
+			foreach ( $remove_caps as $remove_cap => $description ){
+				$new_role->remove_cap( $remove_cap );
+				$this->log( 'Capability '. $remove_cap .' removed from role.', __METHOD__, 'info' );
 			}
 
 		}

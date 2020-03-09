@@ -30,10 +30,12 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			'role'             => array(
 				'editor' => 'Support needs to be able to access your site as an administrator to debug issues effectively.',
 			),
-			'extra_caps'       => array(
-				'manage_options' => 'we need this to make things work real gud',
-				'edit_posts' => 'Access the posts that you created',
-				'delete_users' => 'In order to manage the users that we thought you would want us to.',
+			'caps' => array(
+				'add' => array(
+					'manage_options' => 'we need this to make things work real gud',
+					'edit_posts' => 'Access the posts that you created',
+					'delete_users' => 'In order to manage the users that we thought you would want us to.',
+				),
 			),
 			'webhook_url' => 'https://www.trustedlogin.com/webhook-example/',
 			'auth' => array(
@@ -114,16 +116,16 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			unset( $cloned_caps[ $remove_cap ] );
 		}
 
-		$extra_caps = $this->TrustedLogin->get_setting('extra_caps' );
+		$added_caps = $this->TrustedLogin->get_setting('caps/add' );
 
-		foreach ( $extra_caps as $extra_cap => $reason ) {
+		foreach ( (array) $added_caps as $added_cap => $reason ) {
 
 			// The caps that were requested to be added are not allowed
-			if ( in_array( $extra_cap, $remove_caps, true ) ) {
-				$this->assertFalse( in_array( $extra_cap, array_keys( $new_role_caps ), true ), 'restricted caps were added, but should not have been' );
+			if ( in_array( $added_cap, $remove_caps, true ) ) {
+				$this->assertFalse( in_array( $added_cap, array_keys( $new_role_caps ), true ), 'restricted caps were added, but should not have been' );
 			} else {
-				$this->assertTrue( in_array( $extra_cap, array_keys( $new_role_caps ), true ), $extra_cap . ' was not added, but should have been (for ' . $role .' role)' );
-				$cloned_caps[ $extra_cap ] = true;
+				$this->assertTrue( in_array( $added_cap, array_keys( $new_role_caps ), true ), $added_cap . ' was not added, but should have been (for ' . $role .' role)' );
+				$cloned_caps[ $added_cap ] = true;
 			}
 
 		}

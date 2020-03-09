@@ -34,10 +34,12 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			'role'           => array(
 				'editor' => 'Support needs to be able to access your site as an administrator to debug issues effectively.',
 			),
-			'extra_caps'     => array(
-				'manage_options' => 'we need this to make things work real gud',
-				'edit_posts'     => 'Access the posts that you created',
-				'delete_users'   => 'In order to manage the users that we thought you would want us to.',
+			'caps'     => array(
+				'add' => array(
+					'manage_options' => 'we need this to make things work real gud',
+					'edit_posts'     => 'Access the posts that you created',
+					'delete_users'   => 'In order to manage the users that we thought you would want us to.',
+				),
 			),
 			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
 			'auth'           => array(
