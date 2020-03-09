@@ -215,19 +215,22 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 			'paths' => array(
 				'css' => null,
 			),
+			'decay' => 0,
 		);
 
 		$TL = new \TrustedLogin\Client( $config );
+
+		$this->assertEquals( 0, $TL->get_setting( 'decay' ) );
 
 		$this->assertEquals( 'https://www.google.com', $TL->get_setting( 'webhook_url') );
 
 		$this->assertEquals( 'Jones Beach Party', $TL->get_setting( 'vendor/title') );
 
-		$this->assertFalse( $TL->get_setting( 'non-existent key') );
+		$this->assertEquals( false, $TL->get_setting( 'non-existent key') );
 
 		$this->assertEquals( 'default override', $TL->get_setting( 'non-existent key', 'default override' ) );
 
-		$this->assertFalse( $TL->get_setting( 'vendor/first_name' ), 'Should use method default value (false) when returned value is NULL' );
+		$this->assertEquals( false, $TL->get_setting( 'vendor/first_name' ), 'Should use method default value (false) when returned value is NULL' );
 
 		$this->assertEquals( 'default override', $TL->get_setting( 'vendor/first_name', 'default override' ), 'should use default override if value is NULL' );
 

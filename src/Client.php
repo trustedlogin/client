@@ -523,12 +523,16 @@ final class Client {
 	 *
 	 * @param int $decay_time If passed, override the `decay` setting
 	 *
-	 * @return int Timestamp in seconds. Default is 3 days in seconds from creation (`time()` + 259200)
+	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
 	 */
 	public function get_expiration_timestamp( $decay_time = null ) {
 
 		if ( is_null( $decay_time ) ) {
-			$decay_time = $this->get_setting( 'decay', 3 * DAY_IN_SECONDS );
+			$decay_time = $this->get_setting( 'decay' );
+		}
+
+		if ( 0 === $decay_time ) {
+			return false;
 		}
 
 		$expiration_timestamp = time() + (int) $decay_time;
@@ -924,9 +928,7 @@ final class Client {
 		$result['caps'] = $caps_output;
 
 		// Decay
-		if ( $this->get_setting( 'decay' ) ) {
-
-			$decay_time = $this->get_expiration_timestamp();
+		if ( $decay_time = $this->get_expiration_timestamp() ) {
 
 			$decay_diff = human_time_diff( $decay_time );
 
@@ -1277,7 +1279,9 @@ final class Client {
 			$value = '';
 		}
 
-		return empty( $value ) && $default !== null ? $default : $value;
+		$value_is_zero = 0 === $value;
+
+		return ( empty( $value ) && ! $value_is_zero ) && $default !== null ? $default : $value;
 	}
 
 	/**

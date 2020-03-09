@@ -248,7 +248,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 */
 	function test_get_expiration_timestamp() {
 
-		$DefaultTrustedLogin = new TrustedLogin\Client( array(
+		$valid_config = array(
 			'auth' => array(
 				'public_key' => 'not empty'
 			),
@@ -259,7 +259,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 				'website' => 'https://example.com',
 				'support_url' => 'https://example.com/support/',
 			)
-		) );
+		);
+
+		$DefaultTrustedLogin = new TrustedLogin\Client( $valid_config );
 
 		$this->assertSame( ( time() + WEEK_IN_SECONDS ), $DefaultTrustedLogin->get_expiration_timestamp(), 'The method should have "WEEK_IN_SECONDS" set as default.' );
 
@@ -267,6 +269,19 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->assertSame( time() + WEEK_IN_SECONDS, $this->TrustedLogin->get_expiration_timestamp( WEEK_IN_SECONDS ) );
 
+		$this->assertSame( false, $this->TrustedLogin->get_expiration_timestamp( 0 ) );
+
+		$valid_config['decay'] = 12345;
+
+		$DefaultTrustedLoginWithDecay = new TrustedLogin\Client( $valid_config );
+
+		$this->assertSame( time() + 12345, $DefaultTrustedLoginWithDecay->get_expiration_timestamp() );
+
+		$valid_config['decay'] = 0;
+
+		$DefaultTrustedLoginWithNoDecay = new TrustedLogin\Client( $valid_config );
+
+		$this->assertSame( false, $DefaultTrustedLoginWithNoDecay->get_expiration_timestamp() );
 	}
 
 	/**
