@@ -189,10 +189,6 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 
 	}
 
-	public function test_init_settings() {
-		// TODO: Add checks for filters
-	}
-
 	/**
 	 * @covers \TrustedLogin\Client::get_setting()
 	 */
