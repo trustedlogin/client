@@ -9,8 +9,8 @@ notifications:
     on_failure: change
 
 branches:
-  only:
-    - master
+  except:
+    - gh-pages
 
 cache:
   directories:
