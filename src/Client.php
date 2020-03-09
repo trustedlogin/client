@@ -903,7 +903,7 @@ final class Client {
 
 		// Extra Caps
 		$caps_output = '';
-		foreach ( $this->get_setting( 'caps/add' ) as $cap => $reason ) {
+		foreach ( (array) $this->get_setting( 'caps/add' ) as $cap => $reason ) {
 			$caps_output .= sprintf( '<li class="caps-added"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'With the additional \'%1$s\' Capability.', 'trustedlogin' ),
 					$cap
@@ -911,7 +911,7 @@ final class Client {
 				$reason
 			);
 		}
-		foreach ( $this->get_setting( 'caps/remove' ) as $cap => $reason ) {
+		foreach ( (array) $this->get_setting( 'caps/remove' ) as $cap => $reason ) {
 			$caps_output .= sprintf( '<li class="caps-removed"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'The \'%1$s\' Capability will not be granted.', 'trustedlogin' ),
 					$cap
