@@ -180,7 +180,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 				$expect = ! is_multisite();
 			}
 
-			$this->assertSame( $expect, $support_user->has_cap( $expected_cap ), 'Did not have ' . $expected_cap .', which was set to ' . var_export( $enabled, true ) );
+			if( ! is_numeric( $expected_cap ) ) {
+				$this->assertSame( $expect, $support_user->has_cap( $expected_cap ), 'Did not have ' . $expected_cap .', which was set to ' . var_export( $enabled, true ) );
+			}
 		}
 
 		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->TrustedLogin->get_setting( 'vendor/title' ) );
