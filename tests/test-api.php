@@ -212,6 +212,9 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 				'website' => 'https://example.com',
 				'support_url' => 'https://asdasdsd.example.com/support/',
 			),
+			'paths' => array(
+				'css' => null,
+			),
 		);
 
 		$TL = new \TrustedLogin\Client( $config );
@@ -229,6 +232,11 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 		$this->assertEquals( 'default override', $TL->get_setting( 'vendor/first_name', 'default override' ), 'should use default override if value is NULL' );
 
 		$this->assertEquals( '', $TL->get_setting( 'vendor/last_name' ) );
+
+
+		$this->assertNotNull( $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
+		$this->assertNotFalse( $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
+		$this->assertContains( '.css', $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 
 		// Test passed array values
 		$passed_array = array(

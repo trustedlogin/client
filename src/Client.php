@@ -63,6 +63,49 @@ final class Client {
 	);
 
 	/**
+	 * @var array Default settings values
+	 * @since 0.9.6
+	 */
+	private $default_settings = array(
+		'debug' => false,
+		'auth' => array(
+			'public_key' => null,
+			'private_key' => null,
+		),
+		'decay' => WEEK_IN_SECONDS,
+		'role' => 'editor',
+		'paths' => array(
+			'css' => null, // Default is defined in get_default_settings()
+			'js'  => null, // Default is defined in get_default_settings()
+		),
+		'caps' => array(
+			'add' => array(
+			),
+			'remove' => array(
+			),
+		),
+		'webhook_url' => null,
+		'vendor' => array(
+			'namespace' => null,
+			'title' => null,
+			'first_name' => null,
+			'last_name' => null,
+			'email' => null,
+			'website' => null,
+			'support_url' => null,
+			'logo_url' => null,
+		),
+		'menu' => array(
+			'slug' => null,
+			'title' => null,
+			'priority' => null,
+		),
+		'reassign_posts' => true,
+		'require_ssl' => true,
+	);
+
+	/**
+	 * @var array $settings Configuration array after parsed and validated
 	 * @since 0.1.0
 	 */
 	private $settings = array();
@@ -1122,47 +1165,41 @@ final class Client {
 			return array( new WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
 		}
 
-		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
+		$defaults = $this->get_default_settings();
 
-		$default_settings = array(
-			'debug' => false,
-			'auth' => array(
-				'public_key' => null,
-				'private_key' => null,
-			),
-			'decay' => WEEK_IN_SECONDS,
-			'role' => 'editor',
-			'caps' => array(
-				'add' => array(
-				),
-				'remove' => array(
-				),
-			),
-			'webhook_url' => null,
-			'vendor' => array(
-				'namespace' => null,
-				'title' => null,
-				'first_name' => null,
-				'last_name' => null,
-				'email' => null,
-				'website' => null,
-				'support_url' => null,
-				'logo_url' => null,
-			),
-			'paths' => array(
-				'css' => $default_asset_dir_url . 'trustedlogin.css',
-				'js'  => $default_asset_dir_url . 'trustedlogin.js',
-			),
-			'menu' => array(
-				'slug' => null,
-				'title' => null,
-				'priority' => null,
-			),
-			'reassign_posts' => true,
-			'require_ssl' => true,
-		);
+		$filtered_config = array_filter( $config, array( $this, 'is_not_null' ) );
 
-		return wp_parse_args( $config, $default_settings );
+		return shortcode_atts( $defaults, $filtered_config );
+	}
+
+	/**
+	 * Filter out null input values
+	 *
+	 * @internal Used for parsing settings
+	 *
+	 * @param mixed $input Input to test against.
+	 *
+	 * @return bool True: not null. False: null
+	 */
+	protected function is_not_null( $input ) {
+		return ! is_null( $input );
+	}
+
+	/**
+	 * Gets the default settings for the Client and define dynamic defaults (like paths/css and paths/js)
+	 *
+	 * @since 0.9.6
+	 *
+	 * @return array Array of default settings.
+	 */
+	private function get_default_settings() {
+
+		$default_settings = $this->default_settings;
+
+		$default_settings['paths']['css'] = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.css';
+		$default_settings['paths']['js']  = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.js';
+
+		return $default_settings;
 	}
 
 	/**
@@ -1176,7 +1213,7 @@ final class Client {
 	 *
 	 * @return string|array
 	 */
-	public function get_setting( $key, $default = false, $settings = array() ) {
+	public function get_setting( $key, $default = null, $settings = array() ) {
 
 		if ( empty( $settings ) ) {
 			$settings = $this->settings;
@@ -1185,6 +1222,10 @@ final class Client {
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
 			$this->log( 'Settings have not been configured, returning default value', __METHOD__, 'critical' );
 			return $default;
+		}
+
+		if ( is_null( $default ) ) {
+			$default = $this->get_multi_array_value( $this->get_default_settings(), $key );
 		}
 
 		return $this->get_multi_array_value( $settings, $key, $default );
