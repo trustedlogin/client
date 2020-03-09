@@ -892,15 +892,13 @@ final class Client {
 
 		// Roles
 		$roles_output = '';
-		foreach ( $this->get_setting( 'role' ) as $role => $reason ) {
-			$roles_output .= sprintf( '<li class="tl-role"><p>%1$s<br /><small>%2$s</small></p></li>',
-				sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
-					$this->support_role,
-					$role
-				),
-				esc_html($reason)
-			);
-		}
+		$roles_output .= sprintf( '<li class="tl-role"><p>%1$s</p></li>',
+			sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
+				$this->support_role,
+				$this->get_setting( 'role' )
+			)
+		);
+
 		$result['roles'] = $roles_output;
 
 		// Extra Caps
