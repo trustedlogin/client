@@ -37,7 +37,7 @@ final class Client {
 	 * @var string $version The current drop-in file version
 	 * @since 0.1.0
 	 */
-	const version = '0.9.2';
+	const version = '0.9.6';
 
 	/**
 	 * @var string self::saas_api_url The API url for the TrustedLogin SaaS Platform (with trailing slash)
