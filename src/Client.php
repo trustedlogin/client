@@ -18,9 +18,6 @@
  */
 namespace TrustedLogin;
 
-// If you're not using composer, you'll need to include one or more files.
-// If using Composer, use Mozart to re-namespace
-
 // Exit if accessed directly
 if ( ! defined('ABSPATH') ) {
 	exit;
@@ -37,19 +34,18 @@ use \WP_Admin_Bar;
 final class Client {
 
 	/**
-	 * @var string $version - the current drop-in file version
+	 * @var string $version The current drop-in file version
 	 * @since 0.1.0
 	 */
 	const version = '0.9.2';
 
 	/**
-	 * @var string self::saas_api_url - the API url for the TrustedLogin SaaS Platform (with trailing slash)
+	 * @var string self::saas_api_url The API url for the TrustedLogin SaaS Platform (with trailing slash)
 	 * @since 0.4.0
 	 */
 	const saas_api_url = 'https://app.trustedlogin.com/api/';
 
 	/**
-	 * @var array $settings - instance of the initialised plugin config object
 	 * @var array These capabilities will never be allowed for users created by TrustedLogin
 	 * @since 0.9.6
 	 */
@@ -111,53 +107,53 @@ final class Client {
 	private $settings = array();
 
 	/**
-	 * @var string $support_role - the namespaced name of the new Role to be created for Support Agents
+	 * @var string $support_role The namespaced name of the new Role to be created for Support Agents
 	 * @example '{vendor/namespace}-support'
 	 * @since 0.1.0
 	 */
 	private $support_role;
 
 	/**
-	 * @var string $endpoint_option - the namespaced setting name for storing part of the auto-login endpoint
+	 * @var string $endpoint_option The namespaced setting name for storing part of the auto-login endpoint
 	 * @example 'tl_{vendor/namespace}_endpoint'
 	 * @since 0.3.0
 	 */
 	private $endpoint_option;
 
 	/**
-	 * @var string $identifier_meta_key - The namespaced setting name for storing the unique identifier hash in user meta
+	 * @var string $identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
 	 * @example tl_{vendor/namespace}_id
 	 * @since 0.7.0
 	 */
 	private $identifier_meta_key;
 
 	/**
-	 * @var int $expires_meta_key - [Currently not used] The namespaced setting name for storing the timestamp the user expires
+	 * @var int $expires_meta_key The namespaced setting name for storing the timestamp the user expires
 	 * @example tl_{vendor/namespace}_expires
 	 * @since 0.7.0
 	 */
 	private $expires_meta_key;
 
 	/**
-	 * @var bool $debug_mode - whether to output debug information to a debug text file
+	 * @var bool $debug_mode Whether to output debug information to a debug text file
 	 * @since 0.1.0
 	 */
 	private $debug_mode = false;
 
 	/**
-	 * @var string $ns - plugin's namespace for use in namespacing variables and strings
+	 * @var string $ns Plugin's namespace for use in namespacing variables and strings
 	 * @since 0.4.0
 	 */
 	private $ns;
 
 	/**
-	 * @var string $public_key_option - where the plugin should store the public key for encrypting data
+	 * @var string $public_key_option Where the plugin should store the public key for encrypting data
 	 * @since 0.5.0
 	 */
 	private $public_key_option;
 
 	/**
-	 * @var string $sharable_accesskey_option - where the plugin should store the shareable access key
+	 * @var string $sharable_accesskey_option Where the plugin should store the shareable access key
 	 * @since 0.9.2
 	 */
 	private $sharable_accesskey_option;
