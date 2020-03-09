@@ -50,6 +50,19 @@ final class Client {
 
 	/**
 	 * @var array $settings - instance of the initialised plugin config object
+	 * @var array These capabilities will never be allowed for users created by TrustedLogin
+	 * @since 0.9.6
+	 */
+	private $prevented_caps = array(
+		'create_users',
+		'delete_users',
+		'edit_users',
+		'promote_users',
+		'delete_site',
+		'remove_users',
+	);
+
+	/**
 	 * @since 0.1.0
 	 */
 	private $settings = array();
@@ -1472,17 +1485,8 @@ final class Client {
 		}
 
 		// These roles should never be assigned to TrustedLogin roles.
-		$prevent_caps = array(
-			'create_users',
-			'delete_users',
-			'edit_users',
-			'promote_users',
-			'delete_site',
-			'remove_users',
-		);
-
-		foreach ( $prevent_caps as $prevent_cap ) {
-			unset( $capabilities[ $prevent_cap ] );
+		foreach ( $this->prevented_caps as $prevented_cap ) {
+			unset( $capabilities[ $prevented_cap ] );
 		}
 
 		/**
