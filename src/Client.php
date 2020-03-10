@@ -1311,13 +1311,19 @@ final class Client {
 
 		// Get the role value from the key
 		$clone_role_slug = key( $role_setting );
+		$role_exists = $this->support_user_create_role( $this->support_role, $role_setting );
 
-		$role_exists = $this->support_user_create_role( $this->support_role, $clone_role_slug );
+		if ( is_wp_error( $role_exists ) ) {
 
-		if ( ! $role_exists ) {
-			$this->log( 'Support role could not be created (based on ' . $clone_role_slug . ')', __METHOD__, 'error' );
+			$error_output = $role_exists->get_error_message();
 
-			return new WP_Error( 'role_not_created', 'Support role could not be created' );
+			if( $error_data = $role_exists->get_error_data() ) {
+				$error_output .= ' ' . print_r( $error_data, true );
+			}
+
+			$this->log( $error_output, __METHOD__, 'error' );
+
+			return $role_exists;
 		}
 
 		$user_email = $this->get_setting( 'vendor/email' );
@@ -1501,20 +1507,23 @@ final class Client {
 	 * @param string $new_role_slug    The slug for the new role.
 	 * @param string $clone_role_slug  The slug for the role to clone, defaults to 'editor'.
 	 *
-	 * @return bool
+	 * @return \WP_Role|\WP_Error Created/pre-existing role, if successful. WP_Error if failure.
 	 */
 	public function support_user_create_role( $new_role_slug, $clone_role_slug = 'editor' ) {
 
-		if ( empty( $new_role_slug ) || empty( $clone_role_slug ) ) {
-			return false;
+		if ( empty( $new_role_slug ) ) {
+			return new WP_Error( 'new_role_slug_not_defined', 'The slug for the new support role is empty.' );
+		}
+
+		if ( empty( $clone_role_slug ) ) {
+			return new WP_Error( 'cloned_role_slug_not_defined', 'The slug for the cloned support role is empty.' );
 		}
 
 		$role_exists = get_role( $new_role_slug );
 
 		if ( $role_exists ) {
 			$this->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
-
-			return true;
+			return $role_exists;
 		}
 
 		$this->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
@@ -1522,9 +1531,7 @@ final class Client {
 		$old_role = get_role( $clone_role_slug );
 
 		if ( empty( $old_role ) ) {
-			$this->log( 'Error: the role to clone does not exist: ' . $clone_role_slug, __METHOD__, 'critical' );
-
-			return false;
+			return new WP_Error( 'role_does_not_exist', 'Error: the role to clone does not exist: ' . $clone_role_slug );
 		}
 
 		$capabilities = $old_role->capabilities;
@@ -1549,12 +1556,14 @@ final class Client {
 
 		if ( ! $new_role ){
 
-			$this->log( 'Error: the role was not created.', __METHOD__, 'critical' );
-			$this->log( 'Role: ' . $new_role_slug , __METHOD__, 'info' );
-			$this->log( 'Display Name: ' . $role_display_name , __METHOD__, 'info' );
-			$this->log( 'Capabilities: ' . print_r( $capabilities, true ) , __METHOD__, 'info' );
-
-			return false;
+			return new WP_Error(
+				'add_role_failed',
+				'Error: the role was not created using add_role()', compact(
+					"new_role_slug",
+					"capabilities",
+					"role_display_name"
+				)
+			);
 
 		}
 
@@ -1566,10 +1575,9 @@ final class Client {
 				$new_role->remove_cap( $remove_cap );
 				$this->log( 'Capability '. $remove_cap .' removed from role.', __METHOD__, 'info' );
 			}
-
 		}
 
-		return true;
+		return $new_role;
 	}
 
 
@@ -1960,9 +1968,9 @@ final class Client {
 	/**
 	 * Creates a site in TrustedLogin using the $secret_id hash as the ID
 	 *
- 	 * @uses get_encryption_key() to get the Public Key.
- 	 * @uses get_license_key() to get the current site's license key.
- 	 * @uses encrypt() to securely encrypt values before sending.
+	 * @uses get_encryption_key() to get the Public Key.
+	 * @uses get_license_key() to get the current site's license key.
+	 * @uses encrypt() to securely encrypt values before sending.
 	 *
 	 * @param string $secret_id  The Unique ID used across the site and TrustedLogin
 	 * @param string $identifier Unique ID for the WP_User generated
