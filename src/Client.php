@@ -1307,10 +1307,8 @@ final class Client {
 			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
 		}
 
-		$role_setting = $this->get_setting( 'role', array( 'editor' => '' ) );
+		$role_setting = $this->get_setting( 'role' );
 
-		// Get the role value from the key
-		$clone_role_slug = key( $role_setting );
 		$role_exists = $this->support_user_create_role( $this->support_role, $role_setting );
 
 		if ( is_wp_error( $role_exists ) ) {
