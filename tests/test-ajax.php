@@ -28,7 +28,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	public function setUp() {
 
-		parent::setUp();
+		@parent::setUp();
 
 		$this->config = array(
 			'role' => 'editor',
