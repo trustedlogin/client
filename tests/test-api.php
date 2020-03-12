@@ -30,9 +30,7 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 		parent::setUp();
 
 		$this->config = array(
-			'role'           => array(
-				'editor' => 'Support needs to be able to access your site as an administrator to debug issues effectively.',
-			),
+			'role' => 'editor',
 			'caps'     => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',

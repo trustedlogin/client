@@ -27,9 +27,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		parent::setUp();
 
 		$this->config = array(
-			'role'             => array(
-				'editor' => 'Support needs to be able to access your site as an administrator to debug issues effectively.',
-			),
+			'role' => 'editor',
 			'caps' => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
@@ -107,9 +105,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$new_role = microtime();
 
-		$result = $this->TrustedLogin->support_user_create_role( $new_role, $role );
+		$new_role = $this->TrustedLogin->support_user_create_role( $new_role, $role );
 
-		$this->assertTrue( $result instanceof WP_Role );
+		$this->assertTrue( $new_role instanceof WP_Role );
 
 		$remove_caps = array(
 			'create_users',
@@ -120,11 +118,11 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			'remove_users',
 		);
 
-		$new_role_caps = get_role( $new_role )->capabilities;
+		$new_role_caps = $new_role->capabilities;
 		$cloned_caps = get_role( $role )->capabilities;
 
 		foreach ( $remove_caps as $remove_cap ) {
-			$this->assertFalse( in_array( $remove_cap, get_role( $new_role )->capabilities, true ) );
+			$this->assertFalse( in_array( $remove_cap, $new_role_caps, true ) );
 			unset( $cloned_caps[ $remove_cap ] );
 		}
 
@@ -233,12 +231,12 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_bad_role['vendor']['title'] = microtime();
 		$config_with_bad_role['vendor']['namespace'] = microtime();
 		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
-		$config_with_bad_role['role'] = array( 'madeuprole' => 'We do not need this; it is made-up!');
+		$config_with_bad_role['role'] = 'madeuprole';
 		$TL_config_with_bad_role = new TrustedLogin\Client( $config_with_bad_role );
 
-		$should_be_missing_role = $TL_config_with_bad_role->create_support_user();
-		$this->assertWPError( $should_be_missing_role );
-		$this->assertSame( 'role_not_created', $should_be_missing_role->get_error_code() );
+		$should_be_role_does_not_exist = $TL_config_with_bad_role->create_support_user();
+		$this->assertWPError( $should_be_role_does_not_exist );
+		$this->assertSame( 'role_does_not_exist', $should_be_role_does_not_exist->get_error_code() );
 
 
 		$valid_config = $this->config;
@@ -317,7 +315,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->assertSame( $hash_md5, $this->TrustedLogin->support_user_setup( $user->ID, $hash, $expiry ) );
 		$this->assertSame( (string) $expiry, get_user_option( $this->_get_public_property('expires_meta_key' )->getValue( $this->TrustedLogin ), $user->ID ) );
-		$this->assertSame( (string) $current->ID, get_user_option( 'tl_created_by', $user->ID ) );
+		$this->assertSame( (string) $current->ID, get_user_option( $this->_get_public_property('created_by_meta_key' )->getValue( $this->TrustedLogin ), $user->ID ) );
 
 		// We are scheduling a single event cron, so it will return `false` when using wp_get_schedule().
 		// False is the same result as an error, so we're doing more legwork here to validate.

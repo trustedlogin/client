@@ -82,6 +82,22 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$_POST['_nonce'] = wp_create_nonce( 'tl_nonce-' . $user_id );
 	}
 
+	private function _get_public_property( $name ) {
+
+		$prop = $this->TrustedLoginReflection->getProperty( $name );
+		$prop->setAccessible( true );
+
+		return $prop;
+	}
+
+	private function _get_public_method( $name ) {
+
+		$method = $this->TrustedLoginReflection->getMethod( $name );
+		$method->setAccessible( true );
+
+		return $method;
+	}
+
 
 	/**
 	 * @covers TrustedLogin::ajax_generate_support
@@ -96,7 +112,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			grant_super_admin( $current_user->ID );
 		}
 
-		unset( $_POST['vendor'] );
+/*		unset( $_POST['vendor'] );
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Vendor not defined', $this->_last_response );
 		$this->_last_response = '';
@@ -110,9 +126,9 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Nonce not sent', $this->_last_response );
 		$this->_last_response = '';
-
+*/
 		$_POST['vendor'] = $this->config['vendor']['namespace'];
-		$this->_set_nonce( 0 );
+		/*$this->_set_nonce( 0 );
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Verification issue', $this->_last_response, 'Nonce set to 0; should not validate.' );
 		$this->_set_nonce();
@@ -124,7 +140,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Permissions issue', $this->_last_response, 'User should not have permission to create users.' );
 		$this->_last_response = '';
-		$this->_delete_all_support_users();
+		$this->_delete_all_support_users();*/
 
 		/**
 		 * Create conflicting user name and try to create the user with the same username.
@@ -148,18 +164,12 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 
 		// Cause support_user_setup() to fail to trigger an error.
-		add_filter( 'get_user_metadata', $cause_error = function( $return = null, $object_id, $meta_key, $single ) {
-
-			// Force any user meta key starting with tl_ to return false
-			if ( false !== strpos( $meta_key, 'tl_' ) ) {
-				return false;
-			}
-
-			return $return;
-		}, 10, 4 );
+		add_filter( 'get_user_option_' . $this->_get_public_property( 'expires_meta_key' )->getValue(), '__return_null' );
+		add_filter( 'get_user_option_' . $this->_get_public_property( 'identifier_meta_key' )->getValue(), '__return_null' );
+		add_filter( 'get_user_option_' . $this->_get_public_property( 'created_by_meta_key' )->getValue(), '__return_null' );
 
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Error updating user', $this->_last_response, 'When support_user_setup() returns an error' );
+		$this->assertContains( 'Error updating user', $this->_last_response, 'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true ) );
 		$this->_last_response = '';
 		remove_filter( 'get_user_metadata', $cause_error );
 		$this->_delete_all_support_users();
