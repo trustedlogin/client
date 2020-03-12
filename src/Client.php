@@ -328,9 +328,10 @@ final class Client {
 	 */
 	public function init_hooks() {
 
-		add_action( 'trustedlogin_revoke_access', array( $this, 'support_user_decay' ) );
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
+
+		add_action( 'trustedlogin/' . $this->ns . '/access/revoke', array( $this, 'cron_revoke_access' ) );
 
 		add_action( 'wp_ajax_tl_gen_support', array( $this, 'ajax_generate_support' ) );
 
@@ -1488,7 +1489,7 @@ final class Client {
 	}
 
 	/**
-	 * Hooked Action: Decays (deletes a specific support user)
+	 * Hooked Action: Revokes access for a specific support user
 	 *
 	 * @since 0.2.1
 	 *
@@ -1496,7 +1497,7 @@ final class Client {
 	 *
 	 * @return void
 	 */
-	public function support_user_decay( $identifier_hash ) {
+	public function cron_revoke_access( $identifier_hash ) {
 
 		$this->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 

@@ -324,10 +324,12 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		/** @see wp_get_schedule The md5/serialize/array/md5 nonsense is replicating that behavior */
 		$cron_id = md5( serialize( array( $hash_md5 ) ) );
 
+		$cron_key = 'trustedlogin/' . $this->config['vendor']['namespace'] . '/access/revoke';
+
 		$this->assertArrayHasKey( $expiry, $crons );
-		$this->assertArrayHasKey( 'trustedlogin_revoke_access', $crons[ $expiry ] );
-		$this->assertArrayHasKey( $cron_id, $crons[ $expiry ]['trustedlogin_revoke_access'] );
-		$this->assertSame( $hash_md5, $crons[ $expiry ]['trustedlogin_revoke_access'][ $cron_id ]['args'][0] );
+		$this->assertArrayHasKey( $cron_key, $crons[ $expiry ] );
+		$this->assertArrayHasKey( $cron_id, $crons[ $expiry ][ $cron_key ] );
+		$this->assertSame( $hash_md5, $crons[ $expiry ][ $cron_key ][ $cron_id ]['args'][0] );
 	}
 
 	/**
