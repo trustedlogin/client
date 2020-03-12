@@ -264,7 +264,7 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 
 		unset( $that );
 
-		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', 'any data', 'post' ), 'The method failed to auto-uppercase methods.' );
+		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', 'any data', 'head' ), 'The method failed to auto-uppercase methods.' );
 		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', 'any data', 'HEAD' ) );
 
 		remove_filter( 'http_request_args', $filter_args );
