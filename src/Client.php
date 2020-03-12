@@ -335,11 +335,11 @@ final class Client {
 		add_action( 'wp_ajax_tl_' . $this->ns . '_gen_support', array( $this, 'ajax_generate_support' ) );
 
 		if ( is_admin() ) {
-			add_action( 'trustedlogin_button', array( $this, 'generate_button' ), 10, 2 );
+			add_action( 'trustedlogin/' . $this->ns . '/button', array( $this, 'generate_button' ), 10, 2 );
 
 			add_filter( 'user_row_actions', array( $this, 'user_row_action_revoke' ), 10, 2 );
 
-			add_action( 'trustedlogin_users_table', array( $this, 'output_support_users' ), 20 );
+			add_action( 'trustedlogin/' . $this->ns . '/users_table', array( $this, 'output_support_users' ), 20 );
 		}
 
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
