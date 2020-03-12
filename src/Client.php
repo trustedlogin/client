@@ -153,7 +153,7 @@ final class Client {
 	private $debug_mode = false;
 
 	/**
-	 * @var string $ns Plugin's namespace for use in namespacing variables and strings
+	 * @var string $ns Plugin's namespace (lowercase) for use in namespacing variables and strings. Sanitized using {@see sanitize_title_with_dashes()}
 	 * @since 0.4.0
 	 */
 	private $ns;
@@ -1090,7 +1090,7 @@ final class Client {
 
 		$this->settings = $settings;
 
-		$this->ns = $this->get_setting( 'vendor/namespace' );
+		$this->ns = sanitize_title_with_dashes( $this->get_setting( 'vendor/namespace' ) );
 
 		/**
 		 * Filter: Whether debug logging is enabled in TrustedLogin Client
