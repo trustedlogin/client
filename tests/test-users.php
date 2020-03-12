@@ -97,7 +97,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$result = $this->TrustedLogin->support_user_create_role( $new_role, $role );
 
-		$this->assertTrue( $result );
+		$this->assertTrue( $result instanceof WP_User );
 
 		$remove_caps = array(
 			'create_users',
