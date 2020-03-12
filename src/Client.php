@@ -141,6 +141,12 @@ final class Client {
 	private $expires_meta_key;
 
 	/**
+	 * @var int $created_by_meta_key The ID of the user who created the TrustedLogin access
+	 * @since 0.9.7
+	 */
+	private $created_by_meta_key;
+
+	/**
 	 * @var bool $debug_mode Whether to output debug information to a debug text file
 	 * @since 0.1.0
 	 */
@@ -589,7 +595,7 @@ final class Client {
 		}
 
 		update_user_option( $user_id, $this->identifier_meta_key, md5( $identifier_hash ), true );
-		update_user_option( $user_id, 'tl_created_by', get_current_user_id() );
+		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
 		return get_user_option( $this->identifier_meta_key, $user_id );
@@ -846,7 +852,7 @@ final class Client {
 
 		foreach ( $support_users as $support_user ) {
 
-			$_user_creator = get_user_by( 'id', get_user_option( 'tl_created_by', $support_user->ID ) );
+			$_user_creator = get_user_by( 'id', get_user_option( $this->created_by_meta_key, $support_user->ID ) );
 
 			$return .= '<tr>';
 			$return .= '<th scope="row"><a href="' . esc_url( admin_url( 'user-edit.php?user_id=' . $support_user->ID ) ) . '">';
@@ -1140,6 +1146,7 @@ final class Client {
 
 		$this->identifier_meta_key = 'tl_' . $this->ns . '_id';
 		$this->expires_meta_key    = 'tl_' . $this->ns . '_expires';
+		$this->created_by_meta_key = 'tl_' . $this->ns . '_created_by';
 
 		/**
 		 * Filter: Sets the site option name for the Shareable accessKey if it's used
