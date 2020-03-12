@@ -458,7 +458,11 @@ final class Client {
 			wp_send_json_error( array( 'message' => 'Permissions issue: You do not have the ability to create users.' ) );
 		}
 
-		$support_user_id = $this->create_support_user();
+		try {
+			$support_user_id = $this->create_support_user();
+		} catch ( Exception $exception ) {
+			wp_send_json_error( array( 'message' => $exception->getMessage() ), 500 );
+		}
 
 		if ( is_wp_error( $support_user_id ) ) {
 
@@ -1521,8 +1525,16 @@ final class Client {
 			return new WP_Error( 'new_role_slug_not_defined', 'The slug for the new support role is empty.' );
 		}
 
+		if ( ! is_string( $new_role_slug ) ) {
+			return new WP_Error( 'new_role_slug_not_string', 'The slug for the new support role must be a string.' );
+		}
+
 		if ( empty( $clone_role_slug ) ) {
 			return new WP_Error( 'cloned_role_slug_not_defined', 'The slug for the cloned support role is empty.' );
+		}
+
+		if ( ! is_string( $clone_role_slug ) ) {
+			return new WP_Error( 'cloned_role_slug_not_string', 'The slug for the cloned support role must be a string.' );
 		}
 
 		$role_exists = get_role( $new_role_slug );

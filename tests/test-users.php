@@ -95,7 +95,16 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->assertWPError( $cloned_role_slug_not_defined, 'empty clone role' );
 		$this->assertEquals( 'cloned_role_slug_not_defined', $cloned_role_slug_not_defined->get_error_code() );
 
+		$not_string_new_role = $this->TrustedLogin->support_user_create_role( array('asdasd'), 'administrator' );
+		$this->assertWPError( $not_string_new_role, 'not string new role' );
+		$this->assertEquals( 'new_role_slug_not_string', $not_string_new_role->get_error_code(), 'not string new role' );
+
+		$not_string_clone_role = $this->TrustedLogin->support_user_create_role( 'administrator', array('asdasd') );
+		$this->assertWPError( $not_string_clone_role, 'not string clone role' );
+		$this->assertEquals( 'cloned_role_slug_not_string', $not_string_clone_role->get_error_code(), 'not string clone role' );
+
 		$this->assertTrue( $this->TrustedLogin->support_user_create_role( 'administrator', '1' ) instanceof WP_Role, 'role already exists' );
+
 	}
 
 	/**
