@@ -2310,8 +2310,9 @@ final class Client {
 		$ns          = $this->get_setting( 'vendor/namespace' );
 
 		$logo_output = '';
+		$logo_url = $this->get_setting( 'vendor/logo_url' );
 
-		if ( ! empty( $this->get_setting( 'vendor/logo_url' ) ) ) {
+		if ( ! empty( $logo_url ) ) {
 
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img class="tl-auth-logo" src="%3$s" alt="%4$s" /></a>',
