@@ -590,8 +590,8 @@ final class Client {
 
 			$scheduled_expiration = wp_schedule_single_event(
 				$expiration_timestamp,
-				array( md5( $identifier_hash ) )
 				'trustedlogin/' . $this->ns . '/access/revoke',
+				array( $this->hash( $identifier_hash ) )
 			);
 
 			$this->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
@@ -599,7 +599,7 @@ final class Client {
 			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
 		}
 
-		update_user_option( $user_id, $this->identifier_meta_key, md5( $identifier_hash ), true );
+		update_user_option( $user_id, $this->identifier_meta_key, $this->hash( $identifier_hash ), true );
 		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
@@ -1472,7 +1472,7 @@ final class Client {
 	 * @return string This hash will be used as the first part of the URL and also a part of $secret_id
 	 */
 	private function get_endpoint_hash( $identifier_hash ) {
-		return md5( get_site_url() . $identifier_hash );
+		return $this->hash( get_site_url() . $identifier_hash );
 	}
 
 	/**
@@ -1489,7 +1489,16 @@ final class Client {
 			$endpoint_hash = $this->get_endpoint_hash( $identifier_hash );
 		}
 
-		return md5( $endpoint_hash . $identifier_hash );
+		return $this->hash( $endpoint_hash . $identifier_hash );
+	}
+
+	/**
+	 * @param $string
+	 *
+	 * @return string
+	 */
+	private function hash( $string ) {
+		return md5( $string );
 	}
 
 	/**
@@ -1626,9 +1635,9 @@ final class Client {
 	 */
 	public function get_support_user( $identifier = '' ) {
 
-		// When passed in the endpoint URL, the unique ID will be the raw value, not the md5 hash.
+		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
 		if ( strlen( $identifier ) > 32 ) {
-			$identifier = md5( $identifier );
+			$identifier = $this->hash( $identifier );
 		}
 
 		$args = array(
@@ -1919,7 +1928,7 @@ final class Client {
 	 */
 	private function get_shareable_accesskey(){
 
-		$hash = md5( get_site_url() . $this->get_setting( 'auth/public_key' ) );
+		$hash = $this->hash( get_site_url() . $this->get_setting( 'auth/public_key' ) );
 
 		/**
 		 * Filter: Allow for over-riding the shareable 'accessKey' prefix
