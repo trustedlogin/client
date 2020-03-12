@@ -590,8 +590,8 @@ final class Client {
 
 			$scheduled_expiration = wp_schedule_single_event(
 				$expiration_timestamp,
-				'trustedlogin_revoke_access',
 				array( md5( $identifier_hash ) )
+				'trustedlogin/' . $this->ns . '/access/revoke',
 			);
 
 			$this->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
