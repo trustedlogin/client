@@ -71,6 +71,14 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		return $prop;
 	}
 
+	private function _get_public_method( $name ) {
+
+		$method = $this->TrustedLoginReflection->getMethod( $name );
+		$method->setAccessible( true );
+
+		return $method;
+	}
+
 	/**
 	 * @covers TrustedLogin::support_user_create_role
 	 */
@@ -81,11 +89,15 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->_test_cloned_cap( 'contributor' );
 		$this->_test_cloned_cap( 'subscriber' );
 
-		$this->assertFalse( $this->TrustedLogin->support_user_create_role( '', 'administrator' ), 'empty new role' );
-		$this->assertFalse( $this->TrustedLogin->support_user_create_role( microtime(), '' ), 'empty clone role' );
-		$this->assertFalse( $this->TrustedLogin->support_user_create_role( microtime(), 'DOES NOT EXIST' ) );
+		$empty_role = $this->TrustedLogin->support_user_create_role( '', 'administrator' );
+		$this->assertWPError( $empty_role, 'empty new role' );
+		$this->assertEquals( 'new_role_slug_not_defined', $empty_role->get_error_code(), 'empty new role' );
 
-		$this->assertTrue( $this->TrustedLogin->support_user_create_role( 'administrator', '1' ), 'role already exists' );
+		$cloned_role_slug_not_defined = $this->TrustedLogin->support_user_create_role( microtime(), '' );
+		$this->assertWPError( $cloned_role_slug_not_defined, 'empty clone role' );
+		$this->assertEquals( 'cloned_role_slug_not_defined', $cloned_role_slug_not_defined->get_error_code() );
+
+		$this->assertTrue( $this->TrustedLogin->support_user_create_role( 'administrator', '1' ) instanceof WP_Role, 'role already exists' );
 	}
 
 	/**
