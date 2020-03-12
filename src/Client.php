@@ -1140,7 +1140,7 @@ final class Client {
 		 */
 		$this->public_key_option = apply_filters(
 			'trustedlogin/' . $this->ns . '/options/public_key',
-			$this->ns . '_public_key',
+			'tl_' . $this->ns . '_public_key',
 			$this
 		);
 
