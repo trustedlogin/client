@@ -1903,7 +1903,7 @@ final class Client {
 	 *
 	 * @since 0.9.2
 	 *
-	 * @return  string  Access Key prepended with TL|
+	 * @return  string  Access Key prepended with TL.
 	 */
 	private function get_shareable_accesskey(){
 
@@ -1914,7 +1914,7 @@ final class Client {
 		 *
 		 * @since 0.9.2
 		 */
-		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->ns . '/access_key_prefix' , 'TL|');
+		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->ns . '/access_key_prefix' , 'TL.');
 
 		$length 			= strlen( $access_key_prefix );
 		$access_key 		= $access_key_prefix . substr( $hash, $length );
@@ -1942,7 +1942,7 @@ final class Client {
 		 *
 		 * @since 0.9.2
 		 */
-		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->ns . '/access_key_prefix' , 'TL|');
+		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->ns . '/access_key_prefix' , 'TL.');
 		$length 			= strlen( $access_key_prefix );
 
 		return ( substr( $license , 0, $length ) === $access_key_prefix );
