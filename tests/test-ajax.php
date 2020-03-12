@@ -26,7 +26,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	private $config;
 
+	/**
+	 * @var int Get around Travis being annoying
+	 */
+	private $_real_error_level;
+
 	public function setUp() {
+
+		$this->_real_error_level = error_reporting();
 
 		// Don't show errors at all while setting up WP_Ajax_UnitTestCase
 		error_reporting( 0 );
@@ -65,7 +72,10 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	}
 
 	public function tearDown() {
+
 		parent::tearDown();
+
+		error_reporting( $this->_real_error_level );
 
 		$this->_delete_all_support_users();
 	}
