@@ -28,7 +28,13 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	public function setUp() {
 
-		@parent::setUp();
+		ob_start();
+		parent::setUp();
+		$output = ob_get_clean();
+
+		if ( $output ) {
+			echo 'Output from ' . __METHOD__ . '::setUp(): ' . $output;
+		}
 
 		$this->config = array(
 			'role' => 'editor',
