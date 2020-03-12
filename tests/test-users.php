@@ -188,7 +188,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 			// manage_links is magical.
 			if ( 'manage_links' === $expected_cap ) {
-				$expect = ! empty( get_option( 'link_manager_enabled' ) );
+				$link_manager_enabled = get_option( 'link_manager_enabled' );
+				$expect = ! empty( $link_manager_enabled );
 			}
 
 			/**
