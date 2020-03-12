@@ -328,12 +328,11 @@ final class Client {
 	 */
 	public function init_hooks() {
 
-
 		add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
 
 		add_action( 'trustedlogin/' . $this->ns . '/access/revoke', array( $this, 'cron_revoke_access' ) );
 
-		add_action( 'wp_ajax_tl_gen_support', array( $this, 'ajax_generate_support' ) );
+		add_action( 'wp_ajax_tl_' . $this->ns . '_gen_support', array( $this, 'ajax_generate_support' ) );
 
 		if ( is_admin() ) {
 			add_action( 'trustedlogin_button', array( $this, 'generate_button' ), 10, 2 );
@@ -443,6 +442,7 @@ final class Client {
 
 		// There are multiple TrustedLogin instances, and this is not the one being called.
 		if ( $this->ns !== $_POST['vendor'] ) {
+			wp_send_json_error( array( 'message' => 'Vendor does not match.' ) );
 			return;
 		}
 

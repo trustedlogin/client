@@ -117,7 +117,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$_POST['vendor'] = 'asdasd';
 		$this->_catchHandleAjax();
-		$this->assertSame( '', $this->_last_response, 'Vendor does not match config vendor.' );
+		$this->assertContains( 'Vendor does not match.', $this->_last_response, 'Vendor does not match config vendor.' );
 		$this->_last_response = '';
 
 		$_POST['vendor'] = $this->config['vendor']['namespace'];
@@ -232,7 +232,10 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	function _catchHandleAjax( $action = 'tl_gen_support' ) {
+	function _catchHandleAjax( $action = 'tl_%s_gen_support' ) {
+
+		$action = sprintf( $action, $this->config['vendor']['namespace'] );
+
 		try {
 			$this->_handleAjax( $action );
 		} catch ( Exception $e ) {

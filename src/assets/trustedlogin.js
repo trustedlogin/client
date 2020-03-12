@@ -90,7 +90,7 @@
 
 		function triggerLoginGeneration() {
 			var data = {
-				'action': 'tl_gen_support',
+				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
 				'vendor': tl_obj.vendor.namespace,
 				'_nonce': tl_obj._nonce,
 			};
