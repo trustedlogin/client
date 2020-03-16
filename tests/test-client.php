@@ -1,14 +1,42 @@
 <?php
 /**
- * Class TrustedLoginAPITest
+ * Class TrustedLoginClientTest
  *
- * @package Trustedlogin_Button
+ * @package TrustedLogin\Client
  */
 
+namespace TrustedLogin;
+
+use WP_UnitTestCase;
+use WP_Error;
+
 /**
- * Sample test case.
+ * Override default function_exists() behavior
+ * @see https://stackoverflow.com/a/34386422/480856
+ *
+ * @param $function
+ *
+ * @return bool
  */
-class TrustedLoginAPITest extends WP_UnitTestCase {
+function function_exists( $function ) {
+
+	if ( in_array( $function, TrustedLoginClientTest::$functions_not_exist, true ) ) {
+		return false;
+	}
+
+	return \function_exists( $function );
+}
+
+function openssl_random_pseudo_bytes($length, &$crypto_strong = null) {
+
+	if ( ! TrustedLoginClientTest::$openssl_crypto_strong ) {
+		$crypto_strong = false;
+	}
+
+	return \function_exists( $length );
+}
+
+class TrustedLoginClientTest extends WP_UnitTestCase {
 
 	/**
 	 * @var TrustedLogin
@@ -25,11 +53,15 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 	 */
 	private $config;
 
+	public static $functions_not_exist = array();
+
+	public static $openssl_crypto_strong = true;
+
 	public function setUp() {
 
 		parent::setUp();
 
-		$this->config = array(
+		$config = array(
 			'role' => 'editor',
 			'caps'     => array(
 				'add' => array(
@@ -55,99 +87,15 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 			'reassign_posts' => true,
 		);
 
-		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
+		$this->config = new Config( $config );
 
-		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+		$this->TrustedLogin = new Client( $this->config );
+
+		$this->TrustedLoginReflection = new \ReflectionClass( '\TrustedLogin\Client' );
 	}
 
 	public function tearDown() {
 		parent::tearDown();
-	}
-
-	/**
-	 * @covers \TrustedLogin\Client::__construct
-	 */
-	public function test_constructor() {
-
-		$expected_codes = array(
-			1 => 'empty configuration array',
-			2 => 'replace default namespace',
-			3 => 'invalid configuration array',
-		);
-
-		try {
-			new TrustedLogin\Client( array() );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 1, $exception->getCode(), $expected_codes[1] );
-		}
-
-		try {
-			new TrustedLogin\Client( array(
-				'vendor' => true
-			) );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] . ' ' .$exception->getMessage() );
-			$this->assertContains( 'public key', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/namespace', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/title', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/email', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
-		}
-
-		try {
-			new TrustedLogin\Client( array(
-				'vendor' => true,
-				'auth' => array( 'public_key' => 'asdasd' ),
-			) );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
-			$this->assertNotContains( 'public key', $exception->getMessage(), $expected_codes[3] );
-		}
-
-		$valid_config = array(
-			'auth' => array(
-				'public_key' => 'not empty',
-			),
-			'webhook_url' => 'https://www.google.com',
-			'vendor' => array(
-				'namespace' => 'jonesbeach',
-				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
-				'email' => 'beach@example.com',
-				'website' => 'https://example.com',
-				'support_url' => 'https://example.com',
-			),
-		);
-
-
-		try {
-			$missing_namespace = $valid_config;
-			unset( $missing_namespace['vendor']['namespace'] );
-			new TrustedLogin\Client( $missing_namespace );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
-			$this->assertContains( 'vendor/namespace', $exception->getMessage(), $expected_codes[3] );
-			$this->assertNotContains( 'public key', $exception->getMessage(), $expected_codes[3] );
-			$this->assertNotContains( 'vendor/title', $exception->getMessage(), $expected_codes[3] );
-			$this->assertNotContains( 'vendor/email', $exception->getMessage(), $expected_codes[3] );
-			$this->assertNotContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
-			$this->assertNotContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
-		}
-
-		try {
-			$invalid_website_url = $valid_config;
-			$invalid_website_url['webhook_url'] = 'asdasdsd';
-			$invalid_website_url['vendor']['support_url'] = 'asdasdsd';
-			$invalid_website_url['vendor']['website'] = 'asdasdsd';
-			new TrustedLogin\Client( $invalid_website_url );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
-			$this->assertContains( 'webhook_url', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
-		}
 	}
 
 	/**
@@ -177,74 +125,43 @@ class TrustedLoginAPITest extends WP_UnitTestCase {
 	 */
 	public function test_get_license_key() {
 
-		$this->assertSame( $this->config['auth']['license_key'], $this->TrustedLogin->get_license_key() );
+		$this->assertSame( $this->config->get_setting( 'auth/license_key' ), $this->TrustedLogin->get_license_key() );
 
-		add_filter( 'trustedlogin/' . $this->config['vendor']['namespace'] . '/licence_key', '__return_zero' );
+		add_filter( 'trustedlogin/' . $this->config->ns() . '/licence_key', '__return_zero' );
 
 		$this->assertSame( 0, $this->TrustedLogin->get_license_key() );
 
-		remove_filter( 'trustedlogin/' . $this->config['vendor']['namespace'] . '/licence_key', '__return_zero' );
+		remove_filter( 'trustedlogin/' . $this->config->ns() . '/licence_key', '__return_zero' );
 
 	}
 
 	/**
-	 * @covers \TrustedLogin\Client::get_setting()
+	 * @covers \TrustedLogin\Client::generate_identifier_hash
+	 * @uses \TrustedLogin\openssl_random_pseudo_bytes()
+	 * @uses \TrustedLogin\function_exists()
 	 */
-	public function test_get_setting() {
+	public function test_generate_identifier_hash() {
 
-		$config = array(
-			'auth' => array(
-				'public_key' => 'not empty',
-			),
-			'webhook_url' => 'https://www.google.com',
-			'vendor' => array(
-				'namespace' => 'jones-party',
-				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
-				'email' => 'beach@example.com',
-				'website' => 'https://example.com',
-				'support_url' => 'https://asdasdsd.example.com/support/',
-			),
-			'paths' => array(
-				'css' => null,
-			),
-			'decay' => 0,
-		);
+		self::$functions_not_exist = array( 'random_bytes', 'openssl_random_pseudo_bytes' );
 
-		$TL = new \TrustedLogin\Client( $config );
+		$hash = $this->TrustedLogin->generate_identifier_hash();
+		$this->assertEquals( 'generate_hash_failed', $hash->get_error_code() );
 
-		$this->assertEquals( 0, $TL->get_setting( 'decay' ) );
+		$this->assertWPError( $hash );
 
-		$this->assertEquals( 'https://www.google.com', $TL->get_setting( 'webhook_url') );
+		// OpenSSL exists, but not strong crypto
+		self::$functions_not_exist = array( 'random_bytes' );
+		self::$openssl_crypto_strong = false;
+		$hash = $this->TrustedLogin->generate_identifier_hash();
 
-		$this->assertEquals( 'Jones Beach Party', $TL->get_setting( 'vendor/title') );
+		$this->assertWPError( $hash );
+		$this->assertEquals( 'openssl_not_strong_crypto', $hash->get_error_code() );
 
-		$this->assertEquals( false, $TL->get_setting( 'non-existent key') );
+		self::$functions_not_exist = array();
+		self::$openssl_crypto_strong = true;
+		$hash = $this->TrustedLogin->generate_identifier_hash();
 
-		$this->assertEquals( 'default override', $TL->get_setting( 'non-existent key', 'default override' ) );
-
-		$this->assertEquals( false, $TL->get_setting( 'vendor/first_name' ), 'Should use method default value (false) when returned value is NULL' );
-
-		$this->assertEquals( 'default override', $TL->get_setting( 'vendor/first_name', 'default override' ), 'should use default override if value is NULL' );
-
-		$this->assertEquals( '', $TL->get_setting( 'vendor/last_name' ) );
-
-
-		$this->assertNotNull( $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
-		$this->assertNotFalse( $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
-		$this->assertContains( '.css', $TL->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
-
-		// Test passed array values
-		$passed_array = array(
-			'try' => 'and try again',
-			'first' => array(
-				'three_positive_integers' => 123,
-			),
-		);
-		$this->assertEquals( 'and try again', $TL->get_setting( 'try', null, $passed_array ) );
-		$this->assertEquals( null, $TL->get_setting( 'missssing', null, $passed_array ) );
-		$this->assertEquals( '123', $TL->get_setting( 'first/three_positive_integers', null, $passed_array ) );
+		$this->assertEquals( 64, strlen( $hash ), print_r( $hash, true ) );
 	}
 
 	/**

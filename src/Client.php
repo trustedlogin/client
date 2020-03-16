@@ -65,52 +65,12 @@ final class Client {
 	);
 
 	/**
-	 * @var array Default settings values
-	 * @since 0.9.6
+	 * @var \TrustedLogin\Config $settings Configuration object after parsed and validated
 	 */
-	private $default_settings = array(
-		'debug' => false,
-		'auth' => array(
-			'public_key' => null,
-			'private_key' => null,
-		),
-		'decay' => WEEK_IN_SECONDS,
-		'role' => 'editor',
-		'paths' => array(
-			'css' => null, // Default is defined in get_default_settings()
-			'js'  => null, // Default is defined in get_default_settings()
-		),
-		'caps' => array(
-			'add' => array(
-			),
-			'remove' => array(
-			),
-		),
-		'webhook_url' => null,
-		'vendor' => array(
-			'namespace' => null,
-			'title' => null,
-			'first_name' => null,
-			'last_name' => null,
-			'email' => null,
-			'website' => null,
-			'support_url' => null,
-			'logo_url' => null,
-		),
-		'menu' => array(
-			'slug' => null,
-			'title' => null,
-			'priority' => null,
-		),
-		'reassign_posts' => true,
-		'require_ssl' => true,
-	);
+	private $config;
 
 	/**
-	 * @var array $settings Configuration array after parsed and validated
-	 * @since 0.1.0
 	 */
-	private $settings = array();
 
 	/**
 	 * @var string $support_role The namespaced name of the new Role to be created for Support Agents
@@ -175,97 +135,25 @@ final class Client {
 	 *
 	 * @see https://docs.trustedlogin.com/ for more information
 	 *
-	 * Then you can get TrustedLogin running by using code:
-	 *
-	 * <code>
-	 * $configuration_array = array(
-	 *   'auth' => array(
-	 *     'public_key' => '1a2b3c4d5e6f', // Get this from your TrustedLogin.com account page
-	 *   ),
-	 *   'vendor' => array(
-	 *     'namespace' => 'example',
-	 *   ),
-	 * );
-	 * new \TrustedLogin\TrustedLogin( $configuration_array );
-	 * </code>
-	 *
-	 * @param array $config
+	 * @param Config $config
 	 *
 	 * @throws Exception;
 	 */
-	public function __construct( $config = array() ) {
+	public function __construct( Config $config ) {
 
-		$settings = $this->parse_settings( $config );
-
-		$is_valid = $this->is_valid_configuration( $config, $settings );
-
-		if ( ! $is_valid ) {
+		try {
+			$config->validate();
+		} catch ( Exception $exception ) {
 			return;
 		}
 
-		$this->init_properties( $settings );
+		$this->init_properties( $config );
 		$this->init_hooks();
 	}
 
 	/**
-	 * @param array $config
-	 * @param array $settings
-	 * @param bool  $throw_exception
+	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
 	 *
-	 * @throws \Exception
-	 */
-	private function is_valid_configuration( $passed_config, $settings ) {
-
-		if ( empty( $passed_config ) ) {
-			throw new \Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
-		}
-
-		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
-			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
-		}
-
-		$errors = array();
-
-		if ( ! isset( $passed_config['auth']['public_key'] ) ) {
-			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
-		}
-
-		foreach( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
-			if ( ! isset( $passed_config['vendor'][ $required_vendor_field ] ) ) {
-				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
-			}
-		}
-
-		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
-			$value = $this->get_setting( $settings_key, null, $passed_config );
-			$url = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
-			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
-				$errors[] = new WP_Error(
-					'invalid_configuration',
-					sprintf( 'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
-						$settings_key,
-						print_r( $this->get_setting( $settings_key, null, $passed_config ), true )
-					)
-				);
-			}
-		}
-
-		if ( $errors ) {
-			$error_text = array();
-			foreach ( $errors as $error ) {
-				if ( is_wp_error( $error ) ) {
-					$error_text[] = $error->get_error_message();
-				}
-			}
-
-			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
-			$exception_text .= "\n- " . implode( "\n- ", $error_text );
-
-			throw new \Exception( $exception_text, 3 );
-		}
-
-		return true;
-	}
 
 	/**
 	 * @param string $text Message to log
@@ -314,7 +202,7 @@ final class Client {
 	 */
 	private function is_valid_ssl_setting(){
 
-		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ){
+		if ( $this->config->get_setting( 'require_ssl', true ) && ! is_ssl() ){
 			return false;
 		}
 
@@ -343,7 +231,7 @@ final class Client {
 		}
 
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
-		add_action( 'admin_menu', array( $this, 'admin_menu_auth_link_page' ), $this->get_setting( 'menu/priority', 100 ) );
+		add_action( 'admin_menu', array( $this, 'admin_menu_auth_link_page' ), $this->config->get_setting( 'menu/priority', 100 ) );
 
 		add_action( 'admin_init', array( $this, 'admin_maybe_revoke_support' ), 100 );
 
@@ -473,6 +361,10 @@ final class Client {
 
 		$identifier_hash = $this->generate_identifier_hash();
 
+		if ( is_wp_error( $identifier_hash ) ) {
+			wp_send_json_error( array( 'message' => 'Could not generate a secure secret.' ), 501 );
+		}
+
 		$endpoint = $this->get_endpoint_hash( $identifier_hash );
 
 		$this->update_endpoint( $endpoint );
@@ -541,7 +433,7 @@ final class Client {
 	public function get_expiration_timestamp( $decay_time = null ) {
 
 		if ( is_null( $decay_time ) ) {
-			$decay_time = $this->get_setting( 'decay' );
+			$decay_time = $this->config->get_setting( 'decay' );
 		}
 
 		if ( 0 === $decay_time ) {
@@ -569,10 +461,42 @@ final class Client {
 	 * The hash is stored as usermeta, and is used when generating $secret_id.
 	 * Both parts are required to access the site.
 	 *
-	 * @return string
+	 * @return string|WP_Error
 	 */
 	public function generate_identifier_hash() {
-		return wp_generate_password( 64, false, false );
+
+		$hash = false;
+
+		if( function_exists( 'random_bytes' ) ) {
+			try {
+				$hash = random_bytes( 64 );
+			} catch ( \TypeError $e ) {
+				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+			} catch ( \Error $e ) {
+				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+			} catch ( \Exception $e ) {
+				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+			}
+		} else {
+			$this->logger->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
+		}
+
+		if( $hash ) {
+			return $hash;
+		}
+
+		if( ! function_exists( 'openssl_random_pseudo_bytes' ) ) {
+			return new WP_Error( 'generate_hash_failed', 'Could not generate a secure hash with random_bytes or openssl.' );
+		}
+
+		$crypto_strong = false;
+		$hash = openssl_random_pseudo_bytes( 64, $crypto_strong );
+
+		if ( ! $crypto_strong ) {
+			return new WP_Error( 'openssl_not_strong_crypto', 'Site could not generate a secure hash with OpenSSL.' );
+		}
+
+		return $hash;
 	}
 
 	/**
@@ -636,7 +560,7 @@ final class Client {
 
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin',
-			$this->get_setting( 'paths/js' ),
+			$this->config->get_setting( 'paths/js' ),
 			array( 'jquery-confirm' ),
 			self::version,
 			true
@@ -644,7 +568,7 @@ final class Client {
 
 		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin',
-			$this->get_setting( 'paths/css' ),
+			$this->config->get_setting( 'paths/css' ),
 			array( 'jquery-confirm' ),
 			self::version,
 			'all'
@@ -685,7 +609,7 @@ final class Client {
 		wp_enqueue_style( 'trustedlogin' );
 
 		$button_settings = array(
-			'vendor'   => $this->get_setting( 'vendor' ),
+			'vendor'   => $this->config->get_setting( 'vendor' ),
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
 			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
@@ -727,13 +651,13 @@ final class Client {
 	public function get_button( $atts = array() ) {
 
 		$defaults = array(
-			'text'        => sprintf( esc_html__( 'Grant %s Support Access', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ),
-			'exists_text' => sprintf( esc_html__( '✅ %s Support Has An Account', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ),
+			'text'        => sprintf( esc_html__( 'Grant %s Support Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'exists_text' => sprintf( esc_html__( '✅ %s Support Has An Account', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // "a", "button", "span"
 			'powered_by'  => true,
-			'support_url' => $this->get_setting( 'vendor/support_url' ),
+			'support_url' => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
 		$sizes = array( 'small', 'normal', 'large', 'hero' );
@@ -809,7 +733,7 @@ final class Client {
 			return '';
 		}
 
-		// The `trustedlogin_button` action passes an empty string
+		// The `trustedlogin/{$ns}/button` action passes an empty string
 		if ( '' === $print ) {
 			$print = true;
 		}
@@ -818,7 +742,7 @@ final class Client {
 
 		if ( empty( $support_users ) ) {
 
-			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ) . '</h3>';
+			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
 
 			if ( $print ) {
 				echo $return;
@@ -829,7 +753,7 @@ final class Client {
 
 		$return = '';
 
-		$return .= '<h3>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ) . '</h3>';
+		$return .= '<h3>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
 
 		$return .= '<table class="wp-list-table widefat plugins">';
 
@@ -906,7 +830,7 @@ final class Client {
 
 		$result['intro'] = sprintf(
 			__( 'Grant %1$s Support access to your site.', 'trustedlogin' ),
-			$this->get_setting( 'vendor/title' )
+			$this->config->get_setting( 'vendor/title' )
 		);
 
 		$result['description'] = sprintf( '<p class="description">%1$s</p>',
@@ -918,7 +842,7 @@ final class Client {
 		$roles_output .= sprintf( '<li class="tl-role"><p>%1$s</p></li>',
 			sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
 				$this->support_role,
-				$this->get_setting( 'role' )
+				$this->config->get_setting( 'role' )
 			)
 		);
 
@@ -926,7 +850,7 @@ final class Client {
 
 		// Extra Caps
 		$caps_output = '';
-		foreach ( (array) $this->get_setting( 'caps/add' ) as $cap => $reason ) {
+		foreach ( (array) $this->config->get_setting( 'caps/add' ) as $cap => $reason ) {
 			$caps_output .= sprintf( '<li class="caps-added"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'With the additional \'%1$s\' Capability.', 'trustedlogin' ),
 					$cap
@@ -934,7 +858,7 @@ final class Client {
 				$reason
 			);
 		}
-		foreach ( (array) $this->get_setting( 'caps/remove' ) as $cap => $reason ) {
+		foreach ( (array) $this->config->get_setting( 'caps/remove' ) as $cap => $reason ) {
 			$caps_output .= sprintf( '<li class="caps-removed"> %1$s <br /><small>%2$s</small></li>',
 				sprintf( esc_html__( 'The \'%1$s\' Capability will not be granted.', 'trustedlogin' ),
 					$cap
@@ -997,7 +921,7 @@ final class Client {
 	 */
 	public function output_secondary_alerts() {
 
-		$vendor_title = $this->get_setting( 'vendor/title' );
+		$vendor_title = $this->config->get_setting( 'vendor/title' );
 
 		/**
 		 * Filter: Allow for adding into GET parameters on support_url
@@ -1026,7 +950,7 @@ final class Client {
 			),
 			sprintf(
 				__( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s Support Site', 'trustedlogin' ),
-				esc_url( add_query_arg( $query_args, $this->get_setting( 'vendor/support_url' ) ) ),
+				esc_url( add_query_arg( $query_args, $this->config->get_setting( 'vendor/support_url' ) ) ),
 				$vendor_title
 			)
 		);
@@ -1091,11 +1015,11 @@ final class Client {
 		return $secondary_alert_translations;
 	}
 
-	protected function init_properties( $settings ) {
+	protected function init_properties( $config ) {
 
-		$this->settings = $settings;
+		$this->config = $config;
 
-		$this->ns = sanitize_title_with_dashes( $this->get_setting( 'vendor/namespace' ) );
+		$this->ns = $this->config->ns();
 
 		/**
 		 * Filter: Whether debug logging is enabled in TrustedLogin Client
@@ -1104,7 +1028,9 @@ final class Client {
 		 *
 		 * @param bool $debug_mode Default: false
 		 */
-		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->ns . '/debug/enabled', $this->get_setting( 'debug' ) );
+		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->ns . '/debug/enabled', $this->config->get_setting( 'debug' ) );
+
+		$this->logger = new \TrustedLogin\Logger( $config );
 
 		/**
 		 * Filter: Set support_role value
@@ -1169,63 +1095,9 @@ final class Client {
 	}
 
 	/**
-	 * Validate and initialize settings array passed to the Client contructor
+	 * Alias for Config::get_setting()
 	 *
-	 * @param array|string $config Configuration array or JSON-encoded configuration array
-	 *
-	 * @return bool|WP_Error[] true: Initialization succeeded; array of WP_Error objects if there are any issues.
-	 */
-	protected function parse_settings( $config ) {
-
-		if ( is_string( $config ) ) {
-			$config = json_decode( $config, true );
-		}
-
-		if ( ! is_array( $config ) || empty( $config ) ) {
-			return array( new WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
-		}
-
-		$defaults = $this->get_default_settings();
-
-		$filtered_config = array_filter( $config, array( $this, 'is_not_null' ) );
-
-		return shortcode_atts( $defaults, $filtered_config );
-	}
-
-	/**
-	 * Filter out null input values
-	 *
-	 * @internal Used for parsing settings
-	 *
-	 * @param mixed $input Input to test against.
-	 *
-	 * @return bool True: not null. False: null
-	 */
-	protected function is_not_null( $input ) {
-		return ! is_null( $input );
-	}
-
-	/**
-	 * Gets the default settings for the Client and define dynamic defaults (like paths/css and paths/js)
-	 *
-	 * @since 0.9.6
-	 *
-	 * @return array Array of default settings.
-	 */
-	private function get_default_settings() {
-
-		$default_settings = $this->default_settings;
-
-		$default_settings['paths']['css'] = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.css';
-		$default_settings['paths']['js']  = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.js';
-
-		return $default_settings;
-	}
-
-	/**
-	 * Helper Function: Get a specific setting or return a default value.
-	 *
-	 * @since 0.1.0
+	 * @see \TrustedLogin\Config::get_setting()
 	 *
 	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name'])
 	 * @param mixed $default - if no setting found or settings not init, return this value.
@@ -1234,72 +1106,7 @@ final class Client {
 	 * @return string|array
 	 */
 	public function get_setting( $key, $default = null, $settings = array() ) {
-
-		if ( empty( $settings ) ) {
-			$settings = $this->settings;
-		}
-
-		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			$this->log( 'Settings have not been configured, returning default value', __METHOD__, 'critical' );
-			return $default;
-		}
-
-		if ( is_null( $default ) ) {
-			$default = $this->get_multi_array_value( $this->get_default_settings(), $key );
-		}
-
-		return $this->get_multi_array_value( $settings, $key, $default );
-	}
-
-	/**
-	 * Gets a specific property value within a multidimensional array.
-	 *
-	 * @param array  $array   The array to search in.
-	 * @param string $name    The name of the property to find.
-	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
-	 *
-	 * @return null|string|mixed The value
-	 */
-	private function get_multi_array_value( $array, $name, $default = null ) {
-
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
-			return $default;
-		}
-
-		$names = explode( '/', $name );
-		$val   = $array;
-		foreach ( $names as $current_name ) {
-			$val = $this->get_array_value( $val, $current_name, $default );
-		}
-
-		return $val;
-	}
-
-	/**
-	 * Get a specific property of an array without needing to check if that property exists.
-	 *
-	 * Provide a default value if you want to return a specific value if the property is not set.
-	 *
-	 * @param array  $array   Array from which the property's value should be retrieved.
-	 * @param string $prop    Name of the property to be retrieved.
-	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
-	 *
-	 * @return null|string|mixed The value
-	 */
-	private function get_array_value( $array, $prop, $default = null ) {
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof \ArrayAccess ) ) {
-			return $default;
-		}
-
-		if ( isset( $array[ $prop ] ) ) {
-			$value = $array[ $prop ];
-		} else {
-			$value = '';
-		}
-
-		$value_is_zero = 0 === $value;
-
-		return ( empty( $value ) && ! $value_is_zero ) && $default !== null ? $default : $value;
+		return $this->config->get_setting( $key, $default, $settings );
 	}
 
 	/**
@@ -1311,7 +1118,7 @@ final class Client {
 	 */
 	public function create_support_user() {
 
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) );
+		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( $user_id = username_exists( $user_name ) ) {
 			$this->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
@@ -1319,7 +1126,7 @@ final class Client {
 			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
 		}
 
-		$role_setting = $this->get_setting( 'role' );
+		$role_setting = $this->config->get_setting( 'role' );
 
 		$role_exists = $this->support_user_create_role( $this->support_role, $role_setting );
 
@@ -1336,7 +1143,7 @@ final class Client {
 			return $role_exists;
 		}
 
-		$user_email = $this->get_setting( 'vendor/email' );
+		$user_email = $this->config->get_setting( 'vendor/email' );
 
 		if ( email_exists( $user_email ) ) {
 			$this->log( 'Support User not created; User with that email already exists: ' . $user_email, __METHOD__, 'warning' );
@@ -1346,12 +1153,12 @@ final class Client {
 
 		$user_data = array(
 			'user_login'      => $user_name,
-			'user_url'        => $this->get_setting( 'vendor/website' ),
+			'user_url'        => $this->config->get_setting( 'vendor/website' ),
 			'user_pass'       => wp_generate_password( 64, true, true ),
 			'user_email'      => $user_email,
 			'role'            => $this->support_role,
-			'first_name'      => $this->get_setting( 'vendor/first_name', '' ),
-			'last_name'       => $this->get_setting( 'vendor/last_name', '' ),
+			'first_name'      => $this->config->get_setting( 'vendor/first_name', '' ),
+			'last_name'       => $this->config->get_setting( 'vendor/last_name', '' ),
 			'user_registered' => date( 'Y-m-d H:i:s', time() ),
 		);
 
@@ -1377,7 +1184,7 @@ final class Client {
 	 */
 	private function get_reassign_user_id() {
 
-		if( ! $this->get_setting( 'reassign_posts' ) ) {
+		if( ! $this->config->get_setting( 'reassign_posts' ) ) {
 			return null;
 		}
 
@@ -1563,7 +1370,7 @@ final class Client {
 
 		$capabilities = $old_role->capabilities;
 
-		$add_caps = $this->get_setting( 'caps/add' );
+		$add_caps = $this->config->get_setting( 'caps/add' );
 
 		foreach ( (array) $add_caps as $add_cap => $reason ) {
 			$capabilities[ $add_cap ] = true;
@@ -1577,7 +1384,7 @@ final class Client {
 		/**
 		 * @filter trustedlogin/{namespace}/support_role/display_name Modify the display name of the created support role
 		 */
-		$role_display_name = apply_filters( 'trustedlogin/' . $this->ns . '/support_role/display_name', sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ), $this );
+		$role_display_name = apply_filters( 'trustedlogin/' . $this->ns . '/support_role/display_name', sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ), $this );
 
 		$new_role = add_role( $new_role_slug, $role_display_name, $capabilities );
 
@@ -1594,7 +1401,7 @@ final class Client {
 
 		}
 
-		$remove_caps = $this->get_setting( 'caps/remove' );
+		$remove_caps = $this->config->get_setting( 'caps/remove' );
 
 		if ( ! empty( $remove_caps ) ){
 
@@ -1803,7 +1610,7 @@ final class Client {
 	 */
 	public function maybe_send_webhook( $data ) {
 
-		$webhook_url = $this->get_setting( 'webhook_url' );
+		$webhook_url = $this->config->get_setting( 'webhook_url' );
 
 		if ( ! $webhook_url ) {
 			return;
@@ -1899,7 +1706,7 @@ final class Client {
 	function get_license_key() {
 
 		// if no license key proivded, assume false, and then return accessKey
-		$license_key = $this->get_setting( 'auth/license_key', false );
+		$license_key = $this->config->get_setting( 'auth/license_key', false );
 
 		if ( ! $license_key ){
 			$license_key = $this->get_shareable_accesskey();
@@ -1928,7 +1735,7 @@ final class Client {
 	 */
 	private function get_shareable_accesskey(){
 
-		$hash = $this->hash( get_site_url() . $this->get_setting( 'auth/public_key' ) );
+		$hash = $this->hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
 
 		/**
 		 * Filter: Allow for over-riding the shareable 'accessKey' prefix
@@ -1988,7 +1795,7 @@ final class Client {
 			return $access_key;
 		}
 
-		return $this->get_setting( 'auth/license_key', false );
+		return $this->config->get_setting( 'auth/license_key', false );
 
 	}
 
@@ -2021,7 +1828,7 @@ final class Client {
 				'no_key',
 				sprintf(
 					'No public key has been provided by %1$s: %2$s',
-					$this->get_setting( 'vendor/title' ),
+					$this->config->get_setting( 'vendor/title' ),
 					$encryption_key->get_error_message()
 				)
 			);
@@ -2042,7 +1849,7 @@ final class Client {
 		$envelope = array(
 			'secretId'   => $secret_id,
 			'identifier' => $e_identifier,
-			'publicKey'  => $this->get_setting( 'auth/public_key' ),
+			'publicKey'  => $this->config->get_setting( 'auth/public_key' ),
 			'accessKey'  => $this->get_license_key(),
 			'siteUrl'    => $e_site_url,
 			'userId'     => get_current_user_id(),
@@ -2069,7 +1876,7 @@ final class Client {
 		}
 
 		$body = array(
-			'publicKey' => $this->get_setting( 'auth/public_key' ),
+			'publicKey' => $this->config->get_setting( 'auth/public_key' ),
 		);
 
 		$api_response = $this->api_send(  'sites/' . $identifier, $body, 'DELETE' );
@@ -2186,7 +1993,7 @@ final class Client {
 		$headers = array(
 			'Accept'        => 'application/json',
 			'Content-Type'  => 'application/json',
-			'Authorization' => 'Bearer ' . $this->get_setting( 'auth/public_key' ),
+			'Authorization' => 'Bearer ' . $this->config->get_setting( 'auth/public_key' ),
 		);
 
 		if ( ! empty( $additional_headers ) ) {
@@ -2252,7 +2059,7 @@ final class Client {
 	public function admin_notice_revoked() {
 		?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php echo esc_html( sprintf( __( 'Done! %s Support access revoked. ', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ) ); ?></p>
+			<p><?php echo esc_html( sprintf( __( 'Done! %s Support access revoked. ', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></p>
 		</div>
 		<?php
 	}
@@ -2268,13 +2075,13 @@ final class Client {
 	 */
 	public function admin_menu_auth_link_page() {
 
-		$ns = $this->get_setting( 'vendor/namespace' );
+		$ns = $this->config->get_setting( 'vendor/namespace' );
 
 		$slug = apply_filters( 'trustedlogin/' . $this->ns . '/admin/grantaccess/slug', 'grant-' . $ns . '-access', $ns );
 
-		$parent_slug = $this->get_setting( 'menu/slug', null );
+		$parent_slug = $this->config->get_setting( 'menu/slug', null );
 
-		$menu_title = $this->get_setting( 'menu/title', esc_html__( 'Grant Support Access', 'trustedlogin' ) );
+		$menu_title = $this->config->get_setting( 'menu/title', esc_html__( 'Grant Support Access', 'trustedlogin' ) );
 
 		add_submenu_page(
 			$parent_slug,
@@ -2307,19 +2114,19 @@ final class Client {
 	public function get_auth_screen() {
 
 		$output_lang = $this->output_tl_alert();
-		$ns          = $this->get_setting( 'vendor/namespace' );
+		$ns          = $this->config->get_setting( 'vendor/namespace' );
 
 		$logo_output = '';
-		$logo_url = $this->get_setting( 'vendor/logo_url' );
+		$logo_url = $this->config->get_setting( 'vendor/logo_url' );
 
 		if ( ! empty( $logo_url ) ) {
 
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img class="tl-auth-logo" src="%3$s" alt="%4$s" /></a>',
-				esc_url( $this->get_setting( 'vendor/website' ) ),
-				esc_attr( sprintf( __( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->get_setting( 'vendor/title' ) ) ),
-				esc_url( $this->get_setting( 'vendor/logo_url' ) ),
-				esc_attr( $this->get_setting( 'vendor/title' ) )
+				esc_url( $this->config->get_setting( 'vendor/website' ) ),
+				esc_attr( sprintf( __( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ),
+				esc_url( $this->config->get_setting( 'vendor/logo_url' ) ),
+				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
 		}
 
@@ -2327,12 +2134,15 @@ final class Client {
 
 		$description_output = $output_lang['description'];
 
-		$details_output = sprintf(
-			'<ul class="tl-details tl-roles">%1$s</ul><div class="tl-toggle-caps"><p>%2$s</p></div><ul class="tl-details caps hidden">%3$s</ul>',
-			$output_lang['roles'],
-			sprintf( '%s <span class="dashicons dashicons-arrow-down-alt2"></span>', __( 'With a few more capabilities', 'trustedlogin' ) ),
-			$output_lang['caps']
-		);
+		$details_output = '<div class="tl-details tl-roles">' . wpautop( $output_lang['roles'] ) . '</div>';
+
+		if( $caps = $this->config->get_setting( 'caps' ) ) {
+			$details_output .= sprintf(
+				'<div class="tl-toggle-caps"><p>%2$s</p></div><ul class="tl-details caps hidden">%3$s</ul>',
+				sprintf( '%s <span class="dashicons dashicons-arrow-down-alt2"></span>', __( 'With a few more capabilities', 'trustedlogin' ) ),
+				$output_lang['caps']
+			);
+		}
 
 		$actions_output = $this->generate_button( "size=hero&class=authlink button-primary", false );
 
@@ -2350,7 +2160,7 @@ final class Client {
 			'trustedlogin/' . $this->ns . '/template/grantlink/footer_links',
 			array(
 				__( 'Learn about TrustedLogin', 'trustedlogin' )                    => 'https://www.trustedlogin.com/about/easy-and-safe/',
-				sprintf( 'Visit %s Support', $this->get_setting( 'vendor/title' ) ) => $this->get_setting( 'vendor/support_url' ),
+				sprintf( 'Visit %s Support', $this->config->get_setting( 'vendor/title' ) ) => $this->config->get_setting( 'vendor/support_url' ),
 			),
 			$ns
 		);
@@ -2476,12 +2286,12 @@ final class Client {
 	 */
 	private function get_remote_encryption_key() {
 
-		$vendor_url   = $this->get_setting( 'vendor/website' );
+		$vendor_url   = $this->config->get_setting( 'vendor/website' );
 
 		/**
 		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
 		 */
-		$key_endpoint = apply_filters( 'trustedlogin/' . $this->ns . '/vendor/public_key/endpoint', 'wp-json/trustedlogin/v1/public_key' );
+		$key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', 'wp-json/trustedlogin/v1/public_key' );
 
 		$url = trailingslashit( $vendor_url ) . $key_endpoint;
 

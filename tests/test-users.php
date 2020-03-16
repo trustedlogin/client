@@ -20,13 +20,18 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 */
 	private $TrustedLoginReflection;
 
-	private $config = array();
+	/**
+	 * @var \TrustedLogin\Config
+	 */
+	private $config;
+
+	private $default_settings = array();
 
 	public function setUp() {
 
 		parent::setUp();
 
-		$this->config = array(
+		$this->default_settings = array(
 			'role' => 'editor',
 			'caps' => array(
 				'add' => array(
@@ -52,6 +57,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			),
 			'reassign_posts' => true,
 		);
+
+		$this->config = new \TrustedLogin\Config( $this->default_settings );
 
 		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
@@ -227,9 +234,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->_reset_roles();
 
-		$config_with_new_title = $this->config;
+		$config_with_new_title = $this->default_settings;
 		$config_with_new_title['vendor']['title'] = microtime();
-		$TL_with_new_title = new TrustedLogin\Client( $config_with_new_title );
+		$TL_with_new_title = new TrustedLogin\Client( new \TrustedLogin\Config( $config_with_new_title ) );
 
 		$should_be_dupe_email = $TL_with_new_title->create_support_user();
 		$this->assertWPError( $should_be_dupe_email );
@@ -237,23 +244,23 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->_reset_roles();
 
-		$config_with_bad_role = $this->config;
+		$config_with_bad_role = $this->default_settings;
 		$config_with_bad_role['vendor']['title'] = microtime();
 		$config_with_bad_role['vendor']['namespace'] = microtime();
 		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
 		$config_with_bad_role['role'] = 'madeuprole';
-		$TL_config_with_bad_role = new TrustedLogin\Client( $config_with_bad_role );
+		$TL_config_with_bad_role = new TrustedLogin\Client( new \TrustedLogin\Config( $config_with_bad_role ) );
 
 		$should_be_role_does_not_exist = $TL_config_with_bad_role->create_support_user();
 		$this->assertWPError( $should_be_role_does_not_exist );
 		$this->assertSame( 'role_does_not_exist', $should_be_role_does_not_exist->get_error_code() );
 
 
-		$valid_config = $this->config;
+		$valid_config = $this->default_settings;
 		$valid_config['vendor']['title'] = microtime();
 		$valid_config['vendor']['namespace'] = microtime();
 		$valid_config['vendor']['email'] = microtime() . '@example.com';
-		$TL_valid_config = new TrustedLogin\Client( $valid_config );
+		$TL_valid_config = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );
@@ -283,7 +290,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			)
 		);
 
-		$DefaultTrustedLogin = new TrustedLogin\Client( $valid_config );
+		$DefaultTrustedLogin = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
 
 		$this->assertSame( ( time() + WEEK_IN_SECONDS ), $DefaultTrustedLogin->get_expiration_timestamp(), 'The method should have "WEEK_IN_SECONDS" set as default.' );
 
@@ -295,13 +302,13 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$valid_config['decay'] = 12345;
 
-		$DefaultTrustedLoginWithDecay = new TrustedLogin\Client( $valid_config );
+		$DefaultTrustedLoginWithDecay = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
 
 		$this->assertSame( time() + 12345, $DefaultTrustedLoginWithDecay->get_expiration_timestamp() );
 
 		$valid_config['decay'] = 0;
 
-		$DefaultTrustedLoginWithNoDecay = new TrustedLogin\Client( $valid_config );
+		$DefaultTrustedLoginWithNoDecay = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
 
 		$this->assertSame( false, $DefaultTrustedLoginWithNoDecay->get_expiration_timestamp() );
 	}
@@ -334,7 +341,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		/** @see wp_get_schedule The md5/serialize/array/md5 nonsense is replicating that behavior */
 		$cron_id = md5( serialize( array( $hash_md5 ) ) );
 
-		$cron_key = 'trustedlogin/' . $this->config['vendor']['namespace'] . '/access/revoke';
+		$cron_key = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
 
 		$this->assertArrayHasKey( $expiry, $crons );
 		$this->assertArrayHasKey( $cron_key, $crons[ $expiry ] );

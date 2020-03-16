@@ -40,7 +40,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		parent::setUp();
 
-		$this->config = array(
+		$config = array(
 			'role' => 'editor',
 			'caps'     => array(
 				'add' => array(
@@ -65,6 +65,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			),
 			'reassign_posts' => true,
 		);
+
+		$this->config = new TrustedLogin\Config( $config );
 
 		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
 
@@ -133,12 +135,12 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->assertContains( 'Vendor does not match.', $this->_last_response, 'Vendor does not match config vendor.' );
 		$this->_last_response = '';
 
-		$_POST['vendor'] = $this->config['vendor']['namespace'];
+		$_POST['vendor'] = $this->config->ns();
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Nonce not sent', $this->_last_response );
 		$this->_last_response = '';
 
-		$_POST['vendor'] = $this->config['vendor']['namespace'];
+		$_POST['vendor'] = $this->config->ns();
 		$this->_set_nonce( 0 );
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Verification issue', $this->_last_response, 'Nonce set to 0; should not validate.' );
@@ -248,7 +250,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	function _catchHandleAjax( $action = 'tl_%s_gen_support' ) {
 
-		$action = sprintf( $action, $this->config['vendor']['namespace'] );
+		$action = sprintf( $action, $this->config->ns() );
 
 		try {
 			$this->_handleAjax( $action );
