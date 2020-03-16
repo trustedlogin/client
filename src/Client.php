@@ -166,22 +166,6 @@ final class Client {
 	}
 
 	/**
-	 * Checks whether SSL requirements are met.
-	 *
-	 * @since 0,9.2
-	 *
-	 * @return bool  Whether the vendor-defined SSL requirements are met.
-	 */
-	private function is_valid_ssl_setting(){
-
-		if ( $this->config->get_setting( 'require_ssl', true ) && ! is_ssl() ){
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
 	 * Initialise the action hooks required
 	 *
 	 * @since 0.2.0
@@ -362,7 +346,7 @@ final class Client {
 			'is_ssl'     => is_ssl(),
 		);
 
-		if ( $this->is_valid_ssl_setting() ){
+		if ( $this->config->meets_ssl_requirement() ){
 
 			$created = false;
 
@@ -1842,7 +1826,7 @@ final class Client {
 	 */
 	public function revoke_site( $identifier ) {
 
-		if ( ! $this->is_valid_ssl_setting() ){
+		if ( ! $this->config->meets_ssl_requirement() ){
 			$this->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
 			return true;
 		}

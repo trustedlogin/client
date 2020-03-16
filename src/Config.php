@@ -70,11 +70,11 @@ final class Config {
 		),
 		'reassign_posts' => true,
 		'require_ssl' => true,
-'logging' => array(
-	'directory' => WP_CONTENT_DIR . '/debug.log',
-	'threshold' => 'debug',
-	'options' => array(),
-)
+		'logging' => array(
+			'directory' => WP_CONTENT_DIR . '/debug.log',
+			'threshold' => 'debug',
+			'options' => array(),
+		)
 	);
 
 	/**
@@ -299,5 +299,21 @@ final class Config {
 		$value_is_zero = 0 === $value;
 
 		return ( empty( $value ) && ! $value_is_zero ) && $default !== null ? $default : $value;
+	}
+
+	/**
+	 * Checks whether SSL requirements are met.
+	 *
+	 * @since 0,9.2
+	 *
+	 * @return bool  Whether the vendor-defined SSL requirements are met.
+	 */
+	public function meets_ssl_requirement(){
+
+		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ){
+			return false;
+		}
+
+		return true;
 	}
 }
