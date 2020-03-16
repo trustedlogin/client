@@ -70,7 +70,9 @@ final class Client {
 	private $config;
 
 	/**
+	 * @var null|\TrustedLogin\Logger
 	 */
+	private $logger = null;
 
 	/**
 	 * @var string $support_role The namespaced name of the new Role to be created for Support Agents
@@ -154,43 +156,13 @@ final class Client {
 	/**
 	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
 	 *
-
-	/**
-	 * @param string $text Message to log
 	 * @param string $method Method where the log was called
 	 * @param string $level PSR-3 log level
 	 *
-	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
+	 * @param string $text Message to log
 	 */
-	private function log( $text = '', $method = '', $level = 'notice' ) {
-
-		if ( ! $this->debug_mode ) {
-			return;
-		}
-
-		$levels = array( 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug' );
-
-		if ( ! in_array( $level, $levels ) ) {
-
-			$this->log( sprintf( 'Invalid level passed by %s method: %s', $method, $level ), __METHOD__, 'error' );
-
-			$level = 'notice'; // Continue processing original log
-		}
-
-		do_action( 'trustedlogin/' . $this->ns . '/log', $text, $method, $level );
-		do_action( 'trustedlogin/' . $this->ns . '/log/' . $level, $text, $method );
-
-		// If logging is in place, don't use the error_log
-		if ( has_action( 'trustedlogin/' . $this->ns . '/log' ) || has_action( 'trustedlogin/' . $this->ns . '/log/' . $level ) ) {
-			return;
-		}
-
-		if ( in_array( $level, array( 'emergency', 'alert', 'critical', 'error', 'warning' ) ) ) {
-			// If WP_DEBUG and WP_DEBUG_LOG are enabled, by default, errors will be logged to that log file.
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-				error_log( $method . ' (' . $level . '): ' . $text );
-			}
-		}
+	public function log( $text = '', $method = '', $level = 'debug' ) {
+		$this->logger->log( $text, $method, $level );
 	}
 
 	/**

@@ -70,11 +70,11 @@ final class Config {
 		),
 		'reassign_posts' => true,
 		'require_ssl' => true,
-		'logging' => array(
-			'directory' => WP_CONTENT_DIR . '/debug.log',
-			'threshold' => 'debug',
-			'options' => array(),
-		)
+'logging' => array(
+	'directory' => WP_CONTENT_DIR . '/debug.log',
+	'threshold' => 'debug',
+	'options' => array(),
+)
 	);
 
 	/**
