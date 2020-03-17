@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * Class Logger
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2020 Katz Web Services, Inc.
+ */
 namespace TrustedLogin;
 
 use Katzgrau\KLogger;

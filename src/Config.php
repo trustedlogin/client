@@ -1,20 +1,10 @@
 <?php
 /**
- * The TrustedLogin drop-in class. Include this file and instantiate the class and you have secure support.
+ * Class Config
  *
- * @version 0.9.2
+ * @package TrustedLogin\Client
+ *
  * @copyright 2020 Katz Web Services, Inc.
- *
- * ###                    ###
- * ###   HEY DEVELOPER!   ###
- * ###                    ###
- * ###  (read me first)   ###
- *
- * Thanks for integrating TrustedLogin.
- *
- * 0. If you haven't already, sign up for a TrustedLogin account {@see https://www.trustedlogin.com}
- * 1. Prefix the namespace below with your own namespace (`namespace \ReplaceThisExample\TrustedLogin;`)
- * 2. Instantiate this class with a configuration array ({@see https://www.trustedlogin.com/configuration/} for more info)
  */
 namespace TrustedLogin;
 

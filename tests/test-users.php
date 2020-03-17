@@ -25,6 +25,11 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 */
 	private $config;
 
+	/**
+	 * @var \TrustedLogin\Logger
+	 */
+	private $logger;
+
 	private $default_settings = array();
 
 	public function setUp() {
@@ -62,6 +67,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+
+		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
 	}
 
 	public function tearDown() {
@@ -88,29 +95,26 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 * @covers TrustedLogin::support_user_create_role
 	 */
 	public function test_support_user_create_role() {
+
 		$this->_test_cloned_cap( 'administrator' );
 		$this->_test_cloned_cap( 'editor' );
 		$this->_test_cloned_cap( 'author' );
 		$this->_test_cloned_cap( 'contributor' );
 		$this->_test_cloned_cap( 'subscriber' );
 
-		$empty_role = $this->TrustedLogin->support_user_create_role( '', 'administrator' );
-		$this->assertWPError( $empty_role, 'empty new role' );
-		$this->assertEquals( 'new_role_slug_not_defined', $empty_role->get_error_code(), 'empty new role' );
+		$support_user = $this->_get_public_property( 'support_user' );
 
-		$cloned_role_slug_not_defined = $this->TrustedLogin->support_user_create_role( microtime(), '' );
-		$this->assertWPError( $cloned_role_slug_not_defined, 'empty clone role' );
-		$this->assertEquals( 'cloned_role_slug_not_defined', $cloned_role_slug_not_defined->get_error_code() );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logger );
 
-		$not_string_new_role = $this->TrustedLogin->support_user_create_role( array('asdasd'), 'administrator' );
+		$not_string_new_role = $TL_Support_Role->create( array('asdasd'), 'administrator' );
 		$this->assertWPError( $not_string_new_role, 'not string new role' );
 		$this->assertEquals( 'new_role_slug_not_string', $not_string_new_role->get_error_code(), 'not string new role' );
 
-		$not_string_clone_role = $this->TrustedLogin->support_user_create_role( 'administrator', array('asdasd') );
+		$not_string_clone_role = $TL_Support_Role->create( 'administrator', array('asdasd') );
 		$this->assertWPError( $not_string_clone_role, 'not string clone role' );
 		$this->assertEquals( 'cloned_role_slug_not_string', $not_string_clone_role->get_error_code(), 'not string clone role' );
 
-		$this->assertTrue( $this->TrustedLogin->support_user_create_role( 'administrator', '1' ) instanceof WP_Role, 'role already exists' );
+		$this->assertTrue( $TL_Support_Role->create( 'administrator', '1' ) instanceof WP_Role, 'role already exists' );
 
 	}
 
@@ -121,7 +125,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$new_role = microtime();
 
-		$new_role = $this->TrustedLogin->support_user_create_role( $new_role, $role );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logger );
+		$support_user = $this->_get_public_property( 'support_user' );
+		$new_role = $TL_Support_Role->create( $new_role, $role );
 
 		$this->assertTrue( $new_role instanceof WP_Role );
 
@@ -168,7 +174,10 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->_reset_roles();
 
-		$user_id = $this->TrustedLogin->create_support_user();
+		/** @var \TrustedLogin\SupportUser $support_user */
+		$support_user = $this->_get_public_property( 'support_user' )->getValue( $this->TrustedLogin );
+
+		$user_id = $support_user->create();
 
 		// Was the user created?
 		$this->assertNotFalse( $user_id );
@@ -178,7 +187,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( $support_user->exists() );
 
 		// Was the role created?
-		$support_role_key = $this->_get_public_property( 'support_role' )->getValue( $this->TrustedLogin );
+		$config = $this->_get_public_property( 'config' )->getValue( $this->TrustedLogin );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $config, $this->logger );
+		$support_role_key = $TL_Support_Role->get_name();
 		$this->assertTrue( $wp_roles->is_role( $support_role_key ) );
 		$support_role = $wp_roles->get_role( $support_role_key );
 		$this->assertInstanceOf( 'WP_Role', $support_role, 'The support role key is "' . $support_role_key . '"' );
@@ -227,8 +238,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		###
 
 		$this->_reset_roles();
-
-		$duplicate_user = $this->TrustedLogin->create_support_user();
+		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->logger );
+		$duplicate_user = $TL_Support_User->create();
 		$this->assertWPError( $duplicate_user );
 		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
 
@@ -236,9 +247,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$config_with_new_title = $this->default_settings;
 		$config_with_new_title['vendor']['title'] = microtime();
-		$TL_with_new_title = new TrustedLogin\Client( new \TrustedLogin\Config( $config_with_new_title ) );
+		$TL_with_new_title = new \TrustedLogin\SupportUser( new \TrustedLogin\Config( $config_with_new_title ), $this->logger );
 
-		$should_be_dupe_email = $TL_with_new_title->create_support_user();
+		$should_be_dupe_email = $TL_with_new_title->create();
 		$this->assertWPError( $should_be_dupe_email );
 		$this->assertSame( 'user_email_exists', $should_be_dupe_email->get_error_code() );
 
@@ -249,9 +260,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_bad_role['vendor']['namespace'] = microtime();
 		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
 		$config_with_bad_role['role'] = 'madeuprole';
-		$TL_config_with_bad_role = new TrustedLogin\Client( new \TrustedLogin\Config( $config_with_bad_role ) );
+		$TL_config_with_bad_role = new TrustedLogin\SupportUser( new \TrustedLogin\Config( $config_with_bad_role ), $this->logger );
 
-		$should_be_role_does_not_exist = $TL_config_with_bad_role->create_support_user();
+		$should_be_role_does_not_exist = $TL_config_with_bad_role->create();
 		$this->assertWPError( $should_be_role_does_not_exist );
 		$this->assertSame( 'role_does_not_exist', $should_be_role_does_not_exist->get_error_code() );
 
@@ -260,12 +271,12 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$valid_config['vendor']['title'] = microtime();
 		$valid_config['vendor']['namespace'] = microtime();
 		$valid_config['vendor']['email'] = microtime() . '@example.com';
-		$TL_valid_config = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
+		$TL_valid_config = new TrustedLogin\SupportUser( new \TrustedLogin\Config( $valid_config ), $this->logger );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );
 
-		$should_be_empty_login = $TL_valid_config->create_support_user();
+		$should_be_empty_login = $TL_valid_config->create();
 		$this->assertWPError( $should_be_empty_login );
 		$this->assertSame( 'empty_user_login', $should_be_empty_login->get_error_code() );
 

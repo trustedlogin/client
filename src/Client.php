@@ -52,20 +52,7 @@ final class Client {
 	const jquery_confirm_version = '3.3.4';
 
 	/**
-	 * @var array These capabilities will never be allowed for users created by TrustedLogin
-	 * @since 0.9.6
-	 */
-	private $prevented_caps = array(
-		'create_users',
-		'delete_users',
-		'edit_users',
-		'promote_users',
-		'delete_site',
-		'remove_users',
-	);
-
-	/**
-	 * @var \TrustedLogin\Config $settings Configuration object after parsed and validated
+	 * @var \TrustedLogin\Config
 	 */
 	private $config;
 
@@ -73,6 +60,11 @@ final class Client {
 	 * @var null|\TrustedLogin\Logger
 	 */
 	private $logger = null;
+
+	/**
+	 * @var \TrustedLogin\SupportUser
+	 */
+	private $support_user;
 
 	/**
 	 * @var string $support_role The namespaced name of the new Role to be created for Support Agents
@@ -150,6 +142,11 @@ final class Client {
 		}
 
 		$this->init_properties( $config );
+
+		$this->logger = new \TrustedLogin\Logger( $config );
+
+		$this->support_user = new \TrustedLogin\SupportUser( $config, $this->logger );
+
 		$this->init_hooks();
 	}
 
@@ -241,7 +238,7 @@ final class Client {
 			return;
 		}
 
-		$users = $this->get_support_user( $identifier );
+		$users = $this->support_user->get( $identifier );
 
 		if ( empty( $users ) ) {
 			return;
@@ -257,7 +254,7 @@ final class Client {
 
 			$identifier = get_user_option( $this->identifier_meta_key, $support_user->ID );
 
-			$this->delete_support_user( $identifier );
+			$this->support_user->delete( $identifier );
 
 			return;
 		}
@@ -303,7 +300,7 @@ final class Client {
 		}
 
 		try {
-			$support_user_id = $this->create_support_user();
+			$support_user_id = $this->support_user->create();
 		} catch ( Exception $exception ) {
 			wp_send_json_error( array( 'message' => $exception->getMessage() ), 500 );
 		}
@@ -645,9 +642,9 @@ final class Client {
 
 		$data_atts = array();
 
-		if ( $this->get_support_users() ) {
+		if ( $this->support_user->get_all() ) {
 			$text        			= esc_html( $atts['exists_text'] );
-			$href 	     			= admin_url( 'users.php?role=' . $this->support_role );
+			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->get_role_name() );
 			$data_atts['accesskey'] = $this->get_accesskey(); // Add the shareable accesskey as a data attribute
 		} else {
 			$text      = esc_html( $atts['text'] );
@@ -694,7 +691,7 @@ final class Client {
 			$print = true;
 		}
 
-		$support_users = $this->get_support_users();
+		$support_users = $this->support_user->get_all();
 
 		if ( empty( $support_users ) ) {
 
@@ -756,7 +753,7 @@ final class Client {
 			if ( $revoke_url = $this->helper_get_user_revoke_url( $support_user ) ) {
 				$return .= '<td><a class="trustedlogin tl-revoke submitdelete" href="' . esc_url( $revoke_url ) . '">' . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a></td>';
 			} else {
-				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_role ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';
+				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_user->get_role_name() ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';
 			}
 			$return .= '</tr>';
 
@@ -797,7 +794,7 @@ final class Client {
 		$roles_output = '';
 		$roles_output .= sprintf( '<li class="tl-role"><p>%1$s</p></li>',
 			sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
-				$this->support_role,
+				$this->support_user->get_role_name(),
 				$this->config->get_setting( 'role' )
 			)
 		);
@@ -962,7 +959,7 @@ final class Client {
 							array( 'a' => array( 'href' => array(), 'target' => array() ) )
 						),
 						$vendor_title,
-						esc_url( admin_url( 'users.php?role=' . $this->support_role ) )
+						esc_url( admin_url( 'users.php?role=' . $this->support_user->get_role_name() ) )
 					),
 				),
 			),
@@ -975,6 +972,7 @@ final class Client {
 
 		$this->config = $config;
 
+
 		$this->ns = $this->config->ns();
 
 		/**
@@ -986,22 +984,6 @@ final class Client {
 		 */
 		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->ns . '/debug/enabled', $this->config->get_setting( 'debug' ) );
 
-		$this->logger = new \TrustedLogin\Logger( $config );
-
-		/**
-		 * Filter: Set support_role value
-		 *
-		 * @param string
-		 * @param Client $this
-		 *
-		 * @since 0.2.0
-		 *
-		 */
-		$this->support_role = apply_filters(
-			'trustedlogin/' . $this->ns . '/support_role',
-			$this->ns . '-support',
-			$this
-		);
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -1066,72 +1048,6 @@ final class Client {
 	}
 
 	/**
-	 * Create the Support User with custom role.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return int|WP_Error - Array with login response information if created, or WP_Error object if there was an issue.
-	 */
-	public function create_support_user() {
-
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
-
-		if ( $user_id = username_exists( $user_name ) ) {
-			$this->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
-
-			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
-		}
-
-		$role_setting = $this->config->get_setting( 'role' );
-
-		$role_exists = $this->support_user_create_role( $this->support_role, $role_setting );
-
-		if ( is_wp_error( $role_exists ) ) {
-
-			$error_output = $role_exists->get_error_message();
-
-			if( $error_data = $role_exists->get_error_data() ) {
-				$error_output .= ' ' . print_r( $error_data, true );
-			}
-
-			$this->log( $error_output, __METHOD__, 'error' );
-
-			return $role_exists;
-		}
-
-		$user_email = $this->config->get_setting( 'vendor/email' );
-
-		if ( email_exists( $user_email ) ) {
-			$this->log( 'Support User not created; User with that email already exists: ' . $user_email, __METHOD__, 'warning' );
-
-			return new WP_Error( 'user_email_exists', 'Support User not created; User with that email already exists' );
-		}
-
-		$user_data = array(
-			'user_login'      => $user_name,
-			'user_url'        => $this->config->get_setting( 'vendor/website' ),
-			'user_pass'       => wp_generate_password( 64, true, true ),
-			'user_email'      => $user_email,
-			'role'            => $this->support_role,
-			'first_name'      => $this->config->get_setting( 'vendor/first_name', '' ),
-			'last_name'       => $this->config->get_setting( 'vendor/last_name', '' ),
-			'user_registered' => date( 'Y-m-d H:i:s', time() ),
-		);
-
-		$new_user_id = wp_insert_user( $user_data );
-
-		if ( is_wp_error( $new_user_id ) ) {
-			$this->log( 'Error: User not created because: ' . $new_user_id->get_error_message(), __METHOD__, 'error' );
-
-			return $new_user_id;
-		}
-
-		$this->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
-
-		return $new_user_id;
-	}
-
-	/**
 	 * Get the ID of the best-guess appropriate admin user
 	 *
 	 * @since 0.7.0
@@ -1159,73 +1075,7 @@ final class Client {
 		return $reassign_id;
 	}
 
-	/**
-	 * Deletes support user(s) with options to delete the TrustedLogin-created user role and endpoint as well
-	 *
-	 * @param string $identifier Unique Identifier of the user to delete, or 'all' to remove all support users.
-	 * @param bool   $delete_endpoint Should the TrustedLogin-created user role be deleted also? Default: `true`
-	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint be deleted also? Default: `true`
-	 *
-	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users; WP_Error: something went wrong.
-	 */
-	private function delete_support_user( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
-		if ( 'all' === $identifier ) {
-			$users = $this->get_support_users();
-		} else {
-			$users = $this->get_support_user( $identifier );
-		}
-
-		if ( empty( $users ) ) {
-			return false;
-		}
-
-		$this->log( count( $users ) . " support users found", __METHOD__, 'debug' );
-
-		require_once ABSPATH . 'wp-admin/includes/user.php';
-
-		$reassign_id_or_null = $this->get_reassign_user_id();
-
-		foreach ( $users as $_user ) {
-			$this->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
-
-			$tlid = get_user_option( $this->identifier_meta_key, $_user->ID );
-
-			// Remove auto-cleanup hook
-			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
-
-			if ( wp_delete_user( $_user->ID, $reassign_id_or_null ) ) {
-				$this->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
-			} else {
-				$this->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
-			}
-		}
-
-		if ( $delete_role && get_role( $this->support_role ) ) {
-
-			// Returns void; no way to tell if successful
-			remove_role( $this->support_role );
-
-			if( get_role( $this->support_role ) ) {
-				$this->log( "Role " . $this->support_role . " was not removed successfully.", __METHOD__, 'error' );
-			} else {
-				$this->log( "Role " . $this->support_role . " removed.", __METHOD__, 'info' );
-			}
-		}
-
-		if ( $delete_endpoint && get_site_option( $this->endpoint_option ) ) {
-
-			delete_site_option( $this->endpoint_option );
-
-			flush_rewrite_rules( false );
-
-			update_option( 'tl_permalinks_flushed', 0 );
-
-			$this->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
-		}
-
-		return $this->revoke_access( $identifier );
-	}
 
 	/**
 	 * Generate the endpoint parameter as a hash of the site URL with the identifier
@@ -1277,141 +1127,9 @@ final class Client {
 
 		$this->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$this->delete_support_user( $identifier_hash );
+		$this->support_user->delete( $identifier_hash );
 	}
 
-	/**
-	 * Creates the custom Support Role if it doesn't already exist
-	 *
-	 * @since 0.1.0
-	 * @since 0.9.2 removed excluded_caps from generated role
-	 *
-	 * @param string $new_role_slug    The slug for the new role.
-	 * @param string $clone_role_slug  The slug for the role to clone, defaults to 'editor'.
-	 *
-	 * @return \WP_Role|\WP_Error Created/pre-existing role, if successful. WP_Error if failure.
-	 */
-	public function support_user_create_role( $new_role_slug, $clone_role_slug = 'editor' ) {
-
-		if ( empty( $new_role_slug ) ) {
-			return new WP_Error( 'new_role_slug_not_defined', 'The slug for the new support role is empty.' );
-		}
-
-		if ( ! is_string( $new_role_slug ) ) {
-			return new WP_Error( 'new_role_slug_not_string', 'The slug for the new support role must be a string.' );
-		}
-
-		if ( empty( $clone_role_slug ) ) {
-			return new WP_Error( 'cloned_role_slug_not_defined', 'The slug for the cloned support role is empty.' );
-		}
-
-		if ( ! is_string( $clone_role_slug ) ) {
-			return new WP_Error( 'cloned_role_slug_not_string', 'The slug for the cloned support role must be a string.' );
-		}
-
-		$role_exists = get_role( $new_role_slug );
-
-		if ( $role_exists ) {
-			$this->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
-			return $role_exists;
-		}
-
-		$this->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
-
-		$old_role = get_role( $clone_role_slug );
-
-		if ( empty( $old_role ) ) {
-			return new WP_Error( 'role_does_not_exist', 'Error: the role to clone does not exist: ' . $clone_role_slug );
-		}
-
-		$capabilities = $old_role->capabilities;
-
-		$add_caps = $this->config->get_setting( 'caps/add' );
-
-		foreach ( (array) $add_caps as $add_cap => $reason ) {
-			$capabilities[ $add_cap ] = true;
-		}
-
-		// These roles should never be assigned to TrustedLogin roles.
-		foreach ( $this->prevented_caps as $prevented_cap ) {
-			unset( $capabilities[ $prevented_cap ] );
-		}
-
-		/**
-		 * @filter trustedlogin/{namespace}/support_role/display_name Modify the display name of the created support role
-		 */
-		$role_display_name = apply_filters( 'trustedlogin/' . $this->ns . '/support_role/display_name', sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ), $this );
-
-		$new_role = add_role( $new_role_slug, $role_display_name, $capabilities );
-
-		if ( ! $new_role ){
-
-			return new WP_Error(
-				'add_role_failed',
-				'Error: the role was not created using add_role()', compact(
-					"new_role_slug",
-					"capabilities",
-					"role_display_name"
-				)
-			);
-
-		}
-
-		$remove_caps = $this->config->get_setting( 'caps/remove' );
-
-		if ( ! empty( $remove_caps ) ){
-
-			foreach ( $remove_caps as $remove_cap => $description ){
-				$new_role->remove_cap( $remove_cap );
-				$this->log( 'Capability '. $remove_cap .' removed from role.', __METHOD__, 'info' );
-			}
-		}
-
-		return $new_role;
-	}
-
-
-	/**
-	 * Get all users with the support role
-	 *
-	 * @since 0.7.0
-	 *
-	 * @return array
-	 */
-	public function get_support_users() {
-
-		$args = array(
-			'role' => $this->support_role,
-		);
-
-		return get_users( $args );
-	}
-
-	/**
-	 * Helper Function: Get the generated support user(s).
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param string $identifier - Unique Identifier
-	 *
-	 * @return array of WP_Users
-	 */
-	public function get_support_user( $identifier = '' ) {
-
-		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
-		if ( strlen( $identifier ) > 32 ) {
-			$identifier = $this->hash( $identifier );
-		}
-
-		$args = array(
-			'role'       => $this->support_role,
-			'number'     => 1,
-			'meta_key'   => $this->identifier_meta_key,
-			'meta_value' => $identifier,
-		);
-
-		return get_users( $args );
-	}
 
 	/**
 	 * Adds a "Revoke TrustedLogin" menu item to the admin toolbar
@@ -1422,7 +1140,7 @@ final class Client {
 	 */
 	public function admin_bar_add_toolbar_items( $admin_bar ) {
 
-		if ( ! current_user_can( $this->support_role ) ) {
+		if ( ! current_user_can( $this->support_user->get_role_name() ) ) {
 			return;
 		}
 
@@ -1453,7 +1171,7 @@ final class Client {
 	 */
 	public function user_row_action_revoke( $actions, $user_object ) {
 
-		if ( ! current_user_can( $this->support_role ) && ! current_user_can( 'delete_users' ) ) {
+		if ( ! current_user_can( $this->support_user->get_role_name() ) && ! current_user_can( 'delete_users' ) ) {
 			return $actions;
 		}
 
@@ -1520,7 +1238,7 @@ final class Client {
 		}
 
 		// Allow support team to revoke user
-		if ( ! current_user_can( $this->support_role ) && ! current_user_can( 'delete_users' ) ) {
+		if ( ! current_user_can( $this->support_user->get_role_name() ) && ! current_user_can( 'delete_users' ) ) {
 			return;
 		}
 
@@ -1530,7 +1248,7 @@ final class Client {
 			$identifier = 'all';
 		}
 
-		$deleted_user = $this->delete_support_user( $identifier );
+		$deleted_user = $this->support_user->delete( $identifier );
 
 		if ( is_wp_error( $deleted_user ) ) {
 			$this->log( 'Removing user failed: ' . $deleted_user->get_error_message(), __METHOD__, 'error' );
@@ -1541,7 +1259,7 @@ final class Client {
 			exit;
 		}
 
-		$support_user = $this->get_support_user( $identifier );
+		$support_user = $this->support_user->get( $identifier );
 
 		if ( ! empty( $support_user ) ) {
 			$this->log( 'User #' . $support_user[0]->ID . ' was not removed', __METHOD__, 'error' );

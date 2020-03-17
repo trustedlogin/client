@@ -27,6 +27,11 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	private $config;
 
 	/**
+	 * @var \TrustedLogin\Logger
+	 */
+	private $logger;
+
+	/**
 	 * @var int Get around Travis being annoying
 	 */
 	private $_real_error_level;
@@ -69,6 +74,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->config = new TrustedLogin\Config( $config );
 
 		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
+
+		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 	}
@@ -223,7 +230,10 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	}
 
 	function _delete_all_support_users() {
-		$users = $this->TrustedLogin->get_support_users();
+
+		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->logger );
+
+		$users = $support_user->get_all();
 
 		foreach ( $users as $user ) {
 			wp_delete_user( $user->ID );
