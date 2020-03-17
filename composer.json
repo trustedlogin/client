@@ -25,7 +25,7 @@
         "php": ">=5.3.0",
         "ext-curl": "*",
         "ext-json": "*",
-        "katzgrau/klogger": "dev-master",
+        "katzgrau/klogger": "dev-master as 1.2.1",
         "paragonie/random_compat": "<9.99",
         "paragonie/sodium_compat": "^1.12"
     }
