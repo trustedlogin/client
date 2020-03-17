@@ -1803,9 +1803,11 @@ final class Client {
 
 		$details_output = '<div class="tl-details tl-roles">' . wpautop( $output_lang['roles'] ) . '</div>';
 
-		if( $caps = $this->config->get_setting( 'caps' ) ) {
+		$caps = $this->config->get_setting( 'caps' );
+
+		if( $caps = array_filter( $caps ) ) {
 			$details_output .= sprintf(
-				'<div class="tl-toggle-caps"><p>%2$s</p></div><ul class="tl-details caps hidden">%3$s</ul>',
+				'<div class="tl-toggle-caps"><p>%1$s</p></div><ul class="tl-details caps hidden">%2$s</ul>',
 				sprintf( '%s <span class="dashicons dashicons-arrow-down-alt2"></span>', __( 'With a few more capabilities', 'trustedlogin' ) ),
 				$output_lang['caps']
 			);
