@@ -26,5 +26,7 @@
         "ext-curl": "*",
         "ext-json": "*",
         "katzgrau/klogger": "dev-master",
+        "paragonie/random_compat": "<9.99",
+        "paragonie/sodium_compat": "^1.12"
     }
 }
