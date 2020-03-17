@@ -36,7 +36,7 @@ final class SupportUser {
 	/**
 	 * @var SupportRole $role
 	 */
-	private $role;
+	public $role;
 
 	/**
 	 * SupportUser constructor.

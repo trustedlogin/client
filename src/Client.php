@@ -67,13 +67,6 @@ final class Client {
 	private $support_user;
 
 	/**
-	 * @var string $support_role The namespaced name of the new Role to be created for Support Agents
-	 * @example '{vendor/namespace}-support'
-	 * @since 0.1.0
-	 */
-	private $support_role;
-
-	/**
 	 * @var string $endpoint_option The namespaced setting name for storing part of the auto-login endpoint
 	 * @example 'tl_{vendor/namespace}_endpoint'
 	 * @since 0.3.0
@@ -644,7 +637,7 @@ final class Client {
 
 		if ( $this->support_user->get_all() ) {
 			$text        			= esc_html( $atts['exists_text'] );
-			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->get_role_name() );
+			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
 			$data_atts['accesskey'] = $this->get_accesskey(); // Add the shareable accesskey as a data attribute
 		} else {
 			$text      = esc_html( $atts['text'] );
@@ -753,7 +746,7 @@ final class Client {
 			if ( $revoke_url = $this->helper_get_user_revoke_url( $support_user ) ) {
 				$return .= '<td><a class="trustedlogin tl-revoke submitdelete" href="' . esc_url( $revoke_url ) . '">' . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a></td>';
 			} else {
-				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_user->get_role_name() ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';
+				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_user->role->get_name() ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';
 			}
 			$return .= '</tr>';
 
@@ -794,7 +787,7 @@ final class Client {
 		$roles_output = '';
 		$roles_output .= sprintf( '<li class="tl-role"><p>%1$s</p></li>',
 			sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
-				$this->support_user->get_role_name(),
+				$this->support_user->role->get_name(),
 				$this->config->get_setting( 'role' )
 			)
 		);
@@ -959,7 +952,7 @@ final class Client {
 							array( 'a' => array( 'href' => array(), 'target' => array() ) )
 						),
 						$vendor_title,
-						esc_url( admin_url( 'users.php?role=' . $this->support_user->get_role_name() ) )
+						esc_url( admin_url( 'users.php?role=' . $this->support_user->role->get_name() ) )
 					),
 				),
 			),
@@ -1140,7 +1133,7 @@ final class Client {
 	 */
 	public function admin_bar_add_toolbar_items( $admin_bar ) {
 
-		if ( ! current_user_can( $this->support_user->get_role_name() ) ) {
+		if ( ! current_user_can( $this->support_user->role->get_name() ) ) {
 			return;
 		}
 
@@ -1171,7 +1164,7 @@ final class Client {
 	 */
 	public function user_row_action_revoke( $actions, $user_object ) {
 
-		if ( ! current_user_can( $this->support_user->get_role_name() ) && ! current_user_can( 'delete_users' ) ) {
+		if ( ! current_user_can( $this->support_user->role->get_name() ) && ! current_user_can( 'delete_users' ) ) {
 			return $actions;
 		}
 
@@ -1238,7 +1231,7 @@ final class Client {
 		}
 
 		// Allow support team to revoke user
-		if ( ! current_user_can( $this->support_user->get_role_name() ) && ! current_user_can( 'delete_users' ) ) {
+		if ( ! current_user_can( $this->support_role->get_name() ) && ! current_user_can( 'delete_users' ) ) {
 			return;
 		}
 
