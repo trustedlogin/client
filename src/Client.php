@@ -1201,7 +1201,7 @@ final class Client {
 		}
 
 		// Allow support team to revoke user
-		if ( ! current_user_can( $this->support_role->get_name() ) && ! current_user_can( 'delete_users' ) ) {
+		if ( ! current_user_can( $this->support_user->role->get_name() ) && ! current_user_can( 'delete_users' ) ) {
 			return;
 		}
 
