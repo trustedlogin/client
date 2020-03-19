@@ -29,6 +29,11 @@ final class SupportUser {
 	private $config;
 
 	/**
+	 * @var OptionKeys $option_keys
+	 */
+	private $option_keys;
+
+	/**
 	 * @var Logger $logger
 	 */
 	private $logger;
@@ -41,8 +46,9 @@ final class SupportUser {
 	/**
 	 * SupportUser constructor.
 	 */
-	public function __construct( Config $config, Logger $logger ) {
+	public function __construct( Config $config, OptionKeys $option_keys, Logger $logger ) {
 		$this->config = $config;
+		$this->option_keys = $option_keys;
 		$this->logger = $logger;
 		$this->role = new SupportRole( $config, $logger );
 	}

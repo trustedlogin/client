@@ -26,6 +26,11 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	private $config;
 
 	/**
+	 * @var \TrustedLogin\OptionKeys
+	 */
+	private $option_keys;
+
+	/**
 	 * @var \TrustedLogin\Logger
 	 */
 	private $logger;
@@ -66,6 +71,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->config = new \TrustedLogin\Config( $this->default_settings );
 
 		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
+
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
 		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
@@ -238,7 +244,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		###
 
 		$this->_reset_roles();
-		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->logger );
+		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin ), $this->logger );
 		$duplicate_user = $TL_Support_User->create();
 		$this->assertWPError( $duplicate_user );
 		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
@@ -247,7 +253,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$config_with_new_title = $this->default_settings;
 		$config_with_new_title['vendor']['title'] = microtime();
-		$TL_with_new_title = new \TrustedLogin\SupportUser( new \TrustedLogin\Config( $config_with_new_title ), $this->logger );
+		$config_with_new_title = new \TrustedLogin\Config( $config_with_new_title );
+		$option_keys = new \TrustedLogin\OptionKeys( $config_with_new_title );
+		$TL_with_new_title = new \TrustedLogin\SupportUser( $config_with_new_title, $option_keys, $this->logger );
 
 		$should_be_dupe_email = $TL_with_new_title->create();
 		$this->assertWPError( $should_be_dupe_email );
@@ -260,7 +268,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_bad_role['vendor']['namespace'] = microtime();
 		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
 		$config_with_bad_role['role'] = 'madeuprole';
-		$TL_config_with_bad_role = new TrustedLogin\SupportUser( new \TrustedLogin\Config( $config_with_bad_role ), $this->logger );
+		$config_with_bad_role = new \TrustedLogin\Config( $config_with_bad_role );
+		$option_keys = new \TrustedLogin\OptionKeys( $config_with_bad_role );
+		$TL_config_with_bad_role = new \TrustedLogin\SupportUser( $config_with_bad_role, $option_keys, $this->logger );
 
 		$should_be_role_does_not_exist = $TL_config_with_bad_role->create();
 		$this->assertWPError( $should_be_role_does_not_exist );
@@ -271,7 +281,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$valid_config['vendor']['title'] = microtime();
 		$valid_config['vendor']['namespace'] = microtime();
 		$valid_config['vendor']['email'] = microtime() . '@example.com';
-		$TL_valid_config = new TrustedLogin\SupportUser( new \TrustedLogin\Config( $valid_config ), $this->logger );
+		$valid_config = new \TrustedLogin\Config( $valid_config );
+		$option_keys = new \TrustedLogin\OptionKeys( $valid_config );
+		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $option_keys, $this->logger );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );
@@ -342,8 +354,10 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$expiry = $this->TrustedLogin->get_expiration_timestamp( DAY_IN_SECONDS );
 
 		$this->assertSame( $hash_md5, $this->TrustedLogin->support_user_setup( $user->ID, $hash, $expiry ) );
-		$this->assertSame( (string) $expiry, get_user_option( $this->_get_public_property('expires_meta_key' )->getValue( $this->TrustedLogin ), $user->ID ) );
-		$this->assertSame( (string) $current->ID, get_user_option( $this->_get_public_property('created_by_meta_key' )->getValue( $this->TrustedLogin ), $user->ID ) );
+
+		$option_keys = $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin );
+		$this->assertSame( (string) $expiry, get_user_option( $option_keys->expires_meta_key, $user->ID ) );
+		$this->assertSame( (string) $current->ID, get_user_option( $option_keys->created_by_meta_key, $user->ID ) );
 
 		// We are scheduling a single event cron, so it will return `false` when using wp_get_schedule().
 		// False is the same result as an error, so we're doing more legwork here to validate.

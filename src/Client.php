@@ -62,7 +62,7 @@ final class Client {
 	private $logger;
 
 	/**
-	 * @var OptionKeys $option_keys
+	 * @var \TrustedLogin\OptionKeys $option_keys
 	 */
 	private $option_keys;
 
@@ -100,9 +100,25 @@ final class Client {
 
 		$this->logger = new \TrustedLogin\Logger( $config );
 
-		$this->support_user = new \TrustedLogin\SupportUser( $config, $this->logger );
+		$this->support_user = new \TrustedLogin\SupportUser( $config, $this->option_keys, $this->logger );
 
-		$this->init_hooks();
+		$this->init();
+	}
+
+	public function init() {
+
+		/**
+		 * Filter: Whether debug logging is enabled in TrustedLogin Client
+		 *
+		 * @since 0.4.2
+		 *
+		 * @param bool $debug_mode Default: false
+		 */
+		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->config->ns() . '/debug/enabled', $this->config->get_setting( 'debug' ) );
+
+		$this->option_keys->init();
+
+		$this->add_hooks();
 	}
 
 	/**
@@ -122,7 +138,7 @@ final class Client {
 	 *
 	 * @since 0.2.0
 	 */
-	public function init_hooks() {
+	public function add_hooks() {
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
 
@@ -149,6 +165,21 @@ final class Client {
 
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) );
+	}
+
+	public function delete_endpoint() {
+
+		if ( ! get_site_option( $this->option_keys->endpoint_option ) ) {
+			return;
+		}
+
+		delete_site_option( $this->option_keys->endpoint_option );
+
+		flush_rewrite_rules( false );
+
+		update_option( 'tl_permalinks_flushed', 0 );
+
+		$this->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
 	}
 
 	/**
@@ -201,13 +232,13 @@ final class Client {
 
 		$support_user = $users[0];
 
-		$expires = get_user_option( $this->expires_meta_key, $support_user->ID );
+		$expires = get_user_option( $this->option_keys->expires_meta_key, $support_user->ID );
 
 		// This user has expired, but the cron didn't run...
 		if ( $expires && time() > (int) $expires ) {
 			$this->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
 
-			$identifier = get_user_option( $this->identifier_meta_key, $support_user->ID );
+			$identifier = get_user_option( $this->option_keys->identifier_meta_key, $support_user->ID );
 
 			$this->support_user->delete( $identifier );
 
@@ -428,14 +459,14 @@ final class Client {
 
 			$this->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
 
-			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+			update_user_option( $user_id, $this->option_keys->expires_meta_key, $expiration_timestamp );
 		}
 
-		update_user_option( $user_id, $this->identifier_meta_key, $this->hash( $identifier_hash ), true );
-		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
+		update_user_option( $user_id, $this->option_keys->identifier_meta_key, $this->hash( $identifier_hash ), true );
+		update_user_option( $user_id, $this->option_keys->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
-		return get_user_option( $this->identifier_meta_key, $user_id );
+		return get_user_option( $this->option_keys->identifier_meta_key, $user_id );
 	}
 
 	/**
@@ -689,7 +720,7 @@ final class Client {
 
 		foreach ( $support_users as $support_user ) {
 
-			$_user_creator = get_user_by( 'id', get_user_option( $this->created_by_meta_key, $support_user->ID ) );
+			$_user_creator = get_user_by( 'id', get_user_option( $this->option_keys->created_by_meta_key, $support_user->ID ) );
 
 			$return .= '<tr>';
 			$return .= '<th scope="row"><a href="' . esc_url( admin_url( 'user-edit.php?user_id=' . $support_user->ID ) ) . '">';
@@ -697,7 +728,7 @@ final class Client {
 			$return .= '</th>';
 
 			$return .= '<td>' . sprintf( esc_html__( '%s ago', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ) ) . '</td>';
-			$return .= '<td>' . sprintf( esc_html__( 'In %s', 'trustedlogin' ), human_time_diff( get_user_option( $this->expires_meta_key, $support_user->ID ) ) ) . '</td>';
+			$return .= '<td>' . sprintf( esc_html__( 'In %s', 'trustedlogin' ), human_time_diff( get_user_option( $this->option_keys->expires_meta_key, $support_user->ID ) ) ) . '</td>';
 
 			if ( $_user_creator && $_user_creator->exists() ) {
 				$return .= '<td>' . ( $_user_creator->exists() ? esc_html( $_user_creator->display_name ) : esc_html__( 'Unknown', 'trustedlogin' ) ) . '</td>';
@@ -1064,13 +1095,13 @@ final class Client {
 			return false;
 		}
 
-		if ( empty( $this->identifier_meta_key ) ) {
+		if ( empty( $this->option_keys->identifier_meta_key ) ) {
 			$this->log( 'The meta key to identify users is not set.', __METHOD__, 'error' );
 
 			return false;
 		}
 
-		$identifier = get_user_option( $this->identifier_meta_key, $user_object->ID );
+		$identifier = get_user_option( $this->option_keys->identifier_meta_key, $user_object->ID );
 
 		if ( empty( $identifier ) ) {
 			return false;
@@ -1156,7 +1187,11 @@ final class Client {
 			return;
 		}
 
-		wp_remote_post( $webhook_url, $data );
+		try {
+			wp_remote_post( $webhook_url, $data );
+		} catch ( Exception $exception ) {
+
+		}
 	}
 
 	/**
@@ -1550,7 +1585,12 @@ final class Client {
 
 		$this->log( sprintf( 'Sending to %s: %s', $api_url, print_r( $request_options, true ) ), __METHOD__, 'debug' );
 
-		$response = wp_remote_request( $api_url, $request_options );
+		try {
+			$response = wp_remote_request( $api_url, $request_options );
+		} catch ( Requests_Exception $exception ) {
+			var_dump( $exception->getMessage() );
+			die();
+		}
 
 		$this->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
 

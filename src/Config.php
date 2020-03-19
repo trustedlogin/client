@@ -206,9 +206,7 @@ final class Config {
 
 		$ns = $this->get_setting( 'vendor/namespace' );
 
-		$ns = sanitize_title_with_dashes( $this->get_setting( 'vendor/namespace' ) );
-
-		return $ns;
+		return sanitize_title_with_dashes( $ns );
 	}
 
 	/**

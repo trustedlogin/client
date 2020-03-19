@@ -1,6 +1,19 @@
 <?php
+/**
+ * Class OptionKeys
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2020 Katz Web Services, Inc.
+ */
+namespace TrustedLogin;
 
 use \TrustedLogin\Config;
+
+// Exit if accessed directly
+if ( ! defined('ABSPATH') ) {
+	exit;
+}
 
 final class OptionKeys {
 
@@ -48,9 +61,7 @@ final class OptionKeys {
 	 */
 	private $sharable_accesskey_option;
 
-	/**
-	 * OptionKeys constructor.
-	 */
+
 	public function __construct( Config $config ) {
 
 		$this->config = $config;
@@ -58,17 +69,8 @@ final class OptionKeys {
 	}
 
 	public function init() {
-		$namespace = $config->ns();
 
-		/**
-		 * Filter: Whether debug logging is enabled in TrustedLogin Client
-		 *
-		 * @since 0.4.2
-		 *
-		 * @param bool $debug_mode Default: false
-		 */
-		$this->debug_mode = apply_filters( 'trustedlogin/' . $namespace . '/debug/enabled', $this->config->get_setting( 'debug' ) );
-
+		$namespace = $this->config->ns();
 
 		/**
 		 * Filter: Set endpoint setting name

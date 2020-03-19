@@ -73,11 +73,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->config = new TrustedLogin\Config( $config );
 
+		$this->option_keys = new \TrustedLogin\OptionKeys( $this->config );
+
 		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
+
+		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
 		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
 
-		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 	}
 
 	public function tearDown() {
@@ -231,7 +234,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	function _delete_all_support_users() {
 
-		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->logger );
+		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->option_keys, $this->logger );
 
 		$users = $support_user->get_all();
 
