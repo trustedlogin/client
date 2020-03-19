@@ -75,7 +75,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 					'delete_users'   => 'In order to manage the users that we thought you would want us to.',
 				),
 			),
-			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
+			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
 				'public_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
@@ -188,8 +188,19 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 
 		unset( $that );
 
-		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', 'any data', 'head' ), 'The method failed to auto-uppercase methods.' );
-		$this->assertNotWPError( $this->TrustedLogin->api_send( 'sites', 'any data', 'HEAD' ) );
+
+		$uppercase = $this->TrustedLogin->api_send( 'sites', 'any data', 'head' );
+
+		// If this failed, it's for some network reason, not because of the reason we're testing.
+		if ( is_wp_error( $uppercase ) ) {
+			$this->assertNotEquals( 'invalid_method', $uppercase->get_error_code(), 'The method failed to auto-uppercase methods.' );
+		}
+
+		$head_request = $this->TrustedLogin->api_send( 'sites', 'any data', 'HEAD' );
+
+		if ( is_wp_error( $head_request ) ) {
+			$this->assertNotWPError( $head_request, $head_request->get_error_code() . ': ' . $head_request->get_error_message() );
+		}
 
 		remove_filter( 'http_request_args', $filter_args );
 
