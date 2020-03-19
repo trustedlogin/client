@@ -1317,7 +1317,7 @@ final class Client {
 		$length 			= strlen( $access_key_prefix );
 		$access_key 		= $access_key_prefix . substr( $hash, $length );
 
-		update_site_option( $this->sharable_accesskey_option, $access_key );
+		update_site_option( $this->option_keys->sharable_accesskey_option, $access_key );
 
 		return $access_key;
 	}
@@ -1359,7 +1359,7 @@ final class Client {
 	 */
 	public function get_accesskey(){
 
-		$access_key = get_site_option( $this->sharable_accesskey_option, false );
+		$access_key = get_site_option( $this->option_keys->sharable_accesskey_option, false );
 
 		if ( $access_key ){
 			return $access_key;
@@ -1461,7 +1461,7 @@ final class Client {
 			return $response;
 		}
 
-		delete_site_option( $this->sharable_accesskey_option );
+		delete_site_option( $this->option_keys->sharable_accesskey_option );
 
 		return true;
 	}

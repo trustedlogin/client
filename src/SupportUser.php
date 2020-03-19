@@ -136,7 +136,7 @@ final class SupportUser {
 		$args = array(
 			'role'       => $this->role->get_name(),
 			'number'     => 1,
-			'meta_key'   => $this->identifier_meta_key,
+			'meta_key'   => $this->option_keys->identifier_meta_key,
 			'meta_value' => $identifier,
 		);
 
@@ -189,9 +189,10 @@ final class SupportUser {
 		foreach ( $users as $_user ) {
 			$this->logger->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
 
-			$tlid = get_user_option( $this->identifier_meta_key, $_user->ID );
+			$tlid = get_user_option( $this->option_keys->identifier_meta_key, $_user->ID );
 
 			// Remove auto-cleanup hook
+			// TODO: Where did the setup for this go?
 			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
 
 			if ( wp_delete_user( $_user->ID, $reassign_id_or_null ) ) {
@@ -213,9 +214,9 @@ final class SupportUser {
 			}
 		}
 
-		if ( $delete_endpoint && get_site_option( $this->endpoint_option ) ) {
+		if ( $delete_endpoint && get_site_option( $this->option_keys->endpoint_option ) ) {
 
-			delete_site_option( $this->endpoint_option );
+			delete_site_option( $this->option_keys->endpoint_option );
 
 			flush_rewrite_rules( false );
 
@@ -224,7 +225,7 @@ final class SupportUser {
 			$this->logger->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
 		}
 
-		return $this->revoke_access( $identifier );
+		return $this->delete( $identifier );
 	}
 
 	/**
