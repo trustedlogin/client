@@ -304,4 +304,25 @@ final class Config {
 
 		return true;
 	}
+
+	/**
+	 * Checks whether configuration has debug mode enabled.
+	 *
+	 * @return bool Default: false
+	 */
+	public function is_debug() {
+
+		$is_debug = $this->get_setting( 'debug', false );
+
+		$is_debug = ! empty( $is_debug );
+
+		/**
+		 * Filter: Whether debug logging is enabled in TrustedLogin Client
+		 *
+		 * @since 0.4.2
+		 *
+		 * @param bool $debug_mode Default: false
+		 */
+		return apply_filters( 'trustedlogin/' . $this->ns() . '/debug/enabled', $is_debug );
+	}
 }

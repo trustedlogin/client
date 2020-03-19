@@ -72,12 +72,6 @@ final class Client {
 	private $support_user;
 
 	/**
-	 * @var bool $debug_mode Whether to output debug information to a debug text file
-	 * @since 0.1.0
-	 */
-	private $debug_mode = false;
-
-	/**
 	 * TrustedLogin constructor.
 	 *
 	 * @see https://docs.trustedlogin.com/ for more information
@@ -106,15 +100,6 @@ final class Client {
 	}
 
 	public function init() {
-
-		/**
-		 * Filter: Whether debug logging is enabled in TrustedLogin Client
-		 *
-		 * @since 0.4.2
-		 *
-		 * @param bool $debug_mode Default: false
-		 */
-		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->config->ns() . '/debug/enabled', $this->config->get_setting( 'debug' ) );
 
 		$this->option_keys->init();
 
@@ -552,7 +537,7 @@ final class Client {
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
 			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
-			'debug'    => $this->debug_mode,
+			'debug'    => $this->config->is_debug(),
 			'selector' => '.trustedlogin–grant-access',
 		);
 
