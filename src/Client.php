@@ -1572,9 +1572,7 @@ final class Client {
 
 		try {
 			$response = wp_remote_request( $api_url, $request_options );
-		} catch ( Requests_Exception $exception ) {
-			var_dump( $exception->getMessage() );
-			die();
+		} catch ( Exception $exception ) {
 		}
 
 		$this->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
