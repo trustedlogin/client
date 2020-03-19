@@ -57,9 +57,14 @@ final class Client {
 	private $config;
 
 	/**
-	 * @var null|\TrustedLogin\Logger
+	 * @var null|\TrustedLogin\Logger $logger
 	 */
-	private $logger = null;
+	private $logger;
+
+	/**
+	 * @var OptionKeys $option_keys
+	 */
+	private $option_keys;
 
 	/**
 	 * @var \TrustedLogin\SupportUser
@@ -67,55 +72,10 @@ final class Client {
 	private $support_user;
 
 	/**
-	 * @var string $endpoint_option The namespaced setting name for storing part of the auto-login endpoint
-	 * @example 'tl_{vendor/namespace}_endpoint'
-	 * @since 0.3.0
-	 */
-	private $endpoint_option;
-
-	/**
-	 * @var string $identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
-	 * @example tl_{vendor/namespace}_id
-	 * @since 0.7.0
-	 */
-	private $identifier_meta_key;
-
-	/**
-	 * @var int $expires_meta_key The namespaced setting name for storing the timestamp the user expires
-	 * @example tl_{vendor/namespace}_expires
-	 * @since 0.7.0
-	 */
-	private $expires_meta_key;
-
-	/**
-	 * @var int $created_by_meta_key The ID of the user who created the TrustedLogin access
-	 * @since 0.9.7
-	 */
-	private $created_by_meta_key;
-
-	/**
 	 * @var bool $debug_mode Whether to output debug information to a debug text file
 	 * @since 0.1.0
 	 */
 	private $debug_mode = false;
-
-	/**
-	 * @var string $ns Plugin's namespace (lowercase) for use in namespacing variables and strings. Sanitized using {@see sanitize_title_with_dashes()}
-	 * @since 0.4.0
-	 */
-	private $ns;
-
-	/**
-	 * @var string $public_key_option Where the plugin should store the public key for encrypting data
-	 * @since 0.5.0
-	 */
-	private $public_key_option;
-
-	/**
-	 * @var string $sharable_accesskey_option Where the plugin should store the shareable access key
-	 * @since 0.9.2
-	 */
-	private $sharable_accesskey_option;
 
 	/**
 	 * TrustedLogin constructor.
@@ -134,7 +94,9 @@ final class Client {
 			return;
 		}
 
-		$this->init_properties( $config );
+		$this->config = $config;
+
+		$this->option_keys = new \TrustedLogin\OptionKeys( $config );
 
 		$this->logger = new \TrustedLogin\Logger( $config );
 
@@ -196,7 +158,7 @@ final class Client {
 	 */
 	public function add_support_endpoint() {
 
-		$endpoint = get_site_option( $this->endpoint_option );
+		$endpoint = get_site_option( $this->option_keys->endpoint_option );
 
 		if ( ! $endpoint ) {
 			return;
@@ -223,7 +185,7 @@ final class Client {
 	 */
 	public function maybe_login_support() {
 
-		$endpoint = get_site_option( $this->endpoint_option );
+		$endpoint = get_site_option( $this->option_keys->endpoint_option );
 
 		$identifier = get_query_var( $endpoint, false );
 
@@ -399,7 +361,7 @@ final class Client {
 	 * @return bool True: updated; False: didn't change, or didn't update
 	 */
 	public function update_endpoint( $endpoint ) {
-		return update_option( $this->endpoint_option, $endpoint, true );
+		return update_option( $this->option_keys->endpoint_option, $endpoint, true );
 	}
 
 	/**
@@ -959,70 +921,6 @@ final class Client {
 		);
 
 		return $secondary_alert_translations;
-	}
-
-	protected function init_properties( $config ) {
-
-		$this->config = $config;
-
-
-		$this->ns = $this->config->ns();
-
-		/**
-		 * Filter: Whether debug logging is enabled in TrustedLogin Client
-		 *
-		 * @since 0.4.2
-		 *
-		 * @param bool $debug_mode Default: false
-		 */
-		$this->debug_mode = apply_filters( 'trustedlogin/' . $this->ns . '/debug/enabled', $this->config->get_setting( 'debug' ) );
-
-
-		/**
-		 * Filter: Set endpoint setting name
-		 *
-		 * @since 0.3.0
-		 *
-		 * @param string
-		 * @param Client $this
-		 */
-		$this->endpoint_option = apply_filters(
-			'trustedlogin/' . $this->ns . '/options/endpoint',
-			'tl_' . $this->ns . '_endpoint',
-			$this
-		);
-
-		/**
-		 * Filter: Sets the site option name for the Public Key for encryption functions
-		 *
-		 * @since 0.5.0
-		 *
-		 * @param string $public_key_option
-		 * @param Client $this
-		 */
-		$this->public_key_option = apply_filters(
-			'trustedlogin/' . $this->ns . '/options/public_key',
-			'tl_' . $this->ns . '_public_key',
-			$this
-		);
-
-		$this->identifier_meta_key = 'tl_' . $this->ns . '_id';
-		$this->expires_meta_key    = 'tl_' . $this->ns . '_expires';
-		$this->created_by_meta_key = 'tl_' . $this->ns . '_created_by';
-
-		/**
-		 * Filter: Sets the site option name for the Shareable accessKey if it's used
-		 *
-		 * @since 0.9.2
-		 *
-		 * @param string $sharable_accesskey_option
-		 * @param Client $this
-		 */
-		$this->sharable_accesskey_option = apply_filters(
-			'trustedlogin/' . $this->ns . '/options/sharable_accesskey',
-			'tl_' . $this->ns . '_sharable_accesskey',
-			$this
-		);
 	}
 
 	/**
