@@ -35,6 +35,12 @@ class Logger {
 		$this->config = $config;
 
 		$this->ns = $this->config->ns();
+
+		$this->logger = new Logger(
+			$config->get_setting( 'logging/directory' ),
+			$config->get_setting( 'logging/threshold' ),
+			$config->get_setting( 'logging/options' )
+		);
 	}
 
 
@@ -75,12 +81,6 @@ class Logger {
 
 			return;
 		}
-
-		$log_directory = $config->get_setting( 'logging/directory' );
-		$log_threshold = $config->get_setting( 'logging/threshold' );
-		$log_options = $config->get_setting( 'logging/options' );
-
-		$this->logger = new Logger( $log_directory, $log_threshold, $log_options );
 
 		$this->logger->{$level}( $method . ': ' . $text );
 
