@@ -9,7 +9,6 @@
 namespace TrustedLogin;
 
 use \TrustedLogin\Config;
-use TrustedLogin\Config;
 
 // Exit if accessed directly
 if ( ! defined('ABSPATH') ) {

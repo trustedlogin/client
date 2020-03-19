@@ -1830,7 +1830,7 @@ final class Client {
 			return new WP_Error( 'no_public_key', 'No key provided.' );
 		}
 
-		$saved = update_site_option( $this->public_key_option, $public_key );
+		$saved = update_site_option( $this->option_keys->public_key_option, $public_key );
 
 		if ( ! $saved ) {
 			return new WP_Error( 'db_save_error', 'Could not save key to database' );
@@ -1889,7 +1889,7 @@ final class Client {
 	 */
 	private function get_local_encryption_key() {
 
-		$public_key = get_site_option( $this->public_key_option, false );
+		$public_key = get_site_option( $this->option_keys->public_key_option, false );
 
 		if ( empty( $public_key ) ) {
 			return new WP_Error( 'no_local_key', 'There is no public key stored in the DB' );
