@@ -9,6 +9,7 @@
 namespace TrustedLogin;
 
 use \TrustedLogin\Config;
+use TrustedLogin\Config;
 
 // Exit if accessed directly
 if ( ! defined('ABSPATH') ) {
@@ -78,12 +79,12 @@ final class OptionKeys {
 		 * @since 0.3.0
 		 *
 		 * @param string
-		 * @param Client $this
+		 * @param Config $config
 		 */
 		$this->endpoint_option = apply_filters(
 			'trustedlogin/' . $namespace . '/options/endpoint',
 			'tl_' . $namespace . '_endpoint',
-			$this
+			$this->config
 		);
 
 		/**
@@ -92,12 +93,12 @@ final class OptionKeys {
 		 * @since 0.5.0
 		 *
 		 * @param string $public_key_option
-		 * @param Client $this
+		 * @param Config $config
 		 */
 		$this->public_key_option = apply_filters(
 			'trustedlogin/' . $namespace . '/options/public_key',
 			'tl_' . $namespace . '_public_key',
-			$this
+			$this->config
 		);
 
 		$this->identifier_meta_key = 'tl_' . $namespace . '_id';
@@ -110,12 +111,12 @@ final class OptionKeys {
 		 * @since 0.9.2
 		 *
 		 * @param string $sharable_accesskey_option
-		 * @param Client $this
+		 * @param Config $config
 		 */
 		$this->sharable_accesskey_option = apply_filters(
 			'trustedlogin/' . $namespace . '/options/sharable_accesskey',
 			'tl_' . $namespace . '_sharable_accesskey',
-			$this
+			$this->config
 		);
 	}
 
