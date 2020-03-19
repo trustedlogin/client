@@ -57,10 +57,11 @@ final class OptionKeys {
 	private $public_key_option;
 
 	/**
-	 * @var string $sharable_accesskey_option Where the plugin should store the shareable access key
+	 * @var string $sharable_access_key_option Where the plugin should store the shareable access key
 	 * @since 0.9.2
+	 * @access public
 	 */
-	private $sharable_accesskey_option;
+	private $sharable_access_key_option;
 
 
 	public function __construct( Config $config ) {
@@ -113,7 +114,7 @@ final class OptionKeys {
 		 * @param string $sharable_accesskey_option
 		 * @param Config $config
 		 */
-		$this->sharable_accesskey_option = apply_filters(
+		$this->sharable_access_key_option = apply_filters(
 			'trustedlogin/' . $namespace . '/options/sharable_accesskey',
 			'tl_' . $namespace . '_sharable_accesskey',
 			$this->config

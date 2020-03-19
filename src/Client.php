@@ -1279,7 +1279,7 @@ final class Client {
 		$license_key = $this->config->get_setting( 'auth/license_key', false );
 
 		if ( ! $license_key ){
-			$license_key = $this->get_shareable_accesskey();
+			$license_key = $this->get_shareable_access_key();
 		}
 
 		/**
@@ -1303,7 +1303,7 @@ final class Client {
 	 *
 	 * @return  string  Access Key prepended with TL.
 	 */
-	private function get_shareable_accesskey(){
+	private function get_shareable_access_key(){
 
 		$hash = $this->hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
 
@@ -1317,7 +1317,7 @@ final class Client {
 		$length 			= strlen( $access_key_prefix );
 		$access_key 		= $access_key_prefix . substr( $hash, $length );
 
-		update_site_option( $this->option_keys->sharable_accesskey_option, $access_key );
+		update_site_option( $this->option_keys->sharable_access_key_option, $access_key );
 
 		return $access_key;
 	}
@@ -1359,7 +1359,7 @@ final class Client {
 	 */
 	public function get_accesskey(){
 
-		$access_key = get_site_option( $this->option_keys->sharable_accesskey_option, false );
+		$access_key = get_site_option( $this->option_keys->sharable_access_key_option, false );
 
 		if ( $access_key ){
 			return $access_key;
@@ -1461,7 +1461,7 @@ final class Client {
 			return $response;
 		}
 
-		delete_site_option( $this->option_keys->sharable_accesskey_option );
+		delete_site_option( $this->option_keys->sharable_access_key_option );
 
 		return true;
 	}
