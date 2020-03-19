@@ -1041,36 +1041,6 @@ final class Client {
 	}
 
 	/**
-	 * Get the ID of the best-guess appropriate admin user
-	 *
-	 * @since 0.7.0
-	 *
-	 * @return int|null User ID if there are admins, null if not
-	 */
-	private function get_reassign_user_id() {
-
-		if( ! $this->config->get_setting( 'reassign_posts' ) ) {
-			return null;
-		}
-
-		// TODO: Filter here?
-		$admins = get_users( array(
-			'role'    => 'administrator',
-			'orderby' => 'registered',
-			'order'   => 'DESC',
-			'number'  => 1,
-		) );
-
-		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
-
-		$this->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
-
-		return $reassign_id;
-	}
-
-
-
-	/**
 	 * Generate the endpoint parameter as a hash of the site URL with the identifier
 	 *
 	 * @param $identifier_hash

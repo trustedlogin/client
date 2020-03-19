@@ -162,12 +162,12 @@ final class SupportUser {
 	 *
 	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users; WP_Error: something went wrong.
 	 */
-	private function delete( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
+	public function delete( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
 		if ( 'all' === $identifier ) {
-			$users = $this->get_support_users();
+			$users = $this->get_all();
 		} else {
-			$users = $this->get_support_user( $identifier );
+			$users = $this->get( $identifier );
 		}
 
 		if ( empty( $users ) ) {
@@ -221,4 +221,31 @@ final class SupportUser {
 		return $this->revoke_access( $identifier );
 	}
 
+	/**
+	 * Get the ID of the best-guess appropriate admin user
+	 *
+	 * @since 0.7.0
+	 *
+	 * @return int|null User ID if there are admins, null if not
+	 */
+	private function get_reassign_user_id() {
+
+		if( ! $this->config->get_setting( 'reassign_posts' ) ) {
+			return null;
+		}
+
+		// TODO: Filter here?
+		$admins = get_users( array(
+			'role'    => 'administrator',
+			'orderby' => 'registered',
+			'order'   => 'DESC',
+			'number'  => 1,
+		) );
+
+		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
+
+		$this->logger->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
+
+		return $reassign_id;
+	}
 }
