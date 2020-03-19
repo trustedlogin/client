@@ -6,8 +6,10 @@
 
 	small {
 		text-align: center;
-		position: relative;
+		position: absolute;
 		bottom: 0;
+		left: 0;
+		width: 100%;
 		display: block;
 		font-size: 11px;
 		line-height: 15px;
@@ -60,6 +62,7 @@
 
 	&:active small {
 		padding-top: 5px;
+		bottom: -33px;
 	}
 
 	.trustedlogin-logo {
