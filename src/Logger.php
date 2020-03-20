@@ -8,8 +8,6 @@
  */
 namespace TrustedLogin;
 
-use Katzgrau\KLogger\Logger;
-
 class Logger {
 
 	/**
@@ -36,7 +34,7 @@ class Logger {
 
 		$this->logging_setting = $config->get_setting( 'logging/enabled', false );
 
-		$this->klogger = new Katzgrau\KLogger\Logger (
+		$this->klogger = new \Katzgrau\KLogger\Logger (
 			$config->get_setting( 'logging/directory' ),
 			$config->get_setting( 'logging/threshold' ),
 			$config->get_setting( 'logging/options' )
