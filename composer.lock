@@ -4,19 +4,19 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c8f1e2120864e70c3a8a6d135355a003",
+    "content-hash": "ca0c9fe1fcefa637dd8ce1478230da5b",
     "packages": [
         {
             "name": "katzgrau/klogger",
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/katzgrau/klogger.git",
+                "url": "https://github.com/katzgrau/KLogger.git",
                 "reference": "de2d3ab6777a393a9879e0496ebb8e0644066e3f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/katzgrau/klogger/zipball/de2d3ab6777a393a9879e0496ebb8e0644066e3f",
+                "url": "https://api.github.com/repos/katzgrau/KLogger/zipball/de2d3ab6777a393a9879e0496ebb8e0644066e3f",
                 "reference": "de2d3ab6777a393a9879e0496ebb8e0644066e3f",
                 "shasum": ""
             },
@@ -236,14 +236,7 @@
         }
     ],
     "packages-dev": [],
-    "aliases": [
-        {
-            "alias": "1.2.1",
-            "alias_normalized": "1.2.1.0",
-            "version": "9999999-dev",
-            "package": "katzgrau/klogger"
-        }
-    ],
+    "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
         "katzgrau/klogger": 20
