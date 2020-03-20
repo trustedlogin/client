@@ -26,9 +26,9 @@ final class SupportRole {
 	private $config;
 
 	/**
-	 * @var Logger $logger
+	 * @var Logging $logging
 	 */
-	private $logger;
+	private $logging;
 
 	/**
 	 * @var string $role_name The namespaced name of the new Role to be created for Support Agents
@@ -57,9 +57,9 @@ final class SupportRole {
 	/**
 	 * SupportUser constructor.
 	 */
-	public function __construct( Config $config, Logger $logger ) {
+	public function __construct( Config $config, Logging $logging ) {
 		$this->config = $config;
-		$this->logger = $logger;
+		$this->logging = $logging;
 		$this->role_name = $this->set_name();
 		$this->cloned_name = $this->config->get_setting( 'role', 'editor' );
 	}
@@ -130,11 +130,11 @@ final class SupportRole {
 		$role_exists = get_role( $new_role_slug );
 
 		if ( $role_exists ) {
-			$this->logger->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
+			$this->logging->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
 			return $role_exists;
 		}
 
-		$this->logger->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
+		$this->logging->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
 
 		$old_role = get_role( $clone_role_slug );
 
@@ -181,7 +181,7 @@ final class SupportRole {
 
 			foreach ( $remove_caps as $remove_cap => $description ){
 				$new_role->remove_cap( $remove_cap );
-				$this->logger->log( 'Capability '. $remove_cap .' removed from role.', __METHOD__, 'info' );
+				$this->logging->log( 'Capability '. $remove_cap .' removed from role.', __METHOD__, 'info' );
 			}
 		}
 

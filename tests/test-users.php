@@ -31,9 +31,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	private $option_keys;
 
 	/**
-	 * @var \TrustedLogin\Logger
+	 * @var \TrustedLogin\Logging
 	 */
-	private $logger;
+	private $logging;
 
 	private $default_settings = array();
 
@@ -74,7 +74,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
+		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
 	}
 
 	public function tearDown() {
@@ -110,7 +110,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$support_user = $this->_get_public_property( 'support_user' );
 
-		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logger );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logging );
 
 		$not_string_new_role = $TL_Support_Role->create( array('asdasd'), 'administrator' );
 		$this->assertWPError( $not_string_new_role, 'not string new role' );
@@ -131,7 +131,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$new_role = microtime();
 
-		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logger );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $this->config, $this->logging );
 		$support_user = $this->_get_public_property( 'support_user' );
 		$new_role = $TL_Support_Role->create( $new_role, $role );
 
@@ -194,7 +194,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		// Was the role created?
 		$config = $this->_get_public_property( 'config' )->getValue( $this->TrustedLogin );
-		$TL_Support_Role = new \TrustedLogin\SupportRole( $config, $this->logger );
+		$TL_Support_Role = new \TrustedLogin\SupportRole( $config, $this->logging );
 		$support_role_key = $TL_Support_Role->get_name();
 		$this->assertTrue( $wp_roles->is_role( $support_role_key ) );
 		$support_role = $wp_roles->get_role( $support_role_key );
@@ -244,7 +244,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		###
 
 		$this->_reset_roles();
-		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin ), $this->logger );
+		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin ), $this->logging );
 		$duplicate_user = $TL_Support_User->create();
 		$this->assertWPError( $duplicate_user );
 		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
@@ -255,7 +255,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_new_title['vendor']['title'] = microtime();
 		$config_with_new_title = new \TrustedLogin\Config( $config_with_new_title );
 		$option_keys = new \TrustedLogin\OptionKeys( $config_with_new_title );
-		$TL_with_new_title = new \TrustedLogin\SupportUser( $config_with_new_title, $option_keys, $this->logger );
+		$TL_with_new_title = new \TrustedLogin\SupportUser( $config_with_new_title, $option_keys, $this->logging );
 
 		$should_be_dupe_email = $TL_with_new_title->create();
 		$this->assertWPError( $should_be_dupe_email );
@@ -270,7 +270,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_bad_role['role'] = 'madeuprole';
 		$config_with_bad_role = new \TrustedLogin\Config( $config_with_bad_role );
 		$option_keys = new \TrustedLogin\OptionKeys( $config_with_bad_role );
-		$TL_config_with_bad_role = new \TrustedLogin\SupportUser( $config_with_bad_role, $option_keys, $this->logger );
+		$TL_config_with_bad_role = new \TrustedLogin\SupportUser( $config_with_bad_role, $option_keys, $this->logging );
 
 		$should_be_role_does_not_exist = $TL_config_with_bad_role->create();
 		$this->assertWPError( $should_be_role_does_not_exist );
@@ -283,7 +283,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$valid_config['vendor']['email'] = microtime() . '@example.com';
 		$valid_config = new \TrustedLogin\Config( $valid_config );
 		$option_keys = new \TrustedLogin\OptionKeys( $valid_config );
-		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $option_keys, $this->logger );
+		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $option_keys, $this->logging );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );

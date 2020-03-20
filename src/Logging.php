@@ -8,7 +8,7 @@
  */
 namespace TrustedLogin;
 
-class Logger {
+class Logging {
 
 	/**
 	 * @var string Namespace for the vendor

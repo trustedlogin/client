@@ -51,7 +51,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \TrustedLogin\Logger::is_enabled()
+	 * @covers \TrustedLogin\Logging::is_enabled()
 	 * @throws \Exception
 	 */
 	public function test_is_enabled() {
@@ -60,7 +60,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 
 		$config = new Config( $default );
 
-		$logging_disabled = new Logger( $config );
+		$logging_disabled = new Logging( $config );
 
 		$this->assertFalse( $logging_disabled->is_enabled() );
 
@@ -77,7 +77,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 
 		$config_enabled = new Config( $enabled );
 
-		$logging_enabled = new Logger( $config_enabled );
+		$logging_enabled = new Logging( $config_enabled );
 
 		$this->assertTrue( $logging_enabled->is_enabled() );
 
@@ -101,12 +101,12 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 
 		$weird_settings['logging']['enabled'] = array( 'asdasddasd' );
 		$weird_config = new Config( $weird_settings );
-		$logging_enabled = new Logger( $weird_config );
+		$logging_enabled = new Logging( $weird_config );
 		$this->assertTrue( $logging_enabled->is_enabled(), 'array had content; !empty() should have returned true' );
 
 		$weird_settings['logging']['enabled'] = array();
 		$weird_config = new Config( $weird_settings );
-		$logging_enabled = new Logger( $weird_config );
+		$logging_enabled = new Logging( $weird_config );
 		$this->assertFalse( $logging_enabled->is_enabled(), 'empty array should have been seen as empty' );
 
 	}

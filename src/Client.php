@@ -57,9 +57,9 @@ final class Client {
 	private $config;
 
 	/**
-	 * @var null|\TrustedLogin\Logger $logger
+	 * @var null|\TrustedLogin\Logging $logging
 	 */
-	private $logger;
+	private $logging;
 
 	/**
 	 * @var \TrustedLogin\OptionKeys $option_keys
@@ -92,9 +92,9 @@ final class Client {
 
 		$this->option_keys = new \TrustedLogin\OptionKeys( $config );
 
-		$this->logger = new \TrustedLogin\Logger( $config );
+		$this->logging = new \TrustedLogin\Logging( $config );
 
-		$this->support_user = new \TrustedLogin\SupportUser( $config, $this->option_keys, $this->logger );
+		$this->support_user = new \TrustedLogin\SupportUser( $config, $this->option_keys, $this->logging );
 
 		$this->init();
 	}
@@ -115,7 +115,7 @@ final class Client {
 	 * @param string $text Message to log
 	 */
 	public function log( $text = '', $method = '', $level = 'debug' ) {
-		$this->logger->log( $text, $method, $level );
+		$this->logging->log( $text, $method, $level );
 	}
 
 	/**
@@ -395,14 +395,14 @@ final class Client {
 			try {
 				$hash = random_bytes( 64 );
 			} catch ( \TypeError $e ) {
-				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Error $e ) {
-				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Exception $e ) {
-				$this->logger->log( $e->getMessage(), __METHOD__, 'error' );
+				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
 			}
 		} else {
-			$this->logger->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
+			$this->logging->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
 		}
 
 		if( $hash ) {
@@ -537,7 +537,7 @@ final class Client {
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
 			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
-			'debug'    => $this->logger->is_enabled(),
+			'debug'    => $this->logging->is_enabled(),
 			'selector' => '.trustedlogin–grant-access',
 		);
 

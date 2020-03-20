@@ -27,9 +27,9 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	private $config;
 
 	/**
-	 * @var \TrustedLogin\Logger
+	 * @var \TrustedLogin\Logging
 	 */
-	private $logger;
+	private $logging;
 
 	/**
 	 * @var int Get around Travis being annoying
@@ -79,7 +79,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
+		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
 
 	}
 
@@ -234,7 +234,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	function _delete_all_support_users() {
 
-		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->option_keys, $this->logger );
+		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->option_keys, $this->logging );
 
 		$users = $support_user->get_all();
 

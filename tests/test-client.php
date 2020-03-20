@@ -54,9 +54,9 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 	private $config;
 
 	/**
-	 * @var \TrustedLogin\Logger
+	 * @var \TrustedLogin\Logging
 	 */
-	private $logger;
+	private $logging;
 
 	public static $functions_not_exist = array();
 
@@ -98,7 +98,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 
 		$this->TrustedLoginReflection = new \ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logger = $this->_get_public_property( 'logger' )->getValue( $this->TrustedLogin );
+		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
 	}
 
 	public function tearDown() {

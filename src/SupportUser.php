@@ -34,9 +34,9 @@ final class SupportUser {
 	private $option_keys;
 
 	/**
-	 * @var Logger $logger
+	 * @var Logging $logging
 	 */
-	private $logger;
+	private $logging;
 
 	/**
 	 * @var SupportRole $role
@@ -46,11 +46,11 @@ final class SupportUser {
 	/**
 	 * SupportUser constructor.
 	 */
-	public function __construct( Config $config, OptionKeys $option_keys, Logger $logger ) {
+	public function __construct( Config $config, OptionKeys $option_keys, Logging $logging ) {
 		$this->config = $config;
 		$this->option_keys = $option_keys;
-		$this->logger = $logger;
-		$this->role = new SupportRole( $config, $logger );
+		$this->logging = $logging;
+		$this->role = new SupportRole( $config, $logging );
 	}
 
 	/**
@@ -65,7 +65,7 @@ final class SupportUser {
 		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( $user_id = username_exists( $user_name ) ) {
-			$this->logger->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
+			$this->logging->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
 
 			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
 		}
@@ -80,7 +80,7 @@ final class SupportUser {
 				$error_output .= ' ' . print_r( $error_data, true );
 			}
 
-			$this->logger->log( $error_output, __METHOD__, 'error' );
+			$this->logging->log( $error_output, __METHOD__, 'error' );
 
 			return $role_exists;
 		}
@@ -88,7 +88,7 @@ final class SupportUser {
 		$user_email = $this->config->get_setting( 'vendor/email' );
 
 		if ( email_exists( $user_email ) ) {
-			$this->logger->log( 'Support User not created; User with that email already exists: ' . $user_email, __METHOD__, 'warning' );
+			$this->logging->log( 'Support User not created; User with that email already exists: ' . $user_email, __METHOD__, 'warning' );
 
 			return new WP_Error( 'user_email_exists', 'Support User not created; User with that email already exists' );
 		}
@@ -107,12 +107,12 @@ final class SupportUser {
 		$new_user_id = wp_insert_user( $user_data );
 
 		if ( is_wp_error( $new_user_id ) ) {
-			$this->logger->log( 'Error: User not created because: ' . $new_user_id->get_error_message(), __METHOD__, 'error' );
+			$this->logging->log( 'Error: User not created because: ' . $new_user_id->get_error_message(), __METHOD__, 'error' );
 
 			return $new_user_id;
 		}
 
-		$this->logger->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
+		$this->logging->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
 
 		return $new_user_id;
 	}
@@ -180,14 +180,14 @@ final class SupportUser {
 			return false;
 		}
 
-		$this->logger->log( count( $users ) . " support users found", __METHOD__, 'debug' );
+		$this->logging->log( count( $users ) . " support users found", __METHOD__, 'debug' );
 
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
 		$reassign_id_or_null = $this->get_reassign_user_id();
 
 		foreach ( $users as $_user ) {
-			$this->logger->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
+			$this->logging->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
 
 			$tlid = get_user_option( $this->option_keys->identifier_meta_key, $_user->ID );
 
@@ -196,9 +196,9 @@ final class SupportUser {
 			wp_clear_scheduled_hook( 'trustedlogin_revoke_access', array( $tlid ) );
 
 			if ( wp_delete_user( $_user->ID, $reassign_id_or_null ) ) {
-				$this->logger->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
+				$this->logging->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
 			} else {
-				$this->logger->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
+				$this->logging->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
 			}
 		}
 
@@ -208,9 +208,9 @@ final class SupportUser {
 			remove_role( $this->role->get_name() );
 
 			if( get_role( $this->role->get_name() ) ) {
-				$this->logger->log( "Role " . $this->role->get_name() . " was not removed successfully.", __METHOD__, 'error' );
+				$this->logging->log( "Role " . $this->role->get_name() . " was not removed successfully.", __METHOD__, 'error' );
 			} else {
-				$this->logger->log( "Role " . $this->role->get_name() . " removed.", __METHOD__, 'info' );
+				$this->logging->log( "Role " . $this->role->get_name() . " removed.", __METHOD__, 'info' );
 			}
 		}
 
@@ -222,7 +222,7 @@ final class SupportUser {
 
 			update_option( 'tl_permalinks_flushed', 0 );
 
-			$this->logger->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
+			$this->logging->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
 		}
 
 		return $this->delete( $identifier );
@@ -251,7 +251,7 @@ final class SupportUser {
 
 		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
 
-		$this->logger->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
+		$this->logging->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
 
 		return $reassign_id;
 	}
