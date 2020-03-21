@@ -16,9 +16,9 @@ class Logging {
 	private $ns;
 
 	/**
-	 * @var bool $logging_setting
+	 * @var bool $logging_enabled
 	 */
-	private $logging_setting = false;
+	private $logging_enabled = false;
 
 	/**
 	 * @var Katzgrau\KLogger\Logger
@@ -32,7 +32,7 @@ class Logging {
 
 		$this->ns = $config->ns();
 
-		$this->logging_setting = $config->get_setting( 'logging/enabled', false );
+		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
 
 		$this->klogger = new \Katzgrau\KLogger\Logger (
 			$config->get_setting( 'logging/directory' ),
@@ -48,7 +48,7 @@ class Logging {
 	 */
 	public function is_enabled() {
 
-		$is_enabled = ! empty( $this->logging_setting );
+		$is_enabled = ! empty( $this->logging_enabled );
 
 		/**
 		 * Filter: Whether debug logging is enabled in TrustedLogin Client
