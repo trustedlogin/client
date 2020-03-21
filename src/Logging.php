@@ -85,8 +85,8 @@ class Logging {
 			$level = 'debug'; // Continue processing original log
 		}
 
-		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $text, $this->is_debug, $method, $level );
-		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $text, $this->is_debug, $method );
+		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $text, $method, $level );
+		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $text, $method );
 
 		// If logging is in place, don't use the error_log
 		if ( has_action( 'trustedlogin/' . $this->ns . '/logging/log' ) || has_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level ) ) {
