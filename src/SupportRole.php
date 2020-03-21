@@ -187,4 +187,28 @@ final class SupportRole {
 
 		return $new_role;
 	}
+
+	/**
+	 * @return bool|null Null: Role wasn't found; True: Removing role succeeded; False: Role wasn't deleted successfully.
+	 */
+	public function delete() {
+
+		if ( ! get_role( $this->get_name() ) ) {
+			return null;
+		}
+
+		// Returns void; no way to tell if successful
+		remove_role( $this->get_name() );
+
+		if( get_role( $this->get_name() ) ) {
+
+			$this->logging->log( "Role " . $this->get_name() . " was not removed successfully.", __METHOD__, 'error' );
+
+			return false;
+		}
+
+		$this->logging->log( "Role " . $this->get_name() . " removed.", __METHOD__, 'info' );
+
+		return true;
+	}
 }

@@ -22,7 +22,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	private $TrustedLoginReflection;
 
 	/**
-	 * @var array
+	 * @var \TrustedLogin\Config
 	 */
 	private $config;
 
@@ -80,6 +80,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
 		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
+
+		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
 
 	}
 
@@ -170,7 +172,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		 * Just wanting to make sure this step is tested, but:
 		 * @see TrustedLoginUsersTest::test_create_support_user for full testing
 		 */
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->TrustedLogin->get_setting( 'vendor/title' ) );
+		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 		$existing_user = $this->factory->user->create_and_get( array( 'user_login' => $user_name ) );
 		$this->assertTrue( is_a( $existing_user, 'WP_User' ) );
 		$this->_setRole( 'administrator' );
@@ -234,7 +236,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	function _delete_all_support_users() {
 
-		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->option_keys, $this->logging );
+		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->logging );
 
 		$users = $support_user->get_all();
 
@@ -242,7 +244,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			wp_delete_user( $user->ID );
 		}
 
-		$user = get_user_by( 'email', $this->TrustedLogin->get_setting( 'vendor/email' ) );
+		$user = get_user_by( 'email', $this->config->get_setting( 'vendor/email' ) );
 
 		if( $user ) {
 			wp_delete_user( $user->ID );

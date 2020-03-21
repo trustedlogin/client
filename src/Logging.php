@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Logger
+ * Class Logging
  *
  * @package TrustedLogin\Client
  *

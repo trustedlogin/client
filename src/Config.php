@@ -32,7 +32,7 @@ final class Config {
 		'decay' => WEEK_IN_SECONDS,
 		'role' => 'editor',
 		'paths' => array(
-			'css' => null, // Default is defined in get_default_settings()
+			'css' => null,
 			'js'  => null, // Default is defined in get_default_settings()
 		),
 		'caps' => array(
@@ -77,6 +77,8 @@ final class Config {
 	 * Config constructor.
 	 *
 	 * @param array $settings
+	 *
+	 * @throws \Exception
 	 */
 	public function __construct( array $settings = array() ) {
 
@@ -89,14 +91,11 @@ final class Config {
 
 
 	/**
-	 * @param array $config
-	 * @param array $settings
-	 * @param bool  $throw_exception
-	 *
 	 * @throws \Exception
+	 *
+	 * @return true|\WP_Error[]
 	 */
 	public function validate() {
-
 
 		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
 			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
@@ -143,6 +142,28 @@ final class Config {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Returns a timestamp that is the current time + decay time setting
+	 *
+	 * Note: This is a server timestamp, not a WordPress timestamp
+	 *
+	 * @param int $decay_time If passed, override the `decay` setting
+	 *
+	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
+	 */
+	public function get_expiration_timestamp( $decay_time = null ) {
+
+		if ( is_null( $decay_time ) ) {
+			$decay_time = $this->get_setting( 'decay' );
+		}
+
+		if ( 0 === $decay_time ) {
+			return false;
+		}
+
+		return time() + (int) $decay_time;
 	}
 
 	/**
@@ -233,7 +254,6 @@ final class Config {
 		}
 
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			$this->log( 'Settings have not been configured, returning default value', __METHOD__, 'critical' );
 			return $default;
 		}
 

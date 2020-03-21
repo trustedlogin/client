@@ -11,24 +11,14 @@
 class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 	/**
-	 * @var TrustedLogin
+	 * @var \TrustedLogin\Client
 	 */
 	private $TrustedLogin;
-
-	/**
-	 * @var ReflectionClass
-	 */
-	private $TrustedLoginReflection;
 
 	/**
 	 * @var \TrustedLogin\Config
 	 */
 	private $config;
-
-	/**
-	 * @var \TrustedLogin\OptionKeys
-	 */
-	private $option_keys;
 
 	/**
 	 * @var \TrustedLogin\Logging
@@ -37,9 +27,20 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 	private $default_settings = array();
 
+	static $role_key;
+
+	static $default_roles;
+
 	public function setUp() {
+		global $wpdb;
 
 		parent::setUp();
+
+		// role settings name in options table
+		self::$role_key = $wpdb->get_blog_prefix( get_current_blog_id() ) . 'user_roles';
+
+		// copy current roles
+		self::$default_roles = get_option( self::$role_key );
 
 		$this->default_settings = array(
 			'role' => 'editor',
@@ -70,20 +71,22 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->config = new \TrustedLogin\Config( $this->default_settings );
 
-		$this->TrustedLogin = new TrustedLogin\Client( $this->config );
-
-		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
 
 		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
+
+		$this->endpoint = new TrustedLogin\Endpoint( $this->config, $this->logging );
 	}
 
-	public function tearDown() {
-		parent::tearDown();
-	}
+	private function _get_public_property( $name, $object = null ) {
 
-	private function _get_public_property( $name ) {
+		$class = '\TrustedLogin\Client';
+		if ( is_object( $object ) ) {
+			$class = get_class( $object );
+		}
 
-		$prop = $this->TrustedLoginReflection->getProperty( $name );
+		$Reflection = new \ReflectionClass( $class );
+		$prop = $Reflection->getProperty( $name );
 		$prop->setAccessible( true );
 
 		return $prop;
@@ -154,7 +157,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			unset( $cloned_caps[ $remove_cap ] );
 		}
 
-		$added_caps = $this->TrustedLogin->get_setting('caps/add' );
+		$added_caps = $this->config->get_setting('caps/add' );
 
 		foreach ( (array) $added_caps as $added_cap => $reason ) {
 
@@ -174,6 +177,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	/**
 	 * @covers TrustedLogin::create_support_user
 	 * @covers TrustedLogin::support_user_create_role
+	 * @throws Exception
 	 */
 	public function test_create_support_user() {
 		global $wp_roles;
@@ -229,12 +233,12 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			}
 		}
 
-		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->TrustedLogin->get_setting( 'vendor/title' ) );
+		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
-		$this->assertSame( $this->TrustedLogin->get_setting('vendor/first_name'), $support_user->first_name );
-		$this->assertSame( $this->TrustedLogin->get_setting('vendor/last_name'), $support_user->last_name );
-		$this->assertSame( $this->TrustedLogin->get_setting('vendor/email'), $support_user->user_email );
-		$this->assertSame( $this->TrustedLogin->get_setting('vendor/website'), $support_user->user_url );
+		$this->assertSame( $this->config->get_setting('vendor/first_name'), $support_user->first_name );
+		$this->assertSame( $this->config->get_setting('vendor/last_name'), $support_user->last_name );
+		$this->assertSame( $this->config->get_setting('vendor/email'), $support_user->user_email );
+		$this->assertSame( $this->config->get_setting('vendor/website'), $support_user->user_url );
 		$this->assertSame( sanitize_user( $username ), $support_user->user_login );
 
 		###
@@ -244,7 +248,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		###
 
 		$this->_reset_roles();
-		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin ), $this->logging );
+		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->logging );
 		$duplicate_user = $TL_Support_User->create();
 		$this->assertWPError( $duplicate_user );
 		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
@@ -254,8 +258,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_new_title = $this->default_settings;
 		$config_with_new_title['vendor']['title'] = microtime();
 		$config_with_new_title = new \TrustedLogin\Config( $config_with_new_title );
-		$option_keys = new \TrustedLogin\OptionKeys( $config_with_new_title );
-		$TL_with_new_title = new \TrustedLogin\SupportUser( $config_with_new_title, $option_keys, $this->logging );
+		$TL_with_new_title = new \TrustedLogin\SupportUser( $config_with_new_title, $this->logging );
 
 		$should_be_dupe_email = $TL_with_new_title->create();
 		$this->assertWPError( $should_be_dupe_email );
@@ -268,22 +271,22 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$config_with_bad_role['vendor']['namespace'] = microtime();
 		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
 		$config_with_bad_role['role'] = 'madeuprole';
+		$this->assertEmpty( get_role( 'gravityview-support' ), 'sanity check - gravityview-support role shouldn\'t exist' );
+		$this->assertEmpty( get_role( $config_with_bad_role['role'] ), 'sanity check - madeuprole role shouldn\'t exist' );
+
 		$config_with_bad_role = new \TrustedLogin\Config( $config_with_bad_role );
-		$option_keys = new \TrustedLogin\OptionKeys( $config_with_bad_role );
-		$TL_config_with_bad_role = new \TrustedLogin\SupportUser( $config_with_bad_role, $option_keys, $this->logging );
+		$TL_config_with_bad_role = new \TrustedLogin\SupportUser( $config_with_bad_role, $this->logging );
 
 		$should_be_role_does_not_exist = $TL_config_with_bad_role->create();
 		$this->assertWPError( $should_be_role_does_not_exist );
 		$this->assertSame( 'role_does_not_exist', $should_be_role_does_not_exist->get_error_code() );
-
 
 		$valid_config = $this->default_settings;
 		$valid_config['vendor']['title'] = microtime();
 		$valid_config['vendor']['namespace'] = microtime();
 		$valid_config['vendor']['email'] = microtime() . '@example.com';
 		$valid_config = new \TrustedLogin\Config( $valid_config );
-		$option_keys = new \TrustedLogin\OptionKeys( $valid_config );
-		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $option_keys, $this->logging );
+		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $this->logging );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );
@@ -296,50 +299,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers TrustedLogin::get_expiration_timestamp
-	 */
-	function test_get_expiration_timestamp() {
-
-		$valid_config = array(
-			'auth' => array(
-				'public_key' => 'not empty'
-			),
-			'vendor' => array(
-				'namespace' => 'asdasd',
-				'email' => 'asdasds',
-				'title' => 'asdasdsad',
-				'website' => 'https://example.com',
-				'support_url' => 'https://example.com/support/',
-			)
-		);
-
-		$DefaultTrustedLogin = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
-
-		$this->assertSame( ( time() + WEEK_IN_SECONDS ), $DefaultTrustedLogin->get_expiration_timestamp(), 'The method should have "WEEK_IN_SECONDS" set as default.' );
-
-		$this->assertSame( time() + DAY_IN_SECONDS, $DefaultTrustedLogin->get_expiration_timestamp( DAY_IN_SECONDS ) );
-
-		$this->assertSame( time() + WEEK_IN_SECONDS, $this->TrustedLogin->get_expiration_timestamp( WEEK_IN_SECONDS ) );
-
-		$this->assertSame( false, $this->TrustedLogin->get_expiration_timestamp( 0 ) );
-
-		$valid_config['decay'] = 12345;
-
-		$DefaultTrustedLoginWithDecay = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
-
-		$this->assertSame( time() + 12345, $DefaultTrustedLoginWithDecay->get_expiration_timestamp() );
-
-		$valid_config['decay'] = 0;
-
-		$DefaultTrustedLoginWithNoDecay = new TrustedLogin\Client( new \TrustedLogin\Config( $valid_config ) );
-
-		$this->assertSame( false, $DefaultTrustedLoginWithNoDecay->get_expiration_timestamp() );
-	}
-
-	/**
 	 * Make sure the user meta and cron are added correctly
 	 *
-	 * @covers TrustedLogin::support_user_setup
+	 * @covers SupportUser::setup
 	 */
 	function test_support_user_setup() {
 
@@ -351,13 +313,17 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$hash = 'asdsdasdasdasdsd';
 		$hash_md5 = md5( $hash );
-		$expiry = $this->TrustedLogin->get_expiration_timestamp( DAY_IN_SECONDS );
+		$expiry = $this->config->get_expiration_timestamp( DAY_IN_SECONDS );
+		$cron = new \TrustedLogin\Cron( $this->config, $this->logging );
 
-		$this->assertSame( $hash_md5, $this->TrustedLogin->support_user_setup( $user->ID, $hash, $expiry ) );
+		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->logging );
 
-		$option_keys = $this->_get_public_property( 'option_keys' )->getValue( $this->TrustedLogin );
-		$this->assertSame( (string) $expiry, get_user_option( $option_keys->expires_meta_key, $user->ID ) );
-		$this->assertSame( (string) $current->ID, get_user_option( $option_keys->created_by_meta_key, $user->ID ) );
+		$this->assertSame( $hash_md5, $TL_Support_User->setup( $user->ID, $hash, $expiry, $cron ) );
+
+		$expires_meta_key = $this->_get_public_property( 'expires_meta_key', $TL_Support_User )->getValue( $TL_Support_User );
+		$this->assertSame( (string) $expiry, get_user_option( $expires_meta_key, $user->ID ) );
+		$created_by_meta_key = $this->_get_public_property( 'created_by_meta_key', $TL_Support_User )->getValue( $TL_Support_User );
+		$this->assertSame( (string) $current->ID, get_user_option( $created_by_meta_key, $user->ID ) );
 
 		// We are scheduling a single event cron, so it will return `false` when using wp_get_schedule().
 		// False is the same result as an error, so we're doing more legwork here to validate.
@@ -378,8 +344,13 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 * Reset the roles to default WordPress roles
 	 */
 	private function _reset_roles() {
-		global $wp_roles;
 
+		update_option( self::$role_key, self::$default_roles );
+
+		// we want to make sure we're testing against the db, not just in-memory data
+		// this will flush everything and reload it from the db
+		unset( $GLOBALS['wp_user_roles'] );
+		global $wp_roles;
 		$wp_roles = new WP_Roles();
 	}
 }

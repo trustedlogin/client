@@ -23,13 +23,6 @@ final class OptionKeys {
 	private $config;
 
 	/**
-	 * @var string $endpoint_option The namespaced setting name for storing part of the auto-login endpoint
-	 * @example 'tl_{vendor/namespace}_endpoint'
-	 * @since 0.3.0
-	 */
-	private $endpoint_option;
-
-	/**
 	 * @var string $identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
 	 * @example tl_{vendor/namespace}_id
 	 * @since 0.7.0
@@ -49,11 +42,6 @@ final class OptionKeys {
 	 */
 	private $created_by_meta_key;
 
-	/**
-	 * @var string $public_key_option Where the plugin should store the public key for encrypting data
-	 * @since 0.5.0
-	 */
-	private $public_key_option;
 
 	/**
 	 * @var string $sharable_access_key_option Where the plugin should store the shareable access key
@@ -73,37 +61,7 @@ final class OptionKeys {
 
 		$namespace = $this->config->ns();
 
-		/**
-		 * Filter: Set endpoint setting name
-		 *
-		 * @since 0.3.0
-		 *
-		 * @param string
-		 * @param Config $config
-		 */
-		$this->endpoint_option = apply_filters(
-			'trustedlogin/' . $namespace . '/options/endpoint',
-			'tl_' . $namespace . '_endpoint',
-			$this->config
-		);
 
-		/**
-		 * Filter: Sets the site option name for the Public Key for encryption functions
-		 *
-		 * @since 0.5.0
-		 *
-		 * @param string $public_key_option
-		 * @param Config $config
-		 */
-		$this->public_key_option = apply_filters(
-			'trustedlogin/' . $namespace . '/options/public_key',
-			'tl_' . $namespace . '_public_key',
-			$this->config
-		);
-
-		$this->identifier_meta_key = 'tl_' . $namespace . '_id';
-		$this->expires_meta_key    = 'tl_' . $namespace . '_expires';
-		$this->created_by_meta_key = 'tl_' . $namespace . '_created_by';
 
 		/**
 		 * Filter: Sets the site option name for the Shareable accessKey if it's used
