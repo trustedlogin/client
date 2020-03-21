@@ -204,9 +204,15 @@ final class Config {
 	 */
 	public function ns() {
 
-		$ns = $this->get_setting( 'vendor/namespace' );
+		static $namespace;
 
-		return sanitize_title_with_dashes( $ns );
+		if ( ! $namespace ) {
+			$ns = $this->get_setting( 'vendor/namespace' );
+
+			$namespace = sanitize_title_with_dashes( $ns );
+		}
+
+		return $namespace;
 	}
 
 	/**
