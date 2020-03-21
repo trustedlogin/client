@@ -61,7 +61,7 @@ final class Config {
 		'require_ssl' => true,
 		'logging' => array(
 			'enabled' => false,
-			'directory' => WP_CONTENT_DIR . '/debug.log',
+			'directory' => null, // Set to WP_CONTENT_DIR . '/debug.log' in Logging class
 			'threshold' => 'debug',
 			'options' => array(),
 		)

@@ -35,7 +35,7 @@ class Logging {
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
 
 		$this->klogger = new \Katzgrau\KLogger\Logger (
-			$config->get_setting( 'logging/directory' ),
+			$config->get_setting( 'logging/directory', WP_CONTENT_DIR . '/debug.log' ),
 			$config->get_setting( 'logging/threshold' ),
 			$config->get_setting( 'logging/options' )
 		);
