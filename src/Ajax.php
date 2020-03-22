@@ -110,11 +110,11 @@ final class Ajax {
 			wp_send_json_error( array( 'message' => 'Error updating user with identifier.' ), 503 );
 		}
 
-		$secret_id = $Endpoint->generate_secret_id( $identifier_hash, $endpoint );
+		$secret_id = $Endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
 
 		$return_data = array(
 			'site_url'    => get_site_url(),
-			'endpoint'   => $endpoint,
+			'endpoint'   => $endpoint_hash,
 			'identifier' => $identifier_hash,
 			'user_id'    => $support_user_id,
 			'expiry'     => $expiration_timestamp,
