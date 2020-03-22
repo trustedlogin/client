@@ -122,7 +122,7 @@ final class Encryption {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'notice' );
 		}
 
-		return $remote_key;
+		return apply_filters( 'trustedlogin/' . $this->config->ns() . '/public_key', $remote_key, $this->config );;
 	}
 
 	/**
