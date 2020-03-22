@@ -24,23 +24,24 @@ use \WP_Admin_Bar;
 final class Envelope {
 
 	/**
-	 * @var Config
-	 */
-	private $config;
-
-	/**
 	 * @var Encryption
 	 */
 	private $encryption;
 
 	/**
+	 * @var string Public key set in software (not Vendor-provided public key)
+	 * @todo Rename to `api_key` again.
+	 */
+	private $public_key;
+
+	/**
 	 * Envelope constructor.
 	 *
+	 * @param string $public_key
 	 * @param Encryption $encryption
-	 * @param Config $config
 	 */
-	public function __construct( Config $config, Encryption $encryption ) {
-		$this->config     = $config;
+	public function __construct( $public_key = '', Encryption $encryption ) {
+		$this->public_key = (string) $public_key;
 		$this->encryption = $encryption;
 	}
 
@@ -81,7 +82,7 @@ final class Envelope {
 			'secretId'   => $secret_id,
 			'identifier' => $e_identifier,
 			'siteUrl'    => $e_site_url,
-			'publicKey'  => $this->config->get_setting( 'auth/public_key' ),
+			'publicKey'  => $this->public_key,
 			'accessKey'  => $access_key,
 			'userId'     => get_current_user_id(),
 			'version'    => Client::version,
