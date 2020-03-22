@@ -26,7 +26,7 @@ final class Config {
 	 */
 	private $default_settings = array(
 		'auth' => array(
-			'public_key' => null,
+			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
 			'private_key' => null,
 		),
 		'decay' => WEEK_IN_SECONDS,
@@ -112,6 +112,8 @@ final class Config {
 				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
 			}
 		}
+
+		// TODO: Add namespace collision check?
 
 		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, null, $this->settings );

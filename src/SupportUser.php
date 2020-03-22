@@ -24,6 +24,11 @@ use \WP_Admin_Bar;
 final class SupportUser {
 
 	/**
+	 * @var string The query parameter used to pass the unique user ID
+	 */
+	const id_query_param = 'tlid';
+
+	/**
 	 * @var Config $config
 	 */
 	private $config;
@@ -148,7 +153,7 @@ final class SupportUser {
 
 		if ( empty( $support_user ) ) {
 
-			$this->logging->log( 'Support user not found at itentifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
+			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
 
 			return new WP_Error( 'user_not_found', 'Support user not found at itentifier ' . esc_attr( $identifier ) );
 		}
@@ -260,7 +265,8 @@ final class SupportUser {
 		if ( 'all' === $identifier ) {
 			$users = $this->get_all();
 		} else {
-			$users = $this->get( $identifier );
+			$user = $this->get( $identifier );
+			$users = $user ? array( $user ) : null;
 		}
 
 		if ( empty( $users ) ) {
@@ -269,6 +275,7 @@ final class SupportUser {
 
 		$this->logging->log( count( $users ) . " support users found", __METHOD__, 'debug' );
 
+		// Needed for wp_delete_user()
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
 		$reassign_id_or_null = $this->get_reassign_user_id();
@@ -276,12 +283,19 @@ final class SupportUser {
 		foreach ( $users as $_user ) {
 			$this->logging->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
 
-			$tlid = get_user_option( $this->identifier_meta_key, $_user->ID );
+			$identifier = $this->get_user_identifier( $_user );
+
+			if ( ! $identifier || is_wp_error( $identifier ) ) {
+				$this->logging->log( 'Identifier not found for: ' . $_user->ID . '; the user was NOT deleted.', __METHOD__, 'error' );
+				continue;
+			}
 
 			// Remove auto-cleanup hook
-			wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $tlid ) );
+			wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $identifier ) );
 
-			if ( wp_delete_user( $_user->ID, $reassign_id_or_null ) ) {
+			$deleted = wp_delete_user( $_user->ID, $reassign_id_or_null );
+
+			if ( $deleted ) {
 				$this->logging->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
 			} else {
 				$this->logging->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
@@ -351,38 +365,55 @@ final class SupportUser {
 	}
 
 	/**
-	 * Returns admin URL to revoke support user
+	 * @param WP_User|int $user_id_or_object User ID or User object
 	 *
-	 * @param WP_User $user_object
-	 *
-	 * @return string|false Unsanitized URL to revoke support user. If $user_object is not WP_User, or no user meta exists, returns false.
+	 * @return string|WP_Error User unique identifier if success; WP_Error if $user is not int or WP_User.
 	 */
-	public function get_revoke_url( $user_object ) {
-
-		if ( ! $user_object instanceof WP_User ) {
-			$this->logger->log( '$user_object not a user object: ' . var_export( $user_object ), __METHOD__, 'warning' );
-
-			return false;
-		}
+	public function get_user_identifier( $user_id_or_object ) {
 
 		if ( empty( $this->identifier_meta_key ) ) {
-			$this->logger->log( 'The meta key to identify users is not set.', __METHOD__, 'error' );
+			$this->logging->log( 'The meta key to identify users is not set.', __METHOD__, 'error' );
 
-			return false;
+			return new WP_Error( 'missing_meta_key', 'The SupportUser object has not been properly instantiated.' );
 		}
 
-		$identifier = get_user_option( $this->option_keys->identifier_meta_key, $user_object->ID );
+		if ( $user_id_or_object instanceof \WP_User ) {
+			$user_id = $user_id_or_object->ID;
+		} elseif ( is_int( $user_id_or_object ) ) {
+			$user_id = $user_id_or_object;
+		} else {
 
-		if ( empty( $identifier ) ) {
+			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
+
+			return new WP_Error( 'invalid_type', '$user must be int or WP_User' );
+		}
+
+		return get_user_option( $this->identifier_meta_key, $user_id );
+	}
+
+	/**
+	 * Returns admin URL to revoke support user
+	 *
+	 * @uses SupportUser::get_user_identifier()
+	 *
+	 * @param WP_User|int $user_id_or_object
+	 *
+	 * @return string|false Unsanitized URL to revoke support user. If not able to retrieve user identifier, returns false.
+	 */
+	public function get_revoke_url( $user_id_or_object ) {
+
+		$identifier = $this->get_user_identifier( $user_id_or_object );
+
+		if ( ! $identifier || is_wp_error( $identifier ) ) {
 			return false;
 		}
 
 		$revoke_url = add_query_arg( array(
-			'revoke-tl' => $this->ns,
-			'tlid'      => $identifier,
+			Endpoint::revoke_support_query_param => $this->config->ns(),
+			self::id_query_param  => $identifier,
 		), admin_url( 'users.php' ) );
 
-		$this->logger->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
+		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
 
 		return $revoke_url;
 	}

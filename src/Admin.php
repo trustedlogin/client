@@ -7,8 +7,6 @@ if ( ! defined('ABSPATH') ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
 use \WP_User;
 use \WP_Admin_Bar;
 
@@ -21,12 +19,22 @@ final class Admin {
 	const jquery_confirm_version = '3.3.4';
 
 	/**
-	 * @var \TrustedLogin\Config
+	 * @var Config
 	 */
 	private $config;
 
 	/**
-	 * @var null|\TrustedLogin\Logging $logging
+	 * @var SiteAccess $site_access
+	 */
+	private $site_access;
+
+	/**
+	 * @var SupportUser $support_user
+	 */
+	private $support_user;
+
+	/**
+	 * @var null|Logging $logging
 	 */
 	private $logging;
 
@@ -152,7 +160,7 @@ final class Admin {
 		$admin_bar->add_menu( array(
 			'id'    => 'tl-' . $this->config->ns() . '-revoke',
 			'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
-			'href'  => admin_url( '/?revoke-tl=' . $this->config->ns(), 'users.php' ),
+			'href'  => admin_url( add_query_arg( array( Endpoint::revoke_support_query_param => $this->config->ns() ), 'users.php' ),
 			'meta'  => array(
 				'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
 				'class' => 'tl-destroy-session',

@@ -16,6 +16,11 @@ use \WP_Admin_Bar;
 class Endpoint {
 
 	/**
+	 * @var string The query string parameter used to revoke users
+	 */
+	const revoke_support_query_param = 'revoke-tl';
+
+	/**
 	 * @var Config $config
 	 */
 	private $config;
@@ -25,6 +30,12 @@ class Endpoint {
 	 * @example 'tl_{vendor/namespace}_endpoint'
 	 */
 	private $option_name;
+
+	/**
+	 * @var SupportUser
+	 * @todo decouple
+	 */
+	private $support_user;
 
 	/**
 	 * @var Logging $logging
@@ -38,6 +49,7 @@ class Endpoint {
 
 		$this->config = $config;
 		$this->logging = $logging;
+		$this->support_user = new SupportUser( $this->config, $this->logging );
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -76,9 +88,12 @@ class Endpoint {
 			return;
 		}
 
-		$support_user = new SupportUser( $this->config, $this->logging );
+		/**
+		 * TODO: Use actions instead of tight coupling? Is this reliable enough?
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login', $identifier );
 
-		$logged_in = $support_user->maybe_login( $identifier );
+		$logged_in = $this->support_user->maybe_login( $identifier );
 
 		if ( is_wp_error( $logged_in ) ) {
 			return;
@@ -90,30 +105,33 @@ class Endpoint {
 	}
 
 	/**
-	 * Hooked Action to maybe revoke support if $_GET['revoke-tl'] == {namespace}
-	 * Can optionally check for _GET['tlid'] for revoking a specific user by their identifier
+	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::id_query_param ] == {namespace}
+	 * Can optionally check for $_REQUEST[ SupportUser::id_query_param ] for revoking a specific user by their identifier
 	 *
 	 * @since 0.2.1
 	 */
 	public function admin_maybe_revoke_support() {
 
-		if ( ! isset( $_GET['revoke-tl'] ) || $this->config->ns() !== $_GET['revoke-tl'] ) {
+		if ( ! isset( $_REQUEST[ self::revoke_support_query_param ] ) ) {
 			return;
 		}
 
-		// Allow support team to revoke user
-		if ( ! current_user_can( $this->support_user->role->get_name() ) && ! current_user_can( 'delete_users' ) ) {
+		if ( $this->config->ns() !== $_REQUEST[ self::revoke_support_query_param ] ) {
+			return;
+		}
+
+		// Allow namespaced support team to revoke their own users
+		$support_team = current_user_can( $this->support_user->role->get_name() );
+
+		// As well as existing users who can delete other users
+		$can_delete_users = current_user_can( 'delete_users' );
+
+		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
 			return;
 		}
 
-		$identifier = isset( $_GET['tlid'] ) ? $_GET['tlid'] : 'all';
-
-		if ( isset( $_GET['tlid'] ) ) {
-			$identifier = sanitize_text_field( $_GET['tlid'] );
-		} else {
-			$identifier = 'all';
-		}
+		$identifier = isset( $_REQUEST[ SupportUser::id_query_param ] ) ? esc_attr( $_REQUEST[ SupportUser::id_query_param ] ) : 'all';
 
 		$deleted_user = $this->support_user->delete( $identifier );
 
@@ -129,14 +147,13 @@ class Endpoint {
 			return;
 		}
 
-		// TODO: Convert to do_action()
-		add_action( 'admin_notices', array( $this->admin, 'admin_notice_revoked' ) );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $identifier );
 	}
 
 	/**
 	 * Hooked Action: Add a unique endpoint to WP if a support agent exists
 	 *
-	 * @see Client::add_hooks() Called via `init` hook
+	 * @see Endpoint::init() Called via `init` hook
 	 *
 	 * @since 0.3.0
 	 */
