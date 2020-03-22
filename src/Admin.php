@@ -45,7 +45,8 @@ final class Admin {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config = $config;
-
+		$this->logging = $logging;
+		$this->site_access = new SiteAccess( $config, $logging );
 		$this->support_user = new SupportUser( $config, $logging );
 	}
 
