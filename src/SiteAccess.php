@@ -115,7 +115,7 @@ class SiteAccess {
 		// Ping SaaS and get back tokens.
 		$envelope = new Envelope( $this->config->get_setting( 'auth/public_key' ), $encryption );
 
-		$sealed_envelope = $envelope->get( $secret_id, $identifier, $this->site_access->get_license_key() );
+		$sealed_envelope = $envelope->get( $secret_id, $identifier, $this->get_license_key() );
 
 		if ( is_wp_error( $sealed_envelope ) ) {
 			return $sealed_envelope;
