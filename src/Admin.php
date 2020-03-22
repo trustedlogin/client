@@ -57,6 +57,8 @@ final class Admin {
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
 		add_action( 'admin_menu', array( $this, 'admin_menu_auth_link_page' ), $this->config->get_setting( 'menu/priority', 100 ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
+
+		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array( $this, 'admin_notices' ) );
 	}
 
 	/**
@@ -793,11 +795,25 @@ final class Admin {
 	}
 
 	/**
+	 * Add admin_notices hooks
+	 *
+	 * @return void
+	 */
+	public function admin_notices() {
+		add_action( 'admin_notices', array( $this, 'admin_notice_revoked' ) );
+	}
+
+	/**
 	 * Notice: Shown when a support user is manually revoked by admin;
 	 *
-	 * @since 0.3.0
+	 * @return void
 	 */
 	public function admin_notice_revoked() {
+
+		if ( ! did_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked' ) ) {
+			return;
+		}
+
 		?>
 		<div class="notice notice-success is-dismissible">
 			<p><?php echo esc_html( sprintf( __( 'Done! %s Support access revoked. ', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></p>
