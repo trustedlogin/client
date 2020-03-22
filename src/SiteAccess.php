@@ -121,13 +121,13 @@ class SiteAccess {
 			return $sealed_envelope;
 		}
 
-		$api_response = $this->remote->send( 'sites', $sealed_envelope, 'POST' );
+		$api_response = $remote->send( 'sites', $sealed_envelope, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
 		}
 
-		$response_json = $this->remote->handle_response( $api_response, array( 'success' ) );
+		$response_json = $remote->handle_response( $api_response, array( 'success' ) );
 
 		if ( is_wp_error( $response_json ) ) {
 			return $response_json;
