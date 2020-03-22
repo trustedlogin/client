@@ -163,7 +163,7 @@ final class Admin {
 		$admin_bar->add_menu( array(
 			'id'    => 'tl-' . $this->config->ns() . '-revoke',
 			'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
-			'href'  => admin_url( add_query_arg( array( Endpoint::revoke_support_query_param => $this->config->ns() ), 'users.php' ),
+			'href'  => add_query_arg( array( Endpoint::revoke_support_query_param => $this->config->ns() ), admin_url( 'users.php' ) ),
 			'meta'  => array(
 				'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
 				'class' => 'tl-destroy-session',
