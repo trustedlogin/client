@@ -72,12 +72,16 @@ class SiteAccess {
 			return false;
 		}
 
-		$endpoint_hash = $this->endpoint->get_hash( $identifier );
+		$Endpoint = new Endpoint( $this->config, $this->logging );
 
-		$this->site_access->set_identifier( $endpoint_hash );
+		$endpoint_hash = $Endpoint->get_hash( $identifier );
+
+		$this->set_identifier( $endpoint_hash );
+
+		$Remote = new Remote( $this->config, $this->logging );
 
 		// Revoke site in SaaS
-		$site_revoked = $this->site_access->revoke( $this->remote );
+		$site_revoked = $this->revoke( $Remote );
 
 		if ( is_wp_error( $site_revoked ) ) {
 
