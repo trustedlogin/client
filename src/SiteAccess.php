@@ -157,7 +157,8 @@ class SiteAccess {
 
 		if( function_exists( 'random_bytes' ) ) {
 			try {
-				$hash = random_bytes( 64 );
+				$bytes = random_bytes( 64 );
+				$hash = bin2hex( $bytes );
 			} catch ( \TypeError $e ) {
 				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Error $e ) {
