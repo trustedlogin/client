@@ -93,15 +93,7 @@ final class Encryption {
 		$public_key = get_site_option( $this->public_key_option, false );
 
 		if ( $public_key ) {
-
-			/**
-			 * Filter: Override the public key functions.
-			 *
-			 * @since 0.5.0
-			 *
-			 * @param string $public_key
-			 * @param Config $config
-			 */
+			// Documented below
 			return apply_filters( 'trustedlogin/' . $this->config->ns() . '/public_key', $public_key, $this->config );
 		}
 
@@ -122,6 +114,14 @@ final class Encryption {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'notice' );
 		}
 
+		/**
+		 * Filter: Override the public key functions.
+		 *
+		 * @since 0.5.0
+		 *
+		 * @param string $public_key
+		 * @param Config $config
+		 */
 		return apply_filters( 'trustedlogin/' . $this->config->ns() . '/public_key', $remote_key, $this->config );;
 	}
 
