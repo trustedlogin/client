@@ -170,27 +170,47 @@ final class Encryption {
 	 * Encrypts a string using the Public Key provided by the plugin/theme developers' server.
 	 *
 	 * @since 0.5.0
-	 * @uses `openssl_public_encrypt()` for encryption.
+	 * @uses `sodium_crypto_box_keypair_from_secretkey_and_publickey()` to generate key.
+	 * @uses `sodium_crypto_secretbox()` to encrypt.
 	 *
-	 * @param string $data Data to encrypt.
-	 * @param string $public_key Key to use to encrypt the data.
+	 * @param string $data  Data to encrypt.
+	 * @param string $nonce The nonce generated for this encryption.
+	 * @param string $client_secret_key The key to use when generating the encryption key.
 	 *
 	 * @return string|WP_Error  Encrypted envelope or WP_Error on failure.
 	 */
-	public function encrypt( $data ) {
+	public function encrypt( $data, $nonce, $client_secret_key ) {
 
 		if ( empty( $data ) ) {
 			return new WP_Error( 'no_data', 'No data provided.' );
 		}
 
 		if ( ! function_exists( 'sodium_crypto_secretbox' ) ) {
-			return new WP_Error( 'openssl_public_encrypt_not_available', 'OpenSSL not available' );
+			return new WP_Error( 'sodium_crypto_secretbox_not_available', 'lib_sodium not available' );
 		}
 
-		$key = $this->get_public_key();
+		$vendor_public_key = $this->get_public_key();
 
-		if ( is_wp_error( $key ) ) {
-			return $key;
+		if ( is_wp_error( $vendor_public_key ) ) {
+			return $vendor_public_key;
+		}
+
+		try {
+
+			$encryption_key = sodium_crypto_box_keypair_from_secretkey_and_publickey( $client_secret_key, $vendor_public_key );
+			$encrypted 		= sodium_crypto_secretbox( $data, $nonce, $encryption_key );
+
+		} catch ( \SodiumException $e ) {
+
+			return new WP_Error(
+				'encryption_failed_secretbox', 
+				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() ) 
+			);
+
+		}
+
+		return base64_encode( $encrypted );
+	}
 		}
 
 		try {
