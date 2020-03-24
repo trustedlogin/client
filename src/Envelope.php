@@ -84,7 +84,7 @@ final class Envelope {
 			'siteUrl'    => $e_site_url,
 			'publicKey'  => $this->public_key,
 			'accessKey'  => $access_key,
-			'userId'     => get_current_user_id(),
+			'wpUserId'   => get_current_user_id(),
 			'version'    => Client::version,
 		);
 	}
