@@ -211,6 +211,18 @@ final class Encryption {
 
 		return base64_encode( $encrypted );
 	}
+
+	/**
+	 * Gets and returns a random nonce.
+	 *
+	 * @since 0.5.0
+	 * 
+	 * @return string|WP_Error  Nonce if created, otherwise WP_Error
+	 */
+	public function get_nonce(){
+
+		if ( ! function_exists( 'random_bytes' ) ) {
+			return new WP_Error( 'missing_function', 'No random_bytes function installed.' );
 		}
 
 		try {
@@ -219,12 +231,40 @@ final class Encryption {
 			return new WP_Error( 'encryption_failed_randombytes', sprintf( 'Unable to generate encryption nonce: %s (%s)', $e->getMessage(), $e->getCode() ) );
 		}
 
-		try {
-			$encrypted = sodium_crypto_secretbox( $data, $nonce, $key );
-		} catch ( \SodiumException $e ) {
-			return new WP_Error('encryption_failed_secretbox', sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() ) );
+		return $nonce;
+	}
+
+	/**
+	 * Generate unique Client encryption keys.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @uses sodium_crypto_box_keypair()
+	 * @uses sodium_crypto_box_publickey()
+	 * @uses sodium_crypto_box_secretkey()
+	 * 
+	 * @return array|WP_Error $alice_keys or WP_Error if there's any issues.
+	 *   $alice_keys = [
+	 *      'publicKey'  =>  (string)  The public key.
+	 *      'privatekey' =>  (string)  The private key.
+	 *   ]
+	 */
+	public function generate_keys(){
+
+		if ( ! function_exists( 'sodium_crypto_box_keypair' ) ){
+			return new WP_Error( 'sodium_crypto_secretbox_not_available', 'lib_sodium not available' );
 		}
 
-		return base64_encode( $encrypted );
+
+		// In our build Alice = Client & Bob = Vendor.
+		$aliceKeypair = sodium_crypto_box_keypair();
+
+		$alice_keys = array(
+			'publicKey'  = sodium_crypto_box_publickey($aliceKeypair),
+			'privatekey' = sodium_crypto_box_secretkey($aliceKeypair)
+		);
+
+		return (object) $alice_keys;
+
 	}
 }

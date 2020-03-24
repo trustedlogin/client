@@ -66,26 +66,40 @@ final class Envelope {
 			return new WP_Error( 'access_key_not_string', 'The access key must be a string: ' . print_r( $access_key, true ) );
 		}
 
-		$e_identifier = $this->encryption->encrypt( $identifier );
+		$e_keys = $this->encryption->generate_keys();
+
+		if ( is_wp_error( $e_keys ) ){
+			return $e_keys;
+		}
+
+		$nonce = $this->encryption->get_nonce();
+
+		if ( is_wp_error( $nonce ) ){
+			return $nonce;
+		}
+
+		$e_identifier = $this->encryption->encrypt( $identifier, $nonce, $e_keys->privateKey );
 
 		if ( is_wp_error( $e_identifier ) ) {
 			return $e_identifier;
 		}
 
-		$e_site_url = $this->encryption->encrypt( get_site_url() );
+		$e_site_url = $this->encryption->encrypt( get_site_url(), $nonce, $e_keys->privateKey );
 
 		if( is_wp_error( $e_site_url ) ) {
 			return $e_site_url;
 		}
 
 		return array(
-			'secretId'   => $secret_id,
-			'identifier' => $e_identifier,
-			'siteUrl'    => $e_site_url,
-			'publicKey'  => $this->public_key,
-			'accessKey'  => $access_key,
-			'wpUserId'   => get_current_user_id(),
-			'version'    => Client::version,
+			'secretId'   	  => $secret_id,
+			'identifier' 	  => $e_identifier,
+			'siteUrl'    	  => $e_site_url,
+			'publicKey'  	  => $this->public_key,
+			'accessKey'  	  => $access_key,
+			'wpUserId'   	  => get_current_user_id(),
+			'version'    	  => Client::version,
+			'nonce'		 	  => $nonce,
+			'clientPublicKey' => $e_keys->publicKey
 		);
 	}
 
