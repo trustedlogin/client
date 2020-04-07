@@ -24,6 +24,11 @@ use \WP_Admin_Bar;
 final class Envelope {
 
 	/**
+	 * @var Config $config
+	 */
+	private $config;
+
+	/**
 	 * @var Encryption
 	 */
 	private $encryption;
@@ -40,8 +45,9 @@ final class Envelope {
 	 * @param string $public_key
 	 * @param Encryption $encryption
 	 */
-	public function __construct( $public_key = '', Encryption $encryption ) {
-		$this->public_key = (string) $public_key;
+	public function __construct( Config $config, Encryption $encryption ) {
+		$this->config     = $config;
+		$this->public_key = $this->config->get_setting( 'auth/public_key' );
 		$this->encryption = $encryption;
 	}
 
@@ -90,6 +96,17 @@ final class Envelope {
 			return $e_site_url;
 		}
 
+		/**
+		 * Filter: Allows devs to assign custom meta_data to be synced via TrustedLogin.
+		 * 
+		 * By default this data is transfered and stored in plain text, and should not contain any sensitive or identifiable information.
+		 *
+		 * @since 1.0.0
+		 * 
+		 * @param array  $meta_data
+		 */
+		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array() );
+
 		return array(
 			'secretId'   	  => $secret_id,
 			'identifier' 	  => $e_identifier,
@@ -99,7 +116,8 @@ final class Envelope {
 			'wpUserId'   	  => get_current_user_id(),
 			'version'    	  => Client::version,
 			'nonce'		 	  => $nonce,
-			'clientPublicKey' => $e_keys->publicKey
+			'clientPublicKey' => $e_keys->publicKey,
+			'metaData'		  => $meta_data,
 		);
 	}
 

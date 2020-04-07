@@ -113,7 +113,7 @@ class SiteAccess {
 		$encryption = new Encryption( $this->config, $remote, $logging );
 
 		// Ping SaaS and get back tokens.
-		$envelope = new Envelope( $this->config->get_setting( 'auth/public_key' ), $encryption );
+		$envelope = new Envelope( $this->config, $encryption );
 
 		$sealed_envelope = $envelope->get( $secret_id, $identifier, $this->get_license_key() );
 
