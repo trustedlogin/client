@@ -255,13 +255,12 @@ final class Encryption {
 			return new WP_Error( 'sodium_crypto_secretbox_not_available', 'lib_sodium not available' );
 		}
 
-
 		// In our build Alice = Client & Bob = Vendor.
 		$aliceKeypair = sodium_crypto_box_keypair();
 
 		$alice_keys = array(
 			'publicKey'  => sodium_crypto_box_publickey( $aliceKeypair ),
-			'privatekey' => sodium_crypto_box_secretkey( $aliceKeypair )
+			'privateKey' => sodium_crypto_box_secretkey( $aliceKeypair )
 		);
 
 		return (object) $alice_keys;
