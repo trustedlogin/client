@@ -242,8 +242,8 @@ final class Encryption {
 	 * @uses sodium_crypto_box_keypair()
 	 * @uses sodium_crypto_box_publickey()
 	 * @uses sodium_crypto_box_secretkey()
-	 * 
-	 * @return array|WP_Error $alice_keys or WP_Error if there's any issues.
+	 *
+	 * @return object|WP_Error $alice_keys or WP_Error if there's any issues.
 	 *   $alice_keys = [
 	 *      'publicKey'  =>  (string)  The public key.
 	 *      'privatekey' =>  (string)  The private key.
