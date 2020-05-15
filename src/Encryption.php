@@ -46,8 +46,8 @@ final class Encryption {
 	/**
 	 * Encryption constructor.
 	 *
-	 * @param Config  $config
-	 * @param Remote  $remote
+	 * @param Config $config
+	 * @param Remote $remote
 	 * @param Logging $logging
 	 */
 	public function __construct( Config $config, Remote $remote, Logging $logging ) {
@@ -173,7 +173,7 @@ final class Encryption {
 	 * @uses `sodium_crypto_box_keypair_from_secretkey_and_publickey()` to generate key.
 	 * @uses `sodium_crypto_secretbox()` to encrypt.
 	 *
-	 * @param string $data  Data to encrypt.
+	 * @param string $data Data to encrypt.
 	 * @param string $nonce The nonce generated for this encryption.
 	 * @param string $client_secret_key The key to use when generating the encryption key.
 	 *
@@ -198,13 +198,13 @@ final class Encryption {
 		try {
 
 			$encryption_key = sodium_crypto_box_keypair_from_secretkey_and_publickey( $client_secret_key, $vendor_public_key );
-			$encrypted 		= sodium_crypto_secretbox( $data, $nonce, $encryption_key );
+			$encrypted      = sodium_crypto_secretbox( $data, $nonce, $encryption_key );
 
 		} catch ( \SodiumException $e ) {
 
 			return new WP_Error(
-				'encryption_failed_secretbox', 
-				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() ) 
+				'encryption_failed_secretbox',
+				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
 
 		}
@@ -216,10 +216,10 @@ final class Encryption {
 	 * Gets and returns a random nonce.
 	 *
 	 * @since 0.5.0
-	 * 
+	 *
 	 * @return string|WP_Error  Nonce if created, otherwise WP_Error
 	 */
-	public function get_nonce(){
+	public function get_nonce() {
 
 		if ( ! function_exists( 'random_bytes' ) ) {
 			return new WP_Error( 'missing_function', 'No random_bytes function installed.' );
@@ -227,7 +227,7 @@ final class Encryption {
 
 		try {
 			$nonce = random_bytes( SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			return new WP_Error( 'encryption_failed_randombytes', sprintf( 'Unable to generate encryption nonce: %s (%s)', $e->getMessage(), $e->getCode() ) );
 		}
 
@@ -249,9 +249,9 @@ final class Encryption {
 	 *      'privatekey' =>  (string)  The private key.
 	 *   ]
 	 */
-	public function generate_keys(){
+	public function generate_keys() {
 
-		if ( ! function_exists( 'sodium_crypto_box_keypair' ) ){
+		if ( ! function_exists( 'sodium_crypto_box_keypair' ) ) {
 			return new WP_Error( 'sodium_crypto_secretbox_not_available', 'lib_sodium not available' );
 		}
 
@@ -265,6 +265,5 @@ final class Encryption {
 		);
 
 		return (object) $alice_keys;
-
 	}
 }
