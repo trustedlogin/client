@@ -260,8 +260,8 @@ final class Encryption {
 		$aliceKeypair = sodium_crypto_box_keypair();
 
 		$alice_keys = array(
-			'publicKey'  = sodium_crypto_box_publickey($aliceKeypair),
-			'privatekey' = sodium_crypto_box_secretkey($aliceKeypair)
+			'publicKey'  => sodium_crypto_box_publickey( $aliceKeypair ),
+			'privatekey' => sodium_crypto_box_secretkey( $aliceKeypair )
 		);
 
 		return (object) $alice_keys;
