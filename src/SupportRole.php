@@ -61,14 +61,22 @@ final class SupportRole {
 		$this->config = $config;
 		$this->logging = $logging;
 		$this->role_name = $this->set_name();
-		$this->cloned_name = $this->config->get_setting( 'role', 'editor' );
+		$this->cloned_name = $this->get_cloned_name();
 	}
 
 	/**
+	 * Get the name (slug) of the role that should be cloned for the TL support role
+	 *
 	 * @return string
 	 */
 	public function get_cloned_name() {
-		return (string) $this->cloned_name;
+
+		$roles = $this->config->get_setting( 'role', 'editor' );
+
+		// TODO: Support multiple roles
+		$role = is_array( $roles ) ? array_key_first( $roles ) : $roles;
+
+		return (string) $role;
 	}
 
 	/**
