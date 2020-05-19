@@ -51,6 +51,13 @@ class Logging {
 	 */
 	private function setup_klogger( $config ) {
 
+		if ( ! class_exists( '\Katzgrau\KLogger\Logger' ) ) {
+
+			$this->log( 'KLogger not found.', __METHOD__, 'error' );
+
+			return false;
+		}
+
 		$configured_logging_dir = $config->get_setting( 'logging/directory', '' );
 
 		if( $configured_logging_dir ) {
