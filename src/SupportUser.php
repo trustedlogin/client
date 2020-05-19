@@ -77,6 +77,27 @@ final class SupportUser {
 	}
 
 	/**
+	 * Allow accessing limited private properties with a magic method.
+	 *
+	 * @param string $name Name of property
+	 *
+	 * @return string|null Value of property, if defined. Otherwise, null.
+	 */
+	public function __get( $name ) {
+
+		// Allow accessing limited private variables
+		switch ( $name ) {
+			case 'identifier_meta_key':
+			case 'expires_meta_key':
+			case 'created_by_meta_key':
+				return $this->{$name};
+				break;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Create the Support User with custom role.
 	 *
 	 * @since 0.1.0
