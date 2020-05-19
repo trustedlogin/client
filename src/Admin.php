@@ -524,7 +524,7 @@ final class Admin {
 		$roles_output .= sprintf( '<li class="tl-role"><p>%1$s</p></li>',
 			sprintf( esc_html__( 'A new user will be created with a custom role \'%1$s\' (with the same capabilities as %2$s).', 'trustedlogin' ),
 				$this->support_user->role->get_name(),
-				$this->config->get_setting( 'role' )
+				implode( ' &amp; ', (array) $this->config->get_setting( 'role' ) )
 			)
 		);
 
