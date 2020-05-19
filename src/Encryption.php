@@ -179,7 +179,7 @@ final class Encryption {
 	 *
 	 * @return string|WP_Error  Encrypted envelope or WP_Error on failure.
 	 */
-	public function encrypt( $data, $nonce, $client_secret_key ) {
+	public function encrypt( $data, $nonce, $alice_secret_key ) {
 
 		if ( empty( $data ) ) {
 			return new WP_Error( 'no_data', 'No data provided.' );
@@ -189,16 +189,16 @@ final class Encryption {
 			return new WP_Error( 'sodium_crypto_secretbox_not_available', 'lib_sodium not available' );
 		}
 
-		$vendor_public_key = $this->get_public_key();
+		$bob_public_key = $this->get_public_key();
 
-		if ( is_wp_error( $vendor_public_key ) ) {
-			return $vendor_public_key;
+		if ( is_wp_error( $bob_public_key ) ) {
+			return $bob_public_key;
 		}
 
 		try {
 
-			$encryption_key = sodium_crypto_box_keypair_from_secretkey_and_publickey( $client_secret_key, \sodium_hex2bin( $vendor_public_key ) );
-			$encrypted      = sodium_crypto_secretbox( $data, $nonce, $encryption_key );
+			$alice_to_bob_kp = sodium_crypto_box_keypair_from_secretkey_and_publickey( $alice_secret_key, \sodium_hex2bin( $bob_public_key ) );
+			$encrypted       = sodium_crypto_secretbox( $data, $nonce, sodium_hex2bin( $alice_to_bob_kp ) );
 
 		} catch ( \SodiumException $e ) {
 
