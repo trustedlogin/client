@@ -197,7 +197,7 @@ final class Encryption {
 
 		try {
 
-			$encryption_key = sodium_crypto_box_keypair_from_secretkey_and_publickey( $client_secret_key, $vendor_public_key );
+			$encryption_key = sodium_crypto_box_keypair_from_secretkey_and_publickey( $client_secret_key, \sodium_hex2bin( $vendor_public_key ) );
 			$encrypted      = sodium_crypto_secretbox( $data, $nonce, $encryption_key );
 
 		} catch ( \SodiumException $e ) {
