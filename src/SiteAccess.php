@@ -100,8 +100,8 @@ class SiteAccess {
 	/**
 	 * Handles the syncing of newly generated support access to the TrustedLogin servers.
 	 *
-	 * @param string $secret_id  The unique identifier for this TrustedLogin authorization.
-	 * @param string $identifier The unique identifier for the WP_User created
+	 * @param string $secret_id  The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
+	 * @param string $identifier The unique identifier for the WP_User created {@see SiteAccess::create_hash}
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
 	 */

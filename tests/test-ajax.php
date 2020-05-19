@@ -12,7 +12,7 @@
 class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	/**
-	 * @var TrustedLogin
+	 * @var \TrustedLogin\Client
 	 */
 	private $TrustedLogin;
 

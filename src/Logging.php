@@ -243,8 +243,11 @@ class Logging {
 		// The logger class didn't load for some reason
 		if ( ! $this->klogger ) {
 
-			// If WP_DEBUG and WP_DEBUG_LOG are enabled, by default, errors will be logged to that log file.
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			$wp_debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+			$wp_debug_log = defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG;
+
+			// If WP_DEBUG and WP_DEBUG_LOG are enabled, log errors to that file.
+			if ( $wp_debug && $wp_debug_log ) {
 				error_log( $method . ' (' . $level . '): ' . $text );
 			}
 
