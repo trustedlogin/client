@@ -124,7 +124,7 @@ final class Remote {
 		);
 
 		if ( ! empty( $data ) && ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
-			$request_options['body'] = json_encode( $data );
+			$request_options['body'] = wp_json_encode( $data );
 		}
 
 		try {

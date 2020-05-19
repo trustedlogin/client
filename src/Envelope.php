@@ -98,11 +98,11 @@ final class Envelope {
 
 		/**
 		 * Filter: Allows devs to assign custom meta_data to be synced via TrustedLogin.
-		 * 
+		 *
 		 * By default this data is transfered and stored in plain text, and should not contain any sensitive or identifiable information.
 		 *
 		 * @since 1.0.0
-		 * 
+		 *
 		 * @param array  $meta_data
 		 */
 		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array() );
@@ -115,8 +115,8 @@ final class Envelope {
 			'accessKey'  	  => $access_key,
 			'wpUserId'   	  => get_current_user_id(),
 			'version'    	  => Client::version,
-			'nonce'		 	  => $nonce,
-			'clientPublicKey' => $e_keys->publicKey,
+			'nonce'		 	  => \sodium_bin2hex( $nonce ),
+			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
 			'metaData'		  => $meta_data,
 		);
 	}
