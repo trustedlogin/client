@@ -6,7 +6,7 @@
 	$( document ).ready( function () {
 
 		jconfirm.pluginDefaults.useBootstrap = false;
-		jconfirm.pluginDefaults.backgroundDismiss = true,
+		jconfirm.pluginDefaults.backgroundDismiss = true;
 
 		function outputErrorAlert( response, tl_obj ) {
 

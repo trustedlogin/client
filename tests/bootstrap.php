@@ -23,7 +23,9 @@ require_once $_tests_dir . '/includes/functions.php';
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	require dirname( dirname( __FILE__ ) ) . '/src/Client.php';
+	require dirname( dirname( __FILE__ ) ) . '/vendor/autoload.php';
+
+
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 

@@ -12,7 +12,7 @@
 class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	/**
-	 * @var TrustedLogin
+	 * @var \TrustedLogin\Client
 	 */
 	private $TrustedLogin;
 
@@ -22,9 +22,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	private $TrustedLoginReflection;
 
 	/**
-	 * @var array
+	 * @var \TrustedLogin\Config
 	 */
 	private $config;
+
+	/**
+	 * @var \TrustedLogin\Logging
+	 */
+	private $logging;
 
 	/**
 	 * @var int Get around Travis being annoying
@@ -40,7 +45,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		parent::setUp();
 
-		$this->config = array(
+		$config = array(
 			'role' => 'editor',
 			'caps'     => array(
 				'add' => array(
@@ -66,9 +71,18 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			'reassign_posts' => true,
 		);
 
+		$this->config = new TrustedLogin\Config( $config );
+
+		$this->option_keys = new \TrustedLogin\OptionKeys( $this->config );
+
 		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
+
+		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
+
+		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
+
 	}
 
 	public function tearDown() {
@@ -133,12 +147,12 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->assertContains( 'Vendor does not match.', $this->_last_response, 'Vendor does not match config vendor.' );
 		$this->_last_response = '';
 
-		$_POST['vendor'] = $this->config['vendor']['namespace'];
+		$_POST['vendor'] = $this->config->ns();
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Nonce not sent', $this->_last_response );
 		$this->_last_response = '';
 
-		$_POST['vendor'] = $this->config['vendor']['namespace'];
+		$_POST['vendor'] = $this->config->ns();
 		$this->_set_nonce( 0 );
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Verification issue', $this->_last_response, 'Nonce set to 0; should not validate.' );
@@ -158,7 +172,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		 * Just wanting to make sure this step is tested, but:
 		 * @see TrustedLoginUsersTest::test_create_support_user for full testing
 		 */
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->TrustedLogin->get_setting( 'vendor/title' ) );
+		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 		$existing_user = $this->factory->user->create_and_get( array( 'user_login' => $user_name ) );
 		$this->assertTrue( is_a( $existing_user, 'WP_User' ) );
 		$this->_setRole( 'administrator' );
@@ -221,13 +235,16 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	}
 
 	function _delete_all_support_users() {
-		$users = $this->TrustedLogin->get_support_users();
+
+		$support_user = new \TrustedLogin\SupportUser( $this->config, $this->logging );
+
+		$users = $support_user->get_all();
 
 		foreach ( $users as $user ) {
 			wp_delete_user( $user->ID );
 		}
 
-		$user = get_user_by( 'email', $this->TrustedLogin->get_setting( 'vendor/email' ) );
+		$user = get_user_by( 'email', $this->config->get_setting( 'vendor/email' ) );
 
 		if( $user ) {
 			wp_delete_user( $user->ID );
@@ -248,7 +265,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	function _catchHandleAjax( $action = 'tl_%s_gen_support' ) {
 
-		$action = sprintf( $action, $this->config['vendor']['namespace'] );
+		$action = sprintf( $action, $this->config->ns() );
 
 		try {
 			$this->_handleAjax( $action );
