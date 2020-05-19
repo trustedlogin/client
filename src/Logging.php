@@ -21,9 +21,9 @@ class Logging {
 	private $logging_enabled = false;
 
 	/**
-	 * @var Katzgrau\KLogger\Logger
+	 * @var Katzgrau\KLogger\Logger|null|false Null: not instantiated; False: failed to instantiate.
 	 */
-	private $klogger;
+	private $klogger = null;
 
 	/**
 	 * Logger constructor.
@@ -94,7 +94,7 @@ class Logging {
 		}
 
 		// The logger class didn't load for some reason
-		if ( ! class_exists( '\Katzgrau\KLogger' ) ) {
+		if ( ! $this->klogger ) {
 
 			// If WP_DEBUG and WP_DEBUG_LOG are enabled, by default, errors will be logged to that log file.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
