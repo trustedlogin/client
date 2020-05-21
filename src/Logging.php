@@ -222,7 +222,7 @@ class Logging {
 	 * @param string|\WP_Error $message Message or error to log. If a WP_Error is passed, $data is ignored.
 	 * @param string $method Method where the log was called
 	 * @param string $level PSR-3 log level
-	 * @param mixed  $data Optional. Error data. Ignored if $message is WP_Error.
+	 * @param \WP_Error|\Exception|mixed $data Optional. Error data. Ignored if $message is WP_Error.
 	 *
 	 */
 	public function log( $message = '', $method = '', $level = 'debug', $data = array() ) {
@@ -280,6 +280,10 @@ class Logging {
 
 		if ( is_wp_error( $data ) ) {
 			$log_message .= sprintf( '[%s] %s', $data->get_error_code(), $data->get_error_message() );
+		}
+
+		if ( $data instanceof \Exception ) {
+			$log_message .= sprintf( '[%s] %s', $data->getCode(), $data->getMessage() );
 		}
 
 		// Keep PSR-4 compatible
