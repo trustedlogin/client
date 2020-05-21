@@ -52,11 +52,18 @@ final class Ajax {
 	public function ajax_generate_support() {
 
 		if ( empty( $_POST['vendor'] ) ) {
+
+			$this->logging->log( 'Vendor not defined in TrustedLogin configuration.', __METHOD__, 'critical' );
+
 			wp_send_json_error( array( 'message' => 'Vendor not defined in TrustedLogin configuration.' ) );
 		}
 
 		// There are multiple TrustedLogin instances, and this is not the one being called.
+		// This should not occur, since the AJAX action is namespaced.
 		if ( $this->config->ns() !== $_POST['vendor'] ) {
+
+			$this->logging->log( 'Vendor does not match TrustedLogin configuration.', __METHOD__, 'critical' );
+
 			wp_send_json_error( array( 'message' => 'Vendor does not match.' ) );
 			return;
 		}
@@ -81,6 +88,9 @@ final class Ajax {
 		try {
 			$support_user_id = $SupportUser->create();
 		} catch ( Exception $exception ) {
+
+			$this->logging->log( 'An exception occured trying to create a support user.', __METHOD__, 'critical', $exception );
+
 			wp_send_json_error( array( 'message' => $exception->getMessage() ), 500 );
 		}
 
@@ -94,6 +104,9 @@ final class Ajax {
 		$identifier_hash = $SiteAccess->create_hash();
 
 		if ( is_wp_error( $identifier_hash ) ) {
+
+			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
+
 			wp_send_json_error( array( 'message' => 'Could not generate a secure secret.' ), 501 );
 		}
 
