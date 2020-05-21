@@ -26,7 +26,7 @@ class Logging {
 	private $logging_enabled = false;
 
 	/**
-	 * @var Katzgrau\KLogger\Logger|null|false Null: not instantiated; False: failed to instantiate.
+	 * @var \Katzgrau\KLogger\Logger|null|false Null: not instantiated; False: failed to instantiate.
 	 */
 	private $klogger = null;
 
@@ -219,12 +219,13 @@ class Logging {
 	/**
 	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
 	 *
+	 * @param string|\WP_Error $message Message or error to log. If a WP_Error is passed, $data is ignored.
 	 * @param string $method Method where the log was called
 	 * @param string $level PSR-3 log level
+	 * @param mixed  $data Optional. Error data. Ignored if $message is WP_Error.
 	 *
-	 * @param string $text Message to log
 	 */
-	public function log( $text = '', $method = '', $level = 'debug' ) {
+	public function log( $message = '', $method = '', $level = 'debug', $data = array() ) {
 
 		if ( ! $this->is_enabled() ) {
 			return;
@@ -239,12 +240,23 @@ class Logging {
 			$level = 'debug'; // Continue processing original log
 		}
 
-		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $text, $method, $level );
-		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $text, $method );
+		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $message, $method, $level, $data );
+		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $message, $method, $data );
 
 		// If logging is in place, don't use the error_log
 		if ( has_action( 'trustedlogin/' . $this->ns . '/logging/log' ) || has_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level ) ) {
 			return;
+		}
+
+		$log_message = $message;
+
+		if ( is_wp_error( $log_message ) ) {
+			$data = $log_message; // Store WP_Error as extra data.
+			$log_message = ''; // The message will be constructed below.
+		}
+
+		if ( ! is_string( $log_message ) ) {
+			$log_message = print_r( $log_message, true );
 		}
 
 		// The logger class didn't load for some reason
@@ -255,13 +267,27 @@ class Logging {
 
 			// If WP_DEBUG and WP_DEBUG_LOG are enabled, log errors to that file.
 			if ( $wp_debug && $wp_debug_log ) {
-				error_log( $method . ' (' . $level . '): ' . $text );
+
+				if ( ! empty( $data ) ) {
+					$log_message .= ' Error data: ' . print_r( $data, true );
+				}
+
+				error_log( $method . ' (' . $level . '): ' . $log_message );
 			}
 
 			return;
 		}
 
-		$this->klogger->{$level}( $method . ': ' . $text );
+		if ( is_wp_error( $data ) ) {
+			$log_message .= sprintf( '[%s] %s', $data->get_error_code(), $data->get_error_message() );
+		}
 
+		// Keep PSR-4 compatible
+		if ( $data && ! is_array( $data ) ) {
+			$data = array( $data );
+		}
+
+		$this->klogger->{$level}( $log_message, $data );
 	}
+
 }
