@@ -153,9 +153,12 @@ final class Remote {
 			$response = wp_remote_request( $api_url, $request_options );
 
 		} catch ( Exception $exception ) {
-			$this->logging->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
 
-			return new WP_Error( 'wp_remote_request_exception', sprintf( 'There was an exception during the remote request: %s (%s)', $exception->getMessage(), $exception->getCode() ) );
+			$error = new WP_Error( 'wp_remote_request_exception', sprintf( 'There was an exception during the remote request: %s (%s)', $exception->getMessage(), $exception->getCode() ) );
+
+			$this->logging->log( $error, __METHOD__, 'error' );
+
+			return $error;
 		}
 
 		$this->logging->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
