@@ -62,25 +62,43 @@ final class Remote {
 	 *   @type string $action "create" or "revoke"
 	 * }
 	 *
-	 * @return void
+	 * @return bool|WP_Error False: webhook setting not defined; True: success; WP_Error: error!
 	 */
 	public function maybe_send_webhook( $data ) {
 
 		$webhook_url = $this->config->get_setting( 'webhook_url' );
 
 		if ( ! $webhook_url ) {
-			return;
+			return false;
 		}
 
 		if ( ! wp_http_validate_url( $webhook_url ) ) {
-			$this->logging->log( 'An invalid `webhook_url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ), __METHOD__, 'error' );
-			return;
+
+			$error = new WP_Error( 'invalid_webhook_url', 'An invalid `webhook_url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ) );
+
+			$this->logging->log( $error, __METHOD__, 'error' );
+
+			return $error;
 		}
 
 		try {
-			wp_remote_post( $webhook_url, $data );
+
+			$posted = wp_remote_post( $webhook_url, $data );
+
+			if ( is_wp_error( $posted ) ) {
+				$this->logging->log( 'An error encountered while sending a webhook to ' . esc_attr( $webhook_url ), __METHOD__, 'error', $posted );
+				return $posted;
+			}
+
+			$this->logging->log( 'Webhook was sent to ' . esc_attr( $webhook_url ), __METHOD__, 'debug', $data );
+
+			return true;
+
 		} catch ( Exception $exception ) {
 
+			$this->logging->log( 'A fatal error was triggered while sending a webhook to ' . esc_attr( $webhook_url ) . ': ' . $exception->getMessage(), __METHOD__, 'error' );
+
+			return new WP_Error( $exception->getCode(), $exception->getMessage() );
 		}
 	}
 
