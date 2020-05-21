@@ -147,6 +147,8 @@ final class Ajax {
 
 				$exception_error = new WP_Error( $e->getCode(), $e->getMessage() );
 
+				$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
+
 				wp_send_json_error( $exception_error, 500 );
 			}
 

@@ -198,12 +198,19 @@ final class Encryption {
 		try {
 
 			$alice_to_bob_kp = sodium_crypto_box_keypair_from_secretkey_and_publickey( $alice_secret_key, \sodium_hex2bin( $bob_public_key ) );
-			$encrypted       = sodium_crypto_secretbox( $data, $nonce, sodium_hex2bin( $alice_to_bob_kp ) );
+			$encrypted       = sodium_crypto_secretbox( $data, $nonce, $alice_to_bob_kp );
 
 		} catch ( \SodiumException $e ) {
 
 			return new WP_Error(
 				'encryption_failed_secretbox',
+				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+
+		} catch ( \RangeException $e ) {
+
+			return new WP_Error(
+				'encryption_failed_secretbox_rangeexception',
 				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
 
