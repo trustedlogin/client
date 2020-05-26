@@ -1,13 +1,11 @@
-
 .button-trustedlogin {
 	position: relative;
 	text-align: center;
 
-
 	small {
 		text-align: center;
 		position: absolute;
-		bottom: 0;
+		bottom: -24px;
 		left: 0;
 		width: 100%;
 		display: block;
@@ -46,23 +44,22 @@
 		background-repeat: no-repeat;
 		background-size: contain;
 	}
-
 }
 
 /**
  * Hero
  */
-.button-hero.button-trustedlogin {
+.button-trustedlogin.button-hero {
 
 	small {
 		padding-top: 6px;
 		font-size: 13px;
 		line-height: 26px;
+		bottom: -33px;
 	}
 
 	&:active small {
 		padding-top: 5px;
-		bottom: -33px;
 	}
 
 	.trustedlogin-logo {
@@ -74,11 +71,12 @@
 /**
  * Large
  */
-.button-large.button-trustedlogin {
+.button-trustedlogin.button-large {
 
 	small {
 		line-height: 21px;
 		font-size: 12px;
+		bottom: -28px;
 	}
 
 	&:active small {
@@ -94,11 +92,12 @@
 /**
  * Small
  */
-.button-small.button-trustedlogin {
+.button-trustedlogin.button-small {
 
 	small {
 		line-height: 18px;
 		font-size: 11px;
+		bottom: -20px;
 	}
 
 	.trustedlogin-logo {
