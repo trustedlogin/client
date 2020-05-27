@@ -388,13 +388,15 @@ final class Admin {
 
 		wp_enqueue_style( 'trustedlogin' );
 
+		$selector = isset( $atts['selector'] ) ? $atts['selector'] : '.trustedlogin–grant-access';
+
 		$button_settings = array(
 			'vendor'   => $this->config->get_setting( 'vendor' ),
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
 			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
 			'debug'    => $this->logging->is_enabled(),
-			'selector' => '.trustedlogin–grant-access',
+			'selector' => $selector,
 		);
 
 		wp_localize_script( 'trustedlogin', 'tl_obj', $button_settings );
@@ -444,19 +446,20 @@ final class Admin {
 
 		$atts = wp_parse_args( $atts, $defaults );
 
+		$css_class = 'trustedlogin–grant-access ';
+
 		switch ( $atts['size'] ) {
 			case '':
-				$css_class = '';
 				break;
 			case 'normal':
-				$css_class = 'button';
+				$css_class .= 'button';
 				break;
 			default:
 				if ( ! in_array( $atts['size'], $sizes ) ) {
 					$atts['size'] = 'hero';
 				}
 
-				$css_class = 'trustedlogin–grant-access button button-' . $atts['size'];
+				$css_class .= 'button button-' . $atts['size'];
 		}
 
 		$tags = array( 'a', 'button', 'span' );
