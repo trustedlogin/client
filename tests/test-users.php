@@ -312,7 +312,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$user = $this->factory->user->create_and_get( array( 'role' => 'administrator' ) );
 
 		$hash = 'asdsdasdasdasdsd';
-		$hash_bin = sodium_crypto_generichash( $hash );
+		$hash_bin = sodium_crypto_generichash( $hash, '', 16 );
 		$generichash     = sodium_bin2hex( $hash_bin );
 		$expiry = $this->config->get_expiration_timestamp( DAY_IN_SECONDS );
 		$cron = new \TrustedLogin\Cron( $this->config, $this->logging );

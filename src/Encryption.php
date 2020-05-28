@@ -83,7 +83,7 @@ final class Encryption {
 		}
 
 		try {
-			$hash_bin = sodium_crypto_generichash( $string );
+			$hash_bin = sodium_crypto_generichash( $string, '', 16 );
 			$hash     = sodium_bin2hex( $hash_bin );
 		} catch ( \SodiumException $exception ) {
 			return new WP_Error(
