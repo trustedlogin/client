@@ -391,18 +391,20 @@ final class Admin {
 
 		wp_enqueue_style( 'trustedlogin' );
 
-		$button_settings = array(
-			'vendor'   => $this->config->get_setting( 'vendor' ),
-			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
-			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
-			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
-			'debug'    => $this->logging->is_enabled(),
-			'selector' => '.button-trustedlogin',
-		);
+		if( Encryption::has_sodium() ) {
+			$button_settings = array(
+				'vendor'   => $this->config->get_setting( 'vendor' ),
+				'ajaxurl'  => admin_url( 'admin-ajax.php' ),
+				'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
+				'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
+				'debug'    => $this->logging->is_enabled(),
+				'selector' => '.button-trustedlogin',
+			);
 
-		wp_localize_script( 'trustedlogin', 'tl_obj', $button_settings );
+			wp_localize_script( 'trustedlogin', 'tl_obj', $button_settings );
 
-		wp_enqueue_script( 'trustedlogin' );
+			wp_enqueue_script( 'trustedlogin' );
+		}
 
 		$return = $this->get_button( $atts );
 
@@ -434,13 +436,14 @@ final class Admin {
 	public function get_button( $atts = array() ) {
 
 		$defaults = array(
-			'text'        => sprintf( esc_html__( 'Grant %s Support Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
-			'exists_text' => sprintf( esc_html__( '✅ %s Support Has An Account', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
-			'size'        => 'hero',
-			'class'       => 'button-primary',
-			'tag'         => 'a', // "a", "button", "span"
-			'powered_by'  => true,
-			'support_url' => $this->config->get_setting( 'vendor/support_url' ),
+			'text'          => sprintf( esc_html__( 'Grant %s Support Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'disabled_text' => sprintf( esc_html__( 'Visit %s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'exists_text'   => sprintf( esc_html__( '✅ %s Support Has An Account', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'size'          => 'hero',
+			'class'         => 'button-primary',
+			'tag'           => 'a', // "a", "button", or "span"
+			'powered_by'    => true,
+			'support_url'   => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
 		$sizes = array( 'small', 'normal', 'large', 'hero' );
@@ -477,7 +480,8 @@ final class Admin {
 			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
 			$data_atts['accesskey'] = $this->site_access->get_access_key(); // Add the shareable accesskey as a data attribute
 		} else {
-			$text      = esc_html( $atts['text'] );
+			$text = Encryption::has_sodium() ? $atts['text'] : $atts['disabled_text'];
+			$text = esc_html( $text );
 			$href      = $atts['support_url'];
 		}
 
@@ -490,9 +494,16 @@ final class Admin {
 		}
 
 		$powered_by = '';
-		if( $atts['powered_by'] ) {
+		if( $atts['powered_by'] && \GravityView\TrustedLogin\Encryption::has_sodium() ) {
+
+			if( is_ssl() ) {
+				$attribution = __( 'Secured by TrustedLogin', 'trustedlogin' );
+			} else {
+				$attribution = __( 'Powered by TrustedLogin', 'trustedlogin' );
+			}
+
 			$powered_by = sprintf( '<small><span class="trustedlogin-logo"></span>%s</small>',
-				esc_html__( 'Secured by TrustedLogin', 'trustedlogin' )
+				esc_html( $attribution )
 			);
 		}
 

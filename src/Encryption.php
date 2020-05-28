@@ -72,6 +72,13 @@ final class Encryption {
 	}
 
 	/**
+	 * @return bool
+	 */
+	static public function has_sodium() {
+		return function_exists( 'sodium_crypto_generichash' ) && function_exists( 'sodium_crypto_secretbox' );
+	}
+
+	/**
 	 * @param $string
 	 *
 	 * @return string|WP_Error
