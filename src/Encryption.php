@@ -128,7 +128,7 @@ final class Encryption {
 		}
 
 		// Store it in the DB
-		$saved = update_site_option( $this->public_key_option, $public_key );
+		$saved = update_site_option( $this->public_key_option, $remote_key );
 
 		if ( ! $saved ) {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'notice' );
