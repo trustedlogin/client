@@ -26,8 +26,9 @@ class Endpoint {
 	private $config;
 
 	/**
-	 * @var string $option_name The namespaced setting name for storing part of the auto-login endpoint
-	 * @example 'tl_{vendor/namespace}_endpoint'
+	 * The namespaced setting name for storing part of the auto-login endpoint
+	 *
+	 * @var string $option_name Example: `tl_{vendor/namespace}_endpoint`
 	 */
 	private $option_name;
 
@@ -231,14 +232,19 @@ class Endpoint {
 	}
 
 	/**
-	 * Updates the site's endpoint to listen for logins
+	 * Updates the site's endpoint to listen for logins. Flushes rewrite rules after updating.
 	 *
 	 * @param string $endpoint
 	 *
 	 * @return bool True: updated; False: didn't change, or didn't update
 	 */
 	public function update( $endpoint ) {
-		return update_option( $this->option_name, $endpoint, true );
+
+		$updated = update_option( $this->option_name, $endpoint, true );
+
+		update_option( 'tl_permalinks_flushed', 0 );
+
+		return $updated;
 	}
 
 	/**
