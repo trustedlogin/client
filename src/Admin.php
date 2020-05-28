@@ -492,12 +492,12 @@ final class Admin {
 		$anchor_html = $text . $powered_by;
 
 		return sprintf(
-			'<%1$s href="%2$s" class="%3$s button-trustedlogin" aria-role="button" %5$s>%4$s</%1$s>',
+			'<%1$s href="%2$s" class="%3$s button-trustedlogin" aria-role="button" %4$s>%5$s</%1$s>',
 			$tag,
 			esc_url( $href ),
 			esc_attr( $css_class ),
-			$anchor_html,
-			$data_string
+			$data_string,
+			$anchor_html
 		);
 	}
 
