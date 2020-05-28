@@ -312,13 +312,13 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$user = $this->factory->user->create_and_get( array( 'role' => 'administrator' ) );
 
 		$hash = 'asdsdasdasdasdsd';
-		$hash_md5 = md5( $hash );
+		$hash_256 = hash( 'sha256', $hash );
 		$expiry = $this->config->get_expiration_timestamp( DAY_IN_SECONDS );
 		$cron = new \TrustedLogin\Cron( $this->config, $this->logging );
 
 		$TL_Support_User = new \TrustedLogin\SupportUser( $this->config, $this->logging );
 
-		$this->assertSame( $hash_md5, $TL_Support_User->setup( $user->ID, $hash, $expiry, $cron ) );
+		$this->assertSame( $hash_256, $TL_Support_User->setup( $user->ID, $hash, $expiry, $cron ) );
 
 		$expires_meta_key = $this->_get_public_property( 'expires_meta_key', $TL_Support_User )->getValue( $TL_Support_User );
 		$this->assertSame( (string) $expiry, get_user_option( $expires_meta_key, $user->ID ) );
@@ -329,15 +329,15 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		// False is the same result as an error, so we're doing more legwork here to validate.
 		$crons = _get_cron_array();
 
-		/** @see wp_get_schedule The md5/serialize/array/md5 nonsense is replicating that behavior */
-		$cron_id = md5( serialize( array( $hash_md5 ) ) );
+		/** @see wp_get_schedule The hash/serialize/array/hash nonsense is replicating that behavior */
+		$cron_id = md5( serialize( array( $hash_256 ) ) );
 
 		$cron_key = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
 
 		$this->assertArrayHasKey( $expiry, $crons );
 		$this->assertArrayHasKey( $cron_key, $crons[ $expiry ] );
 		$this->assertArrayHasKey( $cron_id, $crons[ $expiry ][ $cron_key ] );
-		$this->assertSame( $hash_md5, $crons[ $expiry ][ $cron_key ][ $cron_id ]['args'][0] );
+		$this->assertSame( $hash_256, $crons[ $expiry ][ $cron_key ][ $cron_id ]['args'][0] );
 	}
 
 	/**

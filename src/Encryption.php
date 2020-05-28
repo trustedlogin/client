@@ -77,7 +77,7 @@ final class Encryption {
 	 * @return string
 	 */
 	static public function hash( $string ) {
-		return md5( $string );
+		return hash( 'sha256', $string );
 	}
 
 	/**
