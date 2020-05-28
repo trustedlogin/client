@@ -45,6 +45,11 @@ final class Client {
 	private $config;
 
 	/**
+	 * @var bool
+	 */
+	static $valid_config;
+
+	/**
 	 * @var null|Logging $logging
 	 */
 	private $logging;
@@ -101,8 +106,9 @@ final class Client {
 	public function __construct( Config $config, $init = true ) {
 
 		try {
-			$config->validate();
+			self::$valid_config = $config->validate();
 		} catch ( Exception $exception ) {
+			self::$valid_config = false;
 			return;
 		}
 
@@ -141,6 +147,122 @@ final class Client {
 		$this->remote->init();
 		$this->cron->init();
 		$this->ajax->init();
+	}
+
+	/**
+	 * This creates a TrustedLogin user ✨
+	 *
+	 * @return array|WP_Error
+	 */
+	public function grant_access() {
+
+		if( ! self::$valid_config ) {
+			return new WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
+		}
+
+		if ( ! current_user_can( 'create_users' ) ) {
+			return new WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
+		}
+
+		try {
+			$support_user_id = $this->support_user->create();
+		} catch ( Exception $exception ) {
+
+			$this->logging->log( 'An exception occurred trying to create a support user.', __METHOD__, 'critical', $exception );
+
+			return new WP_Error( 'support_user_exception', $exception->getMessage(), array( 'error_code' => 500 ) );
+		}
+
+		if ( is_wp_error( $support_user_id ) ) {
+
+			$this->logging->log( sprintf( 'Support user not created: %s (%s)', $support_user_id->get_error_message(), $support_user_id->get_error_code() ), __METHOD__, 'error' );
+
+			$support_user_id->add_data( array( 'error_code' => 409 ) );
+
+			return $support_user_id;
+		}
+
+		$identifier_hash = $this->site_access->create_hash();
+
+		if ( is_wp_error( $identifier_hash ) ) {
+
+			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
+
+			return new WP_Error( 'secure_secret_failed', 'Could not generate a secure secret.', array( 'error_code' => 501 ) );
+		}
+
+		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
+
+		$updated = $this->endpoint->update( $endpoint_hash );
+
+		if( ! $updated ) {
+			$this->logging->log( 'Endpoint hash did not save or didn\'t update.', __METHOD__, 'info' );
+		}
+
+		$expiration_timestamp = $this->config->get_expiration_timestamp();
+
+		// Add user meta, configure decay
+		$did_setup = $this->support_user->setup( $support_user_id, $identifier_hash, $expiration_timestamp, $this->cron );
+
+		if ( is_wp_error( $did_setup ) ) {
+
+			$did_setup->add_data( array( 'error_code' => 503 ) );
+
+			return $did_setup;
+		}
+
+		if ( empty( $did_setup ) ) {
+			return new WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
+		}
+
+		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
+
+		if ( is_wp_error( $secret_id ) ) {
+
+			$did_setup->add_data( array( 'error_code' => 500 ) );
+
+			return $secret_id;
+		}
+
+		$return_data = array(
+			'site_url'    => get_site_url(),
+			'endpoint'   => $endpoint_hash,
+			'identifier' => $identifier_hash,
+			'user_id'    => $support_user_id,
+			'expiry'     => $expiration_timestamp,
+			'access_key' => $secret_id,
+			'is_ssl'     => is_ssl(),
+		);
+
+		if ( $this->config->meets_ssl_requirement() ) {
+
+			try {
+
+				$created = $this->site_access->create_secret( $secret_id, $identifier_hash );
+
+			} catch ( Exception $e ) {
+
+				$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
+
+				$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
+
+				return $exception_error;
+			}
+
+			if ( is_wp_error( $created ) ) {
+
+				$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error' );
+
+				$created->add_data( array( 'status_code' => 503 ) );
+
+				return $created;
+			}
+
+		}
+
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+
+		return $return_data;
 	}
 
 }

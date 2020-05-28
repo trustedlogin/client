@@ -98,7 +98,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers TrustedLogin::get_license_key
+	 * @covers \TrustedLogin\SiteAccess::get_license_key
 	 */
 	public function test_get_license_key() {
 
@@ -111,7 +111,37 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$this->assertSame( 0, $site_access->get_license_key() );
 
 		remove_filter( 'trustedlogin/' . $this->config->ns() . '/licence_key', '__return_zero' );
+	}
 
+	/**
+	 * @covers \TrustedLogin\Client::grant_access()
+	 */
+	public function test_grant_access_bad_config() {
+
+		$bad_config = new Config( array( 'asdasd' ) );
+		$trustedlogin = new Client( $bad_config );
+
+		$expect_424 = $trustedlogin->grant_access();
+		$error_data = $expect_424->get_error_data();
+		$error_code = isset( $error_data['error_code'] ) ? $error_data['error_code'] : null;
+
+		$this->assertEquals( $error_code, 424 );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Client::grant_access()
+	 */
+	public function test_grant_access_bad_user_cap() {
+		$current = $this->factory->user->create_and_get( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $current->ID );
+		$trustedlogin = new Client( $this->config );
+		$expect_403 = $trustedlogin->grant_access();
+		$error_data = $expect_403->get_error_data();
+		$error_code = isset( $error_data['error_code'] ) ? $error_data['error_code'] : null;
+
+		$this->assertEquals( $error_code, 403 );
+
+		wp_set_current_user( 0 );
 	}
 
 }
