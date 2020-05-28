@@ -57,22 +57,13 @@ final class Cron {
 	 */
 	public function schedule( $expiration_timestamp, $identifier_hash ) {
 
-		$args = array( $this->hash( $identifier_hash ) );
+		$args = array( Encryption::hash( $identifier_hash ) );
 
 		$scheduled_expiration = wp_schedule_single_event( $expiration_timestamp, $this->hook_name, $args );
 
 		$this->logging->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
 
 		return $scheduled_expiration;
-	}
-
-	/**
-	 * @param $string
-	 *
-	 * @return string
-	 */
-	private function hash( $string ) {
-		return md5( $string );
 	}
 
 	/**
