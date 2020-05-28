@@ -2,6 +2,8 @@
 	position: relative;
 	text-align: center;
 
+	margin-bottom: 24px; // 28px logo + 4px gap
+
 	small {
 		text-align: center;
 		position: absolute;
@@ -51,6 +53,8 @@
  */
 .button-trustedlogin.button-hero {
 
+	margin-bottom: 39px; // 33px logo + 6px gap
+
 	small {
 		padding-top: 6px;
 		font-size: 13px;
@@ -73,6 +77,8 @@
  */
 .button-trustedlogin.button-large {
 
+	margin-bottom: 32px; // 28px logo + 4px gap
+
 	small {
 		line-height: 21px;
 		font-size: 12px;
@@ -93,6 +99,8 @@
  * Small
  */
 .button-trustedlogin.button-small {
+
+	margin-bottom: 24px!important; // 20px logo + 4px gap
 
 	small {
 		line-height: 18px;
