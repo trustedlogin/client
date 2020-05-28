@@ -230,7 +230,7 @@ final class SupportUser {
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
 		if ( strlen( $identifier ) > 32 ) {
-			$identifier = $this->hash( $identifier );
+			$identifier = Encryption::hash( $identifier );
 		}
 
 		$args = array(
