@@ -482,13 +482,20 @@ final class Admin {
 		}
 
 		$css_class = implode( ' ', array( $css_class, $atts['class'] ) );
+		$css_class = trim( $css_class );
 
 		$data_string = '';
 		foreach ( $data_atts as $key => $value ){
 			$data_string .= sprintf(' data-%s="%s"', esc_attr( $key ), esc_attr( $value ) );
 		}
 
-		$powered_by  = $atts['powered_by'] ? '<small><span class="trustedlogin-logo"></span>Powered by TrustedLogin</small>' : false;
+		$powered_by = '';
+		if( $atts['powered_by'] ) {
+			$powered_by = sprintf( '<small><span class="trustedlogin-logo"></span>%s</small>',
+				esc_html__( 'Secured by TrustedLogin', 'trustedlogin' )
+			);
+		}
+
 		$anchor_html = $text . $powered_by;
 
 		return sprintf(
