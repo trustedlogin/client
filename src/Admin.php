@@ -104,7 +104,7 @@ final class Admin {
 		$registered = array();
 
 		$registered['jquery-confirm-css'] = wp_register_style(
-			'jquery-confirm',
+			'tl-jquery-confirm',
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
 			array(),
 			self::jquery_confirm_version,
@@ -112,7 +112,7 @@ final class Admin {
 		);
 
 		$registered['jquery-confirm-js'] = wp_register_script(
-			'jquery-confirm',
+			'tl-jquery-confirm',
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
 			array( 'jquery' ),
 			self::jquery_confirm_version,
@@ -122,7 +122,7 @@ final class Admin {
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin',
 			$this->config->get_setting( 'paths/js' ),
-			array( 'jquery-confirm' ),
+			array( 'tl-jquery-confirm' ),
 			Client::version,
 			true
 		);
@@ -130,7 +130,7 @@ final class Admin {
 		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin',
 			$this->config->get_setting( 'paths/css' ),
-			array( 'jquery-confirm' ),
+			array( 'tl-jquery-confirm' ),
 			Client::version,
 			'all'
 		);
