@@ -365,7 +365,7 @@ final class SupportUser {
 	 * @param string $identifier_hash Unique ID used by
 	 * @param int $decay_timestamp Timestamp when user will be removed
 	 *
-	 * @return string Value of $identifier_meta_key if worked; empty string if not.
+	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
 	public function setup( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
 
@@ -378,7 +378,13 @@ final class SupportUser {
 			}
 		}
 
-		update_user_option( $user_id, $this->identifier_meta_key, Encryption::hash( $identifier_hash ), true );
+		$hash_of_identifier = Encryption::hash( $identifier_hash );
+
+		if ( is_wp_error( $hash_of_identifier ) ) {
+			return $hash_of_identifier;
+		}
+
+		update_user_option( $user_id, $this->identifier_meta_key, $hash_of_identifier, true );
 		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!

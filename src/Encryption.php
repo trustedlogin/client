@@ -74,10 +74,30 @@ final class Encryption {
 	/**
 	 * @param $string
 	 *
-	 * @return string
+	 * @return string|WP_Error
 	 */
 	static public function hash( $string ) {
-		return hash( 'sha256', $string );
+
+		if ( ! function_exists( 'sodium_crypto_generichash' ) ) {
+			return new WP_Error( 'sodium_crypto_generichash_not_available', 'sodium_crypto_generichash not available' );
+		}
+
+		try {
+			$hash_bin = sodium_crypto_generichash( $string );
+			$hash     = sodium_bin2hex( $hash_bin );
+		} catch ( \SodiumException $exception ) {
+			return new WP_Error(
+				'encryption_failed_generichash',
+				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+		} catch ( \TypeError $exception ) {
+			return new WP_Error(
+				'encryption_failed_generichash_typeerror',
+				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+		}
+
+		return $hash;
 	}
 
 	/**

@@ -115,7 +115,13 @@ class SiteAccess {
 		// Ping SaaS and get back tokens.
 		$envelope = new Envelope( $this->config, $encryption );
 
-		$sealed_envelope = $envelope->get( $secret_id, $identifier, $this->get_license_key() );
+		$license_key = $this->get_license_key();
+
+		if ( is_wp_error( $license_key ) ) {
+			return $license_key;
+		}
+
+		$sealed_envelope = $envelope->get( $secret_id, $identifier, $license_key );
 
 		if ( is_wp_error( $sealed_envelope ) ) {
 			return $sealed_envelope;
@@ -239,7 +245,7 @@ class SiteAccess {
 	 *
 	 * @since 0.7.0
 	 *
-	 * @return string
+	 * @return string|WP_Error
 	 */
 	public function get_license_key() {
 
@@ -248,6 +254,10 @@ class SiteAccess {
 
 		if ( ! $license_key ){
 			$license_key = $this->get_shareable_access_key();
+		}
+
+		if ( is_wp_error( $license_key ) ) {
+			return $license_key;
 		}
 
 		/**
@@ -269,11 +279,15 @@ class SiteAccess {
 	 *
 	 * @since 0.9.2
 	 *
-	 * @return  string  Access Key prepended with TL.
+	 * @return  string|WP_Error  Access Key prepended with TL, or something went wrong.
 	 */
 	private function get_shareable_access_key(){
 
 		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
+
+		if ( is_wp_error( $hash ) ) {
+			return $hash;
+		}
 
 		/**
 		 * Filter: Allow for over-riding the shareable 'accessKey' prefix

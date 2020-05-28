@@ -202,7 +202,7 @@ class Endpoint {
 	 * @param string $identifier_hash
 	 * @param string $endpoint_hash
 	 *
-	 * @return string This hash will be used as an identifier in TrustedLogin SaaS
+	 * @return string|WP_Error This hash will be used as an identifier in TrustedLogin SaaS. Or something went wrong.
 	 */
 	public function generate_secret_id( $identifier_hash, $endpoint_hash = '' ) {
 

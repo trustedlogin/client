@@ -57,7 +57,15 @@ final class Cron {
 	 */
 	public function schedule( $expiration_timestamp, $identifier_hash ) {
 
-		$args = array( Encryption::hash( $identifier_hash ) );
+		$hash = Encryption::hash( $identifier_hash );
+
+		if ( is_wp_error( $hash ) ) {
+			$this->logging->log( $hash, __METHOD__ );
+
+			return false;
+		}
+
+		$args = array( $hash );
 
 		$scheduled_expiration = wp_schedule_single_event( $expiration_timestamp, $this->hook_name, $args );
 

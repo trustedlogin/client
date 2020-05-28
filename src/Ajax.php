@@ -119,11 +119,19 @@ final class Ajax {
 		// Add user meta, configure decay
 		$did_setup = $SupportUser->setup( $support_user_id, $identifier_hash, $expiration_timestamp, $Cron );
 
+		if ( is_wp_error( $did_setup ) ) {
+			wp_send_json_error( $did_setup );
+		}
+
 		if ( empty( $did_setup ) ) {
 			wp_send_json_error( array( 'message' => 'Error updating user with identifier.' ), 503 );
 		}
 
 		$secret_id = $Endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
+
+		if ( is_wp_error( $secret_id ) ) {
+			wp_send_json_error( $secret_id );
+		}
 
 		$return_data = array(
 			'site_url'    => get_site_url(),
