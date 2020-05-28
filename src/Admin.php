@@ -57,7 +57,10 @@ final class Admin {
 		add_filter( 'user_row_actions', array( $this, 'user_row_action_revoke' ), 10, 2 );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
 		add_action( 'admin_menu', array( $this, 'admin_menu_auth_link_page' ), $this->config->get_setting( 'menu/priority', 100 ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
+
+		if ( $this->config->get_setting( 'register_assets', true ) ) {
+			add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
+		}
 
 		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array( $this, 'admin_notices' ) );
 	}
@@ -97,11 +100,6 @@ final class Admin {
 	 * @since 0.2.0
 	 */
 	public function register_assets() {
-
-		// Override whether to load assets
-		if ( ! $this->config->get_setting( 'register_assets', true ) ) {
-			return;
-		}
 
 		// TODO: Remove this if/when switching away from jQuery Confirm
 		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
