@@ -252,7 +252,7 @@ final class SupportUser {
 	 */
 	public function get_expiration( WP_User $user ) {
 
-		$expiration = get_user_option( $this->expires_meta_key, $support_user->ID );
+		$expiration = get_user_option( $this->expires_meta_key, $user->ID );
 
 		return $expiration ? $expiration : false;
 	}

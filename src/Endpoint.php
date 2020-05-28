@@ -68,7 +68,13 @@ class Endpoint {
 	}
 
 	public function init() {
-		add_action( 'init', array( $this, 'add' ) );
+
+		if ( did_action( 'init' ) ) {
+			$this->add();
+		} else {
+			add_action( 'init', array( $this, 'add' ) );
+		}
+
 		add_action( 'template_redirect', array( $this, 'maybe_login_support' ), 99 );
 		add_action( 'admin_init', array( $this, 'admin_maybe_revoke_support' ), 100 );
 	}
