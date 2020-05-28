@@ -112,7 +112,11 @@ final class Ajax {
 
 		$endpoint_hash = $Endpoint->get_hash( $identifier_hash );
 
-		$Endpoint->update( $endpoint_hash );
+		$updated = $Endpoint->update( $endpoint_hash );
+
+		if( ! $updated ) {
+			$this->logging->log( 'Endpoint hash did not save or didn\'t update.', __METHOD__, 'info' );
+		}
 
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
 
@@ -143,7 +147,7 @@ final class Ajax {
 			'is_ssl'     => is_ssl(),
 		);
 
-		if ( $this->config->meets_ssl_requirement() ){
+		if ( $this->config->meets_ssl_requirement() ) {
 
 			$created = false;
 

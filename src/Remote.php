@@ -214,7 +214,7 @@ final class Remote {
 			return $api_response;
 		}
 
-		$this->logging->log( "Response: " . print_r( $api_response, true ), __METHOD__, 'error' );
+		$this->logging->log( "Response: " . print_r( $api_response, true ), __METHOD__, 'debug' );
 
 		$response_body = wp_remote_retrieve_body( $api_response );
 
