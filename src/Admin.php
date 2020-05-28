@@ -98,6 +98,11 @@ final class Admin {
 	 */
 	public function register_assets() {
 
+		// Override whether to load assets
+		if ( ! $this->config->get_setting( 'register_assets', true ) ) {
+			return;
+		}
+
 		// TODO: Remove this if/when switching away from jQuery Confirm
 		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
 

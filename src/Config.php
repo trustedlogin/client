@@ -58,6 +58,7 @@ final class Config {
 			'priority' => null,
 		),
 		'reassign_posts' => true,
+		'registers_assets' => true,
 		'require_ssl' => true,
 		'logging' => array(
 			'enabled' => false,
