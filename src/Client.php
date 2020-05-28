@@ -164,6 +164,8 @@ final class Client {
 			return new WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
 		}
 
+		timer_start();
+
 		try {
 			$support_user_id = $this->support_user->create();
 		} catch ( Exception $exception ) {
@@ -224,6 +226,8 @@ final class Client {
 			return $secret_id;
 		}
 
+		$timing_local = timer_stop( 0, 5 );
+
 		$return_data = array(
 			'site_url'    => get_site_url(),
 			'endpoint'   => $endpoint_hash,
@@ -232,9 +236,15 @@ final class Client {
 			'expiry'     => $expiration_timestamp,
 			'access_key' => $secret_id,
 			'is_ssl'     => is_ssl(),
+			'timing'     => array(
+				'local' => $timing_local,
+				'remote' => null,
+			),
 		);
 
 		if ( $this->config->meets_ssl_requirement() ) {
+
+			timer_start();
 
 			try {
 
@@ -258,6 +268,7 @@ final class Client {
 				return $created;
 			}
 
+			$return_data['timing']['remote'] = timer_stop( 0, 5 );
 		}
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
