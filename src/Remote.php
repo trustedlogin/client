@@ -27,7 +27,7 @@ final class Remote {
 	 * @var string The API url for the TrustedLogin SaaS Platform (with trailing slash)
 	 * @since 0.4.0
 	 */
-	const api_url = 'https://app.trustedlogin.com/api/';
+	const api_url = 'https://app.trustedlogin.com/api/v1/';
 
 	/**
 	 * @var Config $config
