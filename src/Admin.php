@@ -222,7 +222,6 @@ final class Admin {
 	 * @return string HTML of the Auth screen
 	 */
 	public function get_auth_screen() {
-
 		$output_lang = $this->output_tl_alert();
 		$ns          = $this->config->get_setting( 'vendor/namespace' );
 
