@@ -107,7 +107,7 @@ final class Admin {
 		$registered = array();
 
 		$registered['jquery-confirm-css'] = wp_register_style(
-			'tl-jquery-confirm',
+			'tl-jquery-confirm' . $this->config->ns(),
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
 			array(),
 			self::jquery_confirm_version,
@@ -115,7 +115,7 @@ final class Admin {
 		);
 
 		$registered['jquery-confirm-js'] = wp_register_script(
-			'tl-jquery-confirm',
+			'tl-jquery-confirm' . $this->config->ns(),
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
 			array( 'jquery' ),
 			self::jquery_confirm_version,
@@ -123,7 +123,7 @@ final class Admin {
 		);
 
 		$registered['trustedlogin-js'] = wp_register_script(
-			'trustedlogin',
+			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/js' ),
 			array( 'tl-jquery-confirm' ),
 			Client::version,
@@ -131,9 +131,9 @@ final class Admin {
 		);
 
 		$registered['trustedlogin-css'] = wp_register_style(
-			'trustedlogin',
+			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/css' ),
-			array( 'tl-jquery-confirm' ),
+			array( 'tl-jquery-confirm' . $this->config->ns() ),
 			Client::version,
 			'all'
 		);
@@ -380,15 +380,15 @@ final class Admin {
 			return '';
 		}
 
-		if ( ! wp_script_is( 'trustedlogin', 'registered' ) ) {
+		if ( ! wp_script_is( 'trustedlogin-' . $this->config->ns(), 'registered' ) ) {
 			$this->logging->log( 'JavaScript is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
-		if ( ! wp_style_is( 'trustedlogin', 'registered' ) ) {
+		if ( ! wp_style_is( 'trustedlogin-' . $this->config->ns(), 'registered' ) ) {
 			$this->logging->log( 'Style is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
-		wp_enqueue_style( 'trustedlogin' );
+		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$button_settings = array(
 			'vendor'   => $this->config->get_setting( 'vendor' ),
@@ -399,9 +399,9 @@ final class Admin {
 			'selector' => '.button-trustedlogin',
 		);
 
-		wp_localize_script( 'trustedlogin', 'tl_obj', $button_settings );
+		wp_localize_script( 'trustedlogin' . $this->config->ns(), 'tl_obj', $button_settings );
 
-		wp_enqueue_script( 'trustedlogin' );
+		wp_enqueue_script( 'trustedlogin' . $this->config->ns() );
 
 		$return = $this->get_button( $atts );
 
