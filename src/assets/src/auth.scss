@@ -17,9 +17,78 @@
 	}
 
 	.tl-#{$namespace}-auth__actions {
+		margin-top: 15px;
 		padding-top: 15px;
 		padding-bottom: 15px + 39px; // 39px for the button
     }
+
+	.tl-#{$namespace}-auth__expire {
+
+		h2 {
+			margin-bottom: .25em;
+			font-weight: 400;
+		}
+
+		.dashicons {
+			height: 18px;
+			width: 18px;
+			font-size: 18px;
+			color: #8F98A1;
+			cursor: help;
+			vertical-align: text-top;
+		}
+    }
+
+	.tl-#{$namespace}-auth__roles {
+
+		small.tl-#{$namespace}-toggle {
+			display: block;
+			color: #7E8993;
+			.dashicons {
+				vertical-align: middle;
+			}
+		}
+
+		.tl-#{$namespace}-auth__role-container {
+			display: flex;
+			justify-content: space-between;
+			width: 100%;
+			flex-wrap: wrap;
+
+			&.hidden {
+				display: none;
+			}
+
+			> div {
+				flex: 1;
+				min-width: 15em;
+			}
+		}
+
+		li {
+			.dashicons {
+				margin-right: 10px;
+				vertical-align: middle;
+			}
+			.dashicons-yes-alt {
+				color: #328540;
+			}
+			.dashicons-no {
+				color: #c0461e;
+			}
+			small {
+				display: block;
+				line-height: 1.375;
+				margin-left: 20px + 10px;
+			}
+		}
+
+		&:after {
+			content: '';
+			display: block;
+			clear: both;
+		}
+	}
 
 	h1, h2, h3, table {
 		color: #666;
@@ -36,7 +105,14 @@
 
 	h2 {
 		font-size: 1.2em;
-		font-weight: 500;
+		font-weight: 400;
+		line-height: 1.75;
+	}
+
+	h3 {
+		font-size: 1em;
+		margin-bottom: 12px;
+		font-weight: 700;
 	}
 
 	p, ul {

@@ -108,7 +108,7 @@ final class Admin {
 		$registered = array();
 
 		$registered['jquery-confirm-css'] = wp_register_style(
-			'tl-jquery-confirm' . $this->config->ns(),
+			'tl-jquery-confirm-' . $this->config->ns(),
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
 			array(),
 			self::jquery_confirm_version,
@@ -116,7 +116,7 @@ final class Admin {
 		);
 
 		$registered['jquery-confirm-js'] = wp_register_script(
-			'tl-jquery-confirm' . $this->config->ns(),
+			'tl-jquery-confirm-' . $this->config->ns(),
 			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
 			array( 'jquery' ),
 			self::jquery_confirm_version,
@@ -126,7 +126,7 @@ final class Admin {
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/js' ),
-			array( 'tl-jquery-confirm' ),
+			array( 'tl-jquery-confirm-' . $this->config->ns() ),
 			Client::version,
 			true
 		);
@@ -134,7 +134,7 @@ final class Admin {
 		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/css' ),
-			array( 'tl-jquery-confirm' . $this->config->ns() ),
+			array( 'tl-jquery-confirm-' . $this->config->ns() ),
 			Client::version,
 			'all'
 		);
@@ -223,21 +223,23 @@ final class Admin {
 	 * @return string HTML of the Auth screen
 	 */
 	public function get_auth_screen() {
-		$output_lang = $this->output_tl_alert();
-		$ns          = $this->config->get_setting( 'vendor/namespace' );
+		$ns          = $this->config->ns();
 
 		$output_template = '
-<div class="trustedlogin-{{ns}}-auth">
+<div class="tl-{{ns}}-auth">
 	<header class="tl-{{ns}}-auth__header">
-		{{logo}}
-		{{intro}}
+		<div class="tl-{{ns}}-auth__logo">{{logo}}</div>
+		<h1>{{intro}}</h1>
 	</header>
-	<div class="tl-{{ns}}-auth__body">
-		{{details}}
-	</div>
-	<div class="tl-{{ns}}-auth__actions">
-		{{button}}
-	</div>
+	<section class="tl-{{ns}}-auth__body">
+		<div class="tl-{{ns}}-auth__details">
+			{{roles}}
+			{{expire}}
+		</div>
+		<div class="tl-{{ns}}-auth__actions">
+			{{button}}
+		</div>
+	</section>
 	<footer class="tl-{{ns}}-auth__footer">
 		{{footer}}
 	</footer>
@@ -259,32 +261,125 @@ final class Admin {
 		$content = array(
 			'ns' => sanitize_html_class( $ns ),
 			'logo' => $this->get_logo_html(),
-			'intro' => sprintf( '<div class="intro">%s</div>', $output_lang['intro'] ),
-			'details' => $this->get_details_html(),
+			'intro' => sprintf( esc_html__( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'roles' => $this->get_roles_html(),
+			'expire' => $this->get_expire_html(),
 			'button' => $this->generate_button( "size=hero&class=authlink button-primary", false ),
 			'footer' => $this->get_footer_html(),
 		);
 
-		return $this->prepare_output( $output_template, $content );
+		$output = $this->prepare_output( $output_template, $content );
+
+		$script = $this->get_script();
+
+		return $output . $script;
 	}
 
-	private function get_details_html() {
+	private function get_script() {
+		ob_start();
+		?>
+		<script>
+			jQuery( document ).ready( function ( $ ) {
+				$( '.tl-{{ns}}-toggle' ).on( 'click', function () {
+					$( this ).find( '.dashicons' ).toggleClass( 'dashicons-arrow-down-alt2' ).toggleClass( 'dashicons-arrow-up-alt2' );
+					$( $( this ).data('toggle') ).toggleClass( 'hidden' );
+				});
+			} );
+		</script>
+		<?php
+		$output = ob_get_clean();
 
-		$output_lang = $this->output_tl_alert();
+		$content = array(
+			'ns' => sanitize_html_class( $this->config->ns() ),
+		);
 
-		$details_output = '<div class="tl-details tl-roles">' . wpautop( $output_lang['roles'] ) . '</div>';
+		return $this->prepare_output( $output, $content, false );
+	}
 
-		$caps = $this->config->get_setting( 'caps' );
+	private function get_roles_html() {
 
-		if( $caps = array_filter( $caps ) ) {
-			$details_output .= sprintf(
-				'<div class="tl-toggle-caps"><p>%2$s</p></div><ul class="tl-details caps hidden">%3$s</ul>',
-				sprintf( '%s <span class="dashicons dashicons-arrow-down-alt2"></span>', __( 'With a few more capabilities', 'trustedlogin' ) ),
-				$output_lang['caps']
-			);
+		$ns = sanitize_html_class( $this->config->ns() );
+
+		$details_template = '
+			<div class="tl-{{ns}}-auth__roles">
+				<h2>{{roles_summary}}</h2>
+				{{caps}}
+			</div>
+		';
+
+		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
+		$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
+
+		$caps_config = $this->config->get_setting( 'caps' );
+		$caps = $caps_added = $caps_removed = '';
+
+		if( $caps_config = array_filter( $caps_config ) ) {
+
+			$added = $this->config->get_setting( 'caps/add' );
+			$removed = $this->config->get_setting( 'caps/remove' );
+
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
+			$differences = sprintf( esc_html__( 'See the differences:', 'trustedlogin' ), $cloned_role );
+			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons-arrow-down-alt2"></span></small>', $differences );
+
+			$caps .= '<div class="tl-' . sanitize_html_class( $this->config->ns() ) . '-auth__role-container hidden">';
+			if ( ! empty( $added ) ) {
+				$caps .= '<div>';
+				$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
+				$caps .= '<ul>';
+				foreach ( (array) $added as $cap => $reason ) {
+					$caps .= '<li><span class="dashicons dashicons-yes-alt"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
+				}
+				$caps .= '</ul>';
+				$caps .= '</div>';
+			}
+
+			if ( ! empty( $removed ) ) {
+				$caps .= '<div>';
+				$caps .= '<h3>' . esc_html__( 'Removed capabilities:', 'trustedlogin' ) . '</h3>';
+				$caps .= '<ul>';
+				foreach ( (array) $removed as $cap => $reason ) {
+					$caps .= '<li><span class="dashicons dashicons-no"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
+				}
+				$caps .= '</ul>';
+				$caps .= '</div>';
+			}
+
+			$caps .= '</div>';
 		}
 
+
+		$content = array (
+			'ns' => sanitize_html_class( $this->config->ns() ),
+			'roles_summary' => $roles_summary,
+			'caps' => $caps,
+		);
+
+		return $this->prepare_output( $details_template, $content );
+
 		return $details_output;
+	}
+
+	private function get_expire_html() {
+		$expire_template = '
+		<div class="tl-{{ns}}-auth__expire">
+			<h2>{{expire_summary}}{{tooltip}}</h2>
+		</div>';
+
+		// translators: The amount of time that the login will be active for.
+		$expire_summary = esc_html__( 'Site access will %1$sauto-expire in %2$s%3$s.', 'trustedlogin' );
+		$expire_summary = sprintf( $expire_summary, '<strong>', human_time_diff( 0, $this->config->get_setting( 'decay') ), '</strong>' );
+
+		$expire_description = __( 'You may revoke access at any time.', 'trustedlogin' );
+
+		$content = array (
+			'ns' => sanitize_html_class( $this->config->ns() ),
+			'expire_summary' => $expire_summary,
+			'tooltip' => sprintf( '<span class="dashicons dashicons-editor-help" title="%s"></span>', esc_attr( $expire_description ) ),
+			'expire_description' => wpautop( $expire_description ),
+		);
+
+		return $this->prepare_output( $expire_template, $content );
 	}
 
 	private function get_logo_html() {
@@ -294,7 +389,7 @@ final class Admin {
 
 		if ( ! empty( $logo_url ) ) {
 			$logo_output = sprintf(
-				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img class="tl-%3$s-auth__logo" src="%4$s" alt="%5$s" /></a>',
+				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%4$s" alt="%5$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
 				esc_attr( sprintf( __( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ),
 				sanitize_html_class( $this->config->ns() ),
@@ -341,7 +436,7 @@ final class Admin {
 		return $footer_output;
 	}
 
-	private function prepare_output( $template, $content ) {
+	private function prepare_output( $template, $content, $wp_kses = true ) {
 
 		$output_html = $template;
 
@@ -349,25 +444,45 @@ final class Admin {
 			$output_html = str_replace( '{{' . $key . '}}', $value, $output_html );
 		}
 
-		$output_html = wp_kses( $output_html, array(
-				'a'      => array( 'class' => array(), 'id' => array(), 'href' => array(), 'title' => array(), 'rel' => array(), 'target' => array() ),
-				'img'	 => array( 'class' => array(), 'id' => array(), 'src' => array(), 'href' => array(), 'alt' => array(), 'title' => array() ),
-				'ul'     => array( 'class' => array(), 'id' => array() ),
-				'p'      => array( 'class' => array(), 'id' => array() ),
-				'h1'     => array( 'class' => array(), 'id' => array() ),
-				'h2'     => array( 'class' => array(), 'id' => array() ),
-				'h3'     => array( 'class' => array(), 'id' => array() ),
-				'h4'     => array( 'class' => array(), 'id' => array() ),
-				'h5'     => array( 'class' => array(), 'id' => array() ),
-				'div'    => array( 'class' => array(), 'id' => array() ),
-				'header' => array( 'class' => array(), 'id' => array() ),
-				'footer' => array( 'class' => array(), 'id' => array() ),
-				'section' => array( 'class' => array(), 'id' => array() ),
-				'br'     => array(),
-				'strong' => array(),
-				'em'     => array(),
-			)
-		);
+		if( $wp_kses ) {
+			$output_html = wp_kses( $output_html, array(
+					'a'       => array(
+						'class'  => array(),
+						'id'     => array(),
+						'href'   => array(),
+						'title'  => array(),
+						'rel'    => array(),
+						'target' => array(),
+						'data-toggle' => array(),
+					),
+					'img'     => array(
+						'class' => array(),
+						'id'    => array(),
+						'src'   => array(),
+						'href'  => array(),
+						'alt'   => array(),
+						'title' => array(),
+					),
+					'span'    => array( 'class' => array(), 'id' => array(), 'title' => array(), 'data-toggle' => array() ),
+					'ul'      => array( 'class' => array(), 'id' => array() ),
+					'li'      => array( 'class' => array(), 'id' => array() ),
+					'p'       => array( 'class' => array(), 'id' => array() ),
+					'h1'      => array( 'class' => array(), 'id' => array() ),
+					'h2'      => array( 'class' => array(), 'id' => array() ),
+					'h3'      => array( 'class' => array(), 'id' => array() ),
+					'h4'      => array( 'class' => array(), 'id' => array() ),
+					'h5'      => array( 'class' => array(), 'id' => array() ),
+					'div'     => array( 'class' => array(), 'id' => array() ),
+					'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
+					'header'  => array( 'class' => array(), 'id' => array() ),
+					'footer'  => array( 'class' => array(), 'id' => array() ),
+					'section' => array( 'class' => array(), 'id' => array() ),
+					'br'      => array(),
+					'strong'  => array(),
+					'em'      => array(),
+				)
+			);
+		}
 
 		return normalize_whitespace( $output_html );
 	}
@@ -402,14 +517,14 @@ final class Admin {
 			'vendor'   => $this->config->get_setting( 'vendor' ),
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
-			'lang'     => array_merge( $this->output_tl_alert(), $this->output_secondary_alerts() ),
+			'lang'     => $this->output_secondary_alerts(),
 			'debug'    => $this->logging->is_enabled(),
-			'selector' => '.button-trustedlogin',
+			'selector' => '.button-trustedlogin-' . $this->config->ns(),
 		);
 
-		wp_localize_script( 'trustedlogin' . $this->config->ns(), 'tl_obj', $button_settings );
+		wp_localize_script( 'trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings );
 
-		wp_enqueue_script( 'trustedlogin' . $this->config->ns() );
+		wp_enqueue_script( 'trustedlogin-' . $this->config->ns() );
 
 		$return = $this->get_button( $atts );
 
@@ -506,10 +621,11 @@ final class Admin {
 		$anchor_html = $text . $powered_by;
 
 		return sprintf(
-			'<%1$s href="%2$s" class="%3$s button-trustedlogin" aria-role="button" %4$s>%5$s</%1$s>',
+			'<%1$s href="%2$s" class="%3$s button-trustedlogin-%4$s" aria-role="button" %5$s>%6$s</%1$s>',
 			$tag,
 			esc_url( $href ),
 			esc_attr( $css_class ),
+			sanitize_html_class( $this->config->ns() ),
 			$data_string,
 			$anchor_html
 		);
@@ -530,14 +646,7 @@ final class Admin {
 
 		$result = array();
 
-		$result['intro'] = sprintf(
-			__( 'Grant %1$s Support access to your site.', 'trustedlogin' ),
-			$this->config->get_setting( 'vendor/title' )
-		);
 
-		$result['description'] = sprintf( '<p class="description">%1$s</p>',
-			__( 'By clicking Confirm, the following will happen automatically:', 'trustedlogin' )
-		);
 
 		// Roles
 		$roles_output = '';
