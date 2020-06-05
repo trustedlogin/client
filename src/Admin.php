@@ -302,7 +302,7 @@ final class Admin {
 
 		$details_template = '
 			<div class="tl-{{ns}}-auth__roles">
-				<h2>{{roles_summary}}</h2>
+				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span> {{roles_summary}}</h2>
 				{{caps}}
 			</div>
 		';
@@ -320,7 +320,7 @@ final class Admin {
 
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
 			$differences = sprintf( esc_html__( 'See the differences:', 'trustedlogin' ), $cloned_role );
-			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons-arrow-down-alt2"></span></small>', $differences );
+			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', $differences );
 
 			$caps .= '<div class="tl-' . sanitize_html_class( $this->config->ns() ) . '-auth__role-container hidden">';
 			if ( ! empty( $added ) ) {
@@ -328,7 +328,7 @@ final class Admin {
 				$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
 				$caps .= '<ul>';
 				foreach ( (array) $added as $cap => $reason ) {
-					$caps .= '<li><span class="dashicons dashicons-yes-alt"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
+					$caps .= '<li><span class="dashicons dashicons-yes-alt dashicons--small"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
 				}
 				$caps .= '</ul>';
 				$caps .= '</div>';
@@ -339,7 +339,7 @@ final class Admin {
 				$caps .= '<h3>' . esc_html__( 'Removed capabilities:', 'trustedlogin' ) . '</h3>';
 				$caps .= '<ul>';
 				foreach ( (array) $removed as $cap => $reason ) {
-					$caps .= '<li><span class="dashicons dashicons-no"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
+					$caps .= '<li><span class="dashicons dashicons-no dashicons--small"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
 				}
 				$caps .= '</ul>';
 				$caps .= '</div>';
@@ -363,7 +363,7 @@ final class Admin {
 	private function get_expire_html() {
 		$expire_template = '
 		<div class="tl-{{ns}}-auth__expire">
-			<h2>{{expire_summary}}{{tooltip}}</h2>
+			<h2><span class="dashicons dashicons-clock dashicons--large"></span> {{expire_summary}}{{tooltip}}</h2>
 		</div>';
 
 		// translators: The amount of time that the login will be active for.
@@ -375,7 +375,7 @@ final class Admin {
 		$content = array (
 			'ns' => sanitize_html_class( $this->config->ns() ),
 			'expire_summary' => $expire_summary,
-			'tooltip' => sprintf( '<span class="dashicons dashicons-editor-help" title="%s"></span>', esc_attr( $expire_description ) ),
+			'tooltip' => sprintf( '<span class="dashicons dashicons-editor-help dashicons--small dashicons--help" title="%s"></span>', esc_attr( $expire_description ) ),
 			'expire_description' => wpautop( $expire_description ),
 		);
 

@@ -17,7 +17,7 @@
 	}
 
 	.tl-#{$namespace}-auth__actions {
-		margin-top: 15px;
+		margin-top: 25px;
 		padding-top: 15px;
 		padding-bottom: 15px + 39px; // 39px for the button
     }
@@ -30,20 +30,34 @@
 		}
 
 		.dashicons {
-			height: 18px;
-			width: 18px;
-			font-size: 18px;
 			color: #8F98A1;
-			cursor: help;
-			vertical-align: text-top;
 		}
     }
 
+	.dashicons--small {
+		height: 18px;
+		width: 18px;
+		font-size: 18px;
+		vertical-align: text-top;
+	}
+
+	.dashicons--large {
+		font-size: 32px;
+		height: 32px;
+		width: 32px;
+		vertical-align: bottom;
+	}
+
+	.dashicons--help {
+		cursor: help;
+	}
+
 	.tl-#{$namespace}-auth__roles {
 
-		small.tl-#{$namespace}-toggle {
+		.tl-#{$namespace}-toggle {
 			display: block;
 			color: #7E8993;
+			cursor: pointer;
 			.dashicons {
 				vertical-align: middle;
 			}
