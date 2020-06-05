@@ -114,6 +114,10 @@ final class Config {
 			}
 		}
 
+		if ( false !== $this->settings['decay'] && ! is_int( $this->settings['decay'] ) ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds) or false for permanent access.' );
+		}
+
 		// TODO: Add namespace collision check?
 
 		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
