@@ -50,6 +50,7 @@ defined( 'ABSPATH' ) || exit;
 		printf( esc_html__( 'Logged in as %s', 'trustedlogin' ), esc_html( $user->display_name ) );
 		?>
 		<a href="<?php echo esc_url( $logout_url ); ?>" class="tl-auth-logout"><?php esc_html_e( 'Logout', 'trustedlogin' ); ?></a>
+	</p>
 </div>
 
 <p class="tl-auth-actions">
