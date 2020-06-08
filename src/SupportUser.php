@@ -266,11 +266,20 @@ final class SupportUser {
 	 */
 	public function get_all() {
 
+		static $support_users = null;
+
+		// Only fetch once per process
+		if ( ! is_null( $support_users ) ) {
+			return $support_users;
+		}
+
 		$args = array(
 			'role' => $this->role->get_name(),
 		);
 
-		return get_users( $args );
+		$support_users = get_users( $args );
+
+		return $support_users;
 	}
 
 	/**
