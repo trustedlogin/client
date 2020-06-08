@@ -2,7 +2,12 @@
 	position: relative;
 	text-align: center;
 
-	margin-bottom: 24px; // 28px logo + 4px gap
+	margin-bottom: 28px; // 24px logo + 4px gap
+
+	.dashicons {
+		vertical-align: middle;
+		margin: 0 .25em;
+	}
 
 	small {
 		text-align: center;
@@ -51,7 +56,7 @@
 /**
  * Hero
  */
-.button-trustedlogin.button-hero {
+.button-trustedlogin-#{$namespace}.button-hero {
 
 	margin-bottom: 39px; // 33px logo + 6px gap
 
@@ -75,7 +80,7 @@
 /**
  * Large
  */
-.button-trustedlogin.button-large {
+.button-trustedlogin-#{$namespace}.button-large {
 
 	margin-bottom: 32px; // 28px logo + 4px gap
 
@@ -98,7 +103,7 @@
 /**
  * Small
  */
-.button-trustedlogin.button-small {
+.button-trustedlogin-#{$namespace}.button-small {
 
 	margin-bottom: 24px!important; // 20px logo + 4px gap
 

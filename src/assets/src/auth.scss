@@ -1,7 +1,7 @@
 .tl-#{$namespace}-auth {
 
 	min-width: 300px;
-	max-width: 960px;
+	max-width: 680px;
 	display: block;
 	margin: 30px auto;
 	font-size: 1em;
@@ -13,14 +13,33 @@
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
 		border-radius: 4px;
 		overflow: hidden;
-		padding: 40px 40px 0;
+		padding: 40px 40px 10px;
 	}
 
 	.tl-#{$namespace}-auth__actions {
 		margin-top: 25px;
 		padding-top: 15px;
-		padding-bottom: 15px + 39px; // 39px for the button
+		padding-bottom: 15px;
     }
+
+	.tl-#{$namespace}-auth--logged_in_as {
+		background: #f5f5f5;
+		border-bottom: 2px solid #eee;
+		line-height: 70px;
+		margin: 0 0 24px;
+		padding: 0 1em 0 0;
+
+		.avatar {
+			height: 70px;
+			width: 70px;
+			float: left;
+			margin: 0 1em 0 0;
+		}
+		p {
+			margin: 0;
+			line-height: 70px;
+		}
+	}
 
 	.tl-#{$namespace}-auth__expire {
 
@@ -110,6 +129,10 @@
 		clear: none;
 		margin: 0 0 24px;
 		padding: 0;
+	}
+
+	table {
+		margin-bottom: 36px;
 	}
 
 	h1 {
