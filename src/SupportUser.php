@@ -145,8 +145,7 @@ final class SupportUser {
 			'user_pass'       => wp_generate_password( 64, true, true ),
 			'user_email'      => $user_email,
 			'role'            => $this->role->get_name(),
-			'first_name'      => $this->config->get_setting( 'vendor/first_name', '' ),
-			'last_name'       => $this->config->get_setting( 'vendor/last_name', '' ),
+			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
 			'user_registered' => date( 'Y-m-d H:i:s', time() ),
 		);
 

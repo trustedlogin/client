@@ -45,11 +45,10 @@ final class Config {
 		'vendor' => array(
 			'namespace' => null,
 			'title' => null,
-			'first_name' => null,
-			'last_name' => null,
 			'email' => null,
 			'website' => null,
 			'support_url' => null,
+			'display_name' => null,
 			'logo_url' => null,
 		),
 		'menu' => array(
