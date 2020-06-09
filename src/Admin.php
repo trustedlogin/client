@@ -274,9 +274,6 @@ final class Admin {
 		return $output . $this->get_script();
 	}
 
-	/**
-	 * @return string
-	 */
 	private function get_intro() {
 
 		$has_access = $this->support_user->get_all();
@@ -310,11 +307,11 @@ final class Admin {
 
 		$output_template = '
 			<div class="tl-{{ns}}-auth__roles">
-				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span> {{roles_summary}}</h2>
+				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}</h2>
 				{{caps}}
 			</div>
 			<div class="tl-{{ns}}-auth__expire">
-				<h2><span class="dashicons dashicons-clock dashicons--large"></span> {{expire_summary}}{{expire_tooltip}}</h2>
+				<h2><span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_tooltip}}</h2>
 			</div>
 		';
 
