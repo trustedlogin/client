@@ -223,7 +223,6 @@ final class Admin {
 	 * @return string HTML of the Auth screen
 	 */
 	public function get_auth_screen() {
-		$ns          = $this->config->ns();
 		$has_access = $this->support_user->get_all();
 
 		$output_template = '
@@ -351,7 +350,6 @@ final class Admin {
 
 		$user = wp_get_current_user();
 		$users = $this->support_user->get_all();
-		$ns = sanitize_html_class( $this->config->ns() );
 
 		if ( empty( $users ) ) {
 			return;
@@ -366,6 +364,7 @@ final class Admin {
 		foreach ( $users as $user ) {
 
 			$revoke_url = $this->support_user->get_revoke_url( $user );
+			$ns          = $this->config->ns();
 
 			$user_description = sprintf( __( '%s has access: <small style="display: block">Granted on %s by %s. Expires in %s.</small>', 'trustedlogin' ),
 				esc_html( $user->display_name ),
@@ -390,10 +389,10 @@ final class Admin {
 
 	private function get_roles_content() {
 
-		$ns = sanitize_html_class( $this->config->ns() );
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
 		$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
 
+		$ns = $this->config->ns();
 		$caps_config = $this->config->get_setting( 'caps' );
 		$caps = $caps_added = $caps_removed = '';
 
@@ -406,7 +405,7 @@ final class Admin {
 			$differences = sprintf( esc_html__( 'See the differences:', 'trustedlogin' ), $cloned_role );
 			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', $differences );
 
-			$caps .= '<div class="tl-' . sanitize_html_class( $this->config->ns() ) . '-auth__role-container hidden">';
+			$caps .= '<div class="tl-' . $this->config->ns() . '-auth__role-container hidden">';
 			if ( ! empty( $added ) ) {
 				$caps .= '<div>';
 				$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
@@ -474,8 +473,8 @@ final class Admin {
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%4$s" alt="%5$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
 				esc_attr( sprintf( __( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ),
-				sanitize_html_class( $this->config->ns() ),
 				esc_url( $this->config->get_setting( 'vendor/logo_url' ) ),
+				$this->config->ns(),
 				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
 		}
@@ -718,7 +717,7 @@ final class Admin {
 			$tag,
 			esc_url( $href ),
 			esc_attr( $css_class ),
-			sanitize_html_class( $this->config->ns() ),
+			$this->config->ns(),
 			$data_string,
 			$anchor_html
 		);
