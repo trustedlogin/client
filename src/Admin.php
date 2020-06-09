@@ -563,7 +563,7 @@ final class Admin {
 			'vendor'   => $this->config->get_setting( 'vendor' ),
 			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
 			'_nonce'   => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
-			'lang'     => $this->output_secondary_alerts(),
+			'lang'     => $this->translations(),
 			'debug'    => $this->logging->is_enabled(),
 			'selector' => '.button-trustedlogin-' . $this->config->ns(),
 		);
@@ -776,7 +776,7 @@ final class Admin {
 	 *
 	 * @return array of Translations and strings to be localized to JS variables
 	 */
-	public function output_secondary_alerts() {
+	public function translations() {
 
 		$vendor_title = $this->config->get_setting( 'vendor/title' );
 
