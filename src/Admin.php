@@ -313,7 +313,7 @@ final class Admin {
 				{{caps}}
 			</div>
 			<div class="tl-{{ns}}-auth__expire">
-				<h2><span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_tooltip}}</h2>
+				<h2><span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_desc}}</h2>
 			</div>
 		';
 
