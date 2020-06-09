@@ -754,7 +754,7 @@ final class Admin {
 				),
 				'error' => array(
 					'title' => sprintf( __( 'Error syncing Support User to %1$s', 'trustedlogin' ), $vendor_title ),
-					'content' => wp_kses( $error_content, array( 'a' => array( 'href' => array() ), 'p' => array() ) ),
+					'content' => wp_kses( $error_content, array( 'a' => array( 'href' => array(), 'rel' => array(), 'target' => array() ), 'p' => array() ) ),
 				),
 				'cancel' => array(
 					'title' => esc_html__( 'Action Cancelled', 'trustedlogin' ),
@@ -774,6 +774,10 @@ final class Admin {
 						$vendor_title
 					),
 					'revoke_link' => esc_url( add_query_arg( array( 'revoke-tl' => $this->config->ns() ), admin_url( 'users.php' ) ) ),
+				),
+				'error404' => array(
+					'title' => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
+					'content' => '',
 				),
 				'error409' => array(
 					'title' => sprintf(

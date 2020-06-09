@@ -26,6 +26,11 @@
 
 			switch ( response.status ) {
 
+				case 404: /** vendor not found */
+				settings.title = tl_obj.lang.status.error404.title;
+					settings.content = tl_obj.lang.status.error404.content;
+					break;
+
 				case 409: /** user already exists */
 				settings.title = tl_obj.lang.status.error409.title;
 					settings.content = tl_obj.lang.status.error409.content;
