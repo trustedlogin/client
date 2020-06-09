@@ -631,10 +631,10 @@ final class Admin {
 	 * Generates HTML for a TrustedLogin Grant Access button
 	 *
 	 * @param array $atts {
-	 *   @type string $text Button text to grant access. Sanitized using esc_html(). Default: "Grant %s Support Access"
+	 *   @type string $text Button text to grant access. Sanitized using esc_html(). Default: "Grant %s Access"
 	 *                      (%s replaced with vendor/title setting)
 	 *   @type string $exists_text Button text when vendor already has a support account. Sanitized using esc_html().
-	 *                      Default: "✅ %s Support Has An Account" (%s replaced with vendor/title setting)
+	 *                      Default: "Extend %s Access" (%s replaced with vendor/title setting)
 	 *   @type string $size WordPress CSS button size. Options: 'small', 'normal', 'large', 'hero'. Default: "hero"
 	 *   @type string $class CSS class added to the button. Default: "button-primary"
 	 *   @type string $tag Tag used to display the button. Options: 'a', 'button', 'span'. Default: "a"
@@ -648,8 +648,8 @@ final class Admin {
 	public function get_button( $atts = array() ) {
 
 		$defaults = array(
-			'text'        => sprintf( esc_html__( 'Grant %s Support Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
-			'exists_text' => sprintf( esc_html__( 'Extend %s Support Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
+			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // "a", "button", "span"
@@ -1048,7 +1048,7 @@ final class Admin {
 
 		?>
 		<div class="notice notice-success is-dismissible">
-			<p><strong><?php echo esc_html( sprintf( __( '%s Support access revoked. ', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></strong></p>
+			<p><strong><?php echo esc_html( sprintf( __( '%s access revoked. ', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></strong></p>
 		</div>
 		<?php
 	}
