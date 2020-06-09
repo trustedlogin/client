@@ -490,7 +490,7 @@ final class Admin {
 		);
 
 		/**
-		 * Filter trustedlogin/template/grantlink/footer-links
+		 * Filter trustedlogin/template/auth/footer_links
 		 *
 		 * Used to add/remove Footer Links on grantlink page
 		 *
@@ -499,7 +499,7 @@ final class Admin {
 		 * @param array Array of links to show in auth footer (Key is anchor text; Value is URL)
 		 * @param string $ns Namespace of the plugin initializing TrustedLogin
 		 **/
-		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/grantlink/footer_links', $footer_links, $this->config->ns() );
+		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links, $this->config->ns() );
 
 		$footer_links_output = '';
 		foreach ( $footer_links as $text => $link ) {
