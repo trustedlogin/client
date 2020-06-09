@@ -802,7 +802,7 @@ final class Admin {
 
 		$error_content = sprintf( '<p>%s</p><p>%s</p>',
 			sprintf(
-				esc_html__( 'Unfortunately, the Support User details could not be sent to %1$s automatically.', 'trustedlogin' ),
+				esc_html__( 'The user details could not be sent to %1$s automatically.', 'trustedlogin' ),
 				$vendor_title
 			),
 			sprintf(
@@ -836,7 +836,7 @@ final class Admin {
 				'cancel' => array(
 					'title' => esc_html__( 'Action Cancelled', 'trustedlogin' ),
 					'content' => sprintf(
-						__( 'A support account for %1$s has NOT been created.', 'trustedlogin' ),
+						__( 'A support account for %1$s was not created.', 'trustedlogin' ),
 						$vendor_title
 					),
 				),
