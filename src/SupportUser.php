@@ -266,7 +266,7 @@ final class SupportUser {
 	 *
 	 * @since 0.7.0
 	 *
-	 * @return array
+	 * @return WP_User[]
 	 */
 	public function get_all() {
 
