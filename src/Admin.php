@@ -233,7 +233,7 @@ final class Admin {
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$auth_form_template = '
-<div class="tl-{{ns}}-auth">
+<div class="tl-{{ns}}-auth {{has_access_class}}">
 	<header class="tl-{{ns}}-auth__header">
 		<div class="tl-{{ns}}-auth__logo">{{logo}}</div>
 		<h1>{{intro}}</h1>
@@ -261,6 +261,7 @@ final class Admin {
 
 		$content = array(
 			'ns' => $this->config->ns(),
+			'has_access_class' => $this->support_user->get_all() ? 'tl-' . $this->config->ns() . '-has-access' : 'tl-' . $this->config->ns() . '-grant-access',
 			'logo' => $this->get_logo_html(),
 			'intro' => $this->get_intro(),
 			'details' => $this->get_details_html(),
