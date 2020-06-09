@@ -924,6 +924,9 @@ final class Admin {
 	 * @since 0.2.1
 	 *
 	 * @param bool $print Whether to print and return (true) or return (false) the results. Default: true
+	 * @param array $atts Settings for the table. {
+	 *   @type bool $current_url Whether to generate Revoke links based on the current URL. Default: false.
+	 * }
 	 *
 	 * @return string HTML table of active support users for vendor. Empty string if current user can't `create_users`
 	 */
@@ -952,7 +955,7 @@ final class Admin {
 		}
 
 		$default_atts = array(
-			'revoke_base' => '',
+			'current_url' => '',
 		);
 
 		$atts = wp_parse_args( $atts, $default_atts );
@@ -1004,7 +1007,7 @@ final class Admin {
 				$return .= '<td>' . esc_html__( 'Unknown', 'trustedlogin' ) . '</td>';
 			}
 
-			if ( $revoke_url = $this->support_user->get_revoke_url( $support_user, $atts['revoke_base'] ) ) {
+			if ( $revoke_url = $this->support_user->get_revoke_url( $support_user, $atts['current_url'] ) ) {
 				$return .= '<td><a class="trustedlogin tl-revoke submitdelete" href="' . esc_url( $revoke_url ) . '">' . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a></td>';
 			} else {
 				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_user->role->get_name() ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';

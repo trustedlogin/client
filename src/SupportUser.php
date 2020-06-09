@@ -437,10 +437,11 @@ final class SupportUser {
 	 * @uses SupportUser::get_user_identifier()
 	 *
 	 * @param WP_User|int $user_id_or_object
+	 * @param bool $current_url Whether to generate link to current URL, with revoke parameters added. Default: false.
 	 *
 	 * @return string|false Unsanitized URL to revoke support user. If not able to retrieve user identifier, returns false.
 	 */
-	public function get_revoke_url( $user_id_or_object ) {
+	public function get_revoke_url( $user_id_or_object, $current_url = false ) {
 
 		$identifier = $this->get_user_identifier( $user_id_or_object );
 
@@ -448,10 +449,16 @@ final class SupportUser {
 			return false;
 		}
 
+		if ( $current_url ) {
+			$base_page = site_url( add_query_arg( array() ) );
+		} else {
+			$base_page = admin_url( 'users.php' );
+		}
+
 		$revoke_url = add_query_arg( array(
 			Endpoint::revoke_support_query_param => $this->config->ns(),
 			self::id_query_param  => $identifier,
-		), admin_url( 'users.php' ) );
+		), $base_page );
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
 
