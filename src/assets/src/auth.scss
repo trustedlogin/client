@@ -3,12 +3,16 @@
  */
 $gutter-width: 10px !default;
 $large-icon-size: 32px !default;
+$small-icon-size: 18px !default;
 $vertical-spacing: 24px !default;
 
 // Colors
 $color-111: #191E23 !default;
+$color-222: #23282D !default;
+$color-333: #32373C !default;
+$color-444: #40464D !default;
 $color-555: #555D66 !default;
-$color-666: #606A73 !default;
+$color-666: #6C7781 !default;
 $color-777: #7E8993 !default;
 $color-888: #8F98A1 !default;
 $color-green: #328540 !default;
@@ -63,9 +67,9 @@ $color-red: #c0461e !default;
     }
 
 	.dashicons--small {
-		height: 18px;
-		width: 18px;
-		font-size: 18px;
+		height: $small-icon-size;
+		width: $small-icon-size;
+		font-size: $small-icon-size;
 		vertical-align: text-top;
 	}
 
@@ -84,8 +88,6 @@ $color-red: #c0461e !default;
 	.tl-#{$namespace}-auth__roles {
 
 		.tl-#{$namespace}-toggle {
-			display: block;
-			color: $color-777;
 			cursor: pointer;
 
 			.dashicons {
@@ -101,6 +103,8 @@ $color-red: #c0461e !default;
 		}
 
 		li {
+			color: $color-555;
+
 			.dashicons {
 				margin-right: $gutter-width / 2;
 				vertical-align: middle;
@@ -114,8 +118,8 @@ $color-red: #c0461e !default;
 			small {
 				display: block;
 				line-height: 1.375;
-				font-size: .9em;
-				margin-left: 19px + ( $gutter-width / 2 );
+				font-size: 13px;
+				margin-left: $small-icon-size + ( $gutter-width / 2 );
 			}
 		}
 
@@ -127,7 +131,7 @@ $color-red: #c0461e !default;
 	}
 
 	h1, h2, h3, table {
-		color: $color-666;
+		color: $color-555;
 		border: 0;
 		clear: none;
 		margin: 0 0 24px;
@@ -151,6 +155,12 @@ $color-red: #c0461e !default;
 		.dashicons--large {
 			margin-left: ( $large-icon-size + $gutter-width ) * -1;
 			padding-right: $gutter-width;
+		}
+
+		small {
+			display: block;
+			color: $color-666;
+			font-size: 14px;
 		}
 	}
 
