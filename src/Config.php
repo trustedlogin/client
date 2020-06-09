@@ -173,6 +173,15 @@ final class Config {
 	}
 
 	/**
+	 * Returns the display name for the vendor; otherwise, the title
+	 *
+	 * @return string
+	 */
+	public function get_display_name() {
+		return $this->get_setting( 'vendor/display_name', $this->get_setting( 'vendor/title', '' ) );
+	}
+
+	/**
 	 * Validate and initialize settings array passed to the Client contructor
 	 *
 	 * @param array|string $config Configuration array or JSON-encoded configuration array
