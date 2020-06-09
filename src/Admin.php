@@ -295,7 +295,7 @@ final class Admin {
 
 		if( $has_access ) {
 			foreach ( $has_access as $access ) {
-				$intro = '✅ ' . sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), $this->support_user->get_expiration( $access, true ) );
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), $this->support_user->get_expiration( $access, true ) );
 			}
 
 		} else {

@@ -246,14 +246,19 @@ final class SupportUser {
 
 	/**
 	 * @param WP_User $user
+	 * @param bool $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
 	 *
-	 * @return int|false Expiration timestamp; False if not set.
+	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
-	public function get_expiration( WP_User $user ) {
+	public function get_expiration( WP_User $user, $human_readable = false ) {
 
 		$expiration = get_user_option( $this->expires_meta_key, $user->ID );
 
-		return $expiration ? $expiration : false;
+		if( ! $expiration ) {
+			return false;
+		}
+
+		return $human_readable ? human_time_diff( time(), $expiration ) : $expiration;
 	}
 
 	/**
