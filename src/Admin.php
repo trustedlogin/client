@@ -315,8 +315,9 @@ final class Admin {
 			</div>
 		';
 
-		// translators: The amount of time that the login will be active for.
+		// translators: %1$s and %3$s are replaced with HTML tags. %2$s is the amount of time that the login will be active for (e.g. "1 week")
 		$expire_summary = sprintf( esc_html__( 'Site access will %1$sauto-expire in %2$s%3$s.', 'trustedlogin' ), '<strong>', human_time_diff( 0, $this->config->get_setting( 'decay' ) ), '</strong>' );
+		$expire_desc = '<small>' . esc_html__( 'You may revoke access at any time.', 'trustedlogin' ) . '</small>';
 
 		$ns          = $this->config->ns();
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
@@ -331,9 +332,9 @@ final class Admin {
 		$content = array(
 			'ns'             => $ns,
 			'expire_summary' => $expire_summary,
+			'expire_desc'    => $expire_desc,
 			'roles_summary'  => $roles_summary,
 			'caps'           => $this->get_caps_html(),
-			'expire_tooltip' => sprintf( '<span class="dashicons dashicons-editor-help dashicons--small dashicons--help" title="%s"></span>', esc_html__( 'You may revoke access at any time.', 'trustedlogin' ) ),
 		);
 
 		return $this->prepare_output( $output_template, $content );
