@@ -280,9 +280,11 @@ final class Admin {
 
 		if( $has_access ) {
 			foreach ( $has_access as $access ) {
+				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
 				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_display_name(), $this->support_user->get_expiration( $access, true ) );
 			}
 		} else {
+			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			$intro = sprintf( esc_html__( 'Grant %1$s access to your site.', 'trustedlogin' ), $this->config->get_display_name() );
 		}
 
@@ -429,6 +431,7 @@ final class Admin {
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%4$s" alt="%5$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
+				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 				sprintf( 'Visit the %s website', $this->config->get_setting( 'vendor/title' ) ),
 				$this->config->ns(),
 				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
@@ -579,6 +582,7 @@ final class Admin {
 			'selector' => '.button-trustedlogin-' . $this->config->ns(),
 		);
 
+		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor
 		wp_localize_script( 'trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings );
 
 		wp_enqueue_script( 'trustedlogin-' . $this->config->ns() );
@@ -817,7 +821,7 @@ final class Admin {
 				$vendor_title
 			),
 			sprintf(
-				__( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s Support Site', 'trustedlogin' ),
+				__( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin' ),
 				esc_url( add_query_arg( $query_args, $this->config->get_setting( 'vendor/support_url' ) ) ),
 				$vendor_title
 			)
