@@ -527,47 +527,53 @@ final class Admin {
 		}
 
 		if( $wp_kses ) {
+
+			// Allow SVGs for logos
+			$allowed_protocols = wp_allowed_protocols();
+			$allowed_protocols[] = 'data';
+
 			$output_html = wp_kses( $output_html, array(
-					'a'       => array(
-						'class'  => array(),
-						'id'     => array(),
-						'href'   => array(),
-						'title'  => array(),
-						'rel'    => array(),
-						'target' => array(),
-						'data-toggle' => array(),
-					),
-					'img'     => array(
-						'class' => array(),
-						'id'    => array(),
-						'src'   => array(),
-						'href'  => array(),
-						'alt'   => array(),
-						'title' => array(),
-					),
-					'span'    => array( 'class' => array(), 'id' => array(), 'title' => array(), 'data-toggle' => array() ),
-					'table'   => array( 'class' => array(), 'id' => array() ),
-					'thead'	  => array(),
-					'tfoot'   => array(),
-					'td'      => array( 'class' => array(), 'id' => array(), 'colspan' => array() ),
-					'th'      => array( 'class' => array(), 'id' => array(), 'colspan' => array(), 'scope' => array() ),
-					'ul'      => array( 'class' => array(), 'id' => array() ),
-					'li'      => array( 'class' => array(), 'id' => array() ),
-					'p'       => array( 'class' => array(), 'id' => array() ),
-					'h1'      => array( 'class' => array(), 'id' => array() ),
-					'h2'      => array( 'class' => array(), 'id' => array() ),
-					'h3'      => array( 'class' => array(), 'id' => array() ),
-					'h4'      => array( 'class' => array(), 'id' => array() ),
-					'h5'      => array( 'class' => array(), 'id' => array() ),
-					'div'     => array( 'class' => array(), 'id' => array() ),
-					'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
-					'header'  => array( 'class' => array(), 'id' => array() ),
-					'footer'  => array( 'class' => array(), 'id' => array() ),
-					'section' => array( 'class' => array(), 'id' => array() ),
-					'br'      => array(),
-					'strong'  => array(),
-					'em'      => array(),
-				)
+				'a'       => array(
+					'class'  => array(),
+					'id'     => array(),
+					'href'   => array(),
+					'title'  => array(),
+					'rel'    => array(),
+					'target' => array(),
+					'data-toggle' => array(),
+				),
+				'img'     => array(
+					'class' => array(),
+					'id'    => array(),
+					'src'   => array(),
+					'href'  => array(),
+					'alt'   => array(),
+					'title' => array(),
+				),
+				'span'    => array( 'class' => array(), 'id' => array(), 'title' => array(), 'data-toggle' => array() ),
+				'table'   => array( 'class' => array(), 'id' => array() ),
+				'thead'	  => array(),
+				'tfoot'   => array(),
+				'td'      => array( 'class' => array(), 'id' => array(), 'colspan' => array() ),
+				'th'      => array( 'class' => array(), 'id' => array(), 'colspan' => array(), 'scope' => array() ),
+				'ul'      => array( 'class' => array(), 'id' => array() ),
+				'li'      => array( 'class' => array(), 'id' => array() ),
+				'p'       => array( 'class' => array(), 'id' => array() ),
+				'h1'      => array( 'class' => array(), 'id' => array() ),
+				'h2'      => array( 'class' => array(), 'id' => array() ),
+				'h3'      => array( 'class' => array(), 'id' => array() ),
+				'h4'      => array( 'class' => array(), 'id' => array() ),
+				'h5'      => array( 'class' => array(), 'id' => array() ),
+				'div'     => array( 'class' => array(), 'id' => array() ),
+				'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
+				'header'  => array( 'class' => array(), 'id' => array() ),
+				'footer'  => array( 'class' => array(), 'id' => array() ),
+				'section' => array( 'class' => array(), 'id' => array() ),
+				'br'      => array(),
+				'strong'  => array(),
+				'em'      => array(),
+			),
+				$allowed_protocols
 			);
 		}
 
