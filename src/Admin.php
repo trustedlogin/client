@@ -347,45 +347,52 @@ final class Admin {
 	 */
 	private function get_caps_html() {
 
-		$caps_config = $this->config->get_setting( 'caps' );
-
-		if ( ! array_filter( $caps_config ) ) {
-			return '';
-		}
-
 		$added   = $this->config->get_setting( 'caps/add' );
 		$removed = $this->config->get_setting( 'caps/remove' );
 
 		$caps = '';
+		$caps .= $this->get_caps_section( $added, __( 'Additional capabilities:', 'trustedlogin' ), 'dashicons-yes-alt' );
+		$caps .= $this->get_caps_section( $removed, __( 'Removed capabilities:', 'trustedlogin' ), 'dashicons-no' );
 
-		if ( ! empty( $added ) ) {
-			$caps .= '<div>';
-			$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
-			$caps .= '<ul>';
-			foreach ( (array) $added as $cap => $reason ) {
-				$caps .= '<li><span class="dashicons dashicons-yes-alt dashicons--small"></span>' . esc_html( $cap ) . '<small>' . esc_html( $reason ) . '</small></li>';
-			}
-			$caps .= '</ul>';
-			$caps .= '</div>';
-		}
-
-		if ( ! empty( $removed ) ) {
-			$caps .= '<div>';
-			$caps .= '<h3>' . esc_html__( 'Removed capabilities:', 'trustedlogin' ) . '</h3>';
-			$caps .= '<ul>';
-			foreach ( (array) $removed as $cap => $reason ) {
-				$dashicon = '<span class="dashicons dashicons-no dashicons--small"></span>';
-				$caps     .= '<li>' . $dashicon . esc_html( $cap ) . '<small>' . esc_html( $reason ) . '</small></li>';
-			}
-			$caps .= '</ul>';
-			$caps .= '</div>';
-		}
-
-		if ( ! $caps ) {
+		if ( empty( $caps ) ) {
 			return $caps;
 		}
 
 		return '<div class="tl-' . $this->config->ns() . '-auth__role-container hidden">' . $caps . '</div>';
+	}
+
+	/**
+	 * Generate additional/removed capabilities sections
+	 *
+	 * @param array $caps_array Associative array of cap => reason why cap is set
+	 * @param string $heading Text to show for the heading of the caps section
+	 * @param string $dashicon CSS class for the specific dashicon
+	 *
+	 * @return string
+	 */
+	private function get_caps_section( $caps_array, $heading = '', $dashicon = '' ) {
+
+		$caps_array = array_filter( (array) $caps_array );
+
+		if ( empty( $caps_array ) ) {
+			return '';
+		}
+
+		$output = '';
+		$output .= '<div>';
+		$output .= '<h3>' . esc_html( $heading ) . '</h3>';
+		$output .= '<ul>';
+
+		foreach ( (array) $caps_array as $cap => $reason ) {
+			$dashicon = '<span class="dashicons ' . esc_attr( $dashicon ) . ' dashicons--small"></span>';
+			$reason = empty( $reason ) ? '' : '<small>' . esc_html( $reason ) . '</small>';
+			$output     .= sprintf( '<li>%s<span class="code">%s</span>%s</li>', $dashicon, esc_html( $cap ), $reason );
+		}
+
+		$output .= '</ul>';
+		$output .= '</div>';
+
+		return $output;
 	}
 
 	private function get_script() {
