@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * Class Admin
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2020 Katz Web Services, Inc.
+ */
 namespace TrustedLogin;
 
 // Exit if accessed directly
@@ -223,48 +229,18 @@ final class Admin {
 	 * @return string HTML of the Auth screen
 	 */
 	public function get_auth_screen() {
-		$has_access = $this->support_user->get_all();
 
-		$output_template = '
+		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
+
+		$auth_form_template = '
 <div class="tl-{{ns}}-auth">
 	<header class="tl-{{ns}}-auth__header">
 		<div class="tl-{{ns}}-auth__logo">{{logo}}</div>
 		<h1>{{intro}}</h1>
 	</header>
 	<section class="tl-{{ns}}-auth__body">
-		<div class="tl-{{ns}}-auth__details">';
-
-		// Has access
-		if ( $has_access ){
-			$roles_summary = $expire_description = $expire_summary = $expire_tooltip = $caps = $roles_summary = $roles_content = '';
-			$output_template .= '{{users_table}}';
-
-		} else {
-
-			$output_template .= '
-				<div class="tl-{{ns}}-auth__roles">
-					<h2><span class="dashicons dashicons-admin-users dashicons--large"></span> {{roles_summary}}</h2>
-					{{caps}}
-				</div>
-				<div class="tl-{{ns}}-auth__expire">
-					<h2><span class="dashicons dashicons-clock dashicons--large"></span> {{expire_summary}}{{expire_tooltip}}</h2>
-				</div>
-			';
-
-			// translators: The amount of time that the login will be active for.
-			$expire_summary = esc_html__( 'Site access will %1$sauto-expire in %2$s%3$s.', 'trustedlogin' );
-			$expire_summary = sprintf( $expire_summary, '<strong>', human_time_diff( 0, $this->config->get_setting( 'decay') ), '</strong>' );
-
-			$expire_description = __( 'You may revoke access at any time.', 'trustedlogin' );
-			$expire_tooltip = sprintf( '<span class="dashicons dashicons-editor-help dashicons--small dashicons--help" title="%s"></span>', esc_attr( $expire_description ) );
-			$expire_description = wpautop( $expire_description );
-
-			$roles_content = $this->get_roles_content();
-			$caps = $roles_content['caps'];
-			$roles_summary = $roles_content['roles_summary'];
-		}
-
-		$output_template .= '
+		<div class="tl-{{ns}}-auth__details">
+			{{details}}
 		</div>
 		<div class="tl-{{ns}}-auth__actions">
 			{{button}}
@@ -276,53 +252,136 @@ final class Admin {
 </div>';
 
 		/**
-		 * Filter trustedlogin/template/grantlink and trustedlogin/template/grantlink/*
-		 *
-		 * Manipulate the output template used to display instructions and details to WP admins
-		 * when they've clicked on a direct link to grant TrustedLogin access.
-		 *
-		 * @since 0.5.0
-		 *
-		 * @param string $output_html
-		 * @param string $ns - the namespace of the plugin. initializing TrustedLogin
+		 * Filter trustedlogin/template/auth
+		 **
+		 * @param string $output_template The Auth form HTML
+		 * @param string $ns The namespace of the plugin initializing TrustedLogin.
 		 **/
-		$output_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $output_template, $ns );
-
-		$button = array(
-			'size' => 'hero',
-			'class' => 'button-primary',
-		);
-
-		if( $has_access ) {
-			foreach ( $has_access as $access ) {
-				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), $this->support_user->get_expiration( $access, true ) );
-			}
-
-		} else {
-			$intro = sprintf( esc_html__( 'Grant %1$s Support access to your site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
-		}
+		$auth_form_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_form_template, $this->config->ns() );
 
 		$content = array(
-			'ns' => sanitize_html_class( $ns ),
+			'ns' => $this->config->ns(),
 			'logo' => $this->get_logo_html(),
-			'intro' => $intro,
-			'users_table' => $this->output_support_users( false, array( 'revoke_base' => add_query_arg( array() ) ) ),
-			'caps' => $caps,
-			'roles_summary' => $roles_summary,
-			'expire' => $this->get_expire_html(),
-			'expire_summary' => $expire_summary,
-			'expire_tooltip' => $expire_tooltip,
-			'expire_description' => $expire_description,
-			'has_access' => $this->get_has_access_html(),
+			'intro' => $this->get_intro(),
+			'details' => $this->get_details_html(),
 			'button' => $this->generate_button( "size=hero&class=authlink button-primary", false ),
 			'footer' => $this->get_footer_html(),
 		);
 
-		$output = $this->prepare_output( $output_template, $content );
+		$output = $this->prepare_output( $auth_form_template, $content );
 
-		$script = $this->get_script();
+		return $output . $this->get_script();
+	}
 
-		return $output . $script;
+	private function get_intro() {
+
+		$has_access = $this->support_user->get_all();
+
+		if( $has_access ) {
+			foreach ( $has_access as $access ) {
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_display_name(), $this->support_user->get_expiration( $access, true ) );
+			}
+		} else {
+			$intro = sprintf( esc_html__( 'Grant %1$s access to your site.', 'trustedlogin' ), $this->config->get_display_name() );
+		}
+	}
+
+	private function get_details_html() {
+
+		$has_access = $this->support_user->get_all();
+
+		// Has access
+		if ( $has_access ) {
+
+			$output_template = '{{users_table}}';
+
+			$content = array(
+				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
+			);
+
+			return $this->prepare_output( $output_template, $content );
+		}
+
+		$output_template = '
+			<div class="tl-{{ns}}-auth__roles">
+				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span> {{roles_summary}}</h2>
+				{{caps}}
+			</div>
+			<div class="tl-{{ns}}-auth__expire">
+				<h2><span class="dashicons dashicons-clock dashicons--large"></span> {{expire_summary}}{{expire_tooltip}}</h2>
+			</div>
+		';
+
+		// translators: The amount of time that the login will be active for.
+		$expire_summary = sprintf( esc_html__( 'Site access will %1$sauto-expire in %2$s%3$s.', 'trustedlogin' ), '<strong>', human_time_diff( 0, $this->config->get_setting( 'decay' ) ), '</strong>' );
+
+		$ns          = $this->config->ns();
+		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
+
+		if ( array_filter( $this->config->get_setting( 'caps' ) ) ) {
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
+			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'See the differences:', 'trustedlogin' ) );
+		} else {
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
+		}
+
+		$content = array(
+			'ns'             => $ns,
+			'expire_summary' => $expire_summary,
+			'roles_summary'  => $roles_summary,
+			'caps'           => $this->get_caps_html(),
+			'expire_tooltip' => sprintf( '<span class="dashicons dashicons-editor-help dashicons--small dashicons--help" title="%s"></span>', esc_html__( 'You may revoke access at any time.', 'trustedlogin' ) ),
+		);
+
+		return $this->prepare_output( $output_template, $content );
+	}
+
+	/**
+	 * Get role capabilities HTML the Auth form
+	 *
+	 * @return string Empty string if there are no caps defined. Otherwise, HTML of caps in lists.
+	 */
+	private function get_caps_html() {
+
+		$caps_config = $this->config->get_setting( 'caps' );
+
+		if ( ! array_filter( $caps_config ) ) {
+			return '';
+		}
+
+		$added   = $this->config->get_setting( 'caps/add' );
+		$removed = $this->config->get_setting( 'caps/remove' );
+
+		$caps = '';
+
+		if ( ! empty( $added ) ) {
+			$caps .= '<div>';
+			$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
+			$caps .= '<ul>';
+			foreach ( (array) $added as $cap => $reason ) {
+				$caps .= '<li><span class="dashicons dashicons-yes-alt dashicons--small"></span>' . esc_html( $cap ) . '<small>' . esc_html( $reason ) . '</small></li>';
+			}
+			$caps .= '</ul>';
+			$caps .= '</div>';
+		}
+
+		if ( ! empty( $removed ) ) {
+			$caps .= '<div>';
+			$caps .= '<h3>' . esc_html__( 'Removed capabilities:', 'trustedlogin' ) . '</h3>';
+			$caps .= '<ul>';
+			foreach ( (array) $removed as $cap => $reason ) {
+				$dashicon = '<span class="dashicons dashicons-no dashicons--small"></span>';
+				$caps     .= '<li>' . $dashicon . esc_html( $cap ) . '<small>' . esc_html( $reason ) . '</small></li>';
+			}
+			$caps .= '</ul>';
+			$caps .= '</div>';
+		}
+
+		if ( ! $caps ) {
+			return $caps;
+		}
+
+		return '<div class="tl-' . $this->config->ns() . '-auth__role-container hidden">' . $caps . '</div>';
 	}
 
 	private function get_script() {
@@ -340,130 +399,17 @@ final class Admin {
 		$output = ob_get_clean();
 
 		$content = array(
-			'ns' => sanitize_html_class( $this->config->ns() ),
+			'ns' => $this->config->ns(),
 		);
 
 		return $this->prepare_output( $output, $content, false );
 	}
 
-	private function get_has_access_html() {
-
-		$user = wp_get_current_user();
-		$users = $this->support_user->get_all();
-
-		if ( empty( $users ) ) {
-			return;
-		}
-
-		$user_template = '
-			{{avatar}}
-			<p>{{revoke_link}} {{logged_in_desc}}</p>';
-
-		$output = '<div class="tl-' . $ns . '-auth--logged_in_as">';
-
-		foreach ( $users as $user ) {
-
-			$revoke_url = $this->support_user->get_revoke_url( $user );
-			$ns          = $this->config->ns();
-
-			$user_description = sprintf( __( '%s has access: <small style="display: block">Granted on %s by %s. Expires in %s.</small>', 'trustedlogin' ),
-				esc_html( $user->display_name ),
-				'Monday',
-				'Zack Katz', // TODO
-				$this->support_user->get_expiration( $user, true )
-			);
-
-			$content = array(
-				'avatar' => get_avatar( $user->ID, 70 ),
-				'logged_in_desc' => $user_description,
-				'revoke_link' => '<a href="' . esc_url( $revoke_url ) . '" class="tl-' . $ns . '-auth__logout alignright">' . esc_html__( 'Remove Access', 'trustedlogin' ) . '</a>',
-			);
-
-			$output .= $this->prepare_output( $user_template, $content, false );
-		}
-
-		$output .= '</div>';
-
-		return $output;
-	}
-
-	private function get_roles_content() {
-
-		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
-		$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
-
-		$ns = $this->config->ns();
-		$caps_config = $this->config->get_setting( 'caps' );
-		$caps = $caps_added = $caps_removed = '';
-
-		if( $caps_config = array_filter( $caps_config ) ) {
-
-			$added = $this->config->get_setting( 'caps/add' );
-			$removed = $this->config->get_setting( 'caps/remove' );
-
-			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>');
-			$differences = sprintf( esc_html__( 'See the differences:', 'trustedlogin' ), $cloned_role );
-			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', $differences );
-
-			$caps .= '<div class="tl-' . $this->config->ns() . '-auth__role-container hidden">';
-			if ( ! empty( $added ) ) {
-				$caps .= '<div>';
-				$caps .= '<h3>' . esc_html__( 'Additional capabilities:', 'trustedlogin' ) . '</h3>';
-				$caps .= '<ul>';
-				foreach ( (array) $added as $cap => $reason ) {
-					$caps .= '<li><span class="dashicons dashicons-yes-alt dashicons--small"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
-				}
-				$caps .= '</ul>';
-				$caps .= '</div>';
-			}
-
-			if ( ! empty( $removed ) ) {
-				$caps .= '<div>';
-				$caps .= '<h3>' . esc_html__( 'Removed capabilities:', 'trustedlogin' ) . '</h3>';
-				$caps .= '<ul>';
-				foreach ( (array) $removed as $cap => $reason ) {
-					$caps .= '<li><span class="dashicons dashicons-no dashicons--small"></span>' . esc_html( $cap ) .'<small>' . esc_html( $reason ) . '</small></li>';
-				}
-				$caps .= '</ul>';
-				$caps .= '</div>';
-			}
-
-			$caps .= '</div>';
-		}
-
-		$content = array (
-			'roles_summary' => $roles_summary,
-			'caps' => $caps,
-		);
-
-		return $content;
-
-		return $details_output;
-	}
-
-	private function get_expire_html() {
-		$expire_template = '
-		<div class="tl-{{ns}}-auth__expire">
-			<h2><span class="dashicons dashicons-clock dashicons--large"></span> {{expire_summary}}{{tooltip}}</h2>
-		</div>';
-
-		// translators: The amount of time that the login will be active for.
-		$expire_summary = esc_html__( 'Site access will %1$sauto-expire in %2$s%3$s.', 'trustedlogin' );
-		$expire_summary = sprintf( $expire_summary, '<strong>', human_time_diff( 0, $this->config->get_setting( 'decay') ), '</strong>' );
-
-		$expire_description = __( 'You may revoke access at any time.', 'trustedlogin' );
-
-		$content = array (
-			'ns' => sanitize_html_class( $this->config->ns() ),
-			'expire_summary' => $expire_summary,
-			'tooltip' => sprintf( '<span class="dashicons dashicons-editor-help dashicons--small dashicons--help" title="%s"></span>', esc_attr( $expire_description ) ),
-			'expire_description' => wpautop( $expire_description ),
-		);
-
-		return $this->prepare_output( $expire_template, $content );
-	}
-
+	/**
+	 * @return string
+	 */
 	private function get_logo_html() {
+
 		$logo_url = $this->config->get_setting( 'vendor/logo_url' );
 
 		$logo_output = '';
@@ -482,6 +428,11 @@ final class Admin {
 		return $logo_output;
 	}
 
+	/**
+	 * Returns the HTML for the footer in the Auth form
+	 *
+	 * @return string
+	 */
 	private function get_footer_html() {
 
 		$footer_links = array(
@@ -648,8 +599,8 @@ final class Admin {
 	public function get_button( $atts = array() ) {
 
 		$defaults = array(
-			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
-			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
+			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_display_name() ),
+			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // "a", "button", "span"
@@ -955,7 +906,7 @@ final class Admin {
 		}
 
 		$default_atts = array(
-			'current_url' => '',
+			'current_url' => false,
 		);
 
 		$atts = wp_parse_args( $atts, $default_atts );
