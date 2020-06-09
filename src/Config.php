@@ -133,6 +133,14 @@ final class Config {
 			}
 		}
 
+		$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+
+		foreach( SupportRole::$prevented_caps as $invalid_cap ) {
+			if ( array_key_exists( $invalid_cap, $added_caps ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
+			}
+		}
+
 		if ( $errors ) {
 			$error_text = array();
 			foreach ( $errors as $error ) {
