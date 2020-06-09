@@ -273,6 +273,9 @@ final class Admin {
 		return $output . $this->get_script();
 	}
 
+	/**
+	 * @return string
+	 */
 	private function get_intro() {
 
 		$has_access = $this->support_user->get_all();
@@ -284,6 +287,8 @@ final class Admin {
 		} else {
 			$intro = sprintf( esc_html__( 'Grant %1$s access to your site.', 'trustedlogin' ), $this->config->get_display_name() );
 		}
+
+		return $intro;
 	}
 
 	private function get_details_html() {
