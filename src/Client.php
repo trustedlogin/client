@@ -248,34 +248,41 @@ final class Client {
 			),
 		);
 
-		if ( $this->config->meets_ssl_requirement() ) {
-
-			timer_start();
-
-			try {
-
-				$created = $this->site_access->create_secret( $secret_id, $identifier_hash );
-
-			} catch ( Exception $e ) {
-
-				$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
-
-				$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
-
-				return $exception_error;
-			}
-
-			if ( is_wp_error( $created ) ) {
-
-				$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error' );
-
-				$created->add_data( array( 'status_code' => 503 ) );
-
-				return $created;
-			}
-
-			$return_data['timing']['remote'] = timer_stop( 0, 5 );
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			// TODO: If fails test, return WP_Error instead
+			// TODO: Write test for this
+			return new WP_Error( 'fails_ssl_requirement', __( 'TODO', 'trustedlogin' ) );
 		}
+
+		timer_start();
+
+		try {
+
+			$created = $this->site_access->create_secret( $secret_id, $identifier_hash );
+
+		} catch ( Exception $e ) {
+
+			$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
+
+			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
+
+			wp_delete_user( $support_user_id );
+
+			return $exception_error;
+		}
+
+		if ( is_wp_error( $created ) ) {
+
+			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error' );
+
+			$created->add_data( array( 'status_code' => 503 ) );
+
+			wp_delete_user( $support_user_id );
+
+			return $created;
+		}
+
+		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
 
