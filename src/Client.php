@@ -188,6 +188,8 @@ final class Client {
 
 		if ( is_wp_error( $identifier_hash ) ) {
 
+			wp_delete_user( $support_user_id );
+
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
 
 			return new WP_Error( 'secure_secret_failed', 'Could not generate a secure secret.', array( 'error_code' => 501 ) );
@@ -208,6 +210,8 @@ final class Client {
 
 		if ( is_wp_error( $did_setup ) ) {
 
+			wp_delete_user( $support_user_id );
+
 			$did_setup->add_data( array( 'error_code' => 503 ) );
 
 			return $did_setup;
@@ -220,6 +224,8 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
+
+			wp_delete_user( $support_user_id );
 
 			$did_setup->add_data( array( 'error_code' => 500 ) );
 
