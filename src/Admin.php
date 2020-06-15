@@ -242,6 +242,8 @@ final class Admin {
 		<div class="tl-{{ns}}-auth__details">
 			{{details}}
 		</div>
+		<div class="tl-{{ns}}-auth__response">
+		</div>
 		<div class="tl-{{ns}}-auth__actions">
 			{{button}}
 		</div>
@@ -751,6 +753,12 @@ final class Admin {
 						__( 'A temporary support user has been created, and sent to %1$s Support.', 'trustedlogin' ),
 						$vendor_title
 					),
+				),
+				'pending' => array(
+					'content' => sprintf( __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin'), $vendor_title ),
+				),
+				'syncing' => array(
+					'content' => sprintf( __( 'Sending encrypted accessKey to %1$s.', 'trustedlogin'), $vendor_title ),
 				),
 				'error' => array(
 					'title' => sprintf( __( 'Error syncing Support User to %1$s', 'trustedlogin' ), $vendor_title ),
