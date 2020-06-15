@@ -93,6 +93,89 @@
 			$.alert( settings );
 		}
 
+		function outputStatus( content, type ){
+
+			var dialogClass = 'tl-' + tl_obj.vendor.namespace + '-auth';
+			var responseClass = 'tl-' + tl_obj.vendor.namespace + '-auth__response';
+
+			var $responseDiv = jQuery( '.' + dialogClass ).find( '.' + responseClass );
+
+			if ( 0 == $responseDiv.length ){
+				if ( tl_obj.debug ) {
+					console.log( responseClass + ' not found');
+				}
+				return;
+			}
+
+			// Reset the class and set the type for contexutal styling.
+			$responseDiv.attr('class', responseClass).addClass('tl-'+ tl_obj.vendor.namespace + '-auth__response_' + type );
+			$responseDiv.text( content );
+
+			if ( 'error' == type ){
+				$( tl_obj.selector ).text('Go to support').removeClass('disabled');
+				$( 'body' ).off( 'click', tl_obj.selector );
+			}
+
+		}
+
+		function grantAccess( $button ){
+
+			$button.addClass( 'disabled' );
+
+			outputStatus( tl_obj.lang.status.pending.content, 'pending' );
+
+			var data = {
+				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
+				'vendor': tl_obj.vendor.namespace,
+				'_nonce': tl_obj._nonce,
+			};
+
+			if ( tl_obj.debug ) {
+				console.log( data );
+			}
+
+			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
+
+			$.post( tl_obj.ajaxurl, data, function ( response ) {
+
+				if ( tl_obj.debug ) {
+					console.log( response );
+				}
+
+				if ( response.success && typeof response.data == 'object' ) {
+					if ( response.data.is_ssl ){
+						location.reload();					
+					} else {
+						outputAccessKey( response.data.access_key, tl_obj );
+					}
+					if ( response.data.access_key ){
+						$( tl_obj.selector ).data('accesskey', response.data.access_key );
+					}
+				} else {
+					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
+				}
+
+			} ).fail( function ( response ) {
+
+				if ( tl_obj.debug ) {
+					console.log( response );
+				}
+
+				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
+
+			} ).always( function( response ) {
+
+				if ( ! tl_obj.debug ) {
+					return;
+				}
+
+				if ( typeof response.data == 'object' ) {
+					console.log( 'TrustedLogin support login URL:' );
+					console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
+				}
+			});
+		}
+
 		function triggerLoginGeneration() {
 			var data = {
 				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
@@ -166,44 +249,9 @@
 				return false;
 			}
 
-			if ( $( this ).parents( '#trustedlogin-auth' ).length ) {
-				triggerLoginGeneration();
-				return false;
-			}
-
-			$.confirm( {
-				title: tl_obj.lang.intro,
-				content: tl_obj.lang.description + tl_obj.lang.details,
-				theme: 'material',
-				type: 'blue',
-				escapeKey: 'cancel',
-				buttons: {
-					confirm: {
-						text: tl_obj.lang.buttons.confirm,
-						action: function () {
-							triggerLoginGeneration();
-						}
-					},
-					cancel: {
-						text: tl_obj.lang.buttons.cancel,
-						action: function () {
-							$.alert( {
-								icon: 'dashicons dashicons-dismiss',
-								theme: 'material',
-								title: tl_obj.lang.status.cancel.title,
-								type: 'orange',
-								escapeKey: 'ok',
-								content: tl_obj.lang.status.cancel.content,
-								buttons: {
-									ok: {
-										text: tl_obj.lang.buttons.ok
-									}
-								}
-							} );
-						}
-					}
-				}
-			} );
+			grantAccess( $( this ) );
+			return false;
+			
 		} );
 
 
