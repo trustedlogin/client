@@ -98,6 +98,23 @@ final class SupportUser {
 	}
 
 	/**
+	 * Checks if a Support User for this vendor has already been created.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return int|false - WP User ID if support user exists, otherwise false.
+	 */
+	public function exists() {
+
+		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+
+		$user_id = username_exists( $user_name );
+
+		return $user_id
+
+	}
+
+	/**
 	 * Create the Support User with custom role.
 	 *
 	 * @since 0.1.0
@@ -106,10 +123,9 @@ final class SupportUser {
 	 */
 	public function create() {
 
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+		$user_id = $this->exists();
 
-		$user_id = username_exists( $user_name );
-
+		// Double-check that a user doesn't exist before trying to create a new one.
 		if ( $user_id ) {
 			$this->logging->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
 
@@ -402,6 +418,32 @@ final class SupportUser {
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
 		return get_user_option( $this->identifier_meta_key, $user_id );
+	}
+
+	/**
+	 * Updates the scheduled cron job to auto-revoke and updates the Support User's meta.
+	 *
+	 * @param int $user_id ID of generated support user
+	 * @param string $identifier_hash Unique ID used by
+	 * @param int $decay_timestamp Timestamp when user will be removed
+	 *
+	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
+	 */
+	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
+
+		if ( $expiration_timestamp ) {
+
+			$rescheduled = $cron->reschedule( $expiration_timestamp, $identifier_hash );
+
+			if ( $rescheduled ) {
+				update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+				return true;
+			}
+
+		}
+
+		return new WP_Error( 'no-action', 'Error extending Support User access' );
+
 	}
 
 	/**
