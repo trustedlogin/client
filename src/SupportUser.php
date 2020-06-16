@@ -132,6 +132,7 @@ final class SupportUser {
 			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
 		}
 
+		$user_name   = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 		$role_exists = $this->role->create();
 
 		if ( is_wp_error( $role_exists ) ) {
