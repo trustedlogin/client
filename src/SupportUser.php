@@ -110,7 +110,7 @@ final class SupportUser {
 
 		$user_id = username_exists( $user_name );
 
-		return $user_id
+		return $user_id;
 
 	}
 
