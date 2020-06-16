@@ -688,12 +688,12 @@ final class Admin {
 
 		return sprintf(
 			'<%1$s href="%2$s" class="%3$s button-trustedlogin-%4$s" aria-role="button" %5$s>%6$s</%1$s>',
-			$tag,
-			esc_url( $href ),
-			esc_attr( $css_class ),
-			$this->config->ns(),
-			$data_string,
-			$anchor_html
+			/* %1$s */ $tag,
+			/* %2$s */ esc_url( $href ),
+			/* %3$s */ esc_attr( $css_class ),
+			/* %4$s */ $this->config->ns(),
+			/* %5$s */ $data_string,
+			/* %6$s */ $anchor_html
 		);
 	}
 
