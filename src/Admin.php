@@ -507,6 +507,7 @@ final class Admin {
 					'rel'    => array(),
 					'target' => array(),
 					'data-toggle' => array(),
+					'data-access' => array(),
 				),
 				'img'     => array(
 					'class' => array(),
@@ -661,9 +662,11 @@ final class Admin {
 			$text        			= '<span class="dashicons dashicons-update-alt"></span>' . esc_html( $atts['exists_text'] );
 			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
 			$data_atts['accesskey'] = $this->site_access->get_access_key(); // Add the shareable accesskey as a data attribute
+			$data_atts['access']	= 'extend';
 		} else {
-			$text      = esc_html( $atts['text'] );
-			$href      = $atts['support_url'];
+			$text      				= esc_html( $atts['text'] );
+			$href      				= $atts['support_url'];
+			$data_atts['access']	= 'grant';
 		}
 
 		$css_class = implode( ' ', array( $css_class, $atts['class'] ) );
@@ -756,6 +759,9 @@ final class Admin {
 				),
 				'pending' => array(
 					'content' => sprintf( __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin'), $vendor_title ),
+				),
+				'extending' => array(
+					'content' => sprintf( __( 'Extending support access for %1$s by $2$s', 'trustedlogin'), $vendor_title, ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing' => array(
 					'content' => sprintf( __( 'Sending encrypted accessKey to %1$s.', 'trustedlogin'), $vendor_title ),

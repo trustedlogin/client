@@ -122,7 +122,12 @@
 
 			$button.addClass( 'disabled' );
 
-			outputStatus( tl_obj.lang.status.pending.content, 'pending' );
+			if ( 'extend' == $button.data('access') ){
+				outputStatus( tl_obj.lang.status.extending.content, 'pending' );
+			} else {
+				outputStatus( tl_obj.lang.status.pending.content, 'pending' );
+			}
+			
 
 			var data = {
 				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
@@ -134,7 +139,10 @@
 				console.log( data );
 			}
 
-			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
+			setTimeout( function(){
+				outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
+			}, 3000 );
+			
 
 			$.post( tl_obj.ajaxurl, data, function ( response ) {
 
