@@ -661,7 +661,6 @@ final class Admin {
 		if ( $this->support_user->get_all() ) {
 			$text        			= '<span class="dashicons dashicons-update-alt"></span>' . esc_html( $atts['exists_text'] );
 			$href 	     			= admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
-			$data_atts['accesskey'] = $this->site_access->get_access_key(); // Add the shareable accesskey as a data attribute
 			$data_atts['access']	= 'extend';
 		} else {
 			$text      				= esc_html( $atts['text'] );
