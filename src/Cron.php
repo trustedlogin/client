@@ -82,29 +82,16 @@ final class Cron {
 	 */
 	public function reschedule( $expiration_timestamp, $identifier_hash ) {
 
-		$hash = Encryption::hash( $identifier_hash );
-
-		if ( is_wp_error( $hash ) ) {
-			$this->logging->log( $hash, __METHOD__ );
-
-			return false;
-		}
-
-		$args = array( $hash );
-
-		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, $args );
+		$unschedule_expiration = wp_unschedule_hook( $this->hook_name );
 
 		if ( ! $unschedule_expiration ){
-			$this->logging->log( sprintf( 'Could not unschedule anything for %s', $identifier_hash ), __METHOD__, 'error' );
+			$this->logging->log( sprintf( 'Could not unschedule event for %s', $this->hook_name ), __METHOD__, 'error' );
 			return false;
 		}
 
-		$scheduled_expiration = wp_schedule_single_event( $expiration_timestamp, $this->hook_name, $args );
-
-		$this->logging->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
-
-		return $scheduled_expiration;
+		return $this->schedule( $expiration_timestamp, $identifier_hash );
 	}
+
 
 	/**
 	 * Hooked Action: Revokes access for a specific support user
