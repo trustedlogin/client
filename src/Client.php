@@ -164,6 +164,19 @@ final class Client {
 			return new WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
 		}
 
+		if ( false !== ( $user_id = $this->support_user->exists() ) ) {
+			// Extend the access by decay setting.
+
+			$return_data = $this->extend_access( $user_id );
+
+			if ( is_wp_error( $return_data ) ){
+				$return_data->add_data( array( 'error_code' => 501 ) );
+			}
+
+			return $return_data;
+
+		}
+
 		timer_start();
 
 		try {
@@ -285,6 +298,54 @@ final class Client {
 		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+
+		return $return_data;
+	}
+
+	/**
+	 * Extends the access duration for an existing Support User
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param int $user_id  The existing Support User ID
+	 *
+	 * @return array|WP_Error 
+	 */
+	private function extend_access( $user_id ){
+
+		timer_start();
+
+		$expiration_timestamp = $this->config->get_expiration_timestamp();
+		$identifier_hash 	  = $this->support_user->get_user_identifier( $user_id );
+
+		if ( is_wp_error( $identifier_hash ) ){
+
+			$this->logging->log( sprintf( 'Could not get identifier hash for existing support user account. %s (%s)', $identifier_hash->get_error_message(), $identifier_hash->get_error_code() ), __METHOD__, 'critical' );
+			return $identifier_hash;
+
+		}
+
+		$extended = $this->support_user->extend( $user_id, $identifier_hash, $expiration_timestamp, $this->cron );
+
+		if ( is_wp_error( $extended ) ) {
+			return $extended;
+		}
+
+		$timing_local = timer_stop( 0, 5 );
+
+		$return_data = array(
+			'site_url'    => get_site_url(),
+			'identifier' => $identifier_hash,
+			'user_id'    => $support_user_id,
+			'expiry'     => $expiration_timestamp,
+			'is_ssl'     => is_ssl(),
+			'timing'     => array(
+				'local' => $timing_local,
+				'remote' => null,
+			),
+		);
+
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( 'url' => get_site_url(), 'action' => 'extended' ) );
 
 		return $return_data;
 	}
