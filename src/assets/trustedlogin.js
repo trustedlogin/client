@@ -139,12 +139,14 @@
 				console.log( data );
 			}
 
-			setTimeout( function(){
+			var secondStatus = setTimeout( function(){
 				outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 			}, 3000 );
 			
 
 			$.post( tl_obj.ajaxurl, data, function ( response ) {
+
+				clearTimeout( secondStatus );
 
 				if ( tl_obj.debug ) {
 					console.log( response );
