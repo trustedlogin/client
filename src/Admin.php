@@ -542,6 +542,13 @@ final class Admin {
 				'br'      => array(),
 				'strong'  => array(),
 				'em'      => array(),
+				'input'   => array( 
+					'class' => array(), 
+					'id' => array(), 
+					'type' => array( 'text' ), 
+					'value' => array() 
+				),
+				'button'   => array( 'class' => array(), 'id' => array() ),
 			),
 				$allowed_protocols
 			);
@@ -857,6 +864,21 @@ final class Admin {
 		$return = '';
 
 		$return .= '<h3>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
+
+		$access_key_output = sprintf(
+			'<%5$s class="tl-%1$s-auth__accesskey">
+				<label>%2$s</label>
+				<input type="text" value="%3$s" class="tl-%1$s-auth__accesskey_field">
+				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy">%4$s</button>
+			</%5$s>',
+			/* %1$s */ sanitize_title( $this->config->ns() ),
+			/* %2$s */ esc_html__( ' Site access key:', 'trustedlogin'),
+			/* %3$s */ esc_attr( $this->site_access->get_access_key() ),
+			/* %4$s */ esc_html__( 'Copy', 'trustedlogin' ),
+			/* %5$s */ 'div'
+		);
+
+		$return .= $access_key_output;
 
 		$return .= '<table class="wp-list-table widefat plugins">';
 

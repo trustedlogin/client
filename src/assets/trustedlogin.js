@@ -270,6 +270,29 @@
 			$( this ).next( '.tl-details.caps' ).toggleClass( 'hidden' );
 		} );
 
+		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function(){ 
+			copyToClipboard( $( this ).prev().val() );
+			var originalText = $( this ).text();
+			$( this ).text('Copied');
+			setTimeout( function(){
+				$( this ).text( originalText );
+			}, 2000 );
+		} );
+
+
+		function copyToClipboard( copyText ) {
+
+			var $temp = $( "<input>" );
+			$("body").append( $temp );
+			$temp.val( copyText ).select();
+			document.execCommand( "copy" );
+			$temp.remove()
+
+			if ( tl_obj.debug) {
+				console.log( 'Copied to clipboard' );
+			}
+		}
+
 	} );
 
 })(jQuery);
