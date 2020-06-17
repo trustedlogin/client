@@ -271,11 +271,13 @@
 		} );
 
 		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function(){ 
-			copyToClipboard( $( this ).prev().val() );
-			var originalText = $( this ).text();
-			$( this ).text('Copied');
+
+			var $this = $( this );
+			copyToClipboard( $this.prev().val() );
+			var originalText = $this.text();
+			$this.text('Copied');
 			setTimeout( function(){
-				$( this ).text( originalText );
+				$this.text( originalText );
 			}, 2000 );
 		} );
 
