@@ -192,7 +192,7 @@ final class SupportUser {
 
 			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
 
-			return new WP_Error( 'user_not_found', 'Support user not found at itentifier ' . esc_attr( $identifier ) );
+			return new WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $identifier ) ) );
 		}
 
 		$expires = $this->get_expiration( $support_user );
