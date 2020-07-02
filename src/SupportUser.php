@@ -432,19 +432,18 @@ final class SupportUser {
 	 */
 	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
 
-		if ( $expiration_timestamp ) {
-
-			$rescheduled = $cron->reschedule( $expiration_timestamp, $identifier_hash );
-
-			if ( $rescheduled ) {
-				update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
-				return true;
-			}
-
+		if ( ! $expiration_timestamp ) {
+			return new WP_Error( 'no-action', 'Error extending Support User access' );
 		}
 
-		return new WP_Error( 'no-action', 'Error extending Support User access' );
+		$rescheduled = $cron->reschedule( $expiration_timestamp, $identifier_hash );
 
+		if ( $rescheduled ) {
+			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+			return true;
+		}
+
+		// TODO: Return error if the rescheduled cron?
 	}
 
 	/**
