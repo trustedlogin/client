@@ -336,7 +336,7 @@ final class Client {
 		$return_data = array(
 			'site_url'    => get_site_url(),
 			'identifier' => $identifier_hash,
-			'user_id'    => $support_user_id,
+			'user_id'    => $user_id,
 			'expiry'     => $expiration_timestamp,
 			'is_ssl'     => is_ssl(),
 			'timing'     => array(
