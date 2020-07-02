@@ -8,6 +8,9 @@
 		jconfirm.pluginDefaults.useBootstrap = false;
 		jconfirm.pluginDefaults.backgroundDismiss = true;
 
+		/**
+		* TODO: Deprecate
+		**/
 		function outputErrorAlert( response, tl_obj ) {
 
 			var settings = {
@@ -60,6 +63,9 @@
 			$.alert( settings );
 		}
 
+		/**
+		* TODO: Deprecate
+		**/
 		function outputAccessKey( accessKey, tl_obj ) {
 
 			var settings = {
@@ -111,7 +117,14 @@
 			$responseDiv.attr('class', responseClass).addClass('tl-'+ tl_obj.vendor.namespace + '-auth__response_' + type );
 			$responseDiv.text( content );
 
+
+			/**
+			 * Handle buttong actions/labels/etc to it's own function
+			 */
 			if ( 'error' == type ){
+				/**
+				* TODO: Translate string
+				**/
 				$( tl_obj.selector ).text('Go to support').removeClass('disabled');
 				$( 'body' ).off( 'click', tl_obj.selector );
 			}
@@ -156,8 +169,15 @@
 					if ( response.data.is_ssl ){
 						location.reload();					
 					} else {
+						/**
+						* TODO: Will be replaced with error message
+						**/
 						outputAccessKey( response.data.access_key, tl_obj );
 					}
+
+					/**
+					* TODO: Removed as we no longer need the button to do popups
+					**/
 					if ( response.data.access_key ){
 						$( tl_obj.selector ).data('accesskey', response.data.access_key );
 					}
@@ -166,6 +186,8 @@
 				}
 
 			} ).fail( function ( response ) {
+
+				clearTimeout( secondStatus );
 
 				if ( tl_obj.debug ) {
 					console.log( response );
@@ -186,6 +208,9 @@
 			});
 		}
 
+		/**
+		* TODO: Deprecate
+		**/
 		function triggerLoginGeneration() {
 			var data = {
 				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
@@ -250,6 +275,10 @@
 			});
 		}
 
+		/**
+		* TODO: Deprecate
+		* No longer show alert.
+		**/
 		$( 'body' ).on( 'click', tl_obj.selector, function ( e ) {
 
 			e.preventDefault();
@@ -270,12 +299,18 @@
 			$( this ).next( '.tl-details.caps' ).toggleClass( 'hidden' );
 		} );
 
+		/**
+		 * Used for copy-to-clipboard functionality
+		 */
 		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function(){ 
 
-			var $this = $( this );
-			copyToClipboard( $this.prev().val() );
-			var originalText = $this.text();
-			$this.text('Copied');
+			var $thisButton = $( this );
+			copyToClipboard( $thisButton.prev().val() );
+			var originalText = $thisButton.text();
+			/**
+			* TODO: Needs translation string
+			**/
+			$thisButton.text('Copied');
 			setTimeout( function(){
 				$this.text( originalText );
 			}, 2000 );
