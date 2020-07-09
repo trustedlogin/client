@@ -99,13 +99,14 @@ final class Envelope {
 		/**
 		 * Filter: Allows devs to assign custom meta_data to be synced via TrustedLogin.
 		 *
-		 * By default this data is transfered and stored in plain text, and should not contain any sensitive or identifiable information.
+		 * WARNING: Meta data is transferred and stored in plain text, and must not contain any sensitive or identifiable information!
 		 *
 		 * @since 1.0.0
 		 *
 		 * @param array  $meta_data
+		 * @param Config $config Current TrustedLogin configuration
 		 */
-		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array() );
+		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(), $this->config );
 
 		return array(
 			'secretId'   	  => $secret_id,
