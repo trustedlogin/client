@@ -30,7 +30,7 @@ class SiteAccess {
 	 *
 	 */
 	public function __construct( Config $config, Logging $logging ) {
-		$this->config = $config;
+		$this->config  = $config;
 		$this->logging = $logging;
 
 
@@ -92,7 +92,10 @@ class SiteAccess {
 			return $site_revoked;
 		}
 
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( 'url' => get_site_url(), 'action' => 'revoke' ) );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array(
+			'url'    => get_site_url(),
+			'action' => 'revoke',
+		) );
 
 		return $site_revoked;
 	}
@@ -100,7 +103,7 @@ class SiteAccess {
 	/**
 	 * Handles the syncing of newly generated support access to the TrustedLogin servers.
 	 *
-	 * @param string $secret_id  The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
+	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
 	 * @param string $identifier The unique identifier for the WP_User created {@see SiteAccess::create_hash}
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
@@ -108,8 +111,8 @@ class SiteAccess {
 	public function create_secret( $secret_id, $identifier ) {
 
 
-		$logging = new Logging( $this->config );
-		$remote = new Remote( $this->config, $logging );
+		$logging    = new Logging( $this->config );
+		$remote     = new Remote( $this->config, $logging );
 		$encryption = new Encryption( $this->config, $remote, $logging );
 
 		// Ping SaaS and get back tokens.
@@ -143,7 +146,10 @@ class SiteAccess {
 			return new WP_Error( 'sync_error', __( 'Could not sync to TrustedLogin server', 'trustedlogin' ) );
 		}
 
-		do_action( 'trustedlogin/' . $this->config->ns() . '/secret/created', array( 'url' => get_site_url(), 'action' => 'create' ) );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/secret/created', array(
+			'url'    => get_site_url(),
+			'action' => 'create',
+		) );
 
 		return true;
 	}
@@ -161,10 +167,10 @@ class SiteAccess {
 
 		$hash = false;
 
-		if( function_exists( 'random_bytes' ) ) {
+		if ( function_exists( 'random_bytes' ) ) {
 			try {
 				$bytes = random_bytes( 64 );
-				$hash = bin2hex( $bytes );
+				$hash  = bin2hex( $bytes );
 			} catch ( \TypeError $e ) {
 				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Error $e ) {
@@ -176,16 +182,16 @@ class SiteAccess {
 			$this->logging->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
 		}
 
-		if( $hash ) {
+		if ( $hash ) {
 			return $hash;
 		}
 
-		if( ! function_exists( 'openssl_random_pseudo_bytes' ) ) {
+		if ( ! function_exists( 'openssl_random_pseudo_bytes' ) ) {
 			return new WP_Error( 'generate_hash_failed', 'Could not generate a secure hash with random_bytes or openssl.' );
 		}
 
 		$crypto_strong = false;
-		$hash = openssl_random_pseudo_bytes( 64, $crypto_strong );
+		$hash          = openssl_random_pseudo_bytes( 64, $crypto_strong );
 
 		if ( ! $crypto_strong ) {
 			return new WP_Error( 'openssl_not_strong_crypto', 'Site could not generate a secure hash with OpenSSL.' );
@@ -208,7 +214,7 @@ class SiteAccess {
 
 		$access_key = get_site_option( $this->sharable_access_key_option, false );
 
-		if ( $access_key ){
+		if ( $access_key ) {
 			return $access_key;
 		}
 
@@ -218,25 +224,25 @@ class SiteAccess {
 	/**
 	 * Checks if a license key is a shareable accessKey
 	 *
-	 * @todo This isn't being used. Hector, what's this for?
-	 *
 	 * @since 0.9.2
 	 *
-	 * @param string  $license
+	 * @todo This isn't being used. Hector, what's this for?
+	 *
+	 * @param string $license
 	 *
 	 * @return bool
 	 */
-	private function is_shareable_access_key( $license ){
+	private function is_shareable_access_key( $license ) {
 
 		/**
 		 * Filter: Allow for over-riding the shareable 'accessKey' prefix
 		 *
 		 * @since 0.9.2
 		 */
-		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix' , 'TL.');
-		$length 			= strlen( $access_key_prefix );
+		$access_key_prefix = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix', 'TL.' );
+		$length            = strlen( $access_key_prefix );
 
-		return ( substr( $license , 0, $length ) === $access_key_prefix );
+		return ( substr( $license, 0, $length ) === $access_key_prefix );
 
 	}
 
@@ -252,7 +258,7 @@ class SiteAccess {
 		// if no license key proivded, assume false, and then return accessKey
 		$license_key = $this->config->get_setting( 'auth/license_key', false );
 
-		if ( ! $license_key ){
+		if ( ! $license_key ) {
 			$license_key = $this->get_shareable_access_key();
 		}
 
@@ -281,7 +287,7 @@ class SiteAccess {
 	 *
 	 * @return  string|WP_Error  Access Key prepended with TL, or something went wrong.
 	 */
-	private function get_shareable_access_key(){
+	private function get_shareable_access_key() {
 
 		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
 
@@ -294,10 +300,10 @@ class SiteAccess {
 		 *
 		 * @since 0.9.2
 		 */
-		$access_key_prefix  = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix' , 'TL.');
+		$access_key_prefix = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix', 'TL.' );
 
-		$length 			= strlen( $access_key_prefix );
-		$access_key 		= $access_key_prefix . substr( $hash, $length );
+		$length     = strlen( $access_key_prefix );
+		$access_key = $access_key_prefix . substr( $hash, $length );
 
 		update_site_option( $this->sharable_access_key_option, $access_key );
 
@@ -317,8 +323,9 @@ class SiteAccess {
 	 */
 	public function revoke( Remote $remote ) {
 
-		if ( ! $this->config->meets_ssl_requirement() ){
+		if ( ! $this->config->meets_ssl_requirement() ) {
 			$this->logging->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
+
 			return true;
 		}
 
@@ -326,7 +333,7 @@ class SiteAccess {
 			'publicKey' => $this->config->get_setting( 'auth/public_key' ),
 		);
 
-		$api_response = $remote->send(  'sites/' . $this->identifier, $body, 'DELETE' );
+		$api_response = $remote->send( 'sites/' . $this->identifier, $body, 'DELETE' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
