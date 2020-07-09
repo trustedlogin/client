@@ -114,6 +114,7 @@ final class Envelope {
 			'publicKey'  	  => $this->public_key,
 			'accessKey'  	  => $access_key,
 			'wpUserId'   	  => get_current_user_id(),
+			'expiresAt'       => $this->config->get_expiration_timestamp( null, true ),
 			'version'    	  => Client::version,
 			'nonce'		 	  => \sodium_bin2hex( $nonce ),
 			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
