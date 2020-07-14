@@ -180,7 +180,9 @@ final class SupportUser {
 	}
 
 	/**
-	 * @param $identifier
+	 * Logs in a support user, if any exist at $identifier and haven't expired yet
+	 *
+	 * @param string $identifier Unique Identifier for support user (stored in user meta)
 	 *
 	 * @return true|WP_Error
 	 */
@@ -202,10 +204,7 @@ final class SupportUser {
 
 			$this->logging->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
 
-			$this->delete( $identifier, true );
-
-			// TODO
-			//$this->endpoint->delete();
+			$this->delete( $identifier, true, true );
 
 			return new WP_Error( 'access_expired', 'The user was supposed to expire on ' . $expires . '; revoking now.' );
 		}
@@ -308,10 +307,11 @@ final class SupportUser {
 	 *
 	 * @param string $identifier Unique Identifier of the user to delete, or 'all' to remove all support users.
 	 * @param bool   $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`
+	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`
 	 *
 	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users; WP_Error: something went wrong.
 	 */
-	public function delete( $identifier = '', $delete_role = true ) {
+	public function delete( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
 		if ( 'all' === $identifier ) {
 			$users = $this->get_all();
@@ -355,6 +355,12 @@ final class SupportUser {
 
 		if( $delete_role ) {
 			$this->role->delete();
+		}
+
+		if ( $delete_endpoint ) {
+			$Endpoint = new Endpoint( $this->config, $this->logging );
+
+			$Endpoint->delete();
 		}
 
 		return $this->delete( $identifier );

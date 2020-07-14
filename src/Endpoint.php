@@ -166,7 +166,7 @@ class Endpoint {
 	 */
 	public function add() {
 
-		$endpoint = get_site_option( $this->option_name );
+		$endpoint = $this->get();
 
 		if ( ! $endpoint ) {
 			return;
@@ -254,6 +254,8 @@ class Endpoint {
 	public function delete() {
 
 		if ( ! get_site_option( $this->option_name ) ) {
+			$this->logging->log( "Endpoint not deleted because it does not exist.", __METHOD__, 'info' );
+
 			return;
 		}
 
