@@ -113,8 +113,10 @@ final class Config {
 			}
 		}
 
-		if ( false !== $this->settings['decay'] && ! is_int( $this->settings['decay'] ) ) {
-			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds) or false for permanent access.' );
+		if ( ! is_int( $this->settings['decay'] ) ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
+		} elseif ( $this->settings['decay'] > MONTH_IN_SECONDS ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must less than or equal to 30 days.' );
 		}
 
 		// TODO: Add namespace collision check?
