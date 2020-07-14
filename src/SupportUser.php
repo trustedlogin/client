@@ -484,14 +484,19 @@ final class SupportUser {
 	 *
 	 * @uses SupportUser::get_user_identifier()
 	 *
-	 * @param WP_User|int $user_id_or_object
-	 * @param bool $current_url Whether to generate link to current URL, with revoke parameters added. Default: false.
+	 * @param WP_User|int|string $user User object, user ID, or "all". If "all", will revoke all users.
+	 * @param bool $current_url Optional. Whether to generate link to current URL, with revoke parameters added. Default: false.
 	 *
-	 * @return string|false Unsanitized URL to revoke support user. If not able to retrieve user identifier, returns false.
+	 * @return string|false Unsanitized nonce URL to revoke support user. If not able to retrieve user identifier, returns false.
 	 */
-	public function get_revoke_url( $user_id_or_object, $current_url = false ) {
+	public function get_revoke_url( $user, $current_url = false ) {
 
-		$identifier = $this->get_user_identifier( $user_id_or_object );
+		// If "all", will revoke all support users.
+		if( 'all' === $user ) {
+			$identifier = 'all';
+		} else {
+			$identifier = $this->get_user_identifier( $user );
+		}
 
 		if ( ! $identifier || is_wp_error( $identifier ) ) {
 			return false;
@@ -506,6 +511,7 @@ final class SupportUser {
 		$revoke_url = add_query_arg( array(
 			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
 			self::id_query_param                 => $identifier,
+			'_wpnonce'                           => Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 		), $base_page );
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );

@@ -145,6 +145,18 @@ class Endpoint {
 			return;
 		}
 
+		if ( ! isset( $_REQUEST['_wpnonce'] ) ) {
+			return;
+		}
+
+		$verify_nonce = wp_verify_nonce( $_REQUEST['_wpnonce' ], self::REVOKE_SUPPORT_QUERY_PARAM );
+
+		if ( ! $verify_nonce ) {
+			$this->logging->log( 'Removing user failed: Nonce expired (Nonce value: ' . $verify_nonce . ')', __METHOD__, 'error' );
+
+			return;
+		}
+
 		// Allow namespaced support team to revoke their own users
 		$support_team = current_user_can( $this->support_user->role->get_name() );
 
@@ -153,6 +165,7 @@ class Endpoint {
 
 		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
+
 			return;
 		}
 
