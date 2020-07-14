@@ -37,7 +37,7 @@ final class Client {
 	 * @var string The current drop-in file version
 	 * @since 0.1.0
 	 */
-	const version = '0.9.6';
+	const VERSION = '0.9.6';
 
 	/**
 	 * @var Config

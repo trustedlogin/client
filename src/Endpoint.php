@@ -18,7 +18,7 @@ class Endpoint {
 	/**
 	 * @var string The query string parameter used to revoke users
 	 */
-	const revoke_support_query_param = 'revoke-tl';
+	const REVOKE_SUPPORT_QUERY_PARAM = 'revoke-tl';
 
 	/**
 	 * @var Config $config
@@ -119,11 +119,11 @@ class Endpoint {
 	 */
 	public function admin_maybe_revoke_support() {
 
-		if ( ! isset( $_REQUEST[ self::revoke_support_query_param ] ) ) {
+		if ( ! isset( $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) ) {
 			return;
 		}
 
-		if ( $this->config->ns() !== $_REQUEST[ self::revoke_support_query_param ] ) {
+		if ( $this->config->ns() !== $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) {
 			return;
 		}
 

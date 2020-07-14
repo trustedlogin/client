@@ -504,8 +504,8 @@ final class SupportUser {
 		}
 
 		$revoke_url = add_query_arg( array(
-			Endpoint::revoke_support_query_param => $this->config->ns(),
-			self::id_query_param  => $identifier,
+			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
+			self::id_query_param                 => $identifier,
 		), $base_page );
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );

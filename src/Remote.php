@@ -27,7 +27,7 @@ final class Remote {
 	 * @var string The API url for the TrustedLogin SaaS Platform (with trailing slash)
 	 * @since 0.4.0
 	 */
-	const api_url = 'https://app.trustedlogin.com/api/v1/';
+	const API_URL = 'https://app.trustedlogin.com/api/v1/';
 
 	/**
 	 * @var Config $config
@@ -184,7 +184,7 @@ final class Remote {
 		 *
 		 * @internal This allows pointing requests to testing servers
 		 */
-		$base_url = apply_filters( 'trustedlogin/' . $this->config->ns() . '/api_url', self::api_url );
+		$base_url = apply_filters( 'trustedlogin/' . $this->config->ns() . '/api_url', self::API_URL );
 
 		if ( is_string( $endpoint ) ) {
 			$url = trailingslashit( $base_url ) . $endpoint;
