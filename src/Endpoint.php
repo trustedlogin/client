@@ -130,8 +130,8 @@ class Endpoint {
 	}
 
 	/**
-	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::id_query_param ] == {namespace}
-	 * Can optionally check for $_REQUEST[ SupportUser::id_query_param ] for revoking a specific user by their identifier
+	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::ID_QUERY_PARAM ] == {namespace}
+	 * Can optionally check for $_REQUEST[ SupportUser::ID_QUERY_PARAM ] for revoking a specific user by their identifier
 	 *
 	 * @since 0.2.1
 	 */
@@ -169,7 +169,7 @@ class Endpoint {
 			return;
 		}
 
-		$identifier = isset( $_REQUEST[ SupportUser::id_query_param ] ) ? esc_attr( $_REQUEST[ SupportUser::id_query_param ] ) : 'all';
+		$identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
 
 		$deleted_user = $this->support_user->delete( $identifier );
 

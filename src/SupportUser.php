@@ -26,7 +26,7 @@ final class SupportUser {
 	/**
 	 * @var string The query parameter used to pass the unique user ID
 	 */
-	const id_query_param = 'tlid';
+	const ID_QUERY_PARAM = 'tlid';
 
 	/**
 	 * @var Config $config
@@ -510,7 +510,7 @@ final class SupportUser {
 
 		$revoke_url = add_query_arg( array(
 			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
-			self::id_query_param                 => $identifier,
+			self::ID_QUERY_PARAM                 => $identifier,
 			'_wpnonce'                           => Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 		), $base_page );
 
