@@ -96,15 +96,33 @@ class Endpoint {
 		}
 
 		/**
-		 * TODO: Use actions instead of tight coupling? Is this reliable enough?
+		 * Runs before the support user is (maybe) logged-in
+		 *
+		 * @param string $identifier Unique Identifier for support user.
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/login', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $identifier );
 
 		$logged_in = $this->support_user->maybe_login( $identifier );
 
 		if ( is_wp_error( $logged_in ) ) {
+
+			/**
+			 * Runs after the support user fails to log in
+			 *
+			 * @param string $identifier Unique Identifier for support user.
+			 * @param WP_Error $logged_in The error encountered when logging-in.
+			 */
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $identifier, $logged_in );
+
 			return;
 		}
+
+		/**
+		 * Runs after the support user is logged-in
+		 *
+		 * @param string $identifier Unique Identifier for support user.
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $identifier );
 
 		wp_safe_redirect( admin_url() );
 
