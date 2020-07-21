@@ -81,7 +81,7 @@ class BruteForceChecker {
 		}
 
 		// Check if this would be the 3rd wrong accesskey
-		if ( count( $used_accesskeys ) >= ACCESSKEY_LIMIT_COUNT ){
+		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ){
 			do_action( 'trustedlogin/' . $this->ns . '/brute_force_detected' );
 			return true;
 		}
@@ -104,7 +104,7 @@ class BruteForceChecker {
 
 		delete_transient( $this->transient_slug );
 
-		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), ACCESSKEY_LIMIT_EXPIRY );
+		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
 
 	}
 
