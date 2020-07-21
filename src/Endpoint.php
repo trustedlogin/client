@@ -229,7 +229,7 @@ class Endpoint {
 
 		$endpoint = $this->get();
 
-		$identifier = get_query_var( $endpoint, false );
+		$identifier = sanitize_text_field( get_query_var( $endpoint, false ) );
 
 		return empty( $identifier ) ? false : $identifier;
 	}
