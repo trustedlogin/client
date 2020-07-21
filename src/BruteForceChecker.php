@@ -25,12 +25,12 @@ class BruteForceChecker {
 	/**
 	 * @var int The number of incorrect accesskeys that should trigger an anomaly alert.
 	 */
-	private $accesskey_count_limit;
+	const ACCESSKEY_LIMIT_COUNT = 3;
 
 	/**
 	 * @var int The number of seconds we should keep incorrect accesskeys stored for.
 	 */
-	private $accesskey_count_expiry;	
+	const ACCESSKEY_LIMIT_EXPIRY = 10 * MINUTE_IN_SECONDS;
 
 	public function __construct( Config $config ) {
 
@@ -38,9 +38,6 @@ class BruteForceChecker {
 
 		$this->transient_slug  = 'tl-' . $this->ns . '-used-accesskeys';
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
-
-		$this->accesskey_count_limit  = apply_filters( 'trustedlogin/security/bruteforce/count', 3 );
-		$this->accesskey_count_expiry = apply_filters( 'trustedlogin/security/bruteforce/time', 10 * MINUTE_IN_SECONDS );
 
 	}
 
@@ -84,7 +81,7 @@ class BruteForceChecker {
 		}
 
 		// Check if this would be the 3rd wrong accesskey
-		if ( count( $used_accesskeys ) >= $this->accesskey_count_limit ){
+		if ( count( $used_accesskeys ) >= ACCESSKEY_LIMIT_COUNT ){
 			do_action( 'trustedlogin/' . $this->ns . '/brute_force_detected' );
 			return true;
 		}
@@ -107,7 +104,7 @@ class BruteForceChecker {
 
 		delete_transient( $this->transient_slug );
 
-		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), $this->accesskey_count_expiry );
+		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), ACCESSKEY_LIMIT_EXPIRY );
 
 	}
 
