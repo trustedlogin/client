@@ -194,7 +194,7 @@ final class SupportUser {
 
 			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
 
-			$brute_force_checker = new BruteForceCheck( $this->config );
+			$brute_force_checker = new BruteForceChecker( $this->config );
 
 			if ( $brute_force_checker->detect_attack( $identifier ) ){
 					$this->logging->log( 
