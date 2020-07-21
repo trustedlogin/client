@@ -194,6 +194,16 @@ final class SupportUser {
 
 			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
 
+			$brute_force_checker = new BruteForceCheck( $this->config );
+
+			if ( $brute_force_checker->detect_attack( $identifier ) ){
+					$this->logging->log( 
+						'Potential Brute Force attack detected with identifer: ' . esc_attr( $identifier ),
+						__METHOD__, 
+						'notice' 
+					);
+			}
+
 			return new WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $identifier ) ) );
 		}
 
