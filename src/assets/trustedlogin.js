@@ -1,7 +1,7 @@
 /* global ajaxurl,jQuery,tl_obj */
 (function( $ ) {
 
-	"use strict";
+	'use strict';
 
 	$( document ).ready( function () {
 
@@ -9,8 +9,8 @@
 		jconfirm.pluginDefaults.backgroundDismiss = true;
 
 		/**
-		* TODO: Deprecate
-		**/
+		 * TODO: Deprecate
+		 **/
 		function outputErrorAlert( response, tl_obj ) {
 
 			var settings = {
@@ -64,8 +64,8 @@
 		}
 
 		/**
-		* TODO: Deprecate
-		**/
+		 * TODO: Deprecate
+		 **/
 		function outputAccessKey( accessKey, tl_obj ) {
 
 			var settings = {
@@ -123,8 +123,8 @@
 			 */
 			if ( 'error' == type ){
 				/**
-				* TODO: Translate string
-				**/
+				 * TODO: Translate string
+				 **/
 				$( tl_obj.selector ).text('Go to support').removeClass('disabled');
 				$( 'body' ).off( 'click', tl_obj.selector );
 			}
@@ -140,7 +140,7 @@
 			} else {
 				outputStatus( tl_obj.lang.status.pending.content, 'pending' );
 			}
-			
+
 
 			var data = {
 				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
@@ -155,7 +155,7 @@
 			var secondStatus = setTimeout( function(){
 				outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 			}, 3000 );
-			
+
 
 			$.post( tl_obj.ajaxurl, data, function ( response ) {
 
@@ -167,17 +167,17 @@
 
 				if ( response.success && typeof response.data == 'object' ) {
 					if ( response.data.is_ssl ){
-						location.reload();					
+						location.reload();
 					} else {
 						/**
-						* TODO: Will be replaced with error message
-						**/
+						 * TODO: Will be replaced with error message
+						 **/
 						outputAccessKey( response.data.access_key, tl_obj );
 					}
 
 					/**
-					* TODO: Removed as we no longer need the button to do popups
-					**/
+					 * TODO: Removed as we no longer need the button to do popups
+					 **/
 					if ( response.data.access_key ){
 						$( tl_obj.selector ).data('accesskey', response.data.access_key );
 					}
@@ -209,8 +209,8 @@
 		}
 
 		/**
-		* TODO: Deprecate
-		**/
+		 * TODO: Deprecate
+		 **/
 		function triggerLoginGeneration() {
 			var data = {
 				'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
@@ -276,9 +276,9 @@
 		}
 
 		/**
-		* TODO: Deprecate
-		* No longer show alert.
-		**/
+		 * TODO: Deprecate
+		 * No longer show alert.
+		 **/
 		$( 'body' ).on( 'click', tl_obj.selector, function ( e ) {
 
 			e.preventDefault();
@@ -290,7 +290,7 @@
 
 			grantAccess( $( this ) );
 			return false;
-			
+
 		} );
 
 
@@ -321,17 +321,16 @@
 			}, 2000 );
 		} );
 
-
 		function copyToClipboard( copyText ) {
 
-			var $temp = $( "<input>" );
-			$("body").append( $temp );
+			var $temp = $( '<input>' );
+			$( 'body' ).append( $temp );
 			$temp.val( copyText ).select();
-			document.execCommand( "copy" );
+			document.execCommand( 'copy' );
 			$temp.remove()
 
-			if ( tl_obj.debug) {
-				console.log( 'Copied to clipboard' );
+			if ( tl_obj.debug ) {
+				console.log( 'Copied to clipboard', copyText );
 			}
 		}
 
