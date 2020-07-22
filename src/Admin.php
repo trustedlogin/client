@@ -753,9 +753,11 @@ final class Admin {
 				'confirm' => esc_html__( 'Confirm', 'trustedlogin' ),
 				'ok' => esc_html__( 'Ok', 'trustedlogin' ),
 				'go_to_site' =>  sprintf( __( 'Go to %1$s support site', 'trustedlogin' ), $vendor_title ),
-				'close' => esc_html__( 'Close', 'trustedlogin' ),
+				'close'  => esc_html__( 'Close', 'trustedlogin' ),
 				'cancel' => esc_html__( 'Cancel', 'trustedlogin' ),
 				'revoke' => sprintf( __( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
+				'copy'   => __( 'Copy', 'trustedlogin' ),
+				'copied' => __( 'Copied!', 'trustedlogin' ),
 			),
 			'status' => array(
 				'synced' => array(

@@ -307,12 +307,10 @@
 			var $thisButton = $( this );
 			copyToClipboard( $thisButton.prev().val() );
 			var originalText = $thisButton.text();
-			/**
-			* TODO: Needs translation string
-			**/
-			$thisButton.text('Copied');
 			setTimeout( function(){
 				$this.text( originalText );
+			$copyButton.text( tl_obj.lang.buttons.copied );
+				$copyButton.text( tl_obj.lang.buttons.copy );
 			}, 2000 );
 		} );
 
