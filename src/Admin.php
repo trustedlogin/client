@@ -518,6 +518,7 @@ final class Admin {
 					'title' => array(),
 				),
 				'span'    => array( 'class' => array(), 'id' => array(), 'title' => array(), 'data-toggle' => array() ),
+				'label'   => array( 'class' => array(), 'id' => array(), 'for' => array() ),
 				'code'	  => array( 'class' => array(), 'id' => array() ),
 				'tt'	  => array( 'class' => array(), 'id' => array() ),
 				'pre'	  => array( 'class' => array(), 'id' => array() ),
@@ -542,11 +543,12 @@ final class Admin {
 				'br'      => array(),
 				'strong'  => array(),
 				'em'      => array(),
-				'input'   => array( 
-					'class' => array(), 
-					'id' => array(), 
-					'type' => array( 'text' ), 
-					'value' => array() 
+				'input'   => array(
+					'class' => array(),
+					'id'    => array(),
+					'type'  => array( 'text' ),
+					'value' => array(),
+					'size'  => array()
 				),
 				'button'   => array( 'class' => array(), 'id' => array() ),
 			),
