@@ -242,7 +242,7 @@ final class Admin {
 		<div class="tl-{{ns}}-auth__details">
 			{{details}}
 		</div>
-		<div class="tl-{{ns}}-auth__response">
+		<div class="tl-{{ns}}-auth__response" aria-live="assertive">
 		</div>
 		<div class="tl-{{ns}}-auth__actions">
 			{{button}}
@@ -535,7 +535,7 @@ final class Admin {
 				'h3'      => array( 'class' => array(), 'id' => array() ),
 				'h4'      => array( 'class' => array(), 'id' => array() ),
 				'h5'      => array( 'class' => array(), 'id' => array() ),
-				'div'     => array( 'class' => array(), 'id' => array() ),
+				'div'     => array( 'class' => array(), 'id' => array(), 'aria-live' => array() ),
 				'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
 				'header'  => array( 'class' => array(), 'id' => array() ),
 				'footer'  => array( 'class' => array(), 'id' => array() ),
@@ -548,9 +548,10 @@ final class Admin {
 					'id'    => array(),
 					'type'  => array( 'text' ),
 					'value' => array(),
-					'size'  => array()
+					'size'  => array(),
+					'aria-live' => array(),
 				),
-				'button'   => array( 'class' => array(), 'id' => array() ),
+				'button'   => array( 'class' => array(), 'id' => array(), 'aria-live' => array() ),
 			),
 				$allowed_protocols
 			);
@@ -868,17 +869,19 @@ final class Admin {
 		$return = '';
 
 		$access_key_output = sprintf(
-			'<%5$s class="tl-%1$s-auth__accesskey">
-				<label><h2>%2$s</h2>
-				<input type="text" value="%3$s" size="33" class="tl-%1$s-auth__accesskey_field code">
+			'<%6$s class="tl-%1$s-auth__accesskey">
+				<label>
+					<h2>%2$s</h2>
+					<input type="text" value="%4$s" size="33" class="tl-%1$s-auth__accesskey_field code" aria-label="%3$s">
 				</label>
-				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy button button button-outline">%4$s</button>
-			</%5$s>',
+				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy button button button-outline" aria-live="polite">%5$s</button>
+			</%6$s>',
 			/* %1$s */ sanitize_title( $this->config->ns() ),
 			/* %2$s */ esc_html__( ' Site access key:', 'trustedlogin'),
-			/* %3$s */ esc_attr( $this->site_access->get_access_key() ),
-			/* %4$s */ esc_html__( 'Copy', 'trustedlogin' ),
-			/* %5$s */ 'div'
+			/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
+			/* %4$s */ esc_attr( $this->site_access->get_access_key() ),
+			/* %5$s */ esc_html__( 'Copy', 'trustedlogin' ),
+			/* %6$s */ 'div'
 		);
 
 		$return .= $access_key_output;
