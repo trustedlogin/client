@@ -304,7 +304,10 @@
 		/**
 		 * Used for copy-to-clipboard functionality
 		 */
-		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function(){ 
+		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function() {
+			var $copyButton = $( this );
+
+			copyToClipboard( $( '.tl-' + tl_obj.vendor.namespace + '-auth__accesskey_field' ).val() );
 
 			$copyButton.text( tl_obj.lang.buttons.copied );
 
