@@ -867,13 +867,12 @@ final class Admin {
 
 		$return = '';
 
-		$return .= '<h3>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
-
 		$access_key_output = sprintf(
 			'<%5$s class="tl-%1$s-auth__accesskey">
-				<label>%2$s</label>
-				<input type="text" value="%3$s" class="tl-%1$s-auth__accesskey_field">
-				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy">%4$s</button>
+				<label><h2>%2$s</h2>
+				<input type="text" value="%3$s" size="33" class="tl-%1$s-auth__accesskey_field code">
+				</label>
+				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy button button button-outline">%4$s</button>
 			</%5$s>',
 			/* %1$s */ sanitize_title( $this->config->ns() ),
 			/* %2$s */ esc_html__( ' Site access key:', 'trustedlogin'),
@@ -884,6 +883,7 @@ final class Admin {
 
 		$return .= $access_key_output;
 
+		$return .= '<h2>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h2>';
 		$return .= '<table class="wp-list-table widefat plugins">';
 
 		$table_header =

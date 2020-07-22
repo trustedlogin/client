@@ -164,6 +164,10 @@ $color-red: #c0461e !default;
 		}
 	}
 
+	&.tl-#{$namespace}-has-access h2 {
+		margin-bottom: 12px;
+	}
+
 	h3 {
 		font-size: 1em;
 		margin-bottom: 12px;
