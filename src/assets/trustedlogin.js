@@ -299,17 +299,21 @@
 			$( this ).next( '.tl-details.caps' ).toggleClass( 'hidden' );
 		} );
 
+		var copyTimer = null;
+
 		/**
 		 * Used for copy-to-clipboard functionality
 		 */
 		$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function(){ 
 
-			var $thisButton = $( this );
-			copyToClipboard( $thisButton.prev().val() );
-			var originalText = $thisButton.text();
-			setTimeout( function(){
-				$this.text( originalText );
 			$copyButton.text( tl_obj.lang.buttons.copied );
+
+			if ( copyTimer ) {
+				clearTimeout( copyTimer );
+				copyTimer = null;
+			}
+
+			copyTimer = setTimeout( function () {
 				$copyButton.text( tl_obj.lang.buttons.copy );
 			}, 2000 );
 		} );
