@@ -336,11 +336,14 @@ final class Client {
 			return $extended;
 		}
 
+		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
+
 		$timing_local = timer_stop( 0, 5 );
 
 		$return_data = array(
 			'site_url'   => get_site_url(),
 			'identifier' => $identifier_hash,
+			'endpoint'   => $endpoint_hash,
 			'user_id'    => $user_id,
 			'expiry'     => $expiration_timestamp,
 			'is_ssl'     => is_ssl(),
