@@ -16,8 +16,5 @@
   },
   "browserslist": [
     "cover 99.7%"
-  ],
-  "scripts": {
-    "copyfiles": "copyfiles -a -f node_modules/jquery-confirm/dist/* src/assets/jquery-confirm/"
-  }
+  ]
 }
