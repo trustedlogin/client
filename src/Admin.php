@@ -771,7 +771,7 @@ final class Admin {
 					'content' => sprintf( __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin'), $vendor_title ),
 				),
 				'extending' => array(
-					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin'), $vendor_title, ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
+					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin'), $vendor_title, human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing' => array(
 					'content' => sprintf( __( 'Sending encrypted access to %1$s.', 'trustedlogin'), $vendor_title ),

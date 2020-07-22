@@ -85,6 +85,13 @@ $color-red: #c0461e !default;
 		cursor: help;
 	}
 
+	.tl-#{$namespace}-auth__response {
+		text-align: center;
+		font-size: 14px;
+		padding-top: 100px;
+		background: url('https://i.gravityview.co/rEIncx+') left top no-repeat;
+	}
+
 	.tl-#{$namespace}-auth__roles {
 
 		.tl-#{$namespace}-toggle {
