@@ -113,7 +113,7 @@
 				return;
 			}
 
-			// Reset the class and set the type for contexutal styling.
+			// Reset the class and set the type for contextual styling.
 			$responseDiv.attr('class', responseClass).addClass('tl-'+ tl_obj.vendor.namespace + '-auth__response_' + type );
 			$responseDiv.text( content );
 
@@ -201,7 +201,7 @@
 					return;
 				}
 
-				if ( typeof response.data == 'object' ) {
+				if ( typeof response.data === 'object' ) {
 					console.log( 'TrustedLogin support login URL:' );
 					console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
 				}
