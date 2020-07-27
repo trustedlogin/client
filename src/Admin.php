@@ -790,7 +790,7 @@ final class Admin {
 				),
 				'failed' => array(
 					'title' => esc_html__( 'Support Access Was Not Granted', 'trustedlogin' ),
-					'content' => esc_html__( 'Got this from the server: ', 'trustedlogin' ),
+					'content' => esc_html__( 'There was an error granting access: ', 'trustedlogin' ),
 				),
 				'accesskey' => array(
 					'title' => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),

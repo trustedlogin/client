@@ -287,7 +287,7 @@ final class Client {
 
 		if ( is_wp_error( $created ) ) {
 
-			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error' );
+			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error', $created->get_error_data() );
 
 			$created->add_data( array( 'status_code' => 503 ) );
 

@@ -263,6 +263,19 @@ final class Remote {
 			return new WP_Error( 'invalid_response', __( 'Invalid response.', 'trustedlogin' ), $response_body );
 		}
 
+		if ( isset( $response_json['errors'] ) ) {
+
+			$errors = '';
+
+			// Multi-dimensional; we flatten.
+			foreach ( $response_json['errors'] as $key => $error ) {
+				$error  = is_array( $error ) ? reset( $error ) : $error;
+				$errors .= $error;
+			}
+
+			return new WP_Error( 'errors_in_response', esc_html( $errors ), $response_body );
+		}
+
 		foreach ( (array) $required_keys as $required_key ) {
 			if ( ! isset( $response_json[ $required_key ] ) ) {
 				return new WP_Error( 'missing_required_key', sprintf( __( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
