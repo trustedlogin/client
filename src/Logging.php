@@ -85,8 +85,8 @@ class Logging {
 				$logging_directory,
 				$config->get_setting( 'logging/threshold', 'notice' ),
 				$config->get_setting( 'logging/options', array(
-					'extension'      => 'log',
-					'prefix'         => sprintf( 'trustedlogin-debug-%s-', wp_hash( $filename_hash_data ) ),
+					'extension' => 'log',
+					'filename'  => sprintf( 'trustedlogin-debug-%s-%s', wp_date( 'Y-m-d' ), wp_hash( $filename_hash_data ) )
 				) )
 			);
 
