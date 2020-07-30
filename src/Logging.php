@@ -8,6 +8,8 @@
  */
 namespace TrustedLogin;
 
+use Katzgrau\KLogger\Logger;
+
 class Logging {
 
 	/**
@@ -26,7 +28,7 @@ class Logging {
 	private $logging_enabled = false;
 
 	/**
-	 * @var \Katzgrau\KLogger\Logger|null|false Null: not instantiated; False: failed to instantiate.
+	 * @var Logger|null|false Null: not instantiated; False: failed to instantiate.
 	 */
 	private $klogger = null;
 
@@ -47,7 +49,7 @@ class Logging {
 	 *
 	 * @param Config $config
 	 *
-	 * @return false|\Katzgrau\KLogger\Logger
+	 * @return false|Logger
 	 */
 	private function setup_klogger( $config ) {
 
@@ -94,7 +96,7 @@ class Logging {
 
 			$options = wp_parse_args( $settings_options, $default_options );
 
-			$klogger = new \Katzgrau\KLogger\Logger (
+			$klogger = new Logger (
 				$logging_directory,
 				$config->get_setting( 'logging/threshold', 'notice' ),
 				$options
