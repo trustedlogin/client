@@ -1,6 +1,6 @@
 <?php
 /**
- * Class BruteForceChecker
+ * Class AccessKeyChecks
  *
  * @package TrustedLogin\Client
  *
@@ -10,7 +10,7 @@ namespace TrustedLogin;
 
 use \WP_Error;
 
-class BruteForceChecker {
+class AccessKeyChecks {
 
 	/**
 	 * @var string Namespace for the vendor
@@ -20,7 +20,7 @@ class BruteForceChecker {
 	/**
 	 * @var string The transient slug used for storing used accesskeys.
 	 */
-	private $transient_slug;
+	private $used_accesskey_transient;
 
 	/**
 	 * @var int The number of incorrect accesskeys that should trigger an anomaly alert.
@@ -36,7 +36,7 @@ class BruteForceChecker {
 
 		$this->ns = $config->ns();
 
-		$this->transient_slug  = 'tl-' . $this->ns . '-used-accesskeys';
+		$this->used_accesskey_transient = 'tl-' . $this->ns . '-used-accesskeys';
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
 
 	}
@@ -47,7 +47,7 @@ class BruteForceChecker {
 	 * @return array|false Returns an array of accesskeys if transient found and hasn't expired. Otherwise returns false.
 	 */
 	private function get_used_accesskeys( ){
-		return maybe_unserialize( get_transient( $this->transient_slug ) );
+		return maybe_unserialize( get_transient( $this->used_accesskey_transient ) );
 	}
 
 	/**
@@ -102,7 +102,11 @@ class BruteForceChecker {
 			return new WP_Error( 'param-not-array', '$accesskeys is not an array' );
 		}
 
-		delete_transient( $this->transient_slug );
+		delete_transient( $this->used_accesskey_transient );
+
+		set_transient( $this->used_accesskey_transient, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
+
+	}
 
 		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
 
