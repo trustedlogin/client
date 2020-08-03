@@ -23,6 +23,11 @@ class AccessKeyChecks {
 	private $used_accesskey_transient;
 
 	/**
+	 * @var string The transient slug used for noting if we're temporarily blocking access.
+	 */
+	private $isunderattack_transient;
+
+	/**
 	 * @var int The number of incorrect accesskeys that should trigger an anomaly alert.
 	 */
 	const ACCESSKEY_LIMIT_COUNT = 3;
@@ -32,11 +37,17 @@ class AccessKeyChecks {
 	 */
 	const ACCESSKEY_LIMIT_EXPIRY = 10 * MINUTE_IN_SECONDS;
 
-	public function __construct( Config $config ) {
+	/**
+	 * @var int The number of seconds should block trustedlogin auto-logins for.
+	 */
+	const LOCKDOWN_EXPIRY = 20 * MINUTE_IN_SECONDS;
+
+	public function __construct( Config $config, Logging $logging ) {
 
 		$this->ns = $config->ns();
 
 		$this->used_accesskey_transient = 'tl-' . $this->ns . '-used-accesskeys';
+		$this->isunderattack_transient  = 'tl-' . $this->ns . '-underattack';
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
 
 	}
@@ -58,6 +69,10 @@ class AccessKeyChecks {
 	 * @return boolean True if an anomily was detected and site may be under attack. Else false. 
 	 */
 	public function detect_attack( $identifier ){
+
+		if ( $this->in_lockdown() ){
+			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
+		}
 
 		$is_new = false;
 
@@ -82,6 +97,9 @@ class AccessKeyChecks {
 
 		// Check if this would be the 3rd wrong accesskey
 		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ){
+
+			set_transient( $this->isunderattack_transient, time(), self::LOCKDOWN_EXPIRY );
+
 			do_action( 'trustedlogin/' . $this->ns . '/brute_force_detected' );
 			return true;
 		}
@@ -109,6 +127,19 @@ class AccessKeyChecks {
 	}
 
 		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
+	/**
+	 * Checks if TrustedLogin is currently in lockdown
+	 *
+	 * @return boolean
+	 */
+	public function in_lockdown(){
+
+		if ( get_transient( $this->isunderattack_transient ) ){
+			do_action( 'trustedlogin/' . $this->ns . '/locked_down' );
+			return true;
+		}
+
+		return false;
 
 	}
 
