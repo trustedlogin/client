@@ -140,6 +140,99 @@ class AccessKeyChecks {
 
 		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
 	/**
+	 * Makes doubley-sure the TrustedLogin Server approves this support-agent login.
+	 *
+	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vertices. 
+	 * It is *only* ever triggered, as part of the auto-login sequence.
+	 * The session data synced will only ever be from authorized support teams, or potential attackers.
+	 * 
+	 * @param  string $identifier The accesskey being used.
+	 * 
+	 * @return true|WP_Error
+	 */
+	public function check_validity( $identifier ) {
+
+		if ( $this->in_lockdown() ) {
+			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
+		}
+
+		$endpoint = 'verify-identifier';
+
+		/**
+		 * This array contains information from the Vendor's support agent 
+		 *  as a means of protecting against potential breaches.
+		 *
+		 * No site user/visitor/admin data is sent back to TrustedLogin server.
+		 * 
+		 * @var array $body
+		 */
+		$body = array(
+			'identifier' => $identifier,
+			'timestamp'  => time(),
+			'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+			'user_ip'	 => $_SERVER['REMOTE_ADDR'],
+		);
+
+		$remote = new Remote( $this->config, $this->logging );
+		$api_response = $remote->send( $endpoint , $body, 'POST' );
+
+		if ( is_wp_error( $api_response ) ) {
+			return $api_response;
+		}
+
+		$response = $remote->handle_response( $api_response );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+	/**
+	 * Notifies the TrustedLogin server that a site may be under a possible bruteforce attack.
+	 *
+	 * @since  1.0.0
+	 * 
+	 * @return true|WP_Error If the notification was sent, returns true, otherwise WP_Error on issue.
+	 */
+	public function notify_trustedlogin() {
+
+		$endpoint = 'report-brute-force';
+
+		/**
+		 * This array contains identifiable information of either a malicious actor
+		 *  or the Vendor's support agent who is triggering the alert.
+		 *
+		 * No site user/visitor/admin data is sent back to TrustedLogin server.
+		 * 
+		 * @var array $body
+		 */
+		$body = array(
+			'timestamp'  => time(),
+			'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+			'user_ip'	 => $_SERVER['REMOTE_ADDR'],
+		);
+
+		$remote = new Remote( $this->config, $this->logging );
+		$api_response = $remote->send( $endpoint , $body, 'POST' );
+
+		if ( is_wp_error( $api_response ) ) {
+			return $api_response;
+		}
+
+		$response = $remote->handle_response( $api_response );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+	/**
 	 * Checks if TrustedLogin is currently in lockdown
 	 *
 	 * @return boolean
