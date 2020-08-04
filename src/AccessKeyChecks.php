@@ -63,7 +63,7 @@ class AccessKeyChecks {
 	 * 
 	 * @return array|false Returns an array of accesskeys if transient found and hasn't expired. Otherwise returns false.
 	 */
-	private function get_used_accesskeys( ){
+	private function get_used_accesskeys() {
 		return maybe_unserialize( get_transient( $this->used_accesskey_transient ) );
 	}
 
@@ -74,7 +74,7 @@ class AccessKeyChecks {
 	 * 
 	 * @return boolean True if an anomily was detected and site may be under attack. Else false. 
 	 */
-	public function detect_attack( $identifier ){
+	public function detect_attack( $identifier ) {
 
 		if ( $this->in_lockdown() ){
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
@@ -103,7 +103,7 @@ class AccessKeyChecks {
 		}
 
 		// Check if this would be the 3rd wrong accesskey
-		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ){
+		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ) {
 
 			set_transient( $this->isunderattack_transient, time(), self::LOCKDOWN_EXPIRY );
 
@@ -112,7 +112,9 @@ class AccessKeyChecks {
 			if ( is_wp_error( $notified ) ){
 				$this->logging->log( sprintf( 'Could not notify TrustedLogin (%s)', $notified->get_error_message() ), __METHOD__, 'error' );
 			}
+
 			do_action( 'trustedlogin/' . $this->ns . '/brute_force_detected' );
+
 			return true;
 		}
 
@@ -126,9 +128,9 @@ class AccessKeyChecks {
 	 * @param  array $accesskeys 
 	 * @return void
 	 */
-	private function save_used_accesskeys( $accesskeys ){
+	private function save_used_accesskeys( $accesskeys ) {
 
-		if ( ! is_array( $accesskeys ) ){
+		if ( ! is_array( $accesskeys ) ) {
 			return new WP_Error( 'param-not-array', '$accesskeys is not an array' );
 		}
 
@@ -138,7 +140,6 @@ class AccessKeyChecks {
 
 	}
 
-		set_transient( $this->transient_slug, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
 	/**
 	 * Makes doubley-sure the TrustedLogin Server approves this support-agent login.
 	 *
