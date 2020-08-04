@@ -18,6 +18,11 @@ class AccessKeyChecks {
 	private $ns;
 
 	/**
+	 * @var Logging $logging
+	 */
+	private $logging;
+
+	/**
 	 * @var string The transient slug used for storing used accesskeys.
 	 */
 	private $used_accesskey_transient;
@@ -46,9 +51,10 @@ class AccessKeyChecks {
 
 		$this->ns = $config->ns();
 
+		$this->logging = $logging;
+
 		$this->used_accesskey_transient = 'tl-' . $this->ns . '-used-accesskeys';
 		$this->isunderattack_transient  = 'tl-' . $this->ns . '-underattack';
-		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
 
 	}
 
@@ -71,6 +77,7 @@ class AccessKeyChecks {
 	public function detect_attack( $identifier ){
 
 		if ( $this->in_lockdown() ){
+			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
 		}
 
@@ -100,6 +107,11 @@ class AccessKeyChecks {
 
 			set_transient( $this->isunderattack_transient, time(), self::LOCKDOWN_EXPIRY );
 
+			$notified = $this->notify_trustedlogin();
+
+			if ( is_wp_error( $notified ) ){
+				$this->logging->log( sprintf( 'Could not notify TrustedLogin (%s)', $notified->get_error_message() ), __METHOD__, 'error' );
+			}
 			do_action( 'trustedlogin/' . $this->ns . '/brute_force_detected' );
 			return true;
 		}
