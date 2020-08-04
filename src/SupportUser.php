@@ -510,7 +510,7 @@ final class SupportUser {
 		$revoke_url = add_query_arg( array(
 			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
 			self::ID_QUERY_PARAM                 => $identifier,
-			'_wpnonce'                           => Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
+			'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
 		), $base_page );
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );

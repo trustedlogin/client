@@ -63,7 +63,14 @@ final class Config {
 			'enabled' => false,
 			'directory' => null,
 			'threshold' => 'debug',
-			'options' => array(),
+			'options' => array(
+				'extension'      => 'log',
+				'dateFormat'     => 'Y-m-d G:i:s.u',
+				'filename'       => null, // Overridden in Logging.php
+				'flushFrequency' => false,
+				'logFormat'      => false,
+				'appendContext'  => true,
+			),
 		)
 	);
 
