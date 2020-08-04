@@ -23,6 +23,11 @@ class AccessKeyChecks {
 	private $logging;
 
 	/**
+	 * @var Config $config
+	 */
+	private $config;
+
+	/**
 	 * @var string The transient slug used for storing used accesskeys.
 	 */
 	private $used_accesskey_transient;
@@ -52,6 +57,7 @@ class AccessKeyChecks {
 		$this->ns = $config->ns();
 
 		$this->logging = $logging;
+		$this->config  = $config;
 
 		$this->used_accesskey_transient = 'tl-' . $this->ns . '-used-accesskeys';
 		$this->isunderattack_transient  = 'tl-' . $this->ns . '-underattack';
