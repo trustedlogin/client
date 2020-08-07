@@ -229,8 +229,8 @@ class AccessKeyChecks {
 		 */
 		$body = array(
 			'timestamp'  => time(),
-			'user_agent' => $_SERVER['HTTP_USER_AGENT'],
-			'user_ip'	 => $_SERVER['REMOTE_ADDR'],
+			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
+			'user_ip'	 => isset( $_SERVER['REMOTE_ADDR'] ) ? wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '',
 		);
 
 		$remote = new Remote( $this->config, $this->logging );
