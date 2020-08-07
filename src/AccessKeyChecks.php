@@ -52,6 +52,16 @@ class AccessKeyChecks {
 	 */
 	const LOCKDOWN_EXPIRY = 72000; // 20 * MINUTE_IN_SECONDS;
 
+	/**
+	 * @var string TrustedLogin endpoint to notify brute-force activity
+	 */
+	const BRUTE_FORCE_ENDPOINT = 'report-brute-force';
+
+	/**
+	 * @var string TrustedLogin endpoint to verify valid support activity
+	 */
+	const VERIFY_SUPPORT_AGENT_ENDPOINT = 'verify-identifier';
+
 	public function __construct( Config $config, Logging $logging ) {
 
 		$this->ns = $config->ns();
@@ -172,8 +182,6 @@ class AccessKeyChecks {
 			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
 		}
 
-		$endpoint = 'verify-identifier';
-
 		/**
 		 * This array contains information from the Vendor's support agent
 		 *  as a means of protecting against potential breaches.
@@ -188,7 +196,8 @@ class AccessKeyChecks {
 		);
 
 		$remote = new Remote( $this->config, $this->logging );
-		$api_response = $remote->send( $endpoint , $body, 'POST' );
+
+		$api_response = $remote->send( self::VERIFY_SUPPORT_AGENT_ENDPOINT, $body, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
@@ -201,7 +210,6 @@ class AccessKeyChecks {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -212,8 +220,6 @@ class AccessKeyChecks {
 	 * @return true|WP_Error If the notification was sent, returns true, otherwise WP_Error on issue.
 	 */
 	public function notify_trustedlogin() {
-
-		$endpoint = 'report-brute-force';
 
 		/**
 		 * This array contains identifiable information of either a malicious actor
@@ -228,7 +234,7 @@ class AccessKeyChecks {
 		);
 
 		$remote = new Remote( $this->config, $this->logging );
-		$api_response = $remote->send( $endpoint , $body, 'POST' );
+		$api_response = $remote->send( self::BRUTE_FORCE_ENDPOINT , $body, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
