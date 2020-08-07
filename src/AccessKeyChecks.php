@@ -78,7 +78,7 @@ class AccessKeyChecks {
 	 *
 	 * @param  string $identifier The identifier provided via `SupportUser->maybe_login( $identifier );`
 	 *
-	 * @return boolean True if an anomily was detected and site may be under attack. Else false.
+	 * @return boolean|WP_Error True if an anomaly was detected and site may be under attack. Else false.
 	 */
 	public function detect_attack( $identifier ) {
 
@@ -129,10 +129,10 @@ class AccessKeyChecks {
 	}
 
 	/**
-	 * Updates the tranisent holding incorrect accesskeys
+	 * Updates the transient holding incorrect access keys
 	 *
-	 * @param  array $accesskeys
-	 * @return void
+	 * @param  array $access_keys
+	 * @return void|WP_Error
 	 */
 	private function save_used_accesskeys( $accesskeys ) {
 
@@ -147,13 +147,13 @@ class AccessKeyChecks {
 	}
 
 	/**
-	 * Makes doubley-sure the TrustedLogin Server approves this support-agent login.
+	 * Makes double-y sure the TrustedLogin Server approves this support-agent login.
 	 *
 	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vertices.
 	 * It is *only* ever triggered, as part of the auto-login sequence.
 	 * The session data synced will only ever be from authorized support teams, or potential attackers.
 	 *
-	 * @param  string $identifier The accesskey being used.
+	 * @param  string $identifier The access key being used.
 	 *
 	 * @return true|WP_Error
 	 */
@@ -211,8 +211,6 @@ class AccessKeyChecks {
 		 *  or the Vendor's support agent who is triggering the alert.
 		 *
 		 * No site user/visitor/admin data is sent back to TrustedLogin server.
-		 *
-		 * @var array $body
 		 */
 		$body = array(
 			'timestamp'  => time(),
