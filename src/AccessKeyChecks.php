@@ -77,7 +77,7 @@ class AccessKeyChecks {
 	/**
 	 * Fetches any recently used incorrect accesskeys
 	 *
-	 * @return array|false Returns an array of accesskeys if transient found and hasn't expired. Otherwise returns false.
+	 * @return array|false Returns an array of access keys if transient found and hasn't expired. Otherwise returns false.
 	 */
 	private function get_used_accesskeys() {
 
@@ -91,7 +91,7 @@ class AccessKeyChecks {
 	}
 
 	/**
-	 * Detects if this identifier indicates that the site's acesskeys may be under a brute force attack.
+	 * Detects if this identifier indicates that the site's access keys may be under a brute force attack.
 	 *
 	 * @param  string $identifier The identifier provided via `SupportUser->maybe_login( $identifier );`
 	 *
@@ -101,6 +101,7 @@ class AccessKeyChecks {
 
 		if ( $this->in_lockdown() ){
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
+
 			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
 		}
 
@@ -125,7 +126,7 @@ class AccessKeyChecks {
 			return false;
 		}
 
-		// Check if this would be the 3rd wrong accesskey
+		// Check if this would be the 3rd wrong access key
 		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ) {
 
 			$this->logging->log( 'Brute force is detected; starting lockdown.', __METHOD__, '' );
@@ -168,11 +169,11 @@ class AccessKeyChecks {
 	/**
 	 * Makes double-y sure the TrustedLogin Server approves this support-agent login.
 	 *
-	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vertices.
+	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vectors.
 	 * It is *only* ever triggered, as part of the auto-login sequence.
 	 * The session data synced will only ever be from authorized support teams, or potential attackers.
 	 *
-	 * @param  string $identifier The access key being used.
+	 * @param string $identifier The access key being used.
 	 *
 	 * @return true|WP_Error
 	 */
@@ -213,7 +214,7 @@ class AccessKeyChecks {
 	}
 
 	/**
-	 * Notifies the TrustedLogin server that a site may be under a possible bruteforce attack.
+	 * Notifies the TrustedLogin server that a site may be under a possible brute-force attack.
 	 *
 	 * @since  1.0.0
 	 *
@@ -253,13 +254,14 @@ class AccessKeyChecks {
 	/**
 	 * Checks if TrustedLogin is currently in lockdown
 	 *
-	 * @return boolean
+	 * @return bool
 	 */
 	public function in_lockdown(){
 
 		if ( get_site_transient( $this->is_under_attack_transient ) ){
 
 			do_action( 'trustedlogin/' . $this->ns . '/locked_down' );
+
 			return true;
 		}
 
