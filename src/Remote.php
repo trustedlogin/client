@@ -201,7 +201,6 @@ final class Remote {
 	 * @since 0.4.1
 	 *
 	 * @param array|WP_Error $api_response - the response from HTTP API
-	 * @param array|WP_Error $api_response The response from HTTP API
 	 * @param array $required_keys If the response JSON must have specific keys in it, pass them here
 	 *
 	 * @return array|WP_Error If successful response, returns array of JSON data. If failed, returns WP_Error.

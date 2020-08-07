@@ -66,7 +66,7 @@ class AccessKeyChecks {
 
 	/**
 	 * Fetches any recently used incorrect accesskeys
-	 * 
+	 *
 	 * @return array|false Returns an array of accesskeys if transient found and hasn't expired. Otherwise returns false.
 	 */
 	private function get_used_accesskeys() {
@@ -75,10 +75,10 @@ class AccessKeyChecks {
 
 	/**
 	 * Detects if this identifier indicates that the site's acesskeys may be under a brute force attack.
-	 * 
+	 *
 	 * @param  string $identifier The identifier provided via `SupportUser->maybe_login( $identifier );`
-	 * 
-	 * @return boolean True if an anomily was detected and site may be under attack. Else false. 
+	 *
+	 * @return boolean True if an anomily was detected and site may be under attack. Else false.
 	 */
 	public function detect_attack( $identifier ) {
 
@@ -124,14 +124,14 @@ class AccessKeyChecks {
 			return true;
 		}
 
-		return false; 
+		return false;
 
 	}
 
 	/**
-	 * Updates the tranisent holding incorrect accesskeys 
-	 * 
-	 * @param  array $accesskeys 
+	 * Updates the tranisent holding incorrect accesskeys
+	 *
+	 * @param  array $accesskeys
 	 * @return void
 	 */
 	private function save_used_accesskeys( $accesskeys ) {
@@ -149,12 +149,12 @@ class AccessKeyChecks {
 	/**
 	 * Makes doubley-sure the TrustedLogin Server approves this support-agent login.
 	 *
-	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vertices. 
+	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vertices.
 	 * It is *only* ever triggered, as part of the auto-login sequence.
 	 * The session data synced will only ever be from authorized support teams, or potential attackers.
-	 * 
+	 *
 	 * @param  string $identifier The accesskey being used.
-	 * 
+	 *
 	 * @return true|WP_Error
 	 */
 	public function check_validity( $identifier ) {
@@ -166,12 +166,10 @@ class AccessKeyChecks {
 		$endpoint = 'verify-identifier';
 
 		/**
-		 * This array contains information from the Vendor's support agent 
+		 * This array contains information from the Vendor's support agent
 		 *  as a means of protecting against potential breaches.
 		 *
 		 * No site user/visitor/admin data is sent back to TrustedLogin server.
-		 * 
-		 * @var array $body
 		 */
 		$body = array(
 			'identifier' => $identifier,
@@ -201,7 +199,7 @@ class AccessKeyChecks {
 	 * Notifies the TrustedLogin server that a site may be under a possible bruteforce attack.
 	 *
 	 * @since  1.0.0
-	 * 
+	 *
 	 * @return true|WP_Error If the notification was sent, returns true, otherwise WP_Error on issue.
 	 */
 	public function notify_trustedlogin() {
@@ -213,7 +211,7 @@ class AccessKeyChecks {
 		 *  or the Vendor's support agent who is triggering the alert.
 		 *
 		 * No site user/visitor/admin data is sent back to TrustedLogin server.
-		 * 
+		 *
 		 * @var array $body
 		 */
 		$body = array(
