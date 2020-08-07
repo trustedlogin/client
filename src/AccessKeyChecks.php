@@ -118,7 +118,9 @@ class AccessKeyChecks {
 		// Check if this would be the 3rd wrong accesskey
 		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ) {
 
-			set_transient( $this->is_under_attack_transient, time(), self::LOCKDOWN_EXPIRY );
+			$this->logging->log( 'Brute force is detected; starting lockdown.', __METHOD__, '' );
+
+			set_site_transient( $this->is_under_attack_transient, time(), self::LOCKDOWN_EXPIRY );
 
 			$notified = $this->notify_trustedlogin();
 
@@ -147,9 +149,9 @@ class AccessKeyChecks {
 			return new WP_Error( 'param-not-array', '$accesskeys is not an array' );
 		}
 
-		delete_transient( $this->used_accesskey_transient );
+		delete_site_transient( $this->used_accesskey_transient );
 
-		set_transient( $this->used_accesskey_transient, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
+		set_site_transient( $this->used_accesskey_transient, maybe_serialize( $accesskeys ), self::ACCESSKEY_LIMIT_EXPIRY );
 
 	}
 
@@ -249,7 +251,8 @@ class AccessKeyChecks {
 	 */
 	public function in_lockdown(){
 
-		if ( get_transient( $this->is_under_attack_transient ) ){
+		if ( get_site_transient( $this->is_under_attack_transient ) ){
+
 			do_action( 'trustedlogin/' . $this->ns . '/locked_down' );
 			return true;
 		}
