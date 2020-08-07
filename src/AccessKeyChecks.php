@@ -70,7 +70,14 @@ class AccessKeyChecks {
 	 * @return array|false Returns an array of accesskeys if transient found and hasn't expired. Otherwise returns false.
 	 */
 	private function get_used_accesskeys() {
-		return maybe_unserialize( get_transient( $this->used_accesskey_transient ) );
+
+		$access_keys = get_site_transient( $this->used_accesskey_transient );
+
+		if ( false === $access_keys ) {
+			return $access_keys;
+		}
+
+		return maybe_unserialize( $access_keys );
 	}
 
 	/**
