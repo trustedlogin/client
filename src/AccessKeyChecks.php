@@ -38,19 +38,19 @@ class AccessKeyChecks {
 	private $isunderattack_transient;
 
 	/**
-	 * @var int The number of incorrect accesskeys that should trigger an anomaly alert.
+	 * @var int The number of incorrect access keys that should trigger an anomaly alert.
 	 */
 	const ACCESSKEY_LIMIT_COUNT = 3;
 
 	/**
-	 * @var int The number of seconds we should keep incorrect accesskeys stored for.
+	 * @var int The number of seconds we should keep incorrect access keys stored for.
 	 */
-	const ACCESSKEY_LIMIT_EXPIRY = 10 * MINUTE_IN_SECONDS;
+	const ACCESSKEY_LIMIT_EXPIRY = 36000; // 10 * MINUTE_IN_SECONDS;
 
 	/**
 	 * @var int The number of seconds should block trustedlogin auto-logins for.
 	 */
-	const LOCKDOWN_EXPIRY = 20 * MINUTE_IN_SECONDS;
+	const LOCKDOWN_EXPIRY = 72000; // 20 * MINUTE_IN_SECONDS;
 
 	public function __construct( Config $config, Logging $logging ) {
 
