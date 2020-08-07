@@ -109,8 +109,8 @@ final class Encryption {
 	 */
 	public function get_public_key() {
 
-		// Already stored locally in options table
-		$public_key = get_site_option( $this->public_key_option, false );
+		// Already stored as transient
+		$public_key = get_site_transient( $this->public_key_option );
 
 		if ( $public_key ) {
 			// Documented below
@@ -127,8 +127,8 @@ final class Encryption {
 			return $remote_key;
 		}
 
-		// Store it in the DB
-		$saved = update_site_option( $this->public_key_option, $remote_key );
+		// Store it in the DB for ten minutes
+		$saved = set_site_transient( $this->public_key_option, $remote_key, 60 * 10 );
 
 		if ( ! $saved ) {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'notice' );
