@@ -228,7 +228,7 @@ final class SecurityChecks {
 	 *
 	 * @return true|WP_Error If the notification was sent, returns true, otherwise WP_Error on issue.
 	 */
-	public function report_lockdown() {
+	private function report_lockdown() {
 
 		/**
 		 * This array contains identifiable information of either a malicious actor
@@ -260,9 +260,7 @@ final class SecurityChecks {
 	}
 
 	/**
-	 * Locks down the site to new access by TrustedLogin identifiers
-	 *
-	 *
+	 * Locks down the site to new access by TrustedLogin identifiers, reports lockdown to TrustedLogin
 	 */
 	private function do_lockdown() {
 
@@ -271,7 +269,7 @@ final class SecurityChecks {
 		$transient_set = set_site_transient( $this->in_lockdown_transient, time(), self::LOCKDOWN_EXPIRY );
 
 		if ( ! $transient_set ) {
-			$this->logging->log( 'Could not set the "Under attack" transient.', __METHOD__, 'alert' );
+			$this->logging->log( 'Could not set the "in lockdown" transient.', __METHOD__, 'alert' );
 		}
 
 		$notified = $this->report_lockdown();
@@ -280,7 +278,10 @@ final class SecurityChecks {
 			$this->logging->log( sprintf( 'Could not notify TrustedLogin (%s)', $notified->get_error_message() ), __METHOD__, 'error' );
 		}
 
-		do_action( 'trustedlogin/' . $this->config->ns() . '/security/lockdown' );
+		/**
+		 * Runs after the site is locked down to access from the Vendor
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/lockdown/after' );
 	}
 
 	/**
