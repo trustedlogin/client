@@ -126,6 +126,12 @@ final class Config {
 			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must less than or equal to 30 days.' );
 		}
 
+		// This seems like a reasonable max limit on namespace length.
+		// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+		if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+		}
+
 		// TODO: Add namespace collision check?
 
 		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
