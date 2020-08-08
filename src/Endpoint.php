@@ -50,7 +50,7 @@ class Endpoint {
 
 		$this->config = $config;
 		$this->logging = $logging;
-		$this->support_user = new SupportUser( $this->config, $this->logging );
+		$this->support_user = new SupportUser( $config, $logging );
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -102,33 +102,35 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $identifier );
 
-		$security_checks = $this->check_security( $identifier );
+		$security_checks = new SecurityChecks( $this->config, $this->logging );
 
-		if ( is_wp_error( $security_checks ) ){
-			
+		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged
+		$is_verified = $security_checks->verify( $identifier );
+
+		if ( ! $is_verified || is_wp_error( $is_verified ) ){
+
 			/**
-			 * Runs after the support user fails to log in
+			 * Runs after the identifier fails security checks
 			 *
 			 * @param string $identifier Unique Identifier for support user.
-			 * @param WP_Error $logged_in The error encountered when logging-in.
+			 * @param WP_Error $is_verified The error encountered when verifying the identifier.
 			 */
-			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $identifier, $security_checks );
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $identifier, $is_verified );
 
 			return;
 		}
 
+		$is_logged_in = $this->support_user->maybe_login( $identifier );
 
-		$logged_in = $this->support_user->maybe_login( $identifier );
-
-		if ( is_wp_error( $logged_in ) ) {
+		if ( is_wp_error( $is_logged_in ) ) {
 
 			/**
 			 * Runs after the support user fails to log in
 			 *
 			 * @param string $identifier Unique Identifier for support user.
-			 * @param WP_Error $logged_in The error encountered when logging-in.
+			 * @param WP_Error $is_logged_in The error encountered when logging-in.
 			 */
-			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $identifier, $logged_in );
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $identifier, $is_logged_in );
 
 			return;
 		}
@@ -145,37 +147,6 @@ class Endpoint {
 		exit();
 	}
 
-	/**
-	 * Checks if a provided identifier is still valid. 
-	 * 
-	 * @param  string $identifier 
-	 * 
-	 * @return true|WP_Error If security checks pass, returns true. Otherwise returns WP_Error on issue.
-	 */
-	private function check_security( $identifier ){
-		
-		$access_key_checks = new AccessKeyChecks( $this->config, $this->logging );
-
-		if ( $access_key_checks->detect_attack( $identifier ) ){
-				
-			$this->logging->log( 
-				'Potential Brute Force attack detected with identifer: ' . esc_attr( $identifier ),
-				__METHOD__, 
-				'notice' 
-			);
-
-			return new WP_Error( 'brute-force-detected', 'Login aborted due to potential brute force detection.'); 
-		}
-
-		$validity = $access_key_checks->check_validity( $identifier );
-
-		if ( is_wp_error( $validity ) ){
-			return $validity;
-		}
-
-		return true;
-
-	}
 
 	/**
 	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::ID_QUERY_PARAM ] == {namespace}
