@@ -13,10 +13,9 @@ if ( ! defined('ABSPATH') ) {
 	exit;
 }
 
+use ArrayAccess;
 use \Exception;
 use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
 
 final class Config {
 
@@ -88,7 +87,7 @@ final class Config {
 	public function __construct( array $settings = array() ) {
 
 		if ( empty( $settings ) ) {
-			throw new \Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
+			throw new Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
 		}
 
 		$this->settings = $settings;
@@ -103,7 +102,7 @@ final class Config {
 	public function validate() {
 
 		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
-			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
+			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
 		}
 
 		$errors = array();
@@ -165,7 +164,7 @@ final class Config {
 			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
-			throw new \Exception( $exception_text, 3 );
+			throw new Exception( $exception_text, 3 );
 		}
 
 		return true;
@@ -339,7 +338,7 @@ final class Config {
 	 * @return null|string|mixed The value
 	 */
 	private function get_array_value( $array, $prop, $default = null ) {
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof \ArrayAccess ) ) {
+		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
 			return $default;
 		}
 
