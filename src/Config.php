@@ -29,36 +29,11 @@ final class Config {
 			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
 			'private_key' => null,
 		),
-		'decay' => WEEK_IN_SECONDS,
-		'role' => 'editor',
-		'paths' => array(
-			'css' => null,
-			'js'  => null, // Default is defined in get_default_settings()
-		),
 		'caps' => array(
-			'add' => array(
-			),
-			'remove' => array(
-			),
+			'add' => array(),
+			'remove' => array(),
 		),
-		'webhook_url' => null,
-		'vendor' => array(
-			'namespace' => null,
-			'title' => null,
-			'email' => null,
-			'website' => null,
-			'support_url' => null,
-			'display_name' => null,
-			'logo_url' => null,
-		),
-		'menu' => array(
-			'slug' => null,
-			'title' => null,
-			'priority' => null,
-		),
-		'reassign_posts' => true,
-		'registers_assets' => true,
-		'require_ssl' => true,
+		'decay' => WEEK_IN_SECONDS,
 		'logging' => array(
 			'enabled' => false,
 			'directory' => null,
@@ -71,7 +46,30 @@ final class Config {
 				'logFormat'      => false,
 				'appendContext'  => true,
 			),
-		)
+		),
+		'menu' => array(
+			'slug' => null,
+			'title' => null,
+			'priority' => null,
+		),
+		'paths' => array(
+			'css' => null,
+			'js'  => null, // Default is defined in get_default_settings()
+		),
+		'reassign_posts' => true,
+		'registers_assets' => true,
+		'require_ssl' => true,
+		'role' => 'editor',
+		'vendor' => array(
+			'namespace' => null,
+			'title' => null,
+			'email' => null,
+			'website' => null,
+			'support_url' => null,
+			'display_name' => null,
+			'logo_url' => null,
+		),
+		'webhook_url' => null,
 	);
 
 	/**
