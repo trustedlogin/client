@@ -101,6 +101,16 @@ final class SecurityChecks {
 
 		// Don't lock-down the site, since there could have been errors related to remote validation
 		if ( is_wp_error( $approved ) ){
+
+			$this->logging->log( 
+				sprintf( 
+					'There was an issue verifying identifier with TrustedLogin, aborting login. (%s)', 
+					$approved->get_error_message() 
+				),
+				__METHOD__, 
+				'error' 
+			);
+			
 			return $approved;
 		}
 
