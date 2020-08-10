@@ -142,6 +142,10 @@ final class SecurityChecks {
 
 		$used_accesskeys = get_site_transient( $this->used_accesskey_transient );
 
+		if ( false === $used_accesskeys ){
+			$used_accesskeys = array();
+		}
+
 		// This is a new access key
 		if ( ! in_array( $identifier, $used_accesskeys, true ) ) {
 
