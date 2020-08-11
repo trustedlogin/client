@@ -150,11 +150,7 @@ final class SecurityChecks {
 	 */
 	private function maybe_add_used_accesskey( $identifier = '' ) {
 
-		$used_accesskeys = get_site_transient( $this->used_accesskey_transient );
-
-		if ( false === $used_accesskeys ){
-			$used_accesskeys = array();
-		}
+		$used_accesskeys = (array) get_site_transient( $this->used_accesskey_transient );
 
 		// This is a new access key
 		if ( ! in_array( $identifier, $used_accesskeys, true ) ) {
