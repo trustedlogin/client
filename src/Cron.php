@@ -46,7 +46,7 @@ final class Cron {
 	 *
 	 */
 	public function init() {
-		add_action( $this->hook_name, array( $this, 'cron_revoke_access' ) );
+		add_action( $this->hook_name, array( $this, 'revoke' ) );
 	}
 
 	/**
