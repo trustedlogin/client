@@ -90,12 +90,6 @@ final class Envelope {
 			return $e_identifier;
 		}
 
-		$e_site_url = $this->encryption->encrypt( get_site_url(), $nonce, $e_keys->privateKey );
-
-		if( is_wp_error( $e_site_url ) ) {
-			return $e_site_url;
-		}
-
 		/**
 		 * Filter: Allows devs to assign custom meta_data to be synced via TrustedLogin.
 		 *
@@ -111,7 +105,7 @@ final class Envelope {
 		return array(
 			'secretId'   	  => $secret_id,
 			'identifier' 	  => $e_identifier,
-			'siteUrl'    	  => $e_site_url,
+			'siteUrl'    	  => get_site_url(),
 			'publicKey'  	  => $this->public_key,
 			'accessKey'  	  => $access_key,
 			'wpUserId'   	  => get_current_user_id(),
