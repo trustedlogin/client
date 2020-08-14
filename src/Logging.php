@@ -163,14 +163,14 @@ class Logging {
 		// Create the folder using wp_mkdir_p() instead of relying on KLogger
 		$folder_created = wp_mkdir_p( $log_dir );
 
-		// Something went wrong maping the directory
+		// Something went wrong mapping the directory
 		if( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
 
 		// Protect directory from being browsed by adding index.html
-		$this->prevent_directory_browsing( $logging_directory );
+		$this->prevent_directory_browsing( $log_dir );
 
 		// Make sure the new log directory can be written to
 		return $log_dir;
