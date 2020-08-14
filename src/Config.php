@@ -111,6 +111,10 @@ final class Config {
 			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
 		}
 
+		if ( 'https://www.example.com' === $this->settings['vendor']['website'] ) {
+			$errors[] = new WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
+		}
+
 		foreach( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
 			if ( ! isset( $this->settings['vendor'][ $required_vendor_field ] ) ) {
 				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
