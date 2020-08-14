@@ -95,9 +95,9 @@ final class Config {
 
 
 	/**
+	 * @return true|\WP_Error[]
 	 * @throws \Exception
 	 *
-	 * @return true|\WP_Error[]
 	 */
 	public function validate() {
 
@@ -115,7 +115,7 @@ final class Config {
 			$errors[] = new WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
 		}
 
-		foreach( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
+		foreach ( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
 			if ( ! isset( $this->settings['vendor'][ $required_vendor_field ] ) ) {
 				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
 			}
@@ -135,9 +135,9 @@ final class Config {
 
 		// TODO: Add namespace collision check?
 
-		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
+		foreach ( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, null, $this->settings );
-			$url = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
+			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 				$errors[] = new WP_Error(
 					'invalid_configuration',
@@ -151,7 +151,7 @@ final class Config {
 
 		$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
 
-		foreach( SupportRole::$prevented_caps as $invalid_cap ) {
+		foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
 			if ( array_key_exists( $invalid_cap, $added_caps ) ) {
 				$errors[] = new WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
 			}
@@ -179,7 +179,7 @@ final class Config {
 	 *
 	 * Note: This is a server timestamp, not a WordPress timestamp
 	 *
-	 * @param int  $decay_time If passed, override the `decay` setting
+	 * @param int $decay_time If passed, override the `decay` setting
 	 * @param bool $gmt Whether to use server time (false) or GMT time (true). Default: false.
 	 *
 	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
@@ -309,8 +309,8 @@ final class Config {
 	/**
 	 * Gets a specific property value within a multidimensional array.
 	 *
-	 * @param array  $array   The array to search in.
-	 * @param string $name    The name of the property to find.
+	 * @param array $array The array to search in.
+	 * @param string $name The name of the property to find.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
@@ -335,8 +335,8 @@ final class Config {
 	 *
 	 * Provide a default value if you want to return a specific value if the property is not set.
 	 *
-	 * @param array  $array   Array from which the property's value should be retrieved.
-	 * @param string $prop    Name of the property to be retrieved.
+	 * @param array $array Array from which the property's value should be retrieved.
+	 * @param string $prop Name of the property to be retrieved.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
@@ -364,9 +364,9 @@ final class Config {
 	 *
 	 * @return bool  Whether the vendor-defined SSL requirements are met.
 	 */
-	public function meets_ssl_requirement(){
+	public function meets_ssl_requirement() {
 
-		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ){
+		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ) {
 			return false;
 		}
 
