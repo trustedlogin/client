@@ -27,6 +27,7 @@ final class Config {
 		'auth' => array(
 			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
 			'private_key' => null,
+			'license_key' => null,
 		),
 		'caps' => array(
 			'add' => array(),
@@ -360,7 +361,7 @@ final class Config {
 	/**
 	 * Checks whether SSL requirements are met.
 	 *
-	 * @since 0,9.2
+	 * @since 0.9.2
 	 *
 	 * @return bool  Whether the vendor-defined SSL requirements are met.
 	 */
