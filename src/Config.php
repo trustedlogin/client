@@ -367,11 +367,18 @@ final class Config {
 	 */
 	public function meets_ssl_requirement() {
 
+		$return = true;
+
 		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ) {
-			return false;
+			$return = false;
 		}
 
-		return true;
+		/**
+		 * @internal Do not rely on this!!!!
+		 * @todo Remove this
+		 * @param bool $return Does this site meet the SSL requirement?
+		 */
+		return apply_filters( 'trustedlogin/' . $this->ns() . '/meets_ssl_requirement', $return );
 	}
 
 }
