@@ -79,7 +79,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
+		$this->logging = new \TrustedLogin\Logging( $this->config );
 
 		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
 
@@ -139,6 +139,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		unset( $_POST['vendor'] );
 		$this->_catchHandleAjax();
+		var_dump( $this->_last_response);
 		$this->assertContains( 'Vendor not defined', $this->_last_response );
 		$this->_last_response = '';
 

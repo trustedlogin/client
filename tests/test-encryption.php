@@ -92,8 +92,8 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 		$this->TrustedLoginReflection = new \ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
-		$this->remote = $this->_get_public_property( 'remote' )->getValue( $this->TrustedLogin );
+		$this->logging = new Logging( $this->config );
+		$this->remote = new Remote( $this->config, $this->logging );
 
 		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
 	}

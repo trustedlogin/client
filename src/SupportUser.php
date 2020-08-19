@@ -129,7 +129,7 @@ final class SupportUser {
 		if ( $user_id ) {
 			$this->logging->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
 
-			return new WP_Error( 'username_exists', sprintf( 'A user with the username %s already exists', $user_name ) );
+			return new WP_Error( 'username_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
 		}
 
 		$user_name   = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
