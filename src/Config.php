@@ -106,13 +106,14 @@ final class Config {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
 		}
 
+
 		$errors = array();
 
 		if ( ! isset( $this->settings['auth']['public_key'] ) ) {
 			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
 		}
 
-		if ( 'https://www.example.com' === $this->settings['vendor']['website'] ) {
+		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] ) {
 			$errors[] = new WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
 		}
 
@@ -122,15 +123,17 @@ final class Config {
 			}
 		}
 
-		if ( ! is_int( $this->settings['decay'] ) ) {
-			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
-		} elseif ( $this->settings['decay'] > MONTH_IN_SECONDS ) {
-			$errors[] = new WP_Error( 'invalid_configuration', 'Decay must less than or equal to 30 days.' );
+		if ( isset( $this->settings['decay'] ) ) {
+			if ( ! is_int( $this->settings['decay'] ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
+			} elseif ( $this->settings['decay'] > MONTH_IN_SECONDS ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must less than or equal to 30 days.' );
+			}
 		}
 
 		// This seems like a reasonable max limit on namespace length.
 		// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
-		if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
+		if ( isset( $this->settings['vendor']['namespace'] ) && strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
 			$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
 		}
 
@@ -296,12 +299,12 @@ final class Config {
 			$settings = $this->settings;
 		}
 
-		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			return $default;
-		}
-
 		if ( is_null( $default ) ) {
 			$default = $this->get_multi_array_value( $this->get_default_settings(), $key );
+		}
+
+		if ( empty( $settings ) || ! is_array( $settings ) ) {
+			return $default;
 		}
 
 		return $this->get_multi_array_value( $settings, $key, $default );
