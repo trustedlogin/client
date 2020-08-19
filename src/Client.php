@@ -166,8 +166,8 @@ final class Client {
 			return new WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
 		}
 
-		if ( false !== ( $user_id = $this->support_user->exists() ) ) {
-			// Extend the access by decay setting.
+		// If the user exists already, extend access
+		if ( $user_id = $this->support_user->exists() ) {
 
 			$return_data = $this->extend_access( $user_id );
 
@@ -176,7 +176,6 @@ final class Client {
 			}
 
 			return $return_data;
-
 		}
 
 		timer_start();
@@ -328,7 +327,6 @@ final class Client {
 			$this->logging->log( sprintf( 'Could not get identifier hash for existing support user account. %s (%s)', $identifier_hash->get_error_message(), $identifier_hash->get_error_code() ), __METHOD__, 'critical' );
 
 			return $identifier_hash;
-
 		}
 
 		$extended = $this->support_user->extend( $user_id, $identifier_hash, $expiration_timestamp, $this->cron );
