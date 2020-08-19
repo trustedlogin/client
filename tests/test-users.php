@@ -51,7 +51,6 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts' => 'Access the posts that you created',
-					'delete_users' => 'In order to manage the users that we thought you would want us to.',
 				),
 			),
 			'webhook_url' => 'https://www.trustedlogin.com/webhook-example/',
