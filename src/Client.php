@@ -102,15 +102,16 @@ final class Client {
 	 * @param Config $config
 	 * @param bool $init Whether to initialize everything on instantiation
 	 *
+	 * @returns Client|\Exception
 	 */
 	public function __construct( Config $config, $init = true ) {
 
 		try {
 			self::$valid_config = $config->validate();
-		} catch ( Exception $exception ) {
+		} catch ( \Exception $exception ) {
 			self::$valid_config = false;
 
-			return;
+			return $exception;
 		}
 
 		$this->config = $config;
