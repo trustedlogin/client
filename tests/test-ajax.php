@@ -138,7 +138,6 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		unset( $_POST['vendor'] );
 		$this->_catchHandleAjax();
-		var_dump( $this->_last_response);
 		$this->assertContains( 'Vendor not defined', $this->_last_response );
 		$this->_last_response = '';
 
@@ -182,7 +181,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		}
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'already exists', $this->_last_response, 'User should not have permission to create users.' );
+		$this->assertContains( 'already exists', $this->_last_response, sprintf( 'User %d should already have been created', $existing_user->ID ) );
 		$this->_last_response = '';
 		$this->assertTrue( wp_delete_user( $existing_user->ID ) ); // Cleanup
 		$this->_delete_all_support_users();
