@@ -231,6 +231,11 @@ final class Remote {
 				return new WP_Error( 'unauthenticated', __( 'Authentication failed.', 'trustedlogin' ), $response_body );
 				break;
 
+			// Unauthenticated
+			case 402:
+				return new WP_Error( 'account_error', __( 'TrustedLogin Account issue.', 'trustedlogin' ), $response_body );
+				break;
+
 			// Problem with Token
 			case 403:
 				return new WP_Error( 'invalid_token', __( 'Invalid tokens.', 'trustedlogin' ), $response_body );
