@@ -218,14 +218,16 @@ final class Remote {
 
 		$response_body = wp_remote_retrieve_body( $api_response );
 
+		if ( 204 === wp_remote_retrieve_response_code( $api_response ) ) {
+			return null;
+		}
+
 		if ( empty( $response_body ) ) {
 			$this->logging->log( "Response body not set: " . print_r( $response_body, true ), __METHOD__, 'error' );
-
 			return new WP_Error( 'missing_response_body', __( 'The response was invalid.', 'trustedlogin' ), $api_response );
 		}
 
 		switch ( wp_remote_retrieve_response_code( $api_response ) ) {
-
 			// Unauthenticated
 			case 401:
 				return new WP_Error( 'unauthenticated', __( 'Authentication failed.', 'trustedlogin' ), $response_body );
