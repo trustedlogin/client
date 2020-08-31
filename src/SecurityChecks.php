@@ -102,15 +102,15 @@ final class SecurityChecks {
 		// Don't lock-down the site, since there could have been errors related to remote validation
 		if ( is_wp_error( $approved ) ){
 
-			$this->logging->log( 
-				sprintf( 
-					'There was an issue verifying identifier with TrustedLogin, aborting login. (%s)', 
-					$approved->get_error_message() 
+			$this->logging->log(
+				sprintf(
+					'There was an issue verifying identifier with TrustedLogin, aborting login. (%s)',
+					$approved->get_error_message()
 				),
-				__METHOD__, 
-				'error' 
+				__METHOD__,
+				'error'
 			);
-			
+
 			return $approved;
 		}
 
@@ -183,7 +183,9 @@ final class SecurityChecks {
 
 		$ip = trim( $ip );
 
-		$ip = filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE );
+		if ( ! defined('TL_DOING_TESTS') ) {
+			$ip = filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE );
+		}
 
 		return (string) $ip;
 	}
