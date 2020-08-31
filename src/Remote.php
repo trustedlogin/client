@@ -224,6 +224,7 @@ final class Remote {
 
 		if ( empty( $response_body ) ) {
 			$this->logging->log( "Response body not set: " . print_r( $response_body, true ), __METHOD__, 'error' );
+
 			return new WP_Error( 'missing_response_body', __( 'The response was invalid.', 'trustedlogin' ), $api_response );
 		}
 
