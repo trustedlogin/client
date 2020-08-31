@@ -228,6 +228,7 @@ final class Remote {
 		}
 
 		switch ( wp_remote_retrieve_response_code( $api_response ) ) {
+
 			// Unauthenticated
 			case 401:
 				return new WP_Error( 'unauthenticated', __( 'Authentication failed.', 'trustedlogin' ), $response_body );
