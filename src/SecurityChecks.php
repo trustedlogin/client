@@ -301,9 +301,26 @@ final class SecurityChecks {
 	/**
 	 * Checks if TrustedLogin is currently in lockdown
 	 *
-	 * @return bool
+	 * To bypass lockdown checks, add a constant to the site's wp-config.php file formatted like:
+	 *
+	 * @example
+	 * <pre>
+	 * TRUSTEDLOGIN_TESTING_EXAMPLE
+	 * </pre>
+	 *
+	 * Where `EXAMPLE` is the upper-cased namespace.
+	 *
+	 * @return int|false Int: in lockdown. The value returned is the timestamp when lockdown ends. False: not in lockdown, or overridden by a constant.
 	 */
 	public function in_lockdown(){
+
+		// See method documentation
+		$constant_name = 'TRUSTEDLOGIN_TESTING_' . strtoupper( $this->config->ns() );
+
+		if ( defined( $constant_name ) && constant( $constant_name ) ) {
+			return false;
+		}
+
 		return get_site_transient( $this->in_lockdown_transient );
 	}
 
