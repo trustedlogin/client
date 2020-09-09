@@ -89,6 +89,10 @@ class Endpoint {
 	 */
 	public function maybe_login_support() {
 
+		if ( is_user_logged_in() ) {
+			return;
+		}
+
 		$identifier = $this->get_query_var();
 
 		if ( empty( $identifier ) ) {
