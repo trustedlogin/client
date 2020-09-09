@@ -102,8 +102,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'vendor' => array(
 				'namespace' => 'jonesbeach',
 				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
+				'display_name' => null,
 				'email' => 'beach@example.com',
 				'website' => 'https://example.com',
 				'support_url' => 'https://example.com',
@@ -177,8 +176,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'vendor' => array(
 				'namespace' => 'jones-party',
 				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
+				'display_name' => null,
 				'email' => 'beach@example.com',
 				'website' => 'https://example.com',
 				'support_url' => 'https://asdasdsd.example.com/support/',
