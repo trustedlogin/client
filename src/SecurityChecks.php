@@ -299,25 +299,51 @@ final class SecurityChecks {
 	}
 
 	/**
+	 * Is this site in local development mode?
+	 *
+	 * @uses \wp_get_environment_type() If available, used to fetch site's development environment
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/wp_get_environment_type/
+	 *
+	 * To bypass lockdown checks, set a WordPress environment to `local` or `development`. Alternately, you may
+	 * add a constant to the site's wp-config.php file formatted as `TRUSTEDLOGIN_TESTING_{EXAMPLE}` where
+	 * `{EXAMPLE}` is replaced with the project's upper-cased namespace.
+	 *
+	 * @return bool True: site is in local or development environment. False: site is live.
+	 */
+	private function in_local_development() {
+
+		$constant_name = 'TRUSTEDLOGIN_TESTING_' . strtoupper( $this->config->ns() );
+
+		if ( defined( $constant_name ) && constant( $constant_name ) ) {
+			return true;
+		}
+
+		if ( ! function_exists( 'wp_get_environment_type' ) ) {
+			return false;
+		}
+
+		switch ( wp_get_environment_type() ) {
+			case 'local':
+			case 'development':
+				return true;
+				break;
+			case 'staging':
+			case 'production':
+			default:
+		}
+
+		return false;
+	}
+
+	/**
 	 * Checks if TrustedLogin is currently in lockdown
-	 *
-	 * To bypass lockdown checks, add a constant to the site's wp-config.php file formatted like:
-	 *
-	 * @example
-	 * <pre>
-	 * TRUSTEDLOGIN_TESTING_EXAMPLE
-	 * </pre>
-	 *
-	 * Where `EXAMPLE` is the upper-cased namespace.
 	 *
 	 * @return int|false Int: in lockdown. The value returned is the timestamp when lockdown ends. False: not in lockdown, or overridden by a constant.
 	 */
 	public function in_lockdown(){
 
-		// See method documentation
-		$constant_name = 'TRUSTEDLOGIN_TESTING_' . strtoupper( $this->config->ns() );
-
-		if ( defined( $constant_name ) && constant( $constant_name ) ) {
+		if ( $this->in_local_development() ) {
 			return false;
 		}
 
