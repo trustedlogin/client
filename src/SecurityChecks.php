@@ -126,6 +126,10 @@ final class SecurityChecks {
 	 */
 	private function check_brute_force( $identifier ) {
 
+		if ( $this->in_local_development() ) {
+			return true;
+		}
+
 		$used_accesskeys = $this->maybe_add_used_accesskey( $identifier );
 
 		// Is the number of attempted accesses below the lockdown limit?
