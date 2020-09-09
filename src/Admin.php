@@ -798,7 +798,7 @@ final class Admin {
 						__( 'Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin' ),
 						$vendor_title
 					),
-					'revoke_link' => esc_url( add_query_arg( array( 'revoke-tl' => $this->config->ns() ), admin_url( 'users.php' ) ) ),
+					'revoke_link' => esc_url( add_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns() ), admin_url() ) ),
 				),
 				'error404' => array(
 					'title' => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
