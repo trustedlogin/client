@@ -124,7 +124,7 @@ $color-red: #c0461e !default;
 			color: $color-555;
 
 			.dashicons {
-				margin-right: $gutter-width / 2;
+				margin-right: $gutter-width;
 				vertical-align: middle;
 			}
 			.dashicons-yes-alt {
@@ -133,11 +133,17 @@ $color-red: #c0461e !default;
 			.dashicons-no {
 				color: $color-red;
 			}
+
+			.code {
+				display: inline-block;
+				margin-bottom: .25em;
+				font-size: 13px;
+			}
 			small {
 				display: block;
 				line-height: 1.375;
-				font-size: 13px;
-				margin-left: $small-icon-size + ( $gutter-width / 2 );
+				font-size: 14px;
+				margin-left: $small-icon-size + $gutter-width;
 			}
 		}
 
