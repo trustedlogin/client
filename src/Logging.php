@@ -303,7 +303,7 @@ class Logging {
 			$data = array( $data );
 		}
 
-		$this->klogger->{$level}( $log_message, $data );
+		$this->klogger->{$level}( $log_message, (array) $data );
 	}
 
 }
