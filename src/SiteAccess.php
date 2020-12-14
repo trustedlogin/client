@@ -105,15 +105,20 @@ class SiteAccess {
 	 *
 	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
 	 * @param string $identifier The unique identifier for the WP_User created {@see SiteAccess::create_hash}
+	 * @param string $action     The type of sync this is. Options can be 'create', 'extend'.
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
 	 */
-	public function create_secret( $secret_id, $identifier ) {
+	public function sync_secret( $secret_id, $identifier, $action = 'create' ) {
 
 
 		$logging    = new Logging( $this->config );
 		$remote     = new Remote( $this->config, $logging );
 		$encryption = new Encryption( $this->config, $remote, $logging );
+
+		if ( ! in_array( $action, array( 'create', 'extend' ) ) ){
+			return new WP_Error( 'param_error', __( 'Unexpected action value', 'trustedlogin' ) );
+		}
 
 		// Ping SaaS and get back tokens.
 		$envelope = new Envelope( $this->config, $encryption );
@@ -146,9 +151,9 @@ class SiteAccess {
 			return new WP_Error( 'sync_error', __( 'Could not sync to TrustedLogin server', 'trustedlogin' ) );
 		}
 
-		do_action( 'trustedlogin/' . $this->config->ns() . '/secret/created', array(
+		do_action( 'trustedlogin/' . $this->config->ns() . '/secret/synced', array(
 			'url'    => get_site_url(),
-			'action' => 'create',
+			'action' => $action,
 		) );
 
 		return true;

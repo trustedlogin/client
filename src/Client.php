@@ -272,7 +272,7 @@ final class Client {
 
 		try {
 
-			$created = $this->site_access->create_secret( $secret_id, $identifier_hash );
+			$created = $this->site_access->sync_secret( $secret_id, $identifier_hash, 'create' );
 
 		} catch ( Exception $e ) {
 
