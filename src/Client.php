@@ -169,13 +169,8 @@ final class Client {
 		// If the user exists already, extend access
 		if ( $user_id = $this->support_user->exists() ) {
 
-			$return_data = $this->extend_access( $user_id );
+			return $this->extend_access( $user_id );
 
-			if ( is_wp_error( $return_data ) ) {
-				$return_data->add_data( array( 'error_code' => 501 ) );
-			}
-
-			return $return_data;
 		}
 
 		timer_start();
@@ -249,6 +244,7 @@ final class Client {
 		$timing_local = timer_stop( 0, 5 );
 
 		$return_data = array(
+			'type'       => 'new',
 			'site_url'   => get_site_url(),
 			'endpoint'   => $endpoint_hash,
 			'identifier' => $identifier_hash,
@@ -335,14 +331,23 @@ final class Client {
 			return $extended;
 		}
 
-		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
+		$secret_id     = $this->endpoint->generate_secret_id( $identifier_hash );
+
+		if ( is_wp_error( $secret_id ) ) {
+
+			wp_delete_user( $support_user_id );
+
+			$did_setup->add_data( array( 'error_code' => 500 ) );
+
+			return $secret_id;
+		}
 
 		$timing_local = timer_stop( 0, 5 );
 
 		$return_data = array(
+			'type'       => 'extend',
 			'site_url'   => get_site_url(),
 			'identifier' => $identifier_hash,
-			'endpoint'   => $endpoint_hash,
 			'user_id'    => $user_id,
 			'expiry'     => $expiration_timestamp,
 			'is_ssl'     => is_ssl(),
@@ -351,6 +356,42 @@ final class Client {
 				'remote' => null,
 			),
 		);
+
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			// TODO: If fails test, return WP_Error instead
+			// TODO: Write test for this
+			return new WP_Error( 'fails_ssl_requirement', __( 'TODO', 'trustedlogin' ) );
+		}
+
+		timer_start();
+
+		try {
+
+			$updated = $this->site_access->sync_secret( $secret_id, $identifier_hash, 'extend' );
+
+		} catch ( Exception $e ) {
+
+			$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
+
+			$this->logging->log( 'There was an error updating TrustedLogin servers.', __METHOD__, 'error', $e );
+
+			wp_delete_user( $support_user_id );
+
+			return $exception_error;
+		}
+
+		if ( is_wp_error( $updated ) ) {
+
+			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $updated->get_error_code(), $updated->get_error_message() ), __METHOD__, 'error', $updated->get_error_data() );
+
+			$updated->add_data( array( 'status_code' => 503 ) );
+
+			wp_delete_user( $support_user_id );
+
+			return $updated;
+		}
+
+		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array(
 			'url'    => get_site_url(),
