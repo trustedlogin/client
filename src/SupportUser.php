@@ -429,16 +429,22 @@ final class SupportUser {
 	/**
 	 * Updates the scheduled cron job to auto-revoke and updates the Support User's meta.
 	 *
-	 * @param int $user_id ID of generated support user
-	 * @param string $identifier_hash Unique ID used by
-	 * @param int $decay_timestamp Timestamp when user will be removed
+	 * @param integer			 $user_id 		   ID of generated support user
+	 * @param string 			 $identifier_hash  Unique ID used by
+	 * @param integer            $decay_timestamp  Timestamp when user will be removed. Throws error if null/empty.
+	 * @param TrustedLogin\Cron  $cron 			   Optional. The Cron object for hadling scheduling. Defaults to null.
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
 	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
 
-		if ( ! $expiration_timestamp ) {
-			return new WP_Error( 'no-action', 'Error extending Support User access' );
+		if ( ! $user_id || ! $identifier_hash || ! $expiration_timestamp ) {
+			return new WP_Error( 'no-action', 'Error extending Support User access, missing required parameter.' );
+		}
+
+		if ( ! $cron ){
+			// Avoid a Fatal error if `$cron` parameter is not provided.
+			$cron = new Cron( $this->config, $this->logging )
 		}
 
 		$rescheduled = $cron->reschedule( $expiration_timestamp, $identifier_hash );
@@ -448,7 +454,8 @@ final class SupportUser {
 			return true;
 		}
 
-		// TODO: Return error if the rescheduled cron?
+		return new WP_Error( 'extend-failed', 'Error rescheduling cron task' );
+
 	}
 
 	/**
