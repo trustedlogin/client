@@ -444,7 +444,7 @@ final class SupportUser {
 
 		if ( ! $cron ){
 			// Avoid a Fatal error if `$cron` parameter is not provided.
-			$cron = new Cron( $this->config, $this->logging )
+			$cron = new Cron( $this->config, $this->logging );
 		}
 
 		$rescheduled = $cron->reschedule( $expiration_timestamp, $identifier_hash );
