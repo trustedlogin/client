@@ -972,7 +972,7 @@ final class Admin {
 
 		?>
 		<div class="notice notice-success is-dismissible">
-			<p><strong><?php echo esc_html( sprintf( __( '%s access revoked. ', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></strong></p>
+			<h3><?php echo esc_html( sprintf( __( '%s access revoked.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></h3>
 		</div>
 		<?php
 	}
