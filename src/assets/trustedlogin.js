@@ -167,7 +167,7 @@
 
 				if ( response.success && typeof response.data == 'object' ) {
 					if ( response.data.is_ssl ){
-						location.reload();
+						location.href = tl_obj.query_string;
 					} else {
 						/**
 						 * TODO: Will be replaced with error message

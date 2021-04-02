@@ -593,6 +593,7 @@ final class Admin {
 			'lang'     => $this->translations(),
 			'debug'    => $this->logging->is_enabled(),
 			'selector' => '.button-trustedlogin-' . $this->config->ns(),
+			'query_string' => esc_url( remove_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM, '_wpnonce' ) ) ),
 		);
 
 		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor
