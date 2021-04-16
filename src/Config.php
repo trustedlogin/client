@@ -136,8 +136,11 @@ final class Config {
 			$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
 		}
 
-		// TODO: Add namespace collision check?
+		if ( isset( $this->settings['vendor'][ 'email' ] ) && ! filter_var( $this->settings['vendor'][ 'email' ], FILTER_VALIDATE_EMAIL ) ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
+		}
 
+		// TODO: Add namespace collision check?
 		foreach ( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, null, $this->settings );
 			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
