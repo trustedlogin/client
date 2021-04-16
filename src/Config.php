@@ -26,7 +26,6 @@ final class Config {
 	private $default_settings = array(
 		'auth' => array(
 			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
-			'private_key' => null,
 			'license_key' => null,
 		),
 		'caps' => array(
@@ -57,7 +56,6 @@ final class Config {
 			'js'  => null, // Default is defined in get_default_settings()
 		),
 		'reassign_posts' => true,
-		'registers_assets' => true,
 		'require_ssl' => true,
 		'role' => 'editor',
 		'vendor' => array(
