@@ -83,7 +83,7 @@ if ( class_exists( '\ProBlockBuilder\TrustedLogin\Client') ) {
 | `menu/position` | `int` | The `$position` argument passed to the [`add_submenu_page()` function](https://developer.wordpress.org/reference/functions/add_submenu_page/) function. | `null` | |
 | `logging/enabled` | `bool` | If enabled, logs are stored in `wp-uploads/trustedlogin-logs` | `false` | |
 | `logging/directory` | `string` | Override the directory where logs are stored. | `''` _(empty string)_ | |
-| `logging/threshold` | `bool` | Define what [PSR log level](https://www.php-fig.org/psr/psr-3/#5-psrlogloglevel) should be logged. The default level is `debug`, which means that if enabled, everything will be logged.| `debug` | |
+| `logging/threshold` | `bool` | Define what [PSR log level](https://www.php-fig.org/psr/psr-3/#5-psrlogloglevel) should be logged. To log everything, set the threshold to `debug`.| `notice` | |
 | `logging/options` | `array` | [KLogger Additional Options](https://github.com/katzgrau/klogger#additional-options) array | `['extension' => 'log', 'dateFormat' => 'Y-m-d G:i:s.u', 'filename' => null, 'flushFrequency' => false, 'logFormat' => false, 'appendContext' => true ]` ||
 | `paths/css` | `string` | Where to load CSS assets from. By default, the bundled TrustedLogin CSS file will be used. Must be local to comply with WordPress.org. | `{plugin_dir_url() to Config.php}/assets/trustedlogin.css` | |
 | `paths/js` | `string` | Where to load JS assets from. By default, the bundled TrustedLogin JS file will be used. Must be local to comply with WordPress.org. | `{plugin_dir_url() to Config.php}/assets/trustedlogin.js` | |

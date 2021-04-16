@@ -37,7 +37,7 @@ final class Config {
 		'logging' => array(
 			'enabled' => false,
 			'directory' => null,
-			'threshold' => 'debug',
+			'threshold' => 'notice',
 			'options' => array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
