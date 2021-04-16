@@ -168,9 +168,7 @@ final class Client {
 
 		// If the user exists already, extend access
 		if ( $user_id = $this->support_user->exists() ) {
-
 			return $this->extend_access( $user_id );
-
 		}
 
 		timer_start();
@@ -331,7 +329,7 @@ final class Client {
 			return $extended;
 		}
 
-		$secret_id     = $this->endpoint->generate_secret_id( $identifier_hash );
+		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
 

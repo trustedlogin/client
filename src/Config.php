@@ -21,6 +21,7 @@ final class Config {
 
 	/**
 	 * @var array Default settings values
+	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 * @since 0.9.6
 	 */
 	private $default_settings = array(

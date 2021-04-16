@@ -125,6 +125,8 @@ final class SupportUser {
 	 *
 	 * @since 0.1.0
 	 *
+	 * @uses wp_insert_user()
+	 *
 	 * @return int|WP_Error - Array with login response information if created, or WP_Error object if there was an issue.
 	 */
 	public function create() {
@@ -384,7 +386,7 @@ final class SupportUser {
 			return null;
 		}
 
-		// TODO: Filter here?
+		// TODO: Add a filter to modify who gets auto-reassigned
 		$admins = get_users( array(
 			'role'    => 'administrator',
 			'orderby' => 'registered',
@@ -435,20 +437,20 @@ final class SupportUser {
 	/**
 	 * Updates the scheduled cron job to auto-revoke and updates the Support User's meta.
 	 *
-	 * @param integer			 $user_id 		   ID of generated support user
-	 * @param string 			 $identifier_hash  Unique ID used by
-	 * @param integer            $decay_timestamp  Timestamp when user will be removed. Throws error if null/empty.
-	 * @param TrustedLogin\Cron  $cron 			   Optional. The Cron object for hadling scheduling. Defaults to null.
+	 * @param int $user_id ID of generated support user.
+	 * @param string $identifier_hash Unique ID used by.
+	 * @param int $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
+	 * @param Cron|null $cron Optional. The Cron object for handling scheduling. Defaults to null.
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
-	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
+	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, $cron = null ) {
 
 		if ( ! $user_id || ! $identifier_hash || ! $expiration_timestamp ) {
 			return new WP_Error( 'no-action', 'Error extending Support User access, missing required parameter.' );
 		}
 
-		if ( ! $cron ){
+		if ( ! $cron || ! $cron instanceof Cron ){
 			// Avoid a Fatal error if `$cron` parameter is not provided.
 			$cron = new Cron( $this->config, $this->logging );
 		}
