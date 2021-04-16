@@ -296,7 +296,7 @@ final class Client {
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array(
 			'url'    => get_site_url(),
-			'action' => 'create'
+			'action' => 'created'
 		) );
 
 		return $return_data;
