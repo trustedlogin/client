@@ -50,6 +50,7 @@ final class Config {
 			'slug' => null,
 			'title' => null,
 			'priority' => null,
+			'position' => null,
 		),
 		'paths' => array(
 			'css' => null,
