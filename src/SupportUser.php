@@ -106,12 +106,18 @@ final class SupportUser {
 	 */
 	public function exists() {
 
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+		$args = array(
+			'role'         => $this->role->get_name(),
+			'number'       => 1,
+			'meta_key'     => $this->identifier_meta_key,
+			'meta_value'   => '',
+			'meta_compare' => 'EXISTS',
+			'fields'       => 'ID',
+		);
 
-		$user_id = username_exists( $user_name );
+		$user_ids = get_users( $args );
 
-		return $user_id;
-
+		return empty( $user_ids ) ? false : (int) $user_ids[0];
 	}
 
 	/**
@@ -129,7 +135,7 @@ final class SupportUser {
 		if ( $user_id ) {
 			$this->logging->log( 'Support User not created; already exists: User #' . $user_id, __METHOD__, 'notice' );
 
-			return new WP_Error( 'username_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
+			return new WP_Error( 'user_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
 		}
 
 		$user_name   = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
