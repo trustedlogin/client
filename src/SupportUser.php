@@ -227,12 +227,18 @@ final class SupportUser {
 	private function login( WP_User $support_user ) {
 
 		if ( ! $support_user->exists() ) {
+
+			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'warning' );
+
 			return;
 		}
 
 		wp_set_current_user( $support_user->ID, $support_user->user_login );
 		wp_set_auth_cookie( $support_user->ID );
+
 		do_action( 'wp_login', $support_user->user_login, $support_user );
+
+		$this->logging->log( sprintf( 'Support User #%d logged in', $support_user->ID ), __METHOD__, 'notice' );
 	}
 
 	/**
