@@ -42,7 +42,7 @@ final class Envelope {
 	/**
 	 * Envelope constructor.
 	 *
-	 * @param string $public_key
+	 * @param Config $config
 	 * @param Encryption $encryption
 	 */
 	public function __construct( Config $config, Encryption $encryption ) {

@@ -132,7 +132,7 @@ final class Encryption {
 			return $remote_key;
 		}
 
-		// Store it in the DB for ten minutes
+		// Store Vendor public key in the DB for ten minutes
 		$saved = set_site_transient( $this->public_key_option, $remote_key, 60 * 10 );
 
 		if ( ! $saved ) {
@@ -185,11 +185,11 @@ final class Encryption {
 		$response_json = $this->remote->handle_response( $response, array( 'publicKey' ) );
 
 		if ( is_wp_error( $response_json ) ) {
-			
+
 			if ( 'not_found' == $response_json->get_error_code() ){
 				return new WP_Error( 'not_found', __( 'Encryption key could not be fetched, Vendor site returned 404.', 'trustedlogin' ) );
 			}
-			
+
 			return $response_json;
 		}
 
