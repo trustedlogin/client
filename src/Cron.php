@@ -106,8 +106,8 @@ final class Cron {
 
 		$this->logging->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$this->support_user->delete( $identifier_hash );
+		$SupportUser = new SupportUser( $this->config, $this->logging );
 
-		$this->endpoint->delete();
+		$SupportUser->delete( $identifier_hash, true, true );
 	}
 }
