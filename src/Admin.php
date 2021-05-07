@@ -177,7 +177,7 @@ final class Admin {
 		$admin_bar->add_menu( array(
 			'id'    => 'tl-' . $this->config->ns() . '-revoke',
 			'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
-			'href'  => $this->support_user->get_revoke_url( 'all' ),
+			'href'  => $this->support_user->get_revoke_url( 'all', true ),
 			'meta'  => array(
 				'title' => esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
 				'class' => 'tl-destroy-session',
