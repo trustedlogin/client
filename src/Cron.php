@@ -84,7 +84,7 @@ final class Cron {
 
 		$unschedule_expiration = wp_unschedule_hook( $this->hook_name );
 
-		if ( ! $unschedule_expiration ){
+		if ( false === $unschedule_expiration ){
 			$this->logging->log( sprintf( 'Could not unschedule event for %s', $this->hook_name ), __METHOD__, 'error' );
 			return false;
 		}
