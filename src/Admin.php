@@ -991,6 +991,7 @@ final class Admin {
 		?>
 		<div class="notice notice-success is-dismissible">
 			<h3><?php echo esc_html( sprintf( __( '%s access revoked.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></h3>
+			<p><?php echo esc_html__( 'You may safely close this window.', 'trustedlogin' ); ?></p>
 		</div>
 		<?php
 	}
