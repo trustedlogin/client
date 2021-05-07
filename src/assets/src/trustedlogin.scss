@@ -1,7 +1,6 @@
 @import "namespace"; /** This is overwritten by the Composer.json script. */
 @import "auth";
 @import "buttons";
-@import "toolbar";
 
 #trustedlogin .hidden {
 	display: none;
