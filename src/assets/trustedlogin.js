@@ -39,7 +39,11 @@
 					settings.content = tl_obj.lang.status.error409.content;
 					break;
 
-				case 503: /** problem syncing to SaaS */
+				case 500: /** problems syncing to SaaS */
+				case 501:
+				case 502:
+				case 503:
+				case 504:
 				settings.title = tl_obj.lang.status.error.title;
 					settings.content = tl_obj.lang.status.error.content;
 					settings.icon = 'dashicons dashicons-external';

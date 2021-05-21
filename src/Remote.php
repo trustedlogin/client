@@ -233,10 +233,15 @@ final class Remote {
 			case 404:
 				return new WP_Error( 'not_found', __( 'The TrustedLogin vendor was not found.', 'trustedlogin' ), $api_response );
 
+			// The site is a teapot.
+			case 418:
+				return new WP_Error( 'teapot', '🫖', $api_response );
+
 			// Server offline
 			case 500:
+			case 503:
 			case 'http_request_failed':
-				return new WP_Error( 'unavailable', __( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
+				return new WP_Error( 'unavailable', __( 'The TrustedLogin site is not currently online.', 'trustedlogin' ), $api_response );
 
 			// Server error
 			case 501:
