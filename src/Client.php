@@ -234,7 +234,7 @@ final class Client {
 
 			wp_delete_user( $support_user_id );
 
-			$did_setup->add_data( array( 'error_code' => 500 ) );
+			$secret_id->add_data( array( 'error_code' => 500 ) );
 
 			return $secret_id;
 		}
@@ -335,7 +335,7 @@ final class Client {
 
 			wp_delete_user( $support_user_id );
 
-			$did_setup->add_data( array( 'error_code' => 500 ) );
+			$secret_id->add_data( array( 'error_code' => 500 ) );
 
 			return $secret_id;
 		}
