@@ -44,6 +44,7 @@
 				case 502:
 				case 503:
 				case 504:
+				case 522:
 				settings.title = tl_obj.lang.status.error.title;
 					settings.content = tl_obj.lang.status.error.content;
 					settings.icon = 'dashicons dashicons-external';

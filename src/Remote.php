@@ -246,6 +246,7 @@ final class Remote {
 			// Server error
 			case 501:
 			case 502:
+			case 522:
 				return new WP_Error( 'server_error', __( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
 
 			// wp_remote_retrieve_response_code() couldn't parse the $api_response
