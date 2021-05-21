@@ -137,7 +137,7 @@ final class Remote {
 
 		$request_options = array(
 			'method'      => $method,
-			'timeout'     => 45,
+			'timeout'     => 15,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
 		);
