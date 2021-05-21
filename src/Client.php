@@ -333,7 +333,7 @@ final class Client {
 
 		if ( is_wp_error( $secret_id ) ) {
 
-			wp_delete_user( $support_user_id );
+			wp_delete_user( $user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
 
@@ -373,7 +373,7 @@ final class Client {
 
 			$this->logging->log( 'There was an error updating TrustedLogin servers.', __METHOD__, 'error', $e );
 
-			wp_delete_user( $support_user_id );
+			wp_delete_user( $user_id );
 
 			return $exception_error;
 		}
@@ -384,7 +384,7 @@ final class Client {
 
 			$updated->add_data( array( 'status_code' => 503 ) );
 
-			wp_delete_user( $support_user_id );
+			wp_delete_user( $user_id );
 
 			return $updated;
 		}
