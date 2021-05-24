@@ -17,9 +17,6 @@ use \Exception;
 use \WP_Error;
 use \Sodium;
 
-/**
- * The TrustedLogin all-in-one drop-in class.
- */
 final class Encryption {
 
 	/**
