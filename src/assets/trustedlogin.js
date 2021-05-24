@@ -45,7 +45,7 @@
 				case 503:
 				case 504:
 				case 522:
-				settings.title = tl_obj.lang.status.error.title;
+					settings.title = tl_obj.lang.status.error.title;
 					settings.content = tl_obj.lang.status.error.content;
 					settings.icon = 'dashicons dashicons-external';
 					settings.escapeKey = 'close';
@@ -111,7 +111,7 @@
 
 			var $responseDiv = jQuery( '.' + dialogClass ).find( '.' + responseClass );
 
-			if ( 0 == $responseDiv.length ){
+			if ( 0 === $responseDiv.length ){
 				if ( tl_obj.debug ) {
 					console.log( responseClass + ' not found');
 				}
@@ -126,7 +126,7 @@
 			/**
 			 * Handle buttong actions/labels/etc to it's own function
 			 */
-			if ( 'error' == type ){
+			if ( 'error' === type ){
 				/**
 				 * TODO: Translate string
 				 **/
@@ -140,7 +140,7 @@
 
 			$button.addClass( 'disabled' );
 
-			if ( 'extend' == $button.data('access') ){
+			if ( 'extend' === $button.data('access') ){
 				outputStatus( tl_obj.lang.status.extending.content, 'pending' );
 			} else {
 				outputStatus( tl_obj.lang.status.pending.content, 'pending' );
