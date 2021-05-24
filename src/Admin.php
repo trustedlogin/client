@@ -811,6 +811,9 @@ final class Admin {
 					'title' => esc_html__( 'Support Access Was Not Granted', 'trustedlogin' ),
 					'content' => esc_html__( 'There was an error granting access: ', 'trustedlogin' ),
 				),
+				'failed_permissions' => array(
+					'content' => esc_html__( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ),
+				),
 				'accesskey' => array(
 					'title' => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
 					'content' => sprintf(

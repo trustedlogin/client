@@ -186,8 +186,8 @@
 					if ( response.data.access_key ){
 						$( tl_obj.selector ).data('accesskey', response.data.access_key );
 					}
-				} else {
-					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
+				} else if ( typeof response.data === 'object' ) {
+					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
 				}
 
 			} ).fail( function ( response ) {
@@ -195,10 +195,15 @@
 				clearTimeout( secondStatus );
 
 				if ( tl_obj.debug ) {
-					console.log( response );
+					console.error( 'Request failed.', response );
 				}
 
-				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
+				// User not logged-in
+				if ( response.responseText && '0' === response.responseText ) {
+					outputStatus( tl_obj.lang.status.failed_permissions.content, 'error' );
+				} else if ( typeof response.data === 'object' ) {
+					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
+				}
 
 			} ).always( function( response ) {
 
