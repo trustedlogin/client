@@ -161,7 +161,6 @@
 				outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 			}, 3000 );
 
-
 			$.post( tl_obj.ajaxurl, data, function ( response ) {
 
 				clearTimeout( secondStatus );
@@ -203,6 +202,8 @@
 					outputStatus( tl_obj.lang.status.failed_permissions.content, 'error' );
 				} else if ( typeof response.data === 'object' ) {
 					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
+				} else if ( typeof response.responseJSON === 'object' ) {
+					outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
 				}
 
 			} ).always( function( response ) {
