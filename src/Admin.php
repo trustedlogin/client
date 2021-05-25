@@ -344,7 +344,7 @@ final class Admin {
 		$ns          = $this->config->ns();
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
 
-		if ( array_filter( $this->config->get_setting( 'caps' ) ) ) {
+		if ( array_filter( $this->config->get_setting( 'caps' ), array( $this->config, 'is_not_null' ) ) ) {
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'See the differences:', 'trustedlogin' ) );
 		} else {
@@ -394,7 +394,7 @@ final class Admin {
 	 */
 	private function get_caps_section( $caps_array, $heading = '', $dashicon = '' ) {
 
-		$caps_array = array_filter( (array) $caps_array );
+		$caps_array = array_filter( (array) $caps_array, array( $this->config, 'is_not_null' ) );
 
 		if ( empty( $caps_array ) ) {
 			return '';

@@ -248,7 +248,7 @@ final class Config {
 	 *
 	 * @return bool True: not null. False: null
 	 */
-	protected function is_not_null( $input ) {
+	public function is_not_null( $input ) {
 		return ! is_null( $input );
 	}
 
