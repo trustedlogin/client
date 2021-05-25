@@ -60,6 +60,34 @@ if ( class_exists( '\ProBlockBuilder\TrustedLogin\Client') ) {
 - Change directory to this directory using `cd "path/to/dir/trustedlogin-client"`
 - Run `yarn install && yarn copyfiles`
 
+## Security details
+
+### Logging in
+
+Every time a login occurs using a TrustedLogin link, the login is also verified by the TrustedLogin service.
+
+In the future, the TrustedLogin service will analyze the usage patterns of access keys to ensure security.
+
+### Lockdown mode
+
+TrustedLogin should not generate incorrect access keys. If incorrect access keys are used to attempt a login, it may be the sign of a brute force attack on your plugin.
+
+When TrustedLogin identifies more than 3 incorrect logins in 10 minutes, TrustedLogin enables lockdown mode for the plugin for 20 minutes.
+
+Lockdown mode:
+
+- Prevents all site access using the plugin's TrustedLogin link
+- Notifies the TrustedLogin service of the lockdown
+- Runs the `trustedlogin/{namespace}/lockdown/after` action so developers can customize behavior
+
+#### Preventing sites from going into lockdown:
+
+When setting up TrustedLogin on a testing site, it may be helpful to temporarily disable lockdown mode.
+
+Security checks will automatically be disabled for `local` and `development` sites based on the value of the [`wp_get_environment_type()`](https://developer.wordpress.org/reference/functions/wp_get_environment_type/) function.
+
+You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's `wp-config.php` file.
+
 ## TrustedLogin Client `Config` settings
 
 | Key | Type | Description | Default | Required? |
