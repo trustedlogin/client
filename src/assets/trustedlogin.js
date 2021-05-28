@@ -130,10 +130,7 @@
 		 * Handle buttong actions/labels/etc to it's own function
 		 */
 		if ( 'error' === type ){
-			/**
-			 * TODO: Translate string
-			 **/
-			$( tl_obj.selector ).text('Go to support').removeClass('disabled');
+			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).removeClass('disabled');
 			$body.off( 'click', tl_obj.selector );
 		}
 
