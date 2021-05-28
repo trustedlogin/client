@@ -3,37 +3,19 @@
 
 	'use strict';
 
-	function outputStatus( content, type ){
+	var $body = $( 'body' ),
+		tl_namespace = tl_obj.vendor.namespace,
+		$tl_container = $( '.tl-' + tl_namespace + '-auth' ),
+		copy_button_timer = null;
 
-		var dialogClass = 'tl-' + tl_obj.vendor.namespace + '-auth';
-		var responseClass = 'tl-' + tl_obj.vendor.namespace + '-auth__response';
+	$body.on( 'click', tl_obj.selector, function ( e ) {
 
-		var $responseDiv = jQuery( '.' + dialogClass ).find( '.' + responseClass );
+		e.preventDefault();
 
-		if ( 0 === $responseDiv.length ){
-			if ( tl_obj.debug ) {
-				console.log( responseClass + ' not found');
-			}
-			return;
-		}
+		grantAccess( $( this ) );
 
-		// Reset the class and set the type for contextual styling.
-		$responseDiv
-			.attr('class', responseClass).addClass('tl-'+ tl_obj.vendor.namespace + '-auth__response_' + type )
-			.text( content );
-
-		/**
-		 * Handle buttong actions/labels/etc to it's own function
-		 */
-		if ( 'error' === type ){
-			/**
-			 * TODO: Translate string
-			 **/
-			$( tl_obj.selector ).text('Go to support').removeClass('disabled');
-			$( 'body' ).off( 'click', tl_obj.selector );
-		}
-
-	}
+		return false;
+	} );
 
 	function grantAccess( $button ){
 
@@ -47,8 +29,8 @@
 
 
 		var data = {
-			'action': 'tl_' + tl_obj.vendor.namespace + '_gen_support',
-			'vendor': tl_obj.vendor.namespace,
+			'action': 'tl_' + tl_namespace + '_gen_support',
+			'vendor': tl_namespace,
 			'_nonce': tl_obj._nonce,
 		};
 
@@ -60,13 +42,9 @@
 			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 		}, 3000 );
 
-		$.post( tl_obj.ajaxurl, data, function ( response ) {
+		var remote_success = function ( response ) {
 
 			clearTimeout( secondStatus );
-
-			if ( tl_obj.debug ) {
-				console.log( response );
-			}
 
 			if ( response.success && typeof response.data == 'object' ) {
 				if ( response.data.is_ssl ){
@@ -78,11 +56,13 @@
 					//outputAccessKey( response.data.access_key, tl_obj );
 				}
 
-			} else if ( typeof response.data === 'object' ) {
-				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
+			} else {
+				remote_error( response );
 			}
 
-		} ).fail( function ( response ) {
+		};
+
+		var remote_error = function( response ) {
 
 			clearTimeout( secondStatus );
 
@@ -99,56 +79,80 @@
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
 			}
 
-		} ).always( function( response ) {
+		};
+
+		var remote_always = function( response ) {
 
 			if ( ! tl_obj.debug ) {
 				return;
 			}
 
+			console.log( 'TrustedLogin response: ' + response );
+
 			if ( typeof response.data === 'object' ) {
 				console.log( 'TrustedLogin support login URL:' );
 				console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
 			}
+		};
+
+		$.ajax({
+			url: tl_obj.ajaxurl,
+			type: 'POST',
+			dataType: 'json',
+			data: data,
+			success: remote_success,
+			error: remote_fail,
+			always: remote_always
 		});
 	}
 
-	/**
-	 * TODO: Deprecate
-	 * No longer show alert.
-	 **/
-	$( 'body' ).on( 'click', tl_obj.selector, function ( e ) {
+	function outputStatus( content, type ){
 
-		e.preventDefault();
+		var responseClass = 'tl-' + tl_namespace + '-auth__response';
 
-		grantAccess( $( this ) );
+		var $responseDiv = $tl_container.find( '.' + responseClass );
 
-		return false;
-	} );
+		if ( 0 === $responseDiv.length ){
+			if ( tl_obj.debug ) {
+				console.log( responseClass + ' not found');
+			}
+			return;
+		}
 
+		// Reset the class and set the type for contextual styling.
+		$responseDiv
+			.attr('class', responseClass).addClass('tl-'+ tl_namespace + '-auth__response_' + type )
+			.text( content );
 
-	$( '#trustedlogin-auth' ).on( 'click', '.tl-toggle-caps', function () {
-		$( this ).find( 'span' ).toggleClass( 'dashicons-arrow-down-alt2' ).toggleClass( 'dashicons-arrow-up-alt2' );
-		$( this ).next( '.tl-details.caps' ).toggleClass( 'hidden' );
-	} );
+		/**
+		 * Handle buttong actions/labels/etc to it's own function
+		 */
+		if ( 'error' === type ){
+			/**
+			 * TODO: Translate string
+			 **/
+			$( tl_obj.selector ).text('Go to support').removeClass('disabled');
+			$body.off( 'click', tl_obj.selector );
+		}
 
-	var copyTimer = null;
+	}
 
 	/**
 	 * Used for copy-to-clipboard functionality
 	 */
-	$( '.tl-' + tl_obj.vendor.namespace + '-auth' ).on( 'click', '#tl-' + tl_obj.vendor.namespace +'-copy', function() {
+	$( '.tl-' + tl_namespace +'-auth__accesskey_copy', $tl_container ).on( 'click', function() {
 		var $copyButton = $( this );
 
-		copyToClipboard( $( '.tl-' + tl_obj.vendor.namespace + '-auth__accesskey_field' ).val() );
+		copyToClipboard( $( '.tl-' + tl_namespace + '-auth__accesskey_field' ).val() );
 
 		$copyButton.text( tl_obj.lang.buttons.copied );
 
-		if ( copyTimer ) {
+		if ( copy_button_timer ) {
 			clearTimeout( copyTimer );
-			copyTimer = null;
+			copy_button_timer = null;
 		}
 
-		copyTimer = setTimeout( function () {
+		copy_button_timer = setTimeout( function () {
 			$copyButton.text( tl_obj.lang.buttons.copy );
 		}, 2000 );
 	} );
@@ -156,7 +160,7 @@
 	function copyToClipboard( copyText ) {
 
 		var $temp = $( '<input>' );
-		$( 'body' ).append( $temp );
+		$body.append( $temp );
 		$temp.val( copyText ).select();
 		document.execCommand( 'copy' );
 		$temp.remove()
