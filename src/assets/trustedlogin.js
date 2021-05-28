@@ -5,9 +5,6 @@
 
 	$( document ).ready( function () {
 
-		jconfirm.pluginDefaults.useBootstrap = false;
-		jconfirm.pluginDefaults.backgroundDismiss = true;
-
 		/**
 		 * TODO: Deprecate
 		 **/

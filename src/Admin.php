@@ -19,12 +19,6 @@ use \WP_Admin_Bar;
 final class Admin {
 
 	/**
-	 * @var string The version of jQuery Confirm currently being used
-	 * @internal Don't rely on jQuery Confirm existing!
-	 */
-	const jquery_confirm_version = '3.3.4';
-
-	/**
 	 * @var Config
 	 */
 	private $config;
@@ -112,31 +106,12 @@ final class Admin {
 	 */
 	public function register_assets() {
 
-		// TODO: Remove this if/when switching away from jQuery Confirm
-		$default_asset_dir_url = plugin_dir_url( __FILE__ ) . 'assets/';
-
 		$registered = array();
-
-		$registered['jquery-confirm-css'] = wp_register_style(
-			'tl-jquery-confirm-' . $this->config->ns(),
-			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.css',
-			array(),
-			self::jquery_confirm_version,
-			'all'
-		);
-
-		$registered['jquery-confirm-js'] = wp_register_script(
-			'tl-jquery-confirm-' . $this->config->ns(),
-			$default_asset_dir_url . 'jquery-confirm/jquery-confirm.min.js',
-			array( 'jquery' ),
-			self::jquery_confirm_version,
-			true
-		);
 
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/js' ),
-			array( 'tl-jquery-confirm-' . $this->config->ns() ),
+			array(),
 			Client::VERSION,
 			true
 		);
@@ -144,7 +119,7 @@ final class Admin {
 		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/css' ),
-			array( 'tl-jquery-confirm-' . $this->config->ns() ),
+			array(),
 			Client::VERSION,
 			'all'
 		);
