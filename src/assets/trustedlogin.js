@@ -77,6 +77,8 @@
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
 			} else if ( typeof response.responseJSON === 'object' ) {
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
+			} else if( 'parsererror' === response.statusText ) {
+				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseText, 'error' );
 			}
 
 		};
