@@ -4,9 +4,10 @@
 	'use strict';
 
 	var $body = $( 'body' ),
-		tl_namespace = tl_obj.vendor.namespace,
-		$tl_container = $( '.tl-' + tl_namespace + '-auth' ),
-		copy_button_timer = null;
+		namespace = tl_obj.vendor.namespace,
+		$tl_container = $( '.tl-' + namespace + '-auth' ),
+		copy_button_timer = null,
+		second_status = null;
 
 	$body.on( 'click', tl_obj.selector, function ( e ) {
 
@@ -27,24 +28,13 @@
 			outputStatus( tl_obj.lang.status.pending.content, 'pending' );
 		}
 
-
-		var data = {
-			'action': 'tl_' + tl_namespace + '_gen_support',
-			'vendor': tl_namespace,
-			'_nonce': tl_obj._nonce,
-		};
-
-		if ( tl_obj.debug ) {
-			console.log( data );
-		}
-
-		var secondStatus = setTimeout( function(){
+		second_status = setTimeout( function(){
 			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 		}, 3000 );
 
 		var remote_success = function ( response ) {
 
-			clearTimeout( secondStatus );
+			clearTimeout( second_status );
 
 			if ( response.success && typeof response.data == 'object' ) {
 				if ( response.data.is_ssl ){
@@ -64,7 +54,7 @@
 
 		var remote_error = function( response ) {
 
-			clearTimeout( secondStatus );
+			clearTimeout( second_status );
 
 			if ( tl_obj.debug ) {
 				console.error( 'Request failed.', response );
@@ -97,20 +87,30 @@
 			}
 		};
 
+		var data = {
+			'action': 'tl_' + namespace + '_gen_support',
+			'vendor': namespace,
+			'_nonce': tl_obj._nonce,
+		};
+
+		if ( tl_obj.debug ) {
+			console.log( data );
+		}
+
 		$.ajax({
 			url: tl_obj.ajaxurl,
 			type: 'POST',
 			dataType: 'json',
 			data: data,
 			success: remote_success,
-			error: remote_fail,
+			error: remote_error,
 			always: remote_always
 		});
 	}
 
 	function outputStatus( content, type ){
 
-		var responseClass = 'tl-' + tl_namespace + '-auth__response';
+		var responseClass = 'tl-' + namespace + '-auth__response';
 
 		var $responseDiv = $tl_container.find( '.' + responseClass );
 
@@ -123,11 +123,11 @@
 
 		// Reset the class and set the type for contextual styling.
 		$responseDiv
-			.attr('class', responseClass).addClass('tl-'+ tl_namespace + '-auth__response_' + type )
+			.attr('class', responseClass).addClass('tl-'+ namespace + '-auth__response_' + type )
 			.text( content );
 
 		/**
-		 * Handle buttong actions/labels/etc to it's own function
+		 * Handle button actions/labels/etc to it's own function
 		 */
 		if ( 'error' === type ){
 			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).removeClass('disabled');
@@ -139,10 +139,10 @@
 	/**
 	 * Used for copy-to-clipboard functionality
 	 */
-	$( '.tl-' + tl_namespace +'-auth__accesskey_copy', $tl_container ).on( 'click', function() {
+	$( '.tl-' + namespace +'-auth__accesskey_copy', $tl_container ).on( 'click', function() {
 		var $copyButton = $( this );
 
-		copyToClipboard( $( '.tl-' + tl_namespace + '-auth__accesskey_field' ).val() );
+		copyToClipboard( $( '.tl-' + namespace + '-auth__accesskey_field' ).val() );
 
 		$copyButton.text( tl_obj.lang.buttons.copied );
 
