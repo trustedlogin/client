@@ -124,10 +124,10 @@ final class Admin {
 			'all'
 		);
 
-		$registered = array_filter( $registered );
+		$registered_filtered = array_filter( $registered );
 
-		if ( 4 !== count( $registered ) ) {
-			$this->logging->log( 'Not all scripts and styles were registered: ' . print_r( $registered, true ), __METHOD__, 'error' );
+		if ( count( $registered ) !== count( $registered_filtered ) ) {
+			$this->logging->log( 'Not all scripts and styles were registered: ' . print_r( $registered_filtered, true ), __METHOD__, 'error' );
 		}
 
 	}
