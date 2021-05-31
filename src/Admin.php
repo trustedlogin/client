@@ -19,6 +19,11 @@ use \WP_Admin_Bar;
 final class Admin {
 
 	/**
+	 * URL pointing to the "About TrustedLogin" page, shown below the Grant Access dialog
+	 */
+	const ABOUT_TL_URL = 'https://www.trustedlogin.com/about/easy-and-safe/';
+
+	/**
 	 * @var Config
 	 */
 	private $config;
@@ -445,7 +450,7 @@ final class Admin {
 	private function get_footer_html() {
 
 		$footer_links = array(
-			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                    => 'https://www.trustedlogin.com/about/easy-and-safe/',
+			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                    => self::ABOUT_TL_URL,
 			sprintf( 'Visit %s Support', $this->config->get_setting( 'vendor/title' ) ) => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
