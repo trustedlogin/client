@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => '32d4198e58fe5104d84f076337239322037d96ee',
+    'reference' => '6abc885e5451484430e75b571bf9c012cce93bbd',
     'name' => 'trustedlogin/trustedlogin-client',
   ),
   'versions' => 
@@ -32,12 +32,12 @@
     ),
     'paragonie/sodium_compat' => 
     array (
-      'pretty_version' => 'v1.15.4',
-      'version' => '1.15.4.0',
+      'pretty_version' => 'v1.16.1',
+      'version' => '1.16.1.0',
       'aliases' => 
       array (
       ),
-      'reference' => '8a93bfe047c7f699f819459de8ddda144cd636a4',
+      'reference' => '2e856afe80bfc968b47da1f4a7e1ea8f03d06b38',
     ),
     'psr/log' => 
     array (
@@ -55,7 +55,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => '32d4198e58fe5104d84f076337239322037d96ee',
+      'reference' => '6abc885e5451484430e75b571bf9c012cce93bbd',
     ),
   ),
 );
