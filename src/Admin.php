@@ -429,11 +429,10 @@ final class Admin {
 
 		if ( ! empty( $logo_url ) ) {
 			$logo_output = sprintf(
-				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%4$s" alt="%5$s" /></a>',
+				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%3$s" alt="%4$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
 				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 				sprintf( 'Visit the %s website', $this->config->get_setting( 'vendor/title' ) ),
-				$this->config->ns(),
 				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
 				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
