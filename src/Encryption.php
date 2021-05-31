@@ -87,14 +87,24 @@ final class Encryption {
 		try {
 			$hash_bin = sodium_crypto_generichash( $string, '', 16 );
 			$hash     = sodium_bin2hex( $hash_bin );
-		} catch ( \SodiumException $e ) {
-			return new WP_Error(
-				'encryption_failed_generichash',
-				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
-			);
 		} catch ( \TypeError $e ) {
 			return new WP_Error(
 				'encryption_failed_generichash_typeerror',
+				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+		} catch ( \Error $e ) {
+			return new WP_Error(
+				'encryption_failed_generichash_error',
+				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+		} catch ( \SodiumException $e ) {
+			return new WP_Error(
+				'encryption_failed_generichash_sodium',
+				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
+			);
+		} catch ( \Exception $e ) {
+			return new WP_Error(
+				'encryption_failed_generichash',
 				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
 		}
