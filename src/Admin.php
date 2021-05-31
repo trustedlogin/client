@@ -878,7 +878,7 @@ final class Admin {
 				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy button button button-outline" aria-live="polite">%5$s</button>
 			</%6$s>',
 			/* %1$s */ sanitize_title( $this->config->ns() ),
-			/* %2$s */ esc_html__( ' Site access key:', 'trustedlogin'),
+			/* %2$s */ esc_html__( 'Site access key:', 'trustedlogin'),
 			/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
 			/* %4$s */ esc_attr( $this->site_access->get_access_key() ),
 			/* %5$s */ esc_html__( 'Copy', 'trustedlogin' ),
