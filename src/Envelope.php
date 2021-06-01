@@ -55,11 +55,10 @@ final class Envelope {
 	 * @param string $secret_id
 	 * @param string $identifier
 	 * @param string $access_key
-	 * @param string $license_key
 	 *
 	 * @return array|WP_Error
 	 */
-	public function get( $secret_id, $identifier, $access_key = '', $license_key = '' ) {
+	public function get( $secret_id, $identifier, $access_key = '' ) {
 
 		if ( ! is_string( $secret_id ) ) {
 			return new WP_Error( 'secret_not_string', 'The secret ID must be a string:' . print_r( $secret_id, true ) );
@@ -71,10 +70,6 @@ final class Envelope {
 
 		if ( ! is_string( $access_key ) ) {
 			return new WP_Error( 'access_key_not_string', 'The access key must be a string: ' . print_r( $access_key, true ) );
-		}
-
-		if ( ! is_string( $access_key ) ) {
-			return new WP_Error( 'license_key_not_string', 'The license key must be a string: ' . print_r( $license_key, true ) );
 		}
 
 		$e_keys = $this->encryption->generate_keys();
@@ -102,14 +97,10 @@ final class Envelope {
 		 *
 		 * @since 1.0.0
 		 *
-		 * @param array  $meta_data {
-		 * @type string $license_key Optional. License key, if defined.
-		 * }
+		 * @param array  $meta_data
 		 * @param Config $config Current TrustedLogin configuration
 		 */
-		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
-			'licenseKey' => $license_key,
-		), $this->config );
+		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(), $this->config );
 
 		return array(
 			'secretId'   	  => $secret_id,
