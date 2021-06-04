@@ -65,7 +65,7 @@ $color-red: #c0461e !default;
 		padding-top: $vertical-spacing / 2;
 		padding-bottom: $vertical-spacing / 2;
 		text-align: center;
-    }
+	}
 
 	.dashicons--small {
 		height: $small-icon-size;
@@ -241,6 +241,17 @@ $color-red: #c0461e !default;
 		}
 	}
 
+	.notice {
+		h3 {
+			font-size: 1.2em;
+			line-height: 1.4;
+			margin: 12px 0 12px;
+		}
+
+		p {
+			font-size: 1em;
+			margin: 12px 0;
+		}
 	}
 
 	.tl-#{$namespace}-auth__logo {
