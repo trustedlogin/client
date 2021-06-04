@@ -225,6 +225,22 @@ $color-red: #c0461e !default;
 		&:hover, &:focus {
 			color: $color-111;
 		}
+
+		&[rel=external]:after,
+		&[target=_blank]:after {
+			content: "\f504";
+			display: inline;
+			font: normal 1em/1 dashicons !important;
+			margin: 0 auto;
+			padding: 0;
+			position: relative;
+			text-align: center;
+			speak: none;
+			-webkit-font-smoothing: antialiased;
+			-moz-osx-font-smoothing: grayscale
+		}
+	}
+
 	}
 
 	.tl-#{$namespace}-auth__logo {
@@ -236,6 +252,10 @@ $color-red: #c0461e !default;
 		img {
 			max-width: 50%;
 			max-height: 120px;
+		}
+
+		a:after {
+			content: ''; // Remove external icon
 		}
 	}
 
