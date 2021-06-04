@@ -709,13 +709,13 @@ final class Admin {
 				$css_class = 'button button-' . $atts['size'];
 		}
 
-		$tags = array( 'a', 'button', 'span' );
+		$_valid_tags = array( 'a', 'button', 'span' );
 
-		if ( ! in_array( $atts['tag'], $tags ) ) {
-			$atts['tag'] = 'a';
+		if ( ! empty( $atts['tag'] ) && in_array( strtolower( $atts['tag'] ), $_valid_tags, true ) ) {
+			$tag = $atts['tag'];
+		} else {
+			$tag = 'a';
 		}
-
-		$tag = empty( $atts['tag'] ) ? 'a' : $atts['tag'];
 
 		$data_atts = array();
 
@@ -801,7 +801,7 @@ final class Admin {
 			)
 		);
 
-		$secondary_alert_translations = array(
+		$translations = array(
 			'buttons' => array(
 				'confirm'    => esc_html__( 'Confirm', 'trustedlogin' ),
 				'ok'         => esc_html__( 'Ok', 'trustedlogin' ),
@@ -883,7 +883,7 @@ final class Admin {
 			),
 		);
 
-		return $secondary_alert_translations;
+		return $translations;
 	}
 
 	/**
