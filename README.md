@@ -48,17 +48,29 @@ $config = array(
 );
 ```
 6. Create a new object using your namespace defined in Step 2 (`ProBlockBuilder`):
+### No-conflict mode
+
+Some plugins like Gravity Forms and GravityView have a "no-conflict mode" to limit script and style conflicts. If you see
+scripts and styles not loading on your Grant Support Access page, that's what's going on.
+
+The WordPress script and style handles registered by TrustedLogin are formatted as `trustedlogin-{namespace}`.
+Here's an example of how GravityView (with a namespace of `gravityview`) allows TrustedLogin scripts:
+
 ```php
 // Check class_exists() for sites running PHP 5.2.x
 if ( class_exists( '\ProBlockBuilder\TrustedLogin\Client') ) {
     new \ProBlockBuilder\TrustedLogin\Client( $config ); // ⚠️
 }
 ```
+add_filter( 'gravityview_noconflict_scripts', function ( $allowed_scripts = array() ) {
 
-## Installing JS Assets
+	$allowed_scripts[] = 'trustedlogin-gravityview'; // GravityView's namespace is `gravityview`
 
 - Change directory to this directory using `cd "path/to/dir/trustedlogin-client"`
 - Run `yarn install && yarn copyfiles`
+	return $allowed_scripts;
+} );
+```
 
 ## Security details
 
