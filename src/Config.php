@@ -22,7 +22,7 @@ final class Config {
 	/**
 	 * @var string[] These namespaces cannot be used, lest they result in confusion.
 	 */
-	private $reserved_namespaces = array( 'trustedlogin', 'client', 'vendor', 'admin', 'wordpress' );
+	private static $reserved_namespaces = array( 'trustedlogin', 'client', 'vendor', 'admin', 'wordpress' );
 
 	/**
 	 * @var array Default settings values
