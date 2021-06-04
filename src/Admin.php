@@ -453,8 +453,8 @@ final class Admin {
 		</div>';
 
 		$content = array(
-			'local_site' => sprintf( esc_html__( 'This site may not be accessible by %s support.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
-			'need_access' => esc_html__( 'You appear to be running a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
+			'local_site' => sprintf( esc_html__( '%s support may not be able to access this site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'need_access' => esc_html__( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
 			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
 			'opens_in_new_window' => esc_attr__( 'This link opens in a new window.', 'trustedlogin' ),
 			'learn_more' => esc_html__( 'Learn more.', 'trustedlogin' ),
