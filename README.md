@@ -6,7 +6,7 @@
 > ### When you see ⚠️, make sure to replace with your own names!
 > In the examples below, we're going to pretend your plugin or theme is named "Pro Block Builder" and your business is named Widgets, Co. These should not be the names you use—make sure to update the sample code below to match your business and plugin/theme name!
 
-### 1. The best way: Use Composer and Mozart
+### 1. The best way: Use Composer and Strauss
 
 - If you don't have a `composer.json` file for your plugin or theme:
     - Copy the [Sample Plugin's composer.json file](https://github.com/trustedlogin/trustedlogin-example/blob/master/composer.json)
@@ -24,30 +24,6 @@ if ( class_exists( '\ProBlockBuilder\TrustedLogin\Client') ) {
 }
 ```
 
-### 2. Copy three files, and modify the namespace
-
-1. Copy a few files where you want them in your plugin:
-    - `/src/Client.php`
-    - `/src/assets/js/trustedlogin.css`
-    - `/src/assets/js/trustedlogin.js`
-1. Edit the `Client.php` file you just copied:
-    - Find `namespace TrustedLogin;`
-    - Replace that twith `namespace \ProBlockBuilder\TrustedLogin;`. ⚠️ Remember: `ProBlockBuilder` is the name that represents the imaginary Pro Block Builder plugin. Replace this with a namespace that fits your own plugin!
-1. Add an `include()` in your plugin or theme `require 'path/to/Client.php';`
-1. Define path to your main plugin's file `define( 'PRO_BLOCK_BUILDER_FILE', __FILE__ );` ⚠️
-1. Create a new configuration array URLs to your copied CSS and JS files:
-```php
-// Make sure to update MY_PLUGIN_FILE to use your constant name (like PRO_BLOCK_BUILDER_FILE)
-$config = array(
-    // [...] Other settings here
-    'paths' => array(
-        'css' => plugins_url( 'assets/css/my-trustedlogin.css', PRO_BLOCK_BUILDER_FILE ), // ⚠️
-        'js' => plugins_url( 'assets/css/my-trustedlogin.css', PRO_BLOCK_BUILDER_FILE ), // ⚠️
-    ),
-    // [...] Other settings here
-);
-```
-6. Create a new object using your namespace defined in Step 2 (`ProBlockBuilder`):
 ### No-conflict mode
 
 Some plugins like Gravity Forms and GravityView have a "no-conflict mode" to limit script and style conflicts. If you see
@@ -57,17 +33,10 @@ The WordPress script and style handles registered by TrustedLogin are formatted 
 Here's an example of how GravityView (with a namespace of `gravityview`) allows TrustedLogin scripts:
 
 ```php
-// Check class_exists() for sites running PHP 5.2.x
-if ( class_exists( '\ProBlockBuilder\TrustedLogin\Client') ) {
-    new \ProBlockBuilder\TrustedLogin\Client( $config ); // ⚠️
-}
-```
 add_filter( 'gravityview_noconflict_scripts', function ( $allowed_scripts = array() ) {
 
 	$allowed_scripts[] = 'trustedlogin-gravityview'; // GravityView's namespace is `gravityview`
 
-- Change directory to this directory using `cd "path/to/dir/trustedlogin-client"`
-- Run `yarn install && yarn copyfiles`
 	return $allowed_scripts;
 } );
 ```
