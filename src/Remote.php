@@ -84,7 +84,7 @@ final class Remote {
 
 		try {
 
-			$posted = wp_remote_post( $webhook_url, $data );
+			$posted = wp_remote_post( $webhook_url, array( 'body' => $data ) );
 
 			if ( is_wp_error( $posted ) ) {
 				$this->logging->log( 'An error encountered while sending a webhook to ' . esc_attr( $webhook_url ), __METHOD__, 'error', $posted );
