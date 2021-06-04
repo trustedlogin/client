@@ -18,7 +18,7 @@ class Endpoint {
 	/**
 	 * @var string The query string parameter used to revoke users
 	 */
-	const revoke_support_query_param = 'revoke-tl';
+	const REVOKE_SUPPORT_QUERY_PARAM = 'revoke-tl';
 
 	/**
 	 * @var Config $config
@@ -50,7 +50,7 @@ class Endpoint {
 
 		$this->config = $config;
 		$this->logging = $logging;
-		$this->support_user = new SupportUser( $this->config, $this->logging );
+		$this->support_user = new SupportUser( $config, $logging );
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -89,6 +89,10 @@ class Endpoint {
 	 */
 	public function maybe_login_support() {
 
+		if ( is_user_logged_in() ) {
+			return;
+		}
+
 		$identifier = $this->get_query_var();
 
 		if ( empty( $identifier ) ) {
@@ -96,34 +100,83 @@ class Endpoint {
 		}
 
 		/**
-		 * TODO: Use actions instead of tight coupling? Is this reliable enough?
+		 * Runs before the support user is (maybe) logged-in
+		 *
+		 * @param string $identifier Unique Identifier for support user.
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/login', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $identifier );
 
-		$logged_in = $this->support_user->maybe_login( $identifier );
+		$security_checks = new SecurityChecks( $this->config, $this->logging );
 
-		if ( is_wp_error( $logged_in ) ) {
+		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged
+		$is_verified = $security_checks->verify( $identifier );
+
+		if ( ! $is_verified || is_wp_error( $is_verified ) ){
+
+			/**
+			 * Runs after the identifier fails security checks
+			 *
+			 * @param string $identifier Unique Identifier for support user.
+			 * @param WP_Error $is_verified The error encountered when verifying the identifier.
+			 */
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $identifier, $is_verified );
+
 			return;
 		}
+
+		$is_logged_in = $this->support_user->maybe_login( $identifier );
+
+		if ( is_wp_error( $is_logged_in ) ) {
+
+			/**
+			 * Runs after the support user fails to log in
+			 *
+			 * @param string $identifier Unique Identifier for support user.
+			 * @param WP_Error $is_logged_in The error encountered when logging-in.
+			 */
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $identifier, $is_logged_in );
+
+			return;
+		}
+
+		/**
+		 * Runs after the support user is logged-in
+		 *
+		 * @param string $identifier Unique Identifier for support user.
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $identifier );
 
 		wp_safe_redirect( admin_url() );
 
 		exit();
 	}
 
+
 	/**
-	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::id_query_param ] == {namespace}
-	 * Can optionally check for $_REQUEST[ SupportUser::id_query_param ] for revoking a specific user by their identifier
+	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::ID_QUERY_PARAM ] == {namespace}
+	 * Can optionally check for $_REQUEST[ SupportUser::ID_QUERY_PARAM ] for revoking a specific user by their identifier
 	 *
 	 * @since 0.2.1
 	 */
 	public function admin_maybe_revoke_support() {
 
-		if ( ! isset( $_REQUEST[ self::revoke_support_query_param ] ) ) {
+		if ( ! isset( $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) ) {
 			return;
 		}
 
-		if ( $this->config->ns() !== $_REQUEST[ self::revoke_support_query_param ] ) {
+		if ( $this->config->ns() !== $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) {
+			return;
+		}
+
+		if ( ! isset( $_REQUEST['_wpnonce'] ) ) {
+			return;
+		}
+
+		$verify_nonce = wp_verify_nonce( $_REQUEST['_wpnonce' ], self::REVOKE_SUPPORT_QUERY_PARAM );
+
+		if ( ! $verify_nonce ) {
+			$this->logging->log( 'Removing user failed: Nonce expired (Nonce value: ' . $verify_nonce . ')', __METHOD__, 'error' );
+
 			return;
 		}
 
@@ -135,10 +188,11 @@ class Endpoint {
 
 		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
+
 			return;
 		}
 
-		$identifier = isset( $_REQUEST[ SupportUser::id_query_param ] ) ? esc_attr( $_REQUEST[ SupportUser::id_query_param ] ) : 'all';
+		$identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
 
 		$deleted_user = $this->support_user->delete( $identifier );
 
@@ -166,7 +220,7 @@ class Endpoint {
 	 */
 	public function add() {
 
-		$endpoint = get_site_option( $this->option_name );
+		$endpoint = $this->get();
 
 		if ( ! $endpoint ) {
 			return;
@@ -176,7 +230,7 @@ class Endpoint {
 
 		$this->logging->log( "Endpoint {$endpoint} added.", __METHOD__, 'debug' );
 
-		if ( $endpoint && ! get_site_option( 'tl_permalinks_flushed' ) ) {
+		if ( ! get_site_option( 'tl_permalinks_flushed' ) ) {
 
 			flush_rewrite_rules( false );
 
@@ -198,7 +252,7 @@ class Endpoint {
 
 		$endpoint = $this->get();
 
-		$identifier = get_query_var( $endpoint, false );
+		$identifier = sanitize_text_field( get_query_var( $endpoint, false ) );
 
 		return empty( $identifier ) ? false : $identifier;
 	}
@@ -254,6 +308,8 @@ class Endpoint {
 	public function delete() {
 
 		if ( ! get_site_option( $this->option_name ) ) {
+			$this->logging->log( "Endpoint not deleted because it does not exist.", __METHOD__, 'info' );
+
 			return;
 		}
 

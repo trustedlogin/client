@@ -37,7 +37,6 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
-					'delete_users'   => 'In order to manage the users that we thought you would want us to.',
 				),
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
@@ -147,15 +146,15 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 
 		$method = $this->_get_public_method( 'build_api_url' );
 
-		$this->assertEquals( \TrustedLogin\Remote::api_url, $method->invoke( $this->remote ) );
+		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote ) );
 
-		$this->assertEquals( \TrustedLogin\Remote::api_url, $method->invoke( $this->remote, array('not-a-string') ) );
+		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote, array( 'not-a-string') ) );
 
-		$this->assertEquals( \TrustedLogin\Remote::api_url . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
+		$this->assertEquals( \TrustedLogin\Remote::API_URL . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
 		add_filter( 'trustedlogin/not-my-namespace/api_url', function () { return 'https://www.google.com'; } );
 
-		$this->assertEquals( \TrustedLogin\Remote::api_url . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
+		$this->assertEquals( \TrustedLogin\Remote::API_URL . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
 		remove_all_filters( 'trustedlogin/not-my-namespace/api_url' );
 

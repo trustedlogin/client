@@ -13,59 +13,69 @@ if ( ! defined('ABSPATH') ) {
 	exit;
 }
 
+use ArrayAccess;
 use \Exception;
 use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
 
 final class Config {
 
 	/**
+	 * @var string[] These namespaces cannot be used, lest they result in confusion.
+	 */
+	private $reserved_namespaces = array( 'trustedlogin', 'client', 'vendor', 'admin', 'wordpress' );
+
+	/**
 	 * @var array Default settings values
+	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 * @since 0.9.6
 	 */
 	private $default_settings = array(
 		'auth' => array(
 			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
-			'private_key' => null,
-		),
-		'decay' => WEEK_IN_SECONDS,
-		'role' => 'editor',
-		'paths' => array(
-			'css' => null,
-			'js'  => null, // Default is defined in get_default_settings()
+			'license_key' => null,
 		),
 		'caps' => array(
-			'add' => array(
-			),
-			'remove' => array(
-			),
+			'add' => array(),
+			'remove' => array(),
 		),
-		'webhook_url' => null,
-		'vendor' => array(
-			'namespace' => null,
-			'title' => null,
-			'first_name' => null,
-			'last_name' => null,
-			'email' => null,
-			'website' => null,
-			'support_url' => null,
-			'logo_url' => null,
+		'decay' => WEEK_IN_SECONDS,
+		'logging' => array(
+			'enabled' => false,
+			'directory' => null,
+			'threshold' => 'notice',
+			'options' => array(
+				'extension'      => 'log',
+				'dateFormat'     => 'Y-m-d G:i:s.u',
+				'filename'       => null, // Overridden in Logging.php
+				'flushFrequency' => false,
+				'logFormat'      => false,
+				'appendContext'  => true,
+			),
 		),
 		'menu' => array(
 			'slug' => null,
 			'title' => null,
 			'priority' => null,
+			'position' => null,
+		),
+		'paths' => array(
+			'css' => null,
+			'js'  => null, // Default is defined in get_default_settings()
 		),
 		'reassign_posts' => true,
-		'registers_assets' => true,
 		'require_ssl' => true,
-		'logging' => array(
-			'enabled' => false,
-			'directory' => null,
-			'threshold' => 'debug',
-			'options' => array(),
-		)
+		'role' => 'editor',
+		'vendor' => array(
+			'namespace' => null,
+			'title' => null,
+			'email' => null,
+			'website' => null,
+			'support_url' => null,
+			'display_name' => null,
+			'logo_url' => null,
+			'about_live_access_url' => null,
+		),
+		'webhook_url' => null,
 	);
 
 	/**
@@ -84,7 +94,7 @@ final class Config {
 	public function __construct( array $settings = array() ) {
 
 		if ( empty( $settings ) ) {
-			throw new \Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
+			throw new Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
 		}
 
 		$this->settings = $settings;
@@ -92,15 +102,16 @@ final class Config {
 
 
 	/**
+	 * @return true|\WP_Error[]
 	 * @throws \Exception
 	 *
-	 * @return true|\WP_Error[]
 	 */
 	public function validate() {
 
 		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
-			throw new \Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
+			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
 		}
+
 
 		$errors = array();
 
@@ -108,17 +119,47 @@ final class Config {
 			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
 		}
 
-		foreach( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
+		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined('TL_DOING_TESTS') ) {
+			$errors[] = new WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
+		}
+
+		foreach ( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
 			if ( ! isset( $this->settings['vendor'][ $required_vendor_field ] ) ) {
 				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
 			}
 		}
 
-		// TODO: Add namespace collision check?
+		if ( isset( $this->settings['decay'] ) ) {
+			if ( ! is_int( $this->settings['decay'] ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
+			} elseif ( $this->settings['decay'] > MONTH_IN_SECONDS ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be less than or equal to 30 days.' );
+			} elseif ( $this->settings['decay'] < DAY_IN_SECONDS ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be greater than 1 day.' );
+			}
+		}
 
-		foreach( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
+		if ( isset( $this->settings['vendor']['namespace'] ) ) {
+
+			// This seems like a reasonable max limit on namespace length.
+			// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+			}
+
+			if ( in_array( strtolower( $this->settings['vendor']['namespace'] ), self::$reserved_namespaces, true ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'The defined namespace is reserved.' );
+			}
+		}
+
+		if ( isset( $this->settings['vendor'][ 'email' ] ) && ! filter_var( $this->settings['vendor'][ 'email' ], FILTER_VALIDATE_EMAIL ) ) {
+			$errors[] = new WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
+		}
+
+		// TODO: Add namespace collision check?
+		foreach ( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, null, $this->settings );
-			$url = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
+			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 				$errors[] = new WP_Error(
 					'invalid_configuration',
@@ -127,6 +168,14 @@ final class Config {
 						print_r( $this->get_setting( $settings_key, null, $this->settings ), true )
 					)
 				);
+			}
+		}
+
+		$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+
+		foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
+			if ( array_key_exists( $invalid_cap, $added_caps ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
 			}
 		}
 
@@ -141,7 +190,7 @@ final class Config {
 			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
-			throw new \Exception( $exception_text, 3 );
+			throw new Exception( $exception_text, 3 );
 		}
 
 		return true;
@@ -153,10 +202,11 @@ final class Config {
 	 * Note: This is a server timestamp, not a WordPress timestamp
 	 *
 	 * @param int $decay_time If passed, override the `decay` setting
+	 * @param bool $gmt Whether to use server time (false) or GMT time (true). Default: false.
 	 *
 	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
 	 */
-	public function get_expiration_timestamp( $decay_time = null ) {
+	public function get_expiration_timestamp( $decay_time = null, $gmt = false ) {
 
 		if ( is_null( $decay_time ) ) {
 			$decay_time = $this->get_setting( 'decay' );
@@ -166,7 +216,18 @@ final class Config {
 			return false;
 		}
 
-		return time() + (int) $decay_time;
+		$time = current_time( 'timestamp', $gmt );
+
+		return $time + (int) $decay_time;
+	}
+
+	/**
+	 * Returns the display name for the vendor; otherwise, the title
+	 *
+	 * @return string
+	 */
+	public function get_display_name() {
+		return $this->get_setting( 'vendor/display_name', $this->get_setting( 'vendor/title', '' ) );
 	}
 
 	/**
@@ -202,7 +263,7 @@ final class Config {
 	 *
 	 * @return bool True: not null. False: null
 	 */
-	protected function is_not_null( $input ) {
+	public function is_not_null( $input ) {
 		return ! is_null( $input );
 	}
 
@@ -256,12 +317,12 @@ final class Config {
 			$settings = $this->settings;
 		}
 
-		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			return $default;
-		}
-
 		if ( is_null( $default ) ) {
 			$default = $this->get_multi_array_value( $this->get_default_settings(), $key );
+		}
+
+		if ( empty( $settings ) || ! is_array( $settings ) ) {
+			return $default;
 		}
 
 		return $this->get_multi_array_value( $settings, $key, $default );
@@ -270,8 +331,8 @@ final class Config {
 	/**
 	 * Gets a specific property value within a multidimensional array.
 	 *
-	 * @param array  $array   The array to search in.
-	 * @param string $name    The name of the property to find.
+	 * @param array $array The array to search in.
+	 * @param string $name The name of the property to find.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
@@ -296,14 +357,14 @@ final class Config {
 	 *
 	 * Provide a default value if you want to return a specific value if the property is not set.
 	 *
-	 * @param array  $array   Array from which the property's value should be retrieved.
-	 * @param string $prop    Name of the property to be retrieved.
+	 * @param array $array Array from which the property's value should be retrieved.
+	 * @param string $prop Name of the property to be retrieved.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
 	 */
 	private function get_array_value( $array, $prop, $default = null ) {
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof \ArrayAccess ) ) {
+		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
 			return $default;
 		}
 
@@ -321,17 +382,24 @@ final class Config {
 	/**
 	 * Checks whether SSL requirements are met.
 	 *
-	 * @since 0,9.2
+	 * @since 0.9.2
 	 *
 	 * @return bool  Whether the vendor-defined SSL requirements are met.
 	 */
-	public function meets_ssl_requirement(){
+	public function meets_ssl_requirement() {
 
-		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ){
-			return false;
+		$return = true;
+
+		if ( $this->get_setting( 'require_ssl', true ) && ! is_ssl() ) {
+			$return = false;
 		}
 
-		return true;
+		/**
+		 * @internal Do not rely on this!!!!
+		 * @todo Remove this
+		 * @param bool $return Does this site meet the SSL requirement?
+		 */
+		return apply_filters( 'trustedlogin/' . $this->ns() . '/meets_ssl_requirement', $return );
 	}
 
 }

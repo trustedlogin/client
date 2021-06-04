@@ -66,7 +66,6 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
-					'delete_users'   => 'In order to manage the users that we thought you would want us to.',
 				),
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
@@ -92,8 +91,8 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 		$this->TrustedLoginReflection = new \ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
-		$this->remote = $this->_get_public_property( 'remote' )->getValue( $this->TrustedLogin );
+		$this->logging = new Logging( $this->config );
+		$this->remote = new Remote( $this->config, $this->logging );
 
 		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
 	}

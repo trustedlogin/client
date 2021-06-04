@@ -28,8 +28,6 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 			$config->validate();
 
-			$client = new TrustedLogin\Client( $config );
-
 		} catch ( \Exception $exception ) {
 			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] . ' ' .$exception->getMessage() );
 			$this->assertContains( 'public key', $exception->getMessage(), $expected_codes[3] );
@@ -39,6 +37,20 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			$this->assertContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
 			$this->assertContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
 		}
+
+		try {
+			$config = new \TrustedLogin\Config( array(
+				'vendor' => true,
+			) );
+
+			$client = new TrustedLogin\Client( $config );
+
+			$this->assertTrue( $client instanceof \Exception, 'When instantiating the Client, do not throw an exception; return one.' );
+
+		} catch ( Exception $exception ) {
+
+		}
+
 	}
 
 	/**
@@ -90,8 +102,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'vendor' => array(
 				'namespace' => 'jonesbeach',
 				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
+				'display_name' => null,
 				'email' => 'beach@example.com',
 				'website' => 'https://example.com',
 				'support_url' => 'https://example.com',
@@ -165,8 +176,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'vendor' => array(
 				'namespace' => 'jones-party',
 				'title' => 'Jones Beach Party',
-				'first_name' => null,
-				'last_name' => '',
+				'display_name' => null,
 				'email' => 'beach@example.com',
 				'website' => 'https://example.com',
 				'support_url' => 'https://asdasdsd.example.com/support/',

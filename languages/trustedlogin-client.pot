@@ -1,0 +1,297 @@
+# Copyright (C) 2020 
+# This file is distributed under the same license as the  package.
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/src/Client\n"
+"POT-Creation-Date: 2020-07-22 23:09:44+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2020-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"X-Generator: grunt-wp-i18n 0.5.4\n"
+"X-Poedit-KeywordsList: "
+"__;_e;_x:1,2c;_ex:1,2c;_n:1,2;_nx:1,2,4c;_n_noop:1,2;_nx_noop:1,2,3c;esc_"
+"attr__;esc_html__;esc_attr_e;esc_html_e;esc_attr_x:1,2c;esc_html_x:1,2c;\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Country: United States\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-Basepath: ../\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-Bookmarks: \n"
+"X-Textdomain-Support: yes\n"
+
+#: src/Admin.php:98 src/Admin.php:904 src/Admin.php:931
+msgid "Revoke Access"
+msgstr ""
+
+#: src/Admin.php:175 src/Admin.php:178
+msgid "Revoke TrustedLogin"
+msgstr ""
+
+#: src/Admin.php:201
+msgid "Grant Support Access"
+msgstr ""
+
+#: src/Admin.php:286
+#. translators: %1$s is replaced with the name of the software developer (e.g.
+#. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
+msgid "%1$s has site access that expires in %2$s."
+msgstr ""
+
+#: src/Admin.php:290
+#. translators: %1$s is replaced with the name of the software developer (e.g.
+#. "Acme Widgets")
+msgid "Grant %1$s access to your site."
+msgstr ""
+
+#: src/Admin.php:323
+#. translators: %1$s and %3$s are replaced with HTML tags. %2$s is the amount
+#. of time that the login will be active for (e.g. "1 week")
+msgid "Site access will %1$sauto-expire in %2$s%3$s."
+msgstr ""
+
+#: src/Admin.php:324
+msgid "You may revoke access at any time."
+msgstr ""
+
+#: src/Admin.php:330
+msgid "Create a user with a role similar to %s."
+msgstr ""
+
+#: src/Admin.php:331
+msgid "See the differences:"
+msgstr ""
+
+#: src/Admin.php:333
+msgid "Create a user with a role of %s."
+msgstr ""
+
+#: src/Admin.php:358
+msgid "Additional capabilities:"
+msgstr ""
+
+#: src/Admin.php:359
+msgid "Removed capabilities:"
+msgstr ""
+
+#: src/Admin.php:455
+#. translators: %s is replaced with the name of the software developer (e.g.
+#. "Acme Widgets")
+msgid "Learn about TrustedLogin"
+msgstr ""
+
+#: src/Admin.php:632
+msgid "Grant %s Access"
+msgstr ""
+
+#: src/Admin.php:633
+msgid "Extend %s Access"
+msgstr ""
+
+#: src/Admin.php:691
+msgid "Secured by TrustedLogin"
+msgstr ""
+
+#: src/Admin.php:735
+msgid "Could not create TrustedLogin access."
+msgstr ""
+
+#: src/Admin.php:741
+msgid "The user details could not be sent to %1$s automatically."
+msgstr ""
+
+#: src/Admin.php:745
+msgid ""
+"Please <a href=\"%1$s\" target=\"_blank\">click here</a> to go to the %2$s "
+"support site"
+msgstr ""
+
+#: src/Admin.php:753
+msgid "Confirm"
+msgstr ""
+
+#: src/Admin.php:754
+msgid "Ok"
+msgstr ""
+
+#: src/Admin.php:755
+msgid "Go to %1$s support site"
+msgstr ""
+
+#: src/Admin.php:756
+msgid "Close"
+msgstr ""
+
+#: src/Admin.php:757
+msgid "Cancel"
+msgstr ""
+
+#: src/Admin.php:758
+msgid "Revoke %1$s support access"
+msgstr ""
+
+#: src/Admin.php:759 src/Admin.php:880
+msgid "Copy"
+msgstr ""
+
+#: src/Admin.php:760
+msgid "Copied!"
+msgstr ""
+
+#: src/Admin.php:764
+msgid "Support access granted"
+msgstr ""
+
+#: src/Admin.php:766
+msgid "A temporary support user has been created, and sent to %1$s Support."
+msgstr ""
+
+#: src/Admin.php:771
+msgid "Generating & encrypting secure support access for %1$s"
+msgstr ""
+
+#: src/Admin.php:774
+msgid "Extending support access for %1$s by %2$s"
+msgstr ""
+
+#: src/Admin.php:777
+msgid "Sending encrypted access to %1$s."
+msgstr ""
+
+#: src/Admin.php:780
+msgid "Error syncing Support User to %1$s"
+msgstr ""
+
+#: src/Admin.php:784
+msgid "Action Cancelled"
+msgstr ""
+
+#: src/Admin.php:786
+msgid "A support account for %1$s was not created."
+msgstr ""
+
+#: src/Admin.php:791
+msgid "Support Access Was Not Granted"
+msgstr ""
+
+#: src/Admin.php:792
+msgid "Got this from the server: "
+msgstr ""
+
+#: src/Admin.php:795
+msgid "TrustedLogin Key Created"
+msgstr ""
+
+#: src/Admin.php:797
+msgid "Share this TrustedLogin Key with %1$s to give them secure access:"
+msgstr ""
+
+#: src/Admin.php:803
+msgid "The TrustedLogin vendor could not be found."
+msgstr ""
+
+#: src/Admin.php:808
+msgid "%1$s Support User already exists"
+msgstr ""
+
+#: src/Admin.php:813
+msgid ""
+"A support user for %1$s already exists. You can revoke this support access "
+"from your <a href=\"%2$s\" target=\"_blank\">Users list</a>."
+msgstr ""
+
+#: src/Admin.php:853
+msgid "No %s users exist."
+msgstr ""
+
+#: src/Admin.php:878
+msgid " Site access key:"
+msgstr ""
+
+#: src/Admin.php:886
+msgid "%s users:"
+msgstr ""
+
+#: src/Admin.php:900
+msgid "User"
+msgstr ""
+
+#: src/Admin.php:901
+msgid "Created"
+msgstr ""
+
+#: src/Admin.php:902
+msgid "Expires"
+msgstr ""
+
+#: src/Admin.php:903
+msgid "Created By"
+msgstr ""
+
+#: src/Admin.php:921
+msgid "%s ago"
+msgstr ""
+
+#: src/Admin.php:922
+msgid "In %s"
+msgstr ""
+
+#: src/Admin.php:925
+msgid "Unknown (User #%d)"
+msgstr ""
+
+#: src/Admin.php:927
+msgid "Unknown"
+msgstr ""
+
+#: src/Admin.php:933
+msgid "Manage from Users list"
+msgstr ""
+
+#: src/Admin.php:971
+msgid "%s access revoked. "
+msgstr ""
+
+#: src/Client.php:268
+msgid "TODO"
+msgstr ""
+
+#: src/Remote.php:225
+msgid "The response was invalid."
+msgstr ""
+
+#: src/Remote.php:232
+msgid "Authentication failed."
+msgstr ""
+
+#: src/Remote.php:237
+msgid "Invalid tokens."
+msgstr ""
+
+#: src/Remote.php:242
+msgid "The TrustedLogin vendor was not found."
+msgstr ""
+
+#: src/Remote.php:247 src/Remote.php:251
+msgid "The TrustedLogin site is not currently available."
+msgstr ""
+
+#: src/Remote.php:256 src/Remote.php:263
+msgid "Invalid response."
+msgstr ""
+
+#: src/Remote.php:268
+msgid "Invalid response. Missing key: %s"
+msgstr ""
+
+#: src/SiteAccess.php:146
+msgid "Could not sync to TrustedLogin server"
+msgstr ""
+
+#: src/SupportRole.php:169 src/SupportUser.php:109 src/SupportUser.php:135
+msgid "%s Support"
+msgstr ""

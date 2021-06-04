@@ -51,7 +51,6 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
-					'delete_users'   => 'In order to manage the users that we thought you would want us to.',
 				),
 			),
 			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
@@ -79,7 +78,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->TrustedLoginReflection = new ReflectionClass( '\TrustedLogin\Client' );
 
-		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
+		$this->logging = new \TrustedLogin\Logging( $this->config );
 
 		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
 
@@ -182,7 +181,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		}
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'already exists', $this->_last_response, 'User should not have permission to create users.' );
+		$this->assertContains( 'already exists', $this->_last_response, sprintf( 'User %d should already have been created', $existing_user->ID ) );
 		$this->_last_response = '';
 		$this->assertTrue( wp_delete_user( $existing_user->ID ) ); // Cleanup
 		$this->_delete_all_support_users();

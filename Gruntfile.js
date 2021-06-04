@@ -59,7 +59,7 @@ module.exports = function( grunt ) {
 				]
 			},
 			dist: {
-				src: 'assets/*.css'
+				src: 'src/assets/trustedlogin.css'
 			}
 		},
 

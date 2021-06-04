@@ -8,6 +8,8 @@
  */
 namespace TrustedLogin;
 
+use Katzgrau\KLogger\Logger;
+
 class Logging {
 
 	/**
@@ -26,7 +28,7 @@ class Logging {
 	private $logging_enabled = false;
 
 	/**
-	 * @var \Katzgrau\KLogger\Logger|null|false Null: not instantiated; False: failed to instantiate.
+	 * @var Logger|null|false Null: not instantiated; False: failed to instantiate.
 	 */
 	private $klogger = null;
 
@@ -47,24 +49,33 @@ class Logging {
 	 *
 	 * @param Config $config
 	 *
-	 * @return void
+	 * @return false|Logger
 	 */
 	private function setup_klogger( $config ) {
 
-		if ( ! class_exists( '\Katzgrau\KLogger\Logger' ) ) {
+		if ( ! class_exists( 'Katzgrau\KLogger\Logger' ) ) {
 
 			$this->log( 'KLogger not found.', __METHOD__, 'error' );
 
 			return false;
 		}
 
+		$logging_directory = null;
+
 		$configured_logging_dir = $config->get_setting( 'logging/directory', '' );
 
-		if( $configured_logging_dir ) {
-			return $this->check_directory( $configured_logging_dir );
+		if( ! empty( $configured_logging_dir ) ) {
+
+			$logging_directory = $this->check_directory( $configured_logging_dir );
+
+			if ( ! $logging_directory ) {
+				return false;
+			}
 		}
 
-		$logging_directory = $this->maybe_make_logging_directory();
+		if ( ! $logging_directory ) {
+			$logging_directory = $this->maybe_make_logging_directory();
+		}
 
 		// Directory cannot be found or created. Cannot log.
 		if( ! $logging_directory ) {
@@ -81,13 +92,23 @@ class Logging {
 			// Filename hash changes every day, make it harder to guess
 			$filename_hash_data = $this->ns . home_url( '/' ) . wp_date( 'z' );
 
-			$klogger = new \Katzgrau\KLogger\Logger (
+			$default_options = array(
+				'extension'      => 'log',
+				'dateFormat'     => 'Y-m-d G:i:s.u',
+				'filename'       => sprintf( 'trustedlogin-debug-%s-%s', wp_date( 'Y-m-d' ), wp_hash( $filename_hash_data ) ),
+				'flushFrequency' => false,
+				'logFormat'      => false,
+				'appendContext'  => true,
+			);
+
+			$settings_options = $config->get_setting( 'logging/options', $default_options );
+
+			$options = wp_parse_args( $settings_options, $default_options );
+
+			$klogger = new Logger (
 				$logging_directory,
 				$config->get_setting( 'logging/threshold', 'notice' ),
-				$config->get_setting( 'logging/options', array(
-					'extension'      => 'log',
-					'prefix'         => sprintf( 'trustedlogin-debug-%s-', wp_hash( $filename_hash_data ) ),
-				) )
+				$options
 			);
 
 		} catch ( \RuntimeException $exception ) {
@@ -109,6 +130,7 @@ class Logging {
 	 */
 	private function check_directory( $dirpath ) {
 
+		$dirpath = (string) $dirpath;
 		$file_exists = file_exists( $dirpath );
 		$is_writable = wp_is_writable( $dirpath );
 
@@ -126,7 +148,6 @@ class Logging {
 			$this->log( 'The defined logging directory exists but could not be written to: ' . $dirpath, __METHOD__, 'error' );
 		}
 
-		// Then return early; respect the setting
 		return false;
 	}
 
@@ -151,14 +172,14 @@ class Logging {
 		// Create the folder using wp_mkdir_p() instead of relying on KLogger
 		$folder_created = wp_mkdir_p( $log_dir );
 
-		// Something went wrong maping the directory
+		// Something went wrong mapping the directory
 		if( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
 
 		// Protect directory from being browsed by adding index.html
-		$this->prevent_directory_browsing( $logging_directory );
+		$this->prevent_directory_browsing( $log_dir );
 
 		// Make sure the new log directory can be written to
 		return $log_dir;
@@ -291,7 +312,7 @@ class Logging {
 			$data = array( $data );
 		}
 
-		$this->klogger->{$level}( $log_message, $data );
+		$this->klogger->{$level}( $log_message, (array) $data );
 	}
 
 }

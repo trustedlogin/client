@@ -40,7 +40,7 @@ final class SupportRole {
 	 * @var array These capabilities will never be allowed for users created by TrustedLogin
 	 * @since 0.9.6
 	 */
-	private $prevented_caps = array(
+	static $prevented_caps = array(
 		'create_users',
 		'delete_users',
 		'edit_users',
@@ -159,7 +159,7 @@ final class SupportRole {
 		}
 
 		// These roles should never be assigned to TrustedLogin roles.
-		foreach ( $this->prevented_caps as $prevented_cap ) {
+		foreach ( self::$prevented_caps as $prevented_cap ) {
 			unset( $capabilities[ $prevented_cap ] );
 		}
 

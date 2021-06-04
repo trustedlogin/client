@@ -42,7 +42,7 @@ final class Envelope {
 	/**
 	 * Envelope constructor.
 	 *
-	 * @param string $public_key
+	 * @param Config $config
 	 * @param Encryption $encryption
 	 */
 	public function __construct( Config $config, Encryption $encryption ) {
@@ -90,31 +90,27 @@ final class Envelope {
 			return $e_identifier;
 		}
 
-		$e_site_url = $this->encryption->encrypt( get_site_url(), $nonce, $e_keys->privateKey );
-
-		if( is_wp_error( $e_site_url ) ) {
-			return $e_site_url;
-		}
-
 		/**
 		 * Filter: Allows devs to assign custom meta_data to be synced via TrustedLogin.
 		 *
-		 * By default this data is transfered and stored in plain text, and should not contain any sensitive or identifiable information.
+		 * WARNING: Meta data is transferred and stored in plain text, and must not contain any sensitive or identifiable information!
 		 *
 		 * @since 1.0.0
 		 *
 		 * @param array  $meta_data
+		 * @param Config $config Current TrustedLogin configuration
 		 */
-		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array() );
+		$meta_data = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(), $this->config );
 
 		return array(
 			'secretId'   	  => $secret_id,
 			'identifier' 	  => $e_identifier,
-			'siteUrl'    	  => $e_site_url,
+			'siteUrl'    	  => get_site_url(),
 			'publicKey'  	  => $this->public_key,
 			'accessKey'  	  => $access_key,
 			'wpUserId'   	  => get_current_user_id(),
-			'version'    	  => Client::version,
+			'expiresAt'       => $this->config->get_expiration_timestamp( null, true ),
+			'version'    	  => Client::VERSION,
 			'nonce'		 	  => \sodium_bin2hex( $nonce ),
 			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
 			'metaData'		  => $meta_data,
