@@ -20,6 +20,11 @@ use \WP_Error;
 final class Config {
 
 	/**
+	 * @var string[] These namespaces cannot be used, lest they result in confusion.
+	 */
+	private $reserved_namespaces = array( 'trustedlogin', 'client', 'vendor', 'admin', 'wordpress' );
+
+	/**
 	 * @var array Default settings values
 	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 * @since 0.9.6
@@ -133,10 +138,17 @@ final class Config {
 			}
 		}
 
-		// This seems like a reasonable max limit on namespace length.
-		// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
-		if ( isset( $this->settings['vendor']['namespace'] ) && strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
-			$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+		if ( isset( $this->settings['vendor']['namespace'] ) ) {
+
+			// This seems like a reasonable max limit on namespace length.
+			// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+			}
+
+			if ( in_array( strtolower( $this->settings['vendor']['namespace'] ), self::$reserved_namespaces, true ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'The defined namespace is reserved.' );
+			}
 		}
 
 		if ( isset( $this->settings['vendor'][ 'email' ] ) && ! filter_var( $this->settings['vendor'][ 'email' ], FILTER_VALIDATE_EMAIL ) ) {
