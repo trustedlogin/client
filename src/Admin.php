@@ -495,7 +495,7 @@ final class Admin {
 
 		$footer_links = array(
 			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                    => self::ABOUT_TL_URL,
-			sprintf( 'Visit %s Support', $this->config->get_setting( 'vendor/title' ) ) => $this->config->get_setting( 'vendor/support_url' ),
+			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
 		/**
@@ -816,7 +816,7 @@ final class Admin {
 				'synced'             => array(
 					'title'   => esc_html__( 'Support access granted', 'trustedlogin' ),
 					'content' => sprintf(
-						__( 'A temporary support user has been created, and sent to %1$s Support.', 'trustedlogin' ),
+						__( 'A temporary support user has been created, and sent to %1$s support.', 'trustedlogin' ),
 						$vendor_title
 					),
 				),
@@ -829,8 +829,8 @@ final class Admin {
 				'syncing'            => array(
 					'content' => sprintf( __( 'Sending encrypted access to %1$s.', 'trustedlogin' ), $vendor_title ),
 				),
-					'title' => sprintf( __( 'Error syncing Support User to %1$s', 'trustedlogin' ), $vendor_title ),
 				'error'              => array(
+					'title'   => sprintf( __( 'Error syncing support user to %1$s', 'trustedlogin' ), $vendor_title ),
 					'content' => wp_kses( $error_content, array(
 						'a' => array(
 							'href'   => array(),
@@ -866,9 +866,9 @@ final class Admin {
 					'title'   => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
 					'content' => '',
 				),
-						__( '%1$s Support User already exists', 'trustedlogin' ),
 				'error409'           => array(
 					'title'   => sprintf(
+						__( '%1$s Support user already exists', 'trustedlogin' ),
 						$vendor_title
 					),
 					'content' => sprintf(
