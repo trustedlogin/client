@@ -230,6 +230,28 @@ final class Admin {
 
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
+		$content = array(
+			'ns'               => $this->config->ns(),
+			'has_access_class' => $this->support_user->get_all() ? 'has-access' : 'grant-access',
+			'logo'             => $this->get_logo_html(),
+			'intro'            => $this->get_intro(),
+			'details'          => $this->get_details_html(),
+			'button'           => $this->generate_button( 'size=hero&class=authlink button-primary', false ),
+			'footer'           => $this->get_footer_html(),
+		);
+
+		$auth_form_template = $this->get_auth_form_template();
+
+		$output = $this->prepare_output( $auth_form_template, $content );
+
+		return $output . $this->get_script();
+	}
+
+	/**
+	 * @return mixed|void
+	 */
+	private function get_auth_form_template() {
+
 		$auth_form_template = '
 <div class="tl-{{ns}}-auth tl-{{ns}}-{{has_access_class}}">
 	<header class="tl-{{ns}}-auth__header">
@@ -259,19 +281,7 @@ final class Admin {
 		 **/
 		$auth_form_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_form_template, $this->config->ns() );
 
-		$content = array(
-			'ns' => $this->config->ns(),
-			'has_access_class' => $this->support_user->get_all() ? 'has-access' : 'grant-access',
-			'logo' => $this->get_logo_html(),
-			'intro' => $this->get_intro(),
-			'details' => $this->get_details_html(),
-			'button' => $this->generate_button( "size=hero&class=authlink button-primary", false ),
-			'footer' => $this->get_footer_html(),
-		);
-
-		$output = $this->prepare_output( $auth_form_template, $content );
-
-		return $output . $this->get_script();
+		return $auth_form_template;
 	}
 
 	private function get_intro() {
