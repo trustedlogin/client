@@ -23,6 +23,8 @@ final class Admin {
 	 */
 	const ABOUT_TL_URL = 'https://www.trustedlogin.com/about/easy-and-safe/';
 
+	const ABOUT_LIVE_ACCESS_URL = 'https://www.trustedlogin.com/about/live-access/';
+
 	/**
 	 * @var Config
 	 */
@@ -233,6 +235,7 @@ final class Admin {
 		$content = array(
 			'ns'               => $this->config->ns(),
 			'has_access_class' => $this->support_user->get_all() ? 'has-access' : 'grant-access',
+			'notices'          => $this->get_notices_html(),
 			'logo'             => $this->get_logo_html(),
 			'intro'            => $this->get_intro(),
 			'details'          => $this->get_details_html(),
@@ -264,6 +267,7 @@ final class Admin {
 		</div>
 		<div class="tl-{{ns}}-auth__response" aria-live="assertive">
 		</div>
+		{{notices}}
 		<div class="tl-{{ns}}-auth__actions">
 			{{button}}
 		</div>
@@ -426,6 +430,33 @@ final class Admin {
 		);
 
 		return $this->prepare_output( $output, $content, false );
+	}
+
+	private function get_notices_html() {
+
+		if ( ! function_exists( 'wp_get_environment_type' ) ) {
+			return '';
+		}
+
+		if ( in_array( wp_get_environment_type(), array( 'staging', 'production' ), true ) ) {
+			return '';
+		}
+
+		$notice_template = '
+		<div class="inline notice notice-alt notice-warning">
+			<h3>{{local_site}}</h3>
+			<p>{{need_access}} <a href="{{about_live_access_url}}" target="_blank" rel="noopener noreferrer">{{learn_more}}</a></p>
+		</div>';
+
+		$content = array(
+			'local_site' => sprintf( esc_html__( 'This site may not be accessible by %s support.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'need_access' => esc_html__( 'You appear to be running a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
+			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
+			'opens_in_new_window' => esc_attr__( 'This link opens in a new window.', 'trustedlogin' ),
+			'learn_more' => esc_html__( 'Learn more.', 'trustedlogin' ),
+		);
+
+		return $this->prepare_output( $notice_template, $content );
 	}
 
 	/**

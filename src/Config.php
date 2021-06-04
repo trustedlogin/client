@@ -73,6 +73,7 @@ final class Config {
 			'support_url' => null,
 			'display_name' => null,
 			'logo_url' => null,
+			'about_live_access_url' => null,
 		),
 		'webhook_url' => null,
 	);
