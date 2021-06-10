@@ -91,16 +91,29 @@ $color-red: #c0461e !default;
 		font-size: 18px;
 		line-height: 1.375;
 		font-weight: bold;
-		text-shadow: $color-light-grey-200 0 0 3px;
 		transition: all 1s;
+
+		/** Simulate a stroke */
+		text-shadow:
+			-1px -1px 0 $color-light-grey-200,
+			1px -1px 0 $color-light-grey-200,
+			-1px 1px 0 $color-light-grey-200,
+			1px 1px 0 $color-light-grey-200,
+			0 0 3px $color-light-grey-200;
 	}
 
 	.tl-#{$namespace}-auth__response_pending {
-		padding: 120px 40px 0 40px;
+		padding: 140px 40px 0 40px;
 		width: 100%;
 		vertical-align: top;
-		background: url('https://i.gravityview.co/rEIncx+') center top no-repeat;
-		background-size: (192px * 1.4) (108px * 1.4);
+		background: url("../assets/loading.svg") center top no-repeat;
+		background-size: contain;
+
+		@media ( prefers-reduced-motion: reduce ) {
+			& {
+				background-image: url("../assets/lock.svg");
+			}
+		}
 	}
 
 	.tl-#{$namespace}-auth__response_error {
@@ -174,7 +187,7 @@ $color-red: #c0461e !default;
 	}
 
 	table {
-		margin-bottom: 36px;
+		margin-bottom: 24px;
 	}
 
 	h1 {
