@@ -60,7 +60,7 @@ final class Remote {
 	 *
 	 * @param array $data {
 	 *   @type string $url The site URL as returned by get_site_url()
-	 *   @type string $action "create" or "revoke"
+	 *   @type string $action "created", "extended", or "revoked"
 	 * }
 	 *
 	 * @return bool|WP_Error False: webhook setting not defined; True: success; WP_Error: error!
