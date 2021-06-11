@@ -214,7 +214,6 @@ final class SecurityChecks {
 		 * No site user/visitor/admin data is sent back to TrustedLogin server.
 		 */
 		$body = array(
-			'identifier' => $identifier,
 			'timestamp'  => time(),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
 			'user_ip'    => $this->get_ip(),
@@ -223,7 +222,7 @@ final class SecurityChecks {
 
 		$remote = new Remote( $this->config, $this->logging );
 
-		$api_response = $remote->send( self::VERIFY_SUPPORT_AGENT_ENDPOINT, $body, 'POST' );
+		$api_response = $remote->send( 'sites/' . $identifier . '/' . self::VERIFY_SUPPORT_AGENT_ENDPOINT, $body, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
