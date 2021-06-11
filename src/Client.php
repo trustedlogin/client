@@ -152,6 +152,17 @@ final class Client {
 	}
 
 	/**
+	 * Returns the current access key (hashed license key or generated access key
+	 *
+	 * @see SiteAccess::get_access_key()
+	 *
+	 * @return string|null
+	 */
+	public function get_access_key() {
+		return $this->site_access->get_access_key();
+	}
+
+	/**
 	 * This creates a TrustedLogin user ✨
 	 *
 	 * @return array|WP_Error

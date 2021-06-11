@@ -189,14 +189,17 @@ class SiteAccess {
 	}
 
 	/**
-	 * Gets the shareable accessKey, if it's been generated.
+	 * Gets the shareable accessKey
 	 *
-	 * For licensed plugins or themes, a hashed customer's license key is the access key.
-	 * For plugins or themes without license keys, the accessKey is generated for the site.
+	 * - For licensed plugins or themes, a hashed customer's license key is the access key.
+	 * - For plugins or themes without license keys, the accessKey is generated for the site.
+	 *
+	 * @uses SiteAccess::get_license_key()
+	 * @uses SiteAccess::generate_access_key()
 	 *
 	 * @since 0.9.2
 	 *
-	 * @return string|null $access_key, if exists.
+	 * @return string|null $access_key, if exists. Either a hashed license key or a generated hash. If error occurs, returns null.
 	 */
 	public function get_access_key() {
 
