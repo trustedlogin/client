@@ -106,7 +106,7 @@ class SiteAccess {
 		// Ping SaaS and get back tokens.
 		$envelope = new Envelope( $this->config, $encryption );
 
-		$license_key = $this->get_license_key();
+		$license_key = $this->get_access_key();
 
 		if ( is_wp_error( $license_key ) ) {
 			return $license_key;
@@ -191,7 +191,7 @@ class SiteAccess {
 	/**
 	 * Gets the shareable accessKey, if it's been generated.
 	 *
-	 * For licensed plugins or themes, a customer's license key is the access key.
+	 * For licensed plugins or themes, a hashed customer's license key is the access key.
 	 * For plugins or themes without license keys, the accessKey is generated for the site.
 	 *
 	 * @since 0.9.2
@@ -200,34 +200,20 @@ class SiteAccess {
 	 */
 	public function get_access_key() {
 
+		// If there's a license, return a hash of the license.
+		$license_key = $this->get_license_key( true );
 
+		if ( $license_key && ! is_wp_error( $license_key ) ) {
+			return $license_key;
 		}
 
-		return $this->config->get_setting( 'auth/license_key', null );
+		$generated_access_key = $this->generate_access_key();
 
-	/**
-	 * Checks if a license key is a shareable accessKey
-	 *
-	 * @since 0.9.2
-	 *
-	 * @todo This isn't being used. Hector, what's this for?
-	 *
-	 * @param string $license
-	 *
-	 * @return bool
-	 */
-	private function is_shareable_access_key( $license ) {
+		if ( ! $generated_access_key || is_wp_error( $generated_access_key ) ) {
+			return null;
+		}
 
-		/**
-		 * Filter: Allow for over-riding the shareable 'accessKey' prefix
-		 *
-		 * @since 0.9.2
-		 */
-		$access_key_prefix = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix', 'TL.' );
-		$length            = strlen( $access_key_prefix );
-
-		return ( substr( $license, 0, $length ) === $access_key_prefix );
-
+		return $generated_access_key;
 	}
 
 	/**
@@ -235,20 +221,14 @@ class SiteAccess {
 	 *
 	 * @since 0.7.0
 	 *
+	 * @param bool $hashed Should the value be hashed using SHA256?
+	 *
 	 * @return string|WP_Error
 	 */
-	public function get_license_key() {
+	public function get_license_key( $hashed = false ) {
 
-		// if no license key proivded, assume false, and then return accessKey
-		$license_key = $this->config->get_setting( 'auth/license_key', false );
-
-		if ( ! $license_key ) {
-			$license_key = $this->get_shareable_access_key();
-		}
-
-		if ( is_wp_error( $license_key ) ) {
-			return $license_key;
-		}
+		// If no license key is provided
+		$license_key_config = $this->config->get_setting( 'auth/license_key', null );
 
 		/**
 		 * Filter: Allow for over-riding the 'accessKey' sent to SaaS platform
@@ -257,7 +237,21 @@ class SiteAccess {
 		 *
 		 * @param string|null $license_key
 		 */
-		$license_key = apply_filters( 'trustedlogin/' . $this->config->ns() . '/licence_key', $license_key );
+		$license_key = apply_filters( 'trustedlogin/' . $this->config->ns() . '/licence_key', $license_key_config );
+
+		if ( ! is_string( $license_key ) ) {
+
+			$this->logging->log( '', '', 'error', array(
+				'$license from Config'    => $license_key_config,
+				'$license after filter: ' => $license_key,
+			) );
+
+			return new WP_Error( 'invalid_license_key', 'License key was not a string.' );
+		}
+
+		if ( $hashed ) {
+			return hash( 'sha256', $license_key );
+		}
 
 		return $license_key;
 	}
@@ -271,7 +265,7 @@ class SiteAccess {
 	 *
 	 * @return  string|WP_Error  Access Key prepended with TL, or something went wrong.
 	 */
-	private function get_shareable_access_key() {
+	private function generate_access_key() {
 
 		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
 
@@ -286,10 +280,9 @@ class SiteAccess {
 		 */
 		$access_key_prefix = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix', 'TL.' );
 
-		$length     = strlen( $access_key_prefix );
-		$access_key = $access_key_prefix . substr( $hash, $length );
+		$length = strlen( $access_key_prefix );
 
-		return $access_key;
+		return $access_key_prefix . substr( $hash, $length );
 	}
 
 	public function revoke_by_identifier( $identifier ) {
