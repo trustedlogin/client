@@ -96,7 +96,7 @@
 				return;
 			}
 
-			console.log( 'TrustedLogin response: ' + response );
+			console.log( 'TrustedLogin response: ', response );
 
 			if ( typeof response.data === 'object' ) {
 				console.log( 'TrustedLogin support login URL:' );
