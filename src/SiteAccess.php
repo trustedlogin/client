@@ -19,8 +19,6 @@ class SiteAccess {
 	 */
 	private $logging;
 
-	private $sharable_access_key_option;
-
 	/**
 	 * @var string The unique identifier of the site in TrustedLogin
 	 */
@@ -32,21 +30,6 @@ class SiteAccess {
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
 		$this->logging = $logging;
-
-
-		/**
-		 * Filter: Sets the site option name for the Shareable accessKey if it's used
-		 *
-		 * @since 0.9.2
-		 *
-		 * @param string $sharable_accesskey_option
-		 * @param Config $config
-		 */
-		$this->sharable_access_key_option = apply_filters(
-			'trustedlogin/' . $this->config->ns() . '/options/sharable_access_key',
-			'tl_' . $this->config->ns() . '_sharable_access_key',
-			$this->config
-		);
 	}
 
 	/**
@@ -217,14 +200,10 @@ class SiteAccess {
 	 */
 	public function get_access_key() {
 
-		$access_key = get_site_option( $this->sharable_access_key_option, false );
 
-		if ( $access_key ) {
-			return $access_key;
 		}
 
 		return $this->config->get_setting( 'auth/license_key', null );
-	}
 
 	/**
 	 * Checks if a license key is a shareable accessKey
@@ -310,8 +289,6 @@ class SiteAccess {
 		$length     = strlen( $access_key_prefix );
 		$access_key = $access_key_prefix . substr( $hash, $length );
 
-		update_site_option( $this->sharable_access_key_option, $access_key );
-
 		return $access_key;
 	}
 
@@ -327,9 +304,6 @@ class SiteAccess {
 	 * @return true|\WP_Error Was the sync to TrustedLogin successful
 	 */
 	public function revoke( Remote $remote ) {
-
-		// Always delete the access key, regardless of whether there's an error later on.
-		delete_site_option( $this->sharable_access_key_option );
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
 			$this->logging->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
