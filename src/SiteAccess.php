@@ -1,6 +1,12 @@
 <?php
+/**
+ * @license GPL-2.0-or-later
+ *
+ * Modified by gravityview on 11-June-2021 using Strauss.
+ * @see https://github.com/BrianHenryIE/strauss
+ */
 
-namespace TrustedLogin;
+namespace GravityView\TrustedLogin;
 
 use \WP_Error;
 
@@ -267,22 +273,13 @@ class SiteAccess {
 	 */
 	private function generate_access_key() {
 
-		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ) );
+		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ), 32 );
 
 		if ( is_wp_error( $hash ) ) {
 			return $hash;
 		}
 
-		/**
-		 * Filter: Allow for over-riding the shareable 'accessKey' prefix
-		 *
-		 * @since 0.9.2
-		 */
-		$access_key_prefix = apply_filters( 'trustedlogin/' . $this->config->ns() . '/access_key_prefix', 'TL.' );
-
-		$length = strlen( $access_key_prefix );
-
-		return $access_key_prefix . substr( $hash, $length );
+		return $hash;
 	}
 
 	public function revoke_by_identifier( $identifier ) {
