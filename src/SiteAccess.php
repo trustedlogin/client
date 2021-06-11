@@ -2,10 +2,7 @@
 
 namespace TrustedLogin;
 
-use \Exception;
 use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
 
 class SiteAccess {
 
@@ -50,7 +47,7 @@ class SiteAccess {
 
 		if ( empty( $identifier ) ) {
 
-			$this->logging->log( "Missing the revoke access identifier.", __METHOD__, 'error' );
+			$this->logging->log( 'Missing the revoke access identifier.', __METHOD__, 'error' );
 
 			return false;
 		}
@@ -70,7 +67,7 @@ class SiteAccess {
 
 			// Couldn't sync to SaaS, this should/could be extended to add a cron-task to delayed update of SaaS DB
 			// TODO: extend to add a cron-task to delayed update of SaaS DB
-			$this->logging->log( "There was an issue syncing to SaaS. Failing silently.", __METHOD__, 'error' );
+			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
 
 			return $site_revoked;
 		}
@@ -88,7 +85,7 @@ class SiteAccess {
 	 *
 	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
 	 * @param string $identifier The unique identifier for the WP_User created {@see SiteAccess::create_hash}
-	 * @param string $action     The type of sync this is. Options can be 'create', 'extend'.
+	 * @param string $action The type of sync this is. Options can be 'create', 'extend'.
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
 	 */
@@ -99,7 +96,7 @@ class SiteAccess {
 		$remote     = new Remote( $this->config, $logging );
 		$encryption = new Encryption( $this->config, $remote, $logging );
 
-		if ( ! in_array( $action, array( 'create', 'extend' ) ) ){
+		if ( ! in_array( $action, array( 'create', 'extend' ) ) ) {
 			return new WP_Error( 'param_error', __( 'Unexpected action value', 'trustedlogin' ) );
 		}
 
