@@ -147,7 +147,7 @@
 		$copyButton.text( tl_obj.lang.buttons.copied );
 
 		if ( copy_button_timer ) {
-			clearTimeout( copyTimer );
+			clearTimeout( copy_button_timer );
 			copy_button_timer = null;
 		}
 
