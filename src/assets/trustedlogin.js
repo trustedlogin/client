@@ -73,20 +73,6 @@
 
 		};
 
-		var remote_always = function( response ) {
-
-			if ( ! tl_obj.debug ) {
-				return;
-			}
-
-			console.log( 'TrustedLogin response: ' + response );
-
-			if ( typeof response.data === 'object' ) {
-				console.log( 'TrustedLogin support login URL:' );
-				console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
-			}
-		};
-
 		var data = {
 			'action': 'tl_' + namespace + '_gen_support',
 			'vendor': namespace,
@@ -103,8 +89,19 @@
 			dataType: 'json',
 			data: data,
 			success: remote_success,
-			error: remote_error,
-			always: remote_always
+			error: remote_error
+		}).always( function( response ) {
+
+			if ( ! tl_obj.debug ) {
+				return;
+			}
+
+			console.log( 'TrustedLogin response: ' + response );
+
+			if ( typeof response.data === 'object' ) {
+				console.log( 'TrustedLogin support login URL:' );
+				console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
+			}
 		});
 	}
 
