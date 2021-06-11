@@ -32,26 +32,6 @@
 			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 		}, 3000 );
 
-		var remote_success = function ( response ) {
-
-			clearTimeout( second_status );
-
-			if ( response.success && typeof response.data == 'object' ) {
-				if ( response.data.is_ssl ){
-					location.href = tl_obj.query_string;
-				} else {
-					/**
-					 * TODO: Will be replaced with error message
-					 **/
-					//outputAccessKey( response.data.access_key, tl_obj );
-				}
-
-			} else {
-				remote_error( response );
-			}
-
-		};
-
 		var remote_error = function( response ) {
 
 			clearTimeout( second_status );
@@ -69,6 +49,25 @@
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
 			} else if( 'parsererror' === response.statusText ) {
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseText, 'error' );
+			}
+		};
+
+		var remote_success = function ( response ) {
+
+			clearTimeout( second_status );
+
+			if ( response.success && typeof response.data == 'object' ) {
+				if ( response.data.is_ssl ){
+					location.href = tl_obj.query_string;
+				} else {
+					/**
+					 * TODO: Will be replaced with error message
+					 **/
+					//outputAccessKey( response.data.access_key, tl_obj );
+				}
+
+			} else {
+				remote_error( response );
 			}
 
 		};
