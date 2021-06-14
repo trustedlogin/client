@@ -1029,7 +1029,10 @@ final class Admin {
 	 */
 	public function admin_notice_revoked() {
 
-		if ( ! did_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked' ) ) {
+		static $displayed_notice;
+
+		// Only show notice once
+		if ( $displayed_notice ) {
 			return;
 		}
 
@@ -1041,5 +1044,7 @@ final class Admin {
 			<?php } ?>
 		</div>
 		<?php
+
+		$displayed_notice = true;
 	}
 }
