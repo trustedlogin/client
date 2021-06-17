@@ -46,7 +46,7 @@ final class Cron {
 	 *
 	 */
 	public function init() {
-		add_action( $this->hook_name, array( $this, 'revoke' ) );
+		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
 	}
 
 	/**
@@ -106,8 +106,8 @@ final class Cron {
 
 		$this->logging->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$SupportUser = new SupportUser( $this->config, $this->logging );
+		$Client = new Client( $this->config );
 
-		$SupportUser->delete( $identifier_hash, true, true );
+		$Client->revoke_access( $identifier_hash );
 	}
 }
