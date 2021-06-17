@@ -217,15 +217,15 @@ final class Remote {
 			case 204:
 				return null;
 
-			// Unauthenticated
+			case 400:
+				return new WP_Error( 'unable_to_verify', __( 'Unable to verify Pause Mode.', 'trustedlogin' ), $api_response );
+
 			case 401:
 				return new WP_Error( 'unauthenticated', __( 'Authentication failed.', 'trustedlogin' ), $api_response );
 
-			// Unauthenticated
 			case 402:
 				return new WP_Error( 'account_error', __( 'TrustedLogin Account issue.', 'trustedlogin' ), $api_response );
 
-			// Problem with Token
 			case 403:
 				return new WP_Error( 'invalid_token', __( 'Invalid tokens.', 'trustedlogin' ), $api_response );
 
