@@ -261,7 +261,6 @@ final class Client {
 			'identifier' => $identifier_hash,
 			'user_id'    => $support_user_id,
 			'expiry'     => $expiration_timestamp,
-			'access_key' => $secret_id,
 			'reference_id' => $reference_id,
 			'is_ssl'     => is_ssl(),
 			'timing'     => array(
