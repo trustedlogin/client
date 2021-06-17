@@ -680,6 +680,7 @@ final class Admin {
 			'lang'         => $this->translations(),
 			'debug'        => $this->logging->is_enabled(),
 			'selector'     => '.button-trustedlogin-' . $this->config->ns(),
+			'reference_id' => self::get_reference_id(),
 			'query_string' => esc_url( remove_query_arg( array(
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 				'_wpnonce'
@@ -1086,5 +1087,17 @@ final class Admin {
 		<?php
 
 		$displayed_notice = true;
+	}
+
+	/**
+	 * @return string|null
+	 */
+	public static function get_reference_id() {
+
+		if ( ! isset( $_GET['ref'] ) ) {
+			return null;
+		}
+
+		return esc_html( $_GET['ref'] );
 	}
 }

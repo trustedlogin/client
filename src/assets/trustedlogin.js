@@ -76,6 +76,7 @@
 			'action': 'tl_' + namespace + '_gen_support',
 			'vendor': namespace,
 			'_nonce': tl_obj._nonce,
+			'reference_id': tl_obj.reference_id,
 		};
 
 		if ( tl_obj.debug ) {

@@ -250,6 +250,8 @@ final class Client {
 			return $secret_id;
 		}
 
+		$reference_id = ( isset( $_POST['ref'] ) ? esc_html( $_POST['ref'] ) : null );
+
 		$timing_local = timer_stop( 0, 5 );
 
 		$return_data = array(
@@ -260,6 +262,7 @@ final class Client {
 			'user_id'    => $support_user_id,
 			'expiry'     => $expiration_timestamp,
 			'access_key' => $secret_id,
+			'reference_id' => $reference_id,
 			'is_ssl'     => is_ssl(),
 			'timing'     => array(
 				'local'  => $timing_local,
@@ -305,7 +308,8 @@ final class Client {
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array(
 			'url'    => get_site_url(),
-			'action' => 'created'
+			'action' => 'created',
+			'ref' => $reference_id,
 		) );
 
 		return $return_data;
