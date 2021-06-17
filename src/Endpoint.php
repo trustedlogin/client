@@ -43,10 +43,6 @@ class Endpoint {
 	 */
 	private $support_user;
 
-	/**
-	 * @var SiteAccess
-	 */
-	private $site_access;
 
 	/**
 	 * @var Logging $logging
@@ -61,7 +57,6 @@ class Endpoint {
 		$this->config = $config;
 		$this->logging = $logging;
 		$this->support_user = new SupportUser( $config, $logging );
-		$this->site_access = new SiteAccess( $config, $logging );
 
 		/**
 		 * Filter: Set endpoint setting name
