@@ -24,23 +24,11 @@ class SiteAccess {
 	private $logging;
 
 	/**
-	 * @var string The unique identifier of the site in TrustedLogin
-	 */
-	private $identifier;
-
-	/**
 	 *
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
 		$this->logging = $logging;
-	}
-
-	/**
-	 * @param string $identifier The unique identifier of the site in TrustedLogin
-	 */
-	public function set_identifier( $identifier ) {
-		$this->identifier = (string) $identifier;
 	}
 
 	/**
@@ -104,6 +92,7 @@ class SiteAccess {
 	/**
 	 * Generate a hash that is used to add two levels of security to the login URL:
 	 * The hash is used when generating $secret_id.
+	 * It is also re-hashed and stored as usermeta.
 	 * It is also re-hashed and stored as usermeta.
 	 * Both parts are required to access the site.
 	 *
@@ -246,11 +235,12 @@ class SiteAccess {
 	/**
 	 * Revoke a site in TrustedLogin
 	 *
+	 * @param string $secret_id ID of site secret identifier to be removed from TrustedLogin
 	 * @param Remote $remote
 	 *
 	 * @return true|\WP_Error Was the sync to TrustedLogin successful
 	 */
-	public function revoke( Remote $remote ) {
+	public function revoke( $secret_id, Remote $remote ) {
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
 			$this->logging->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
@@ -262,7 +252,7 @@ class SiteAccess {
 			'publicKey' => $this->config->get_setting( 'auth/public_key' ),
 		);
 
-		$api_response = $remote->send( 'sites/' . $this->identifier, $body, 'DELETE' );
+		$api_response = $remote->send( 'sites/' . $secret_id, $body, 'DELETE' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
