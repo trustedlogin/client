@@ -262,10 +262,9 @@ final class Client {
 			'user_id'    => $support_user_id,
 			'expiry'     => $expiration_timestamp,
 			'reference_id' => $reference_id,
-			'is_ssl'     => is_ssl(),
 			'timing'     => array(
 				'local'  => $timing_local,
-				'remote' => null,
+				'remote' => null, // Updated later
 			),
 		);
 
@@ -362,10 +361,9 @@ final class Client {
 			'identifier' => $identifier_hash,
 			'user_id'    => $user_id,
 			'expiry'     => $expiration_timestamp,
-			'is_ssl'     => is_ssl(),
 			'timing'     => array(
 				'local'  => $timing_local,
-				'remote' => null,
+				'remote' => null, // Updated later
 			),
 		);
 
