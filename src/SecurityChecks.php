@@ -67,15 +67,15 @@ final class SecurityChecks {
 	}
 
 	/**
-	 * Verifies that a provided identifier is still valid.
+	 * Verifies that a provided user identifier is still valid.
 	 *
 	 * Multiple security checks are performed, including brute-force and known-attacker-list checks
 	 *
-	 * @param string $identifier The identifier provided via {@see SupportUser::maybe_login()}
+	 * @param string $user_identifier The identifier provided via {@see SupportUser::maybe_login()}
 	 *
 	 * @return true|WP_Error True if identifier passes checks. WP_Error if not.
 	 */
-	public function verify( $identifier ) {
+	public function verify( $user_identifier ) {
 
 		if ( $this->in_lockdown() ){
 
@@ -84,11 +84,12 @@ final class SecurityChecks {
 			return new WP_Error( 'in-lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
 		}
 
-		if ( strlen( $identifier ) > 32 ) {
-			$identifier = Encryption::hash( $identifier );
+		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
+		if ( strlen( $user_identifier ) > 32 ) {
+			$user_identifier = Encryption::hash( $user_identifier );
 		}
 
-		$brute_force = $this->check_brute_force( $identifier );
+		$brute_force = $this->check_brute_force( $user_identifier );
 
 		if ( is_wp_error( $brute_force ) ) {
 
@@ -97,14 +98,14 @@ final class SecurityChecks {
 			return $brute_force;
 		}
 
-		$approved = $this->check_approved_identifier( $identifier );
+		$approved = $this->check_approved_identifier( $user_identifier );
 
 		// Don't lock-down the site, since there could have been errors related to remote validation
 		if ( is_wp_error( $approved ) ){
 
 			$this->logging->log(
 				sprintf(
-					'There was an issue verifying identifier with TrustedLogin, aborting login. (%s)',
+					__( 'There was an issue verifying the user identifier with TrustedLogin, aborting login. (%s)', 'trustedlogin' ),
 					$approved->get_error_message()
 				),
 				__METHOD__,
@@ -148,18 +149,18 @@ final class SecurityChecks {
 	}
 
 	/**
-	 * @param string $identifier
+	 * @param string $user_identifier
 	 *
 	 * @return mixed
 	 */
-	private function maybe_add_used_accesskey( $identifier = '' ) {
+	private function maybe_add_used_accesskey( $user_identifier = '' ) {
 
 		$used_accesskeys = (array) get_site_transient( $this->used_accesskey_transient );
 
 		// This is a new access key
-		if ( ! in_array( $identifier, $used_accesskeys, true ) ) {
+		if ( ! in_array( $user_identifier, $used_accesskeys, true ) ) {
 
-			$used_accesskeys[] = $identifier;
+			$used_accesskeys[] = $user_identifier;
 
 			$transient_set = set_site_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
 

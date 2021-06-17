@@ -202,9 +202,9 @@ final class Client {
 			return $support_user_id;
 		}
 
-		$identifier_hash = $this->site_access->create_hash();
+		$site_identifier_hash = $this->site_access->create_hash();
 
-		if ( is_wp_error( $identifier_hash ) ) {
+		if ( is_wp_error( $site_identifier_hash ) ) {
 
 			wp_delete_user( $support_user_id );
 
@@ -213,7 +213,7 @@ final class Client {
 			return new WP_Error( 'secure_secret_failed', 'Could not generate a secure secret.', array( 'error_code' => 501 ) );
 		}
 
-		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
+		$endpoint_hash = $this->endpoint->get_hash( $site_identifier_hash );
 
 		$updated = $this->endpoint->update( $endpoint_hash );
 
@@ -224,7 +224,7 @@ final class Client {
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
 
 		// Add user meta, configure decay
-		$did_setup = $this->support_user->setup( $support_user_id, $identifier_hash, $expiration_timestamp, $this->cron );
+		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
 
@@ -239,7 +239,7 @@ final class Client {
 			return new WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
 		}
 
-		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
+		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
 
@@ -258,7 +258,7 @@ final class Client {
 			'type'       => 'new',
 			'site_url'   => get_site_url(),
 			'endpoint'   => $endpoint_hash,
-			'identifier' => $identifier_hash,
+			'identifier' => $site_identifier_hash,
 			'user_id'    => $support_user_id,
 			'expiry'     => $expiration_timestamp,
 			'reference_id' => $reference_id,
@@ -278,7 +278,7 @@ final class Client {
 
 		try {
 
-			$created = $this->site_access->sync_secret( $secret_id, $identifier_hash, 'create' );
+			$created = $this->site_access->sync_secret( $secret_id, $site_identifier_hash, 'create' );
 
 		} catch ( Exception $e ) {
 
@@ -327,22 +327,23 @@ final class Client {
 		timer_start();
 
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
-		$identifier_hash      = $this->support_user->get_user_identifier( $user_id );
 
-		if ( is_wp_error( $identifier_hash ) ) {
+		$site_identifier_hash = $this->support_user->get_site_hash( $user_id );
 
-			$this->logging->log( sprintf( 'Could not get identifier hash for existing support user account. %s (%s)', $identifier_hash->get_error_message(), $identifier_hash->get_error_code() ), __METHOD__, 'critical' );
+		if ( is_wp_error( $site_identifier_hash ) ) {
 
-			return $identifier_hash;
+			$this->logging->log( sprintf( 'Could not get identifier hash for existing support user account. %s (%s)', $site_identifier_hash->get_error_message(), $site_identifier_hash->get_error_code() ), __METHOD__, 'critical' );
+
+			return $site_identifier_hash;
 		}
 
-		$extended = $this->support_user->extend( $user_id, $identifier_hash, $expiration_timestamp, $this->cron );
+		$extended = $this->support_user->extend( $user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $extended ) ) {
 			return $extended;
 		}
 
-		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash );
+		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
 
@@ -358,7 +359,7 @@ final class Client {
 		$return_data = array(
 			'type'       => 'extend',
 			'site_url'   => get_site_url(),
-			'identifier' => $identifier_hash,
+			'identifier' => $site_identifier_hash,
 			'user_id'    => $user_id,
 			'expiry'     => $expiration_timestamp,
 			'timing'     => array(
@@ -377,7 +378,7 @@ final class Client {
 
 		try {
 
-			$updated = $this->site_access->sync_secret( $secret_id, $identifier_hash, 'extend' );
+			$updated = $this->site_access->sync_secret( $secret_id, $site_identifier_hash, 'extend' );
 
 		} catch ( Exception $e ) {
 
@@ -443,9 +444,9 @@ final class Client {
 			return false;
 		}
 
-		$identifier_hash = $this->support_user->get_site_hash( $user );
-		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
-		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
+		$site_identifier_hash = $this->support_user->get_site_hash( $user );
+		$endpoint_hash = $this->endpoint->get_hash( $site_identifier_hash );
+		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		// Revoke site in SaaS
 		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
@@ -484,3 +485,4 @@ final class Client {
 	}
 
 }
+0

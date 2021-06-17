@@ -99,48 +99,48 @@ class Endpoint {
 			return;
 		}
 
-		$identifier = $this->get_query_var();
+		$user_identifier = $this->get_query_var();
 
-		if ( empty( $identifier ) ) {
+		if ( empty( $user_identifier ) ) {
 			return;
 		}
 
 		/**
 		 * Runs before the support user is (maybe) logged-in
 		 *
-		 * @param string $identifier Unique Identifier for support user.
+		 * @param string $user_identifier Unique identifier for support user.
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $user_identifier );
 
 		$security_checks = new SecurityChecks( $this->config, $this->logging );
 
 		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged
-		$is_verified = $security_checks->verify( $identifier );
+		$is_verified = $security_checks->verify( $user_identifier );
 
 		if ( ! $is_verified || is_wp_error( $is_verified ) ){
 
 			/**
 			 * Runs after the identifier fails security checks
 			 *
-			 * @param string $identifier Unique Identifier for support user.
+			 * @param string $user_identifier Unique identifier for support user.
 			 * @param WP_Error $is_verified The error encountered when verifying the identifier.
 			 */
-			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $identifier, $is_verified );
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $user_identifier, $is_verified );
 
 			return;
 		}
 
-		$is_logged_in = $this->support_user->maybe_login( $identifier );
+		$is_logged_in = $this->support_user->maybe_login( $user_identifier );
 
 		if ( is_wp_error( $is_logged_in ) ) {
 
 			/**
 			 * Runs after the support user fails to log in
 			 *
-			 * @param string $identifier Unique Identifier for support user.
+			 * @param string $user_identifier Unique Identifier for support user.
 			 * @param WP_Error $is_logged_in The error encountered when logging-in.
 			 */
-			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $identifier, $is_logged_in );
+			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $user_identifier, $is_logged_in );
 
 			return;
 		}
@@ -148,9 +148,9 @@ class Endpoint {
 		/**
 		 * Runs after the support user is logged-in
 		 *
-		 * @param string $identifier Unique Identifier for support user.
+		 * @param string $user_identifier Unique Identifier for support user.
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $user_identifier );
 
 		wp_safe_redirect( admin_url() );
 
@@ -198,18 +198,18 @@ class Endpoint {
 			return;
 		}
 
-		$identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
+		$user_identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
 
 		/**
 		 * Trigger action to revoke access based on Support User identifier.
 		 *
 		 * Hooked into by Cron::revoke
 		 *
-		 * @param string $identifier Unique TrustedLogin ID for the Support User
+		 * @param string $user_identifier Unique ID for TrustedLogin support user or "all".
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoke', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoke', $user_identifier );
 
-		$should_be_deleted = $this->support_user->get( $identifier );
+		$should_be_deleted = $this->support_user->get( $user_identifier );
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
@@ -218,9 +218,9 @@ class Endpoint {
 
 		/**
 		 * Only triggered when all access has been successfully revoked and no users exist with identifier $identifer.
-		 * @param string $identifier Unique TrustedLogin ID for the Support User
+		 * @param string $user_identifier Unique TrustedLogin ID for the Support User or "all"
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $identifier );
+		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $user_identifier );
 	}
 
 	/**
@@ -266,43 +266,48 @@ class Endpoint {
 		return (string) get_site_option( $this->option_name );
 	}
 
+	/**
+	 * Returns the value of the {user_identifier} part of a TrustedLogin URL, if set.
+	 *
+	 * @return false|string If false, no query var is set. If string, the sanitized unhashed identifier for the support user.
+	 */
 	private function get_query_var() {
 
 		$endpoint = $this->get();
 
 		$query_var = get_query_var( $endpoint, false );
 
-		$identifier = sanitize_text_field( $query_var );
+		$user_identifier = sanitize_text_field( $query_var );
 
-		return empty( $identifier ) ? false : $identifier;
+		return empty( $user_identifier ) ? false : $user_identifier;
 	}
 
 	/**
 	 * Generate the secret_id parameter as a hash of the endpoint with the identifier
 	 *
-	 * @param string $identifier_hash
+	 * @param string $site_identifier_hash
 	 * @param string $endpoint_hash
 	 *
 	 * @return string|WP_Error This hash will be used as an identifier in TrustedLogin SaaS. Or something went wrong.
 	 */
-	public function generate_secret_id( $identifier_hash, $endpoint_hash = '' ) {
+	public function generate_secret_id( $site_identifier_hash, $endpoint_hash = '' ) {
 
 		if ( empty( $endpoint_hash ) ) {
-			$endpoint_hash = $this->get_hash( $identifier_hash );
+			$endpoint_hash = $this->get_hash( $site_identifier_hash );
 		}
 
-		return Encryption::hash( $endpoint_hash . $identifier_hash );
+		return Encryption::hash( $endpoint_hash . $site_identifier_hash );
 	}
 
 	/**
 	 * Generate the endpoint parameter as a hash of the site URL with the identifier
 	 *
-	 * @param $identifier_hash
+	 * @param $site_identifier_hash
 	 *
 	 * @return string This hash will be used as the first part of the URL and also a part of $secret_id
 	 */
-	public function get_hash( $identifier_hash ) {
-		return Encryption::hash( get_site_url() . $identifier_hash );
+	public function get_hash( $site_identifier_hash ) {
+		return Encryption::hash( get_site_url() . $site_identifier_hash );
 	}
 
 	/**

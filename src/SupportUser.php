@@ -44,14 +44,14 @@ final class SupportUser {
 	public $role;
 
 	/**
-	 * @var string $identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
+	 * @var string $user_identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
 	 * @since 0.7.0
 	 * @example tl_{vendor/namespace}_id
 	 */
-	private $identifier_meta_key;
+	private $user_identifier_meta_key;
 
 	/**
-	 * @var string $identifier_meta_key The namespaced setting name for storing the site identifier hash in user meta
+	 * @var string $site_hash_meta_key The namespaced setting name for storing the site identifier hash in user meta
 	 * @since 0.7.0
 	 * @example tl_{vendor/namespace}_site_hash
 	 */
@@ -78,10 +78,10 @@ final class SupportUser {
 		$this->logging = $logging;
 		$this->role    = new SupportRole( $config, $logging );
 
-		$this->identifier_meta_key = 'tl_' . $config->ns() . '_id';
-		$this->site_hash_meta_key  = 'tl_' . $config->ns() . '_site_hash';
-		$this->expires_meta_key    = 'tl_' . $config->ns() . '_expires';
-		$this->created_by_meta_key = 'tl_' . $config->ns() . '_created_by';
+		$this->user_identifier_meta_key = 'tl_' . $config->ns() . '_id';
+		$this->site_hash_meta_key       = 'tl_' . $config->ns() . '_site_hash';
+		$this->expires_meta_key         = 'tl_' . $config->ns() . '_expires';
+		$this->created_by_meta_key      = 'tl_' . $config->ns() . '_created_by';
 	}
 
 	/**
@@ -117,7 +117,7 @@ final class SupportUser {
 		$args = array(
 			'role'         => $this->role->get_name(),
 			'number'       => 1,
-			'meta_key'     => $this->identifier_meta_key,
+			'meta_key'     => $this->user_identifier_meta_key,
 			'meta_value'   => '',
 			'meta_compare' => 'EXISTS',
 			'fields'       => 'ID',
@@ -198,19 +198,19 @@ final class SupportUser {
 	/**
 	 * Logs in a support user, if any exist at $identifier and haven't expired yet
 	 *
-	 * @param string $identifier Unique Identifier for support user (stored in user meta)
+	 * @param string $user_identifier Unique identifier for support user before being hashed.
 	 *
 	 * @return true|WP_Error
 	 */
-	public function maybe_login( $identifier ) {
+	public function maybe_login( $user_identifier ) {
 
-		$support_user = $this->get( $identifier );
+		$support_user = $this->get( $user_identifier );
 
 		if ( empty( $support_user ) ) {
 
-			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $identifier ), __METHOD__, 'notice' );
+			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $user_identifier ), __METHOD__, 'notice' );
 
-			return new WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $identifier ) ) );
+			return new WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
 		}
 
 		$expires = $this->get_expiration( $support_user );
@@ -220,7 +220,7 @@ final class SupportUser {
 
 			$this->logging->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
 
-			$this->delete( $identifier, true, true );
+			$this->delete( $user_identifier, true, true );
 
 			return new WP_Error( 'access_expired', 'The user was supposed to expire on ' . $expires . '; revoking now.' );
 		}
@@ -255,26 +255,28 @@ final class SupportUser {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $identifier - Unique Identifier
+	 * @param string $user_identifier_or_hash
 	 *
 	 * @return WP_User|null WP_User if found; null if not
 	 */
-	public function get( $identifier = '' ) {
+	public function get( $user_identifier_or_hash = '' ) {
 
-		if ( empty( $identifier ) ) {
+		if ( empty( $user_identifier_or_hash ) ) {
 			return null;
 		}
 
+		$user_identifier_hash = $user_identifier_or_hash;
+
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
-		if ( strlen( $identifier ) > 32 ) {
-			$identifier = Encryption::hash( $identifier );
+		if ( strlen( $user_identifier ) > 32 ) {
+			$user_identifier_hash = Encryption::hash( $user_identifier_or_hash );
 		}
 
 		$args = array(
 			'role'       => $this->role->get_name(),
 			'number'     => 1,
-			'meta_key'   => $this->identifier_meta_key,
-			'meta_value' => $identifier,
+			'meta_key'   => $this->user_identifier_meta_key,
+			'meta_value' => $user_identifier_hash,
 		);
 
 		$user = get_users( $args );
@@ -436,18 +438,18 @@ final class SupportUser {
 			}
 		}
 
-		$hash_of_identifier = Encryption::hash( $identifier_hash );
+		$user_identifier = Encryption::hash( $identifier_hash );
 
-		if ( is_wp_error( $hash_of_identifier ) ) {
-			return $hash_of_identifier;
+		if ( is_wp_error( $user_identifier ) ) {
+			return $user_identifier;
 		}
 
-		update_user_option( $user_id, $this->identifier_meta_key, $hash_of_identifier, true );
 		update_user_option( $user_id, $this->site_hash_meta_key, $identifier_hash, true );
+		update_user_option( $user_id, $this->user_identifier_meta_key, $user_identifier, true );
 		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
-		return get_user_option( $this->identifier_meta_key, $user_id );
+		return get_user_option( $this->user_identifier_meta_key, $user_id );
 	}
 
 	/**
@@ -490,7 +492,7 @@ final class SupportUser {
 	 */
 	public function get_user_identifier( $user_id_or_object ) {
 
-		if ( empty( $this->identifier_meta_key ) ) {
+		if ( empty( $this->user_identifier_meta_key ) ) {
 			$this->logging->log( 'The meta key to identify users is not set.', __METHOD__, 'error' );
 
 			return new WP_Error( 'missing_meta_key', 'The SupportUser object has not been properly instantiated.' );
@@ -507,7 +509,7 @@ final class SupportUser {
 			return new WP_Error( 'invalid_type', '$user must be int or WP_User' );
 		}
 
-		return get_user_option( $this->identifier_meta_key, $user_id );
+		return get_user_option( $this->user_identifier_meta_key, $user_id );
 	}
 
 	/**
@@ -551,12 +553,12 @@ final class SupportUser {
 
 		// If "all", will revoke all support users.
 		if ( 'all' === $user ) {
-			$identifier = 'all';
+			$user_identifier = 'all';
 		} else {
-			$identifier = $this->get_user_identifier( $user );
+			$user_identifier = $this->get_user_identifier( $user );
 		}
 
-		if ( ! $identifier || is_wp_error( $identifier ) ) {
+		if ( ! $user_identifier || is_wp_error( $user_identifier ) ) {
 			return false;
 		}
 
@@ -568,7 +570,7 @@ final class SupportUser {
 
 		$revoke_url = add_query_arg( array(
 			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
-			self::ID_QUERY_PARAM                 => $identifier,
+			self::ID_QUERY_PARAM                 => $user_identifier,
 			'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
 		), $base_page );
 
