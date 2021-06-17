@@ -329,52 +329,43 @@ final class SupportUser {
 	/**
 	 * Deletes support user(s) with options to delete the TrustedLogin-created user role and endpoint as well
 	 *
-	 * @param string $identifier Unique Identifier of the user to delete, or 'all' to remove all support users.
-	 * @param bool $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`
-	 * @param bool $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`
+	 * @used-by SupportUser::maybe_login() Called when user access has expired, but the cron didn't run...
+	 * @used-by Client::revoke_access()
 	 *
-	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users; WP_Error: something went wrong.
+	 * @param string $user_identifier Unique identifier of the user to delete.
+	 * @param bool $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
+	 * @param bool $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
+	 *
+	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users matching $user_identifier; WP_Error: something went wrong.
 	 */
-	public function delete( $identifier = '', $delete_role = true, $delete_endpoint = true ) {
+	public function delete( $user_identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
-		if ( 'all' === $identifier ) {
-			$users = $this->get_all();
-		} else {
-			$user  = $this->get( $identifier );
-			$users = $user ? array( $user ) : null;
-		}
+		require_once ABSPATH . 'wp-admin/includes/user.php'; // Needed for wp_delete_user()
 
-		if ( empty( $users ) ) {
+		$user = $this->get( $user_identifier );
+
+		if ( empty( $user ) ) {
 			return false;
 		}
 
-		$this->logging->log( count( $users ) . " support users found", __METHOD__, 'debug' );
-
-		// Needed for wp_delete_user()
-		require_once ABSPATH . 'wp-admin/includes/user.php';
-
 		$reassign_id_or_null = $this->get_reassign_user_id();
 
-		foreach ( $users as $_user ) {
-			$this->logging->log( "Processing user ID " . $_user->ID, __METHOD__, 'debug' );
+		if ( $delete_endpoint ) {
+			$Endpoint   = new Endpoint( $this->config, $this->logging );
+			$secret_ids = array();
+		}
 
-			$identifier = $this->get_user_identifier( $_user );
+		$this->logging->log( "Processing user ID " . $user->ID, __METHOD__, 'debug' );
 
-			if ( ! $identifier || is_wp_error( $identifier ) ) {
-				$this->logging->log( 'Identifier not found for: ' . $_user->ID . '; the user was NOT deleted.', __METHOD__, 'error' );
-				continue;
-			}
+		// Remove auto-cleanup hook
+		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
-			// Remove auto-cleanup hook
-			wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $identifier ) );
+		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
-			$deleted = wp_delete_user( $_user->ID, $reassign_id_or_null );
-
-			if ( $deleted ) {
-				$this->logging->log( "User: " . $_user->ID . " deleted.", __METHOD__, 'info' );
-			} else {
-				$this->logging->log( "User: " . $_user->ID . " NOT deleted.", __METHOD__, 'error' );
-			}
+		if ( $deleted ) {
+			$this->logging->log( "User: " . $user->ID . " deleted.", __METHOD__, 'info' );
+		} else {
+			$this->logging->log( "User: " . $user->ID . " NOT deleted.", __METHOD__, 'error' );
 		}
 
 		if ( $delete_role ) {
@@ -383,11 +374,11 @@ final class SupportUser {
 
 		if ( $delete_endpoint ) {
 			$Endpoint = new Endpoint( $this->config, $this->logging );
-
 			$Endpoint->delete();
 		}
 
-		return $this->delete( $identifier );
+		// Re-run to make sure there were no race conditions
+		return $this->delete( $user_identifier );
 	}
 
 	/**
