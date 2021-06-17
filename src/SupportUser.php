@@ -51,6 +51,13 @@ final class SupportUser {
 	private $identifier_meta_key;
 
 	/**
+	 * @var string $identifier_meta_key The namespaced setting name for storing the site identifier hash in user meta
+	 * @since 0.7.0
+	 * @example tl_{vendor/namespace}_site_hash
+	 */
+	private $site_hash_meta_key;
+
+	/**
 	 * @var int $expires_meta_key The namespaced setting name for storing the timestamp the user expires
 	 * @since 0.7.0
 	 * @example tl_{vendor/namespace}_expires
@@ -72,6 +79,7 @@ final class SupportUser {
 		$this->role    = new SupportRole( $config, $logging );
 
 		$this->identifier_meta_key = 'tl_' . $config->ns() . '_id';
+		$this->site_hash_meta_key  = 'tl_' . $config->ns() . '_site_hash';
 		$this->expires_meta_key    = 'tl_' . $config->ns() . '_expires';
 		$this->created_by_meta_key = 'tl_' . $config->ns() . '_created_by';
 	}
@@ -435,6 +443,7 @@ final class SupportUser {
 		}
 
 		update_user_option( $user_id, $this->identifier_meta_key, $hash_of_identifier, true );
+		update_user_option( $user_id, $this->site_hash_meta_key, $identifier_hash, true );
 		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 
 		// Make extra sure that the identifier was saved. Otherwise, things won't work!
@@ -499,6 +508,33 @@ final class SupportUser {
 		}
 
 		return get_user_option( $this->identifier_meta_key, $user_id );
+	}
+
+	/**
+	 * @param WP_User|int $user_id_or_object User ID or User object
+	 *
+	 * @return string|WP_Error User unique identifier if success; WP_Error if $user is not int or WP_User.
+	 */
+	public function get_site_hash( $user_id_or_object ) {
+
+		if ( empty( $this->site_hash_meta_key ) ) {
+			$this->logging->log( 'The constructor has not been properly instantiated; the site_hash_meta_key property is not set.', __METHOD__, 'error' );
+
+			return new WP_Error( 'missing_meta_key', 'The SupportUser object has not been properly instantiated.' );
+		}
+
+		if ( $user_id_or_object instanceof \WP_User ) {
+			$user_id = $user_id_or_object->ID;
+		} elseif ( is_int( $user_id_or_object ) ) {
+			$user_id = $user_id_or_object;
+		} else {
+
+			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
+
+			return new WP_Error( 'invalid_type', '$user must be int or WP_User' );
+		}
+
+		return get_user_option( $this->site_hash_meta_key, $user_id );
 	}
 
 	/**
