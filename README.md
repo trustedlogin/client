@@ -141,6 +141,14 @@ The most secure option is to disable logging. This should be the default, but so
    - `{date}` is `YYYY-MM-DD` format
    - The hash is generated using `wp_hash()` using on the `vendor/namespace`, site `home_url()`, and the day of the year (`date('z')`). The point of the hash is to make log names harder to guess (security by obscurity).
 
+## Hooks
+
+### `trustedlogin/{namespace}/login/refused`
+
+Runs after the identifier fails security checks. Could be triggered for the following reasons:
+
+- The site is in lockdown mode (brute force attacks detected)
+
 ## FAQ
 
 ### WordPress.org compliance
