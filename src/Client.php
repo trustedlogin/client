@@ -3,7 +3,7 @@
  * The TrustedLogin drop-in class. Include this file and instantiate the class and you have secure support.
  *
  * @version 0.9.2
- * @copyright 2020 Katz Web Services, Inc.
+ * @copyright 2021 Katz Web Services, Inc.
  *
  * ###                    ###
  * ###   HEY DEVELOPER!   ###
@@ -13,8 +13,8 @@
  * Thanks for integrating TrustedLogin.
  *
  * 0. If you haven't already, sign up for a TrustedLogin account {@see https://www.trustedlogin.com}
- * 1. Prefix the namespace below with your own namespace (`namespace \ReplaceThisExample\TrustedLogin;`)
- * 2. Instantiate this class with a configuration array ({@see https://www.trustedlogin.com/configuration/} for more info)
+ * 1. Namespace the installation ({@see https://www.trustedlogin.com/configuration/} to learn how)
+ * 2. Instantiate this class with a configuration array (really, {@see https://www.trustedlogin.com/configuration/} for more info)
  */
 namespace TrustedLogin;
 

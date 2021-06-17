@@ -4,7 +4,7 @@
  *
  * @package TrustedLogin\Client
  *
- * @copyright 2020 Katz Web Services, Inc.
+ * @copyright 2021 Katz Web Services, Inc.
  */
 namespace TrustedLogin;
 

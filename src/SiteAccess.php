@@ -1,4 +1,11 @@
 <?php
+/**
+ * Class SiteAccess
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2021 Katz Web Services, Inc.
+ */
 
 namespace TrustedLogin;
 
