@@ -477,7 +477,7 @@ final class Admin {
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%3$s" alt="%4$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
 				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-				sprintf( 'Visit the %s website', $this->config->get_setting( 'vendor/title' ) ),
+				sprintf( 'Visit the %s website (opens in a new tab)', $this->config->get_setting( 'vendor/title' ) ),
 				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
 				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
