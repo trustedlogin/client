@@ -37,50 +37,6 @@ class SiteAccess {
 	}
 
 	/**
-	 * Revoke access to a site
-	 *
-	 * @param string $identifier Unique ID or "all"
-	 *
-	 * @return bool|WP_Error True: Synced to SaaS. False: empty identifier. WP_Error: failed to revoke site in SaaS.
-	 */
-	public function revoke_access( $identifier = '' ) {
-
-		if ( empty( $identifier ) ) {
-
-			$this->logging->log( 'Missing the revoke access identifier.', __METHOD__, 'error' );
-
-			return false;
-		}
-
-		$Endpoint = new Endpoint( $this->config, $this->logging );
-
-		$endpoint_hash = $Endpoint->get_hash( $identifier );
-
-		$this->set_identifier( $endpoint_hash );
-
-		$Remote = new Remote( $this->config, $this->logging );
-
-		// Revoke site in SaaS
-		$site_revoked = $this->revoke( $Remote );
-
-		if ( is_wp_error( $site_revoked ) ) {
-
-			// Couldn't sync to SaaS, this should/could be extended to add a cron-task to delayed update of SaaS DB
-			// TODO: extend to add a cron-task to delayed update of SaaS DB
-			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
-
-			return $site_revoked;
-		}
-
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array(
-			'url'    => get_site_url(),
-			'action' => 'revoked',
-		) );
-
-		return $site_revoked;
-	}
-
-	/**
 	 * Handles the syncing of newly generated support access to the TrustedLogin servers.
 	 *
 	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}

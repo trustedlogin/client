@@ -200,17 +200,14 @@ class Endpoint {
 
 		$identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
 
-		$deleted_user = $this->support_user->delete( $identifier );
-
-		if ( is_wp_error( $deleted_user ) ) {
-			$this->logging->log( 'Removing user failed: ' . $deleted_user->get_error_message(), __METHOD__, 'error' );
-		}
-
-		$revoked_site_in_saas = $this->site_access->revoke_access( $identifier );
-
-		if ( is_wp_error( $revoked_site_in_saas ) ) {
-			return; // Don't trigger `access_revoked` if anything fails.
-		}
+		/**
+		 * Trigger action to revoke access based on Support User identifier.
+		 *
+		 * Hooked into by Cron::revoke
+		 *
+		 * @param string $identifier Unique TrustedLogin ID for the Support User
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoke', $identifier );
 
 		$should_be_deleted = $this->support_user->get( $identifier );
 

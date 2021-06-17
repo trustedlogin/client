@@ -410,4 +410,76 @@ final class Client {
 		return $return_data;
 	}
 
+	/**
+	 * Revoke access to a site
+	 *
+	 * @param string $identifier Unique ID or "all"
+	 *
+	 * @return bool|WP_Error True: Synced to SaaS and user(s) deleted. False: empty identifier. WP_Error: failed to revoke site in SaaS or failed to delete user.
+	 */
+	public function revoke_access( $identifier = '' ) {
+
+		if ( empty( $identifier ) ) {
+
+			$this->logging->log( 'Missing the revoke access identifier.', __METHOD__, 'error' );
+
+			return false;
+		}
+
+		if ( 'all' === $identifier ) {
+			$users = $this->support_user->get_all();
+
+			foreach ( $users as $user ) {
+				$this->revoke_access( $this->support_user->get_user_identifier( $user ) );
+			}
+		}
+
+		$user = $this->support_user->get( $identifier );
+
+		if ( null === $user ) {
+			$this->logging->log( 'User does not exist; access may have already been revoked.', __METHOD__, 'error' );
+
+			return false;
+		}
+
+		$identifier_hash = $this->support_user->get_site_hash( $user );
+		$endpoint_hash = $this->endpoint->get_hash( $identifier_hash );
+		$secret_id = $this->endpoint->generate_secret_id( $identifier_hash, $endpoint_hash );
+
+		// Revoke site in SaaS
+		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
+
+		if ( is_wp_error( $site_revoked ) ) {
+
+			// Couldn't sync to SaaS, this should/could be extended to add a cron-task to delayed update of SaaS DB
+			// TODO: extend to add a cron-task to delayed update of SaaS DB
+			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
+		}
+
+		$deleted_user = $this->support_user->delete( $identifier, true, true );
+
+		if ( is_wp_error( $deleted_user ) ) {
+			$this->logging->log( 'Removing user failed: ' . $deleted_user->get_error_message(), __METHOD__, 'error' );
+
+			return $deleted_user;
+		}
+
+		$should_be_deleted = $this->support_user->get( $identifier );
+
+		if ( ! empty( $should_be_deleted ) ) {
+			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
+			return new WP_Error( 'support_user_not_deleted', __( 'The support user was not deleted.', 'trustedlogin' ) );
+		}
+
+		/**
+		 * Site was removed in SaaS, user was deleted.
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array(
+			'url'    => get_site_url(),
+			'action' => 'revoked',
+		) );
+
+		return $site_revoked;
+	}
+
 }
