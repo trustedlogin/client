@@ -21,6 +21,11 @@ class Endpoint {
 	const REVOKE_SUPPORT_QUERY_PARAM = 'revoke-tl';
 
 	/**
+	 * @var string Site option used to track whether permalinks have been flushed.
+	 */
+	const PERMALINK_FLUSH_OPTION_NAME = 'tl_permalinks_flushed';
+
+	/**
 	 * @var Config $config
 	 */
 	private $config;
@@ -242,18 +247,24 @@ class Endpoint {
 
 		$this->logging->log( "Endpoint {$endpoint} added.", __METHOD__, 'debug' );
 
-		if ( ! get_site_option( 'tl_permalinks_flushed' ) ) {
+		if ( get_site_option( self::PERMALINK_FLUSH_OPTION_NAME ) ) {
+			return;
+		}
 
-			flush_rewrite_rules( false );
+		flush_rewrite_rules( false );
 
-			update_option( 'tl_permalinks_flushed', 1 );
+		$this->logging->log( 'Rewrite rules flushed.', __METHOD__, 'info' );
 
-			$this->logging->log( "Rewrite rules flushed.", __METHOD__, 'info' );
+		$updated_option = update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 1 );
+
+		if ( false === $updated_option ) {
+			$this->logging->log( 'Permalink flush option was not properly set.', 'warning' );
 		}
 	}
 
 	/**
 	 * Get the site option value at {@see option_name}
+	 *
 	 * @return string
 	 */
 	public function get() {
@@ -310,7 +321,7 @@ class Endpoint {
 
 		$updated = update_option( $this->option_name, $endpoint, true );
 
-		update_option( 'tl_permalinks_flushed', 0 );
+		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
 		return $updated;
 	}
@@ -331,7 +342,7 @@ class Endpoint {
 
 		flush_rewrite_rules( false );
 
-		update_option( 'tl_permalinks_flushed', 0 );
+		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
 		$this->logging->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
 	}
