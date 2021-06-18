@@ -180,10 +180,6 @@ class SiteAccess {
 		return $hash;
 	}
 
-	public function revoke_by_identifier( $identifier ) {
-
-	}
-
 	/**
 	 * Revoke a site in TrustedLogin
 	 *
