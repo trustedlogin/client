@@ -24,6 +24,14 @@ class SiteAccess {
 	private $logging;
 
 	/**
+	 * @var string[] Valid action types to use when syncing to TrustedLogin.
+	 */
+	private static $sync_actions = array(
+		'create',
+		'extend'
+	);
+
+	/**
 	 *
 	 */
 	public function __construct( Config $config, Logging $logging ) {
@@ -46,7 +54,7 @@ class SiteAccess {
 		$remote     = new Remote( $this->config, $logging );
 		$encryption = new Encryption( $this->config, $remote, $logging );
 
-		if ( ! in_array( $action, array( 'create', 'extend' ) ) ) {
+		if ( ! in_array( $action, self::$sync_actions, true ) ) {
 			return new WP_Error( 'param_error', __( 'Unexpected action value', 'trustedlogin' ) );
 		}
 
