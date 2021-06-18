@@ -231,13 +231,15 @@ final class SupportUser {
 	}
 
 	/**
+	 * Processes login (with extra logging) and triggers the 'trustedlogin/{ns}/login' hook
+	 *
 	 * @param WP_User $support_user
 	 */
 	private function login( WP_User $support_user ) {
 
 		if ( ! $support_user->exists() ) {
 
-			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'warning' );
+			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'error' );
 
 			return;
 		}
@@ -248,6 +250,14 @@ final class SupportUser {
 		do_action( 'wp_login', $support_user->user_login, $support_user );
 
 		$this->logging->log( sprintf( 'Support User #%d logged in', $support_user->ID ), __METHOD__, 'notice' );
+
+		/**
+		 * Action run when TrustedLogin has logged-in
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
+			'url' => get_site_url(),
+			'action' => 'logged_in',
+		) );
 	}
 
 	/**

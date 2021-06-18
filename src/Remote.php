@@ -51,6 +51,7 @@ final class Remote {
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) );
+		add_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array( $this, 'maybe_send_webhook' ) );
 	}
 
 	/**
@@ -60,7 +61,8 @@ final class Remote {
 	 *
 	 * @param array $data {
 	 *   @type string $url The site URL as returned by get_site_url()
-	 *   @type string $action "created", "extended", or "revoked"
+	 *   @type string $action "created", "extended", "logged_in", or "revoked"
+	 *   @type string $ref (Optional) Support ticket Reference ID
 	 * }
 	 *
 	 * @return bool|WP_Error False: webhook setting not defined; True: success; WP_Error: error!
