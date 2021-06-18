@@ -413,29 +413,29 @@ final class SupportUser {
 	 * Schedules cron job to auto-revoke, adds user meta with unique ids
 	 *
 	 * @param int $user_id ID of generated support user
-	 * @param string $identifier_hash Unique ID used by
+	 * @param string $site_identifier_hash
 	 * @param int $decay_timestamp Timestamp when user will be removed
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
-	public function setup( $user_id, $identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
+	public function setup( $user_id, $site_identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
 
 		if ( $expiration_timestamp ) {
 
-			$scheduled = $cron->schedule( $expiration_timestamp, $identifier_hash );
+			$scheduled = $cron->schedule( $expiration_timestamp, $site_identifier_hash );
 
 			if ( $scheduled ) {
 				update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
 			}
 		}
 
-		$user_identifier = Encryption::hash( $identifier_hash );
+		$user_identifier = Encryption::hash( $site_identifier_hash );
 
 		if ( is_wp_error( $user_identifier ) ) {
 			return $user_identifier;
 		}
 
-		update_user_option( $user_id, $this->site_hash_meta_key, $identifier_hash, true );
+		update_user_option( $user_id, $this->site_hash_meta_key, $site_identifier_hash, true );
 		update_user_option( $user_id, $this->user_identifier_meta_key, $user_identifier, true );
 		update_user_option( $user_id, $this->created_by_meta_key, get_current_user_id() );
 

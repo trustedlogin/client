@@ -35,7 +35,7 @@ class SiteAccess {
 	 * Handles the syncing of newly generated support access to the TrustedLogin servers.
 	 *
 	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
-	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see SiteAccess::create_hash}
+	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}
 	 * @param string $action The type of sync this is. Options can be 'create', 'extend'.
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
@@ -87,54 +87,6 @@ class SiteAccess {
 		) );
 
 		return true;
-	}
-
-	/**
-	 * Generate a hash that is used to add two levels of security to the login URL:
-	 * The hash is used when generating $secret_id.
-	 * It is also re-hashed and stored as usermeta.
-	 * It is also re-hashed and stored as usermeta.
-	 * Both parts are required to access the site.
-	 *
-	 * TODO: Move to Encryption?
-	 *
-	 * @return string|WP_Error
-	 */
-	public function create_hash() {
-
-		$hash = false;
-
-		if ( function_exists( 'random_bytes' ) ) {
-			try {
-				$bytes = random_bytes( 64 );
-				$hash  = bin2hex( $bytes );
-			} catch ( \TypeError $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
-			} catch ( \Error $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
-			} catch ( \Exception $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
-			}
-		} else {
-			$this->logging->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
-		}
-
-		if ( $hash ) {
-			return $hash;
-		}
-
-		if ( ! function_exists( 'openssl_random_pseudo_bytes' ) ) {
-			return new WP_Error( 'generate_hash_failed', 'Could not generate a secure hash with random_bytes or openssl.' );
-		}
-
-		$crypto_strong = false;
-		$hash          = openssl_random_pseudo_bytes( 64, $crypto_strong );
-
-		if ( ! $crypto_strong ) {
-			return new WP_Error( 'openssl_not_strong_crypto', 'Site could not generate a secure hash with OpenSSL.' );
-		}
-
-		return $hash;
 	}
 
 	/**
