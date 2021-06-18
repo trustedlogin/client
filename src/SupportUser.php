@@ -268,7 +268,7 @@ final class SupportUser {
 		$user_identifier_hash = $user_identifier_or_hash;
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
-		if ( strlen( $user_identifier ) > 32 ) {
+		if ( strlen( $user_identifier_or_hash ) > 32 ) {
 			$user_identifier_hash = Encryption::hash( $user_identifier_or_hash );
 		}
 
