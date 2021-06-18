@@ -95,7 +95,7 @@ class Logging {
 			$default_options = array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => sprintf( 'trustedlogin-debug-%s-%s', wp_date( 'Y-m-d' ), wp_hash( $filename_hash_data ) ),
+				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', wp_date( 'Y-m-d' ), wp_hash( $filename_hash_data ) ),
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
