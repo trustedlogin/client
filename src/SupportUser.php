@@ -175,7 +175,7 @@ final class SupportUser {
 		$user_data = array(
 			'user_login'      => $user_name,
 			'user_url'        => $this->config->get_setting( 'vendor/website' ),
-			'user_pass'       => wp_generate_password( 64, true, true ),
+			'user_pass'       => Encryption::get_random_hash(),
 			'user_email'      => $user_email,
 			'role'            => $this->role->get_name(),
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
@@ -196,7 +196,9 @@ final class SupportUser {
 	}
 
 	/**
-	 * Logs in a support user, if any exist at $identifier and haven't expired yet
+	 * Logs in a support user, if any exist at $user_identifier and haven't expired yet
+	 *
+	 * If the user access has expired, deletes the user with {@see SupportUser::delete()}
 	 *
 	 * @param string $user_identifier Unique identifier for support user before being hashed.
 	 *

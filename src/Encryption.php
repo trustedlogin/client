@@ -86,7 +86,7 @@ final class Encryption {
 	 *
 	 * @return string|WP_Error 64-character random hash or a WP_Error object explaining what went wrong. See docblock.
 	 */
-	public function get_random_hash() {
+	static public function get_random_hash() {
 
 		$byte_length = 64;
 
