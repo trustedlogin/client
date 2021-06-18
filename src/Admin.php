@@ -225,6 +225,15 @@ final class Admin {
 	}
 
 	/**
+	 * Is this a login screen and should TrustedLogin override the login screen for the current namespace?
+	 *
+	 * @return bool
+	 */
+	private function is_login_screen() {
+		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();
+	}
+
+	/**
 	 * Output the contents of the Auth Link Page in wp-admin
 	 *
 	 * @since 0.5.0
