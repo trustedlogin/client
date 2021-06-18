@@ -90,7 +90,7 @@ class SiteAccess {
 	}
 
 	/**
-	 * Gets the shareable accessKey
+	 * Gets the shareable access key
 	 *
 	 * - For licensed plugins or themes, a hashed customer's license key is the access key.
 	 * - For plugins or themes without license keys, the accessKey is generated for the site.
