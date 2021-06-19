@@ -166,6 +166,9 @@ class Logging {
 
 		// Directory exists; return early
 		if( file_exists( $log_dir ) ) {
+
+			$this->prevent_directory_browsing( $log_dir );
+
 			return $log_dir;
 		}
 
