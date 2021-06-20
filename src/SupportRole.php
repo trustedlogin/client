@@ -44,6 +44,7 @@ final class SupportRole {
 		'create_users',
 		'delete_users',
 		'edit_users',
+		'list_users',
 		'promote_users',
 		'delete_site',
 		'remove_users',
