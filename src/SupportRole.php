@@ -13,10 +13,7 @@ if ( ! defined('ABSPATH') ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use WP_Error;
 
 final class SupportRole {
 
