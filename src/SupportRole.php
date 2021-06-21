@@ -51,18 +51,12 @@ final class SupportRole {
 	);
 
 	/**
-	 * @var string
-	 */
-	private $cloned_name;
-
-	/**
 	 * SupportUser constructor.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config = $config;
 		$this->logging = $logging;
 		$this->role_name = $this->set_name();
-		$this->cloned_name = $this->get_cloned_name();
 	}
 
 	/**
