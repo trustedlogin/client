@@ -106,7 +106,7 @@ final class Cron {
 
 		$this->logging->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$Client = new Client( $this->config );
+		$Client = new Client( $this->config, false );
 
 		$Client->revoke_access( $identifier_hash );
 	}

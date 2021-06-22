@@ -76,7 +76,7 @@ final class Ajax {
 			wp_send_json_error( array( 'message' => 'Verification issue: Request could not be verified. Please reload the page.' ) );
 		}
 
-		$client = new Client( $this->config );
+		$client = new Client( $this->config, false );
 
 		$response = $client->grant_access();
 
