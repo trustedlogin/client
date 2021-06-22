@@ -83,7 +83,8 @@ class Endpoint {
 		}
 
 		add_action( 'template_redirect', array( $this, 'maybe_login_support' ), 99 );
-		add_action( 'admin_init', array( $this, 'admin_maybe_revoke_support' ), 100 );
+		add_action( 'admin_init', array( $this, 'maybe_revoke_support' ), 100 );
+		add_action( 'init', array( $this, 'maybe_revoke_support' ), 100 );
 	}
 
 	/**
@@ -164,7 +165,7 @@ class Endpoint {
 	 *
 	 * @since 0.2.1
 	 */
-	public function admin_maybe_revoke_support() {
+	public function maybe_revoke_support() {
 
 		if ( ! isset( $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) ) {
 			return;
