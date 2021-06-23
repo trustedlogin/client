@@ -121,7 +121,7 @@ final class SecurityChecks {
 	/**
 	 * Detects if this identifier indicates that the site's access keys may be under a brute force attack.
 	 *
-	 * @param  string $identifier The identifier provided via {@see SupportUser::maybe_login()}
+	 * @param  string $identifier The identifier provided via {@see Endpoint::maybe_login_support()}
 	 *
 	 * @return true|WP_Error WP_Error if an anomaly was detected and site may be under attack. Else true.
 	 */
