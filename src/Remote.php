@@ -220,6 +220,7 @@ final class Remote {
 				return null;
 
 			case 400:
+			case 423:
 				return new WP_Error( 'unable_to_verify', __( 'Unable to verify Pause Mode.', 'trustedlogin' ), $api_response );
 
 			case 401:
