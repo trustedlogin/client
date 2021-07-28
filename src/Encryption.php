@@ -84,9 +84,11 @@ final class Encryption {
 	 * @uses random_bytes
 	 * @uses openssl_random_pseudo_bytes Only used if random_bytes() does not exist.
 	 *
+	 * @param Logging The logging object to use
+	 *
 	 * @return string|WP_Error 64-character random hash or a WP_Error object explaining what went wrong. See docblock.
 	 */
-	static public function get_random_hash() {
+	static public function get_random_hash( $logging ) {
 
 		$byte_length = 64;
 
@@ -97,14 +99,14 @@ final class Encryption {
 				$bytes = random_bytes( $byte_length );
 				$hash  = bin2hex( $bytes );
 			} catch ( \TypeError $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
+				$logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Error $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
+				$logging->log( $e->getMessage(), __METHOD__, 'error' );
 			} catch ( \Exception $e ) {
-				$this->logging->log( $e->getMessage(), __METHOD__, 'error' );
+				$logging->log( $e->getMessage(), __METHOD__, 'error' );
 			}
 		} else {
-			$this->logging->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
+			$logging->log( 'This site does not have the random_bytes() function.', __METHOD__, 'debug' );
 		}
 
 		if ( $hash ) {

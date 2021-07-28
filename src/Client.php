@@ -203,7 +203,7 @@ final class Client {
 			return $support_user_id;
 		}
 
-		$site_identifier_hash = Encryption::get_random_hash();
+		$site_identifier_hash = Encryption::get_random_hash( $this->logging );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
 

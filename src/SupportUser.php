@@ -175,7 +175,7 @@ final class SupportUser {
 		$user_data = array(
 			'user_login'      => $user_name,
 			'user_url'        => $this->config->get_setting( 'vendor/website' ),
-			'user_pass'       => Encryption::get_random_hash(),
+			'user_pass'       => Encryption::get_random_hash( $this->logging ),
 			'user_email'      => $user_email,
 			'role'            => $this->role->get_name(),
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
