@@ -285,8 +285,10 @@ final class Admin {
 	private function get_reference_html() {
 		$template =  '<div class="tl-{{ns}}-auth__ref"><p>{{site_url}}{{reference}}</p></div>';
 
+		$reference_id = self::get_reference_id();
+
 		$content = array(
-			'reference' => isset( $_GET['ref'] ) ? '<span class="tl-{{ns}}-auth__ref__middot">&middot;</span> Reference #' . $_GET['ref'] : '',
+			'reference' => $reference_id ? '<span class="tl-{{ns}}-auth__ref__middot">&middot;</span> ' . sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $reference_id ) : '',
 			'ns' => $this->config->ns(),
 			'site_url' => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
 		);
