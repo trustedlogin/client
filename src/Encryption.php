@@ -191,7 +191,7 @@ final class Encryption {
 			return $remote_key;
 		}
 
-		// Store Vendor public key in the DB for ten minutes
+		// Attempt to store Vendor public key in the DB for ten minutes (may be overridden by caching plugins)
 		$saved = set_site_transient( $this->public_key_option, $remote_key, 60 * 10 );
 
 		if ( ! $saved ) {
