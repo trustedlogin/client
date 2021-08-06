@@ -65,6 +65,7 @@ final class Admin {
 			'output_support_users'
 		), 20 );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/auth_screen', array( $this, 'print_auth_screen' ), 20 );
+		add_action( 'login_form_trustedlogin', array( $this, 'maybe_print_request_screen' ), 20 );
 		add_filter( 'user_row_actions', array( $this, 'user_row_action_revoke' ), 10, 2 );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
 
@@ -75,6 +76,7 @@ final class Admin {
 
 		if ( $this->config->get_setting( 'register_assets', true ) ) {
 			add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
+			add_action( 'login_enqueue_scripts', array( $this, 'register_assets' ) );
 		}
 
 		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array( $this, 'admin_notices' ) );
@@ -102,11 +104,9 @@ final class Admin {
 			return $actions;
 		}
 
-		$actions = array(
+		return array(
 			'revoke' => "<a class='trustedlogin tl-revoke submitdelete' href='" . esc_url( $revoke_url ) . "'>" . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a>',
 		);
-
-		return $actions;
 	}
 
 	/**
@@ -214,6 +214,79 @@ final class Admin {
 	}
 
 	/**
+	 * Is this a login screen and should TrustedLogin override the login screen for the current namespace?
+	 *
+	 * @return bool
+	 */
+	private function is_login_screen() {
+		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();
+	}
+
+	/**
+	 * If the current request is a valid login screen override, print the TrustedLogin request screen.
+	 *
+	 * @return void
+	 */
+	public function maybe_print_request_screen() {
+
+		if ( ! $this->is_login_screen() ) {
+			return;
+		}
+
+		// Once logged-in, take user back to auth request screen.
+		if ( ! is_user_logged_in() ) {
+			$_REQUEST['redirect_to'] = site_url( add_query_arg( array() ) );
+			return;
+		}
+
+		if ( ! current_user_can( 'create_users' ) ) {
+			return;
+		}
+
+		$this->print_request_screen();
+	}
+
+	public function print_request_screen() {
+		global $interim_login;
+
+		$interim_login = true;
+
+		add_filter( 'login_headertext', '__return_empty_string' );
+		add_filter( 'login_headertitle', '__return_empty_string' );
+		add_filter( 'login_headerurl', function () {
+			return $this->config->get_setting( 'vendor/website' );
+		});
+
+
+		login_header();
+
+		wp_enqueue_style( 'common');
+
+echo '
+<style>
+#login {
+	width: auto;
+}
+.login .button-primary {
+	float: none;
+}
+.login h1 {
+	margin-top: 36px;
+}
+.login h1 a {
+background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ). '")!important;
+background-size: contain!important;
+};
+</style>';
+
+
+		echo $this->get_auth_screen();
+		login_footer();
+
+		die();
+	}
+
+	/**
 	 * Outputs the TrustedLogin authorization screen
 	 *
 	 * @since 0.8.0
@@ -250,15 +323,41 @@ final class Admin {
 			'notices'          => $this->get_notices_html(),
 			'header'           => $this->get_header_html(),
 			'intro'            => $this->get_intro(),
-			'ref'			   => $this->get_reference_html(),
 			'details'          => $this->get_details_html(),
-			'button'           => $this->generate_button( 'size=hero&class=authlink button-primary', false ),
+			'button'           => $this->generate_button( 'size=hero&class="authlink button-primary"', false ),
 			'footer'           => $this->get_footer_html(),
 		);
 
-		$auth_form_template = $this->get_auth_form_template();
+		$auth_screen_template = '
+		<div class="tl-{{ns}}-auth tl-{{ns}}-{{has_access_class}}">
+			{{header}}
+			<section class="tl-{{ns}}-auth__body">
+				<h2 class="tl-{{ns}}-auth__intro">{{intro}}</h2>
 
-		$output = $this->prepare_output( $auth_form_template, $content );
+				<div class="tl-{{ns}}-auth__details">
+					{{details}}
+				</div>
+				<div class="tl-{{ns}}-auth__response" aria-live="assertive">
+				</div>
+				{{notices}}
+				<div class="tl-{{ns}}-auth__actions">
+					{{button}}
+				</div>
+			</section>
+			<footer class="tl-{{ns}}-auth__footer">
+				{{footer}}
+			</footer>
+		</div>';
+
+		/**
+		 * Filter trustedlogin/{ns}/template/auth
+		 *
+		 * @param string $output_template The Auth form HTML
+		 * @param string $ns The namespace of the plugin initializing TrustedLogin.
+		 */
+		$auth_screen_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template, $this->config->ns() );
+
+		$output = $this->prepare_output( $auth_screen_template, $content );
 
 		return $output . $this->get_script();
 	}
@@ -282,57 +381,37 @@ final class Admin {
 		return $this->prepare_output( $header_template, $variables );
 	}
 
-	private function get_reference_html() {
-		$template =  '<div class="tl-{{ns}}-auth__ref"><p>{{site_url}}{{reference}}</p></div>';
+	/**
+	 * Shows the current site URL and, if passed as $_GET['ref'], a support reference ID
+	 *
+	 * @return string
+	 */
+	private function get_auth_meta_html() {
+
+		if ( ! $this->is_login_screen() ) {
+			return '';
+		}
+
+		$reference_html = '';
+		$ref = self::get_reference_id();
+
+		if ( $ref ) {
+			$reference_html = sprintf( '&nbsp;<span class="tl-{{ns}}-auth__ref__middot">&middot;</span>&nbsp;<span class="tl-{{ns}}-auth_ref__id">%s</span>',
+				sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $ref )
+			);
+		}
+
+		$template =  '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-test-auth_ref__url">{{site_url}}</span>{{reference_html}}</p></div>';
 
 		$reference_id = self::get_reference_id();
 
 		$content = array(
-			'reference' => $reference_id ? '<span class="tl-{{ns}}-auth__ref__middot">&middot;</span> ' . sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $reference_id ) : '',
+			'reference_html' => $reference_html,
 			'ns' => $this->config->ns(),
 			'site_url' => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
 		);
 
 		return $this->prepare_output( $template, $content );
-	}
-
-	/**
-	 * @return mixed|void
-	 */
-	private function get_auth_form_template() {
-
-		$auth_form_template = '
-<div class="tl-{{ns}}-auth tl-{{ns}}-{{has_access_class}}">
-	{{header}}
-	<section class="tl-{{ns}}-auth__body">
-		<h2 class="tl-{{ns}}-auth__intro">{{intro}}</h2>
-		{{ref}}
-
-		<div class="tl-{{ns}}-auth__details">
-			{{details}}
-		</div>
-		<div class="tl-{{ns}}-auth__response" aria-live="assertive">
-		</div>
-		{{notices}}
-		<div class="tl-{{ns}}-auth__actions">
-			{{button}}
-		</div>
-	</section>
-	<footer class="tl-{{ns}}-auth__footer">
-		{{footer}}
-	</footer>
-</div>';
-
-		/**
-		 * Filter trustedlogin/template/auth
-		 **
-		 *
-		 * @param string $output_template The Auth form HTML
-		 * @param string $ns The namespace of the plugin initializing TrustedLogin.
-		 **/
-		$auth_form_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_form_template, $this->config->ns() );
-
-		return $auth_form_template;
 	}
 
 	private function get_intro() {
@@ -342,7 +421,7 @@ final class Admin {
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
-				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_display_name(), $this->support_user->get_expiration( $access, true ) );
+				$intro = sprintf( esc_html__( '✅ %1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_display_name(), $this->support_user->get_expiration( $access, true ) );
 			}
 			return $intro;
 		}
@@ -371,10 +450,11 @@ final class Admin {
 				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
 			);
 
-			return $this->prepare_output( $output_template, $content );
+			return $this->prepare_output( $output_template, $content, false );
 		}
 
 		$output_template = '
+			{{auth_meta}}
 			<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 			<div class="tl-{{ns}}-auth__roles">
 				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}</h2>
@@ -406,6 +486,7 @@ final class Admin {
 			'expire_desc'    => $expire_desc,
 			'roles_summary'  => $roles_summary,
 			'caps'           => $this->get_caps_html(),
+			'auth_meta'      => $this->get_auth_meta_html(),
 		);
 
 		return $this->prepare_output( $output_template, $content );
@@ -487,6 +568,10 @@ final class Admin {
 		return $this->prepare_output( $output, $content, false );
 	}
 
+	/**
+	 * Generates HTML for notices about current server environment perhaps not being accessible.
+	 * @return string
+	 */
 	private function get_notices_html() {
 
 		if ( ! function_exists( 'wp_get_environment_type' ) ) {
@@ -614,7 +699,8 @@ final class Admin {
 					'class'       => array(),
 					'id'          => array(),
 					'title'       => array(),
-					'data-toggle' => array()
+					'data-toggle' => array(),
+					'style'       => array(),
 				),
 				'label'   => array( 'class' => array(), 'id' => array(), 'for' => array() ),
 				'code'    => array( 'class' => array(), 'id' => array() ),
@@ -630,10 +716,10 @@ final class Admin {
 				'p'       => array( 'class' => array(), 'id' => array() ),
 				'h1'      => array( 'class' => array(), 'id' => array() ),
 				'h2'      => array( 'class' => array(), 'id' => array() ),
-				'h3'      => array( 'class' => array(), 'id' => array() ),
+				'h3'      => array( 'class' => array(), 'id' => array(), 'style'       => array(), ),
 				'h4'      => array( 'class' => array(), 'id' => array() ),
 				'h5'      => array( 'class' => array(), 'id' => array() ),
-				'div'     => array( 'class' => array(), 'id' => array(), 'aria-live' => array() ),
+				'div'     => array( 'class' => array(), 'id' => array(), 'aria-live' => array(), 'style'       => array(), ),
 				'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
 				'header'  => array( 'class' => array(), 'id' => array() ),
 				'footer'  => array( 'class' => array(), 'id' => array() ),
@@ -648,8 +734,9 @@ final class Admin {
 					'value'     => array(),
 					'size'      => array(),
 					'aria-live' => array(),
+					'style'       => array(),
 				),
-				'button'  => array( 'class' => array(), 'id' => array(), 'aria-live' => array() ),
+				'button'  => array( 'class' => array(), 'id' => array(), 'aria-live' => array(), 'style'       => array(), ),
 			),
 				$allowed_protocols
 			);
@@ -982,14 +1069,25 @@ final class Admin {
 
 		$return = '';
 
+		$access_key_template = <<<EOD
+<%6\$s class="tl-%1\$s-auth__accesskey">
+	<div style="background: #fcfcfc;">
+		<a href="#" class="button button-danger alignright">Revoke Access</a>
+		<h3>GravityView Support</h3>
+		<span>Created 1 day ago &middot; Expires in 7 days</span>
+	</div>
+	<label>
+		<h3>%2\$s</h3>
+		<p>Maecenas sed diam eget risus varius blandit sit amet non magna. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+		<input type="text" value="%4\$s" size="33" class="tl-%1\$s-auth__accesskey_field code" style="background: #fcfcfc; padding-right: 100px; box-sizing: border-box;" aria-label="%3\$s">
+	</label>
+		<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button button button-outline" aria-live="polite" style="position: absolute; left: -100px; display: none;">%5\$s</button>
+</%6\$s>
+EOD;
+
+
 		$access_key_output = sprintf(
-			'<%6$s class="tl-%1$s-auth__accesskey">
-				<label>
-					<h2>%2$s</h2>
-					<input type="text" value="%4$s" size="33" class="tl-%1$s-auth__accesskey_field code" aria-label="%3$s">
-				</label>
-				<button id="tl-%1$s-copy" class="tl-%1$s-auth__accesskey_copy button button button-outline" aria-live="polite">%5$s</button>
-			</%6$s>',
+			$access_key_template,
 			/* %1$s */ sanitize_title( $this->config->ns() ),
 			/* %2$s */ esc_html__( 'Site access key:', 'trustedlogin' ),
 			/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
