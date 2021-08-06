@@ -15,9 +15,9 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	public function test_config_vendor_stuff() {
 
 		$expected_codes = array(
-			1 => 'empty configuration array',
-			2 => 'replace default namespace',
-			3 => 'invalid configuration array',
+			400 => 'empty configuration array',
+			501 => 'replace default namespace',
+			406 => 'invalid configuration array',
 		);
 
 		try {
@@ -28,8 +28,8 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 			$config->validate();
 
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] . ' ' .$exception->getMessage() );
+		} catch ( Exception $exception ) {
+			$this->assertEquals( 406, $exception->getCode(), $expected_codes[3] . ' ' .$exception->getMessage() );
 			$this->assertContains( 'public key', $exception->getMessage(), $expected_codes[3] );
 			$this->assertContains( 'vendor/namespace', $exception->getMessage(), $expected_codes[3] );
 			$this->assertContains( 'vendor/title', $exception->getMessage(), $expected_codes[3] );
