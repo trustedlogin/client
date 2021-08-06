@@ -173,9 +173,9 @@ final class SupportUser {
 
 		$user_data = array(
 			'user_url'        => $this->config->get_setting( 'vendor/website' ),
-			'user_pass'       => Encryption::get_random_hash( $this->logging ),
 			'user_login'      => $this->generate_unique_username(),
 			'user_email'      => $user_email,
+			'user_pass'       => Encryption::get_random_hash(),
 			'role'            => $this->role->get_name(),
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
 			'user_registered' => date( 'Y-m-d H:i:s', time() ),
