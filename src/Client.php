@@ -103,16 +103,23 @@ final class Client {
 	 * @param Config $config
 	 * @param bool $init Whether to initialize everything on instantiation
 	 *
-	 * @returns Client|\Exception
+	 * @throws Exception If initializing is prevented via constants or the configuration isn't valid, throws exception.
+	 *
+	 * @returns void If no errors, returns void. Otherwise, throws exceptions.
 	 */
 	public function __construct( Config $config, $init = true ) {
+
+		$should_initialize = $this->should_init( $config );
+
+		if ( ! $should_initialize ) {
+			throw new \Exception( 'TrustedLogin was prevented from loading by constants defined on the site.', 403 );
+		}
 
 		try {
 			self::$valid_config = $config->validate();
 		} catch ( \Exception $exception ) {
 			self::$valid_config = false;
-
-			return $exception;
+			throw $exception;
 		}
 
 		$this->config = $config;
@@ -133,11 +140,38 @@ final class Client {
 
 		$this->site_access = new SiteAccess( $this->config, $this->logging );
 
-		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
-
 		if ( $init ) {
 			$this->init();
 		}
+	}
+
+	/**
+	 * Should the Client fully initialize?
+	 *
+	 * @param Config $config
+	 *
+	 * @return bool
+	 */
+	private function should_init( Config $config ) {
+
+		// Disables all TL clients.
+		if ( defined( 'TRUSTEDLOGIN_DISABLE' ) && TRUSTEDLOGIN_DISABLE ) {
+			return false;
+		}
+
+		$ns = $config->ns();
+
+		// Namespace isn't set; allow Config
+		if( empty( $ns ) ) {
+			return true;
+		}
+
+		// Disables namespaced client if `TRUSTEDLOGIN_DISABLE_{NS}` is defined and truthy.
+		if ( defined( 'TRUSTEDLOGIN_DISABLE_' . strtoupper( $ns ) ) && constant( 'TRUSTEDLOGIN_DISABLE_' . strtoupper( $ns ) ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
