@@ -165,10 +165,15 @@ final class SupportUser {
 
 		$user_email = $this->config->get_setting( 'vendor/email' );
 
-		if ( email_exists( $user_email ) ) {
-			$this->logging->log( 'Support User not created; User with that email already exists: ' . $user_email, __METHOD__, 'warning' );
+		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
+			// The hash doesn't need to be secure, just persistent.
+			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY ), $user_email );
+		}
 
-			return new WP_Error( 'user_email_exists', __( 'User not created; User with that email already exists', 'trustedlogin' ) );
+		if ( email_exists( $user_email ) ) {
+			$this->logging->log( 'Support User not created; a user with that email already exists: ' . $user_email, __METHOD__, 'warning' );
+
+			return new WP_Error( 'email_exists', __( 'User not created; User with that email already exists', 'trustedlogin' ) );
 		}
 
 		$user_data = array(
