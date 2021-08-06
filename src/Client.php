@@ -157,9 +157,14 @@ final class Client {
 	 *
 	 * @see SiteAccess::get_access_key()
 	 *
-	 * @return string|null
+	 * @return string|null|WP_Error
 	 */
 	public function get_access_key() {
+
+		if ( ! self::$valid_config ) {
+			return new WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
+		}
+
 		return $this->site_access->get_access_key();
 	}
 
