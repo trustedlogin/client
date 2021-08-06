@@ -91,11 +91,6 @@ final class Client {
 	private $site_access;
 
 	/**
-	 * @var Encryption
-	 */
-	private $encryption;
-
-	/**
 	 * TrustedLogin constructor.
 	 *
 	 * @see https://docs.trustedlogin.com/ for more information
