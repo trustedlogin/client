@@ -94,7 +94,7 @@ final class Config {
 	public function __construct( array $settings = array() ) {
 
 		if ( empty( $settings ) ) {
-			throw new Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 1 );
+			throw new Exception( 'Developer: TrustedLogin requires a configuration array. See https://trustedlogin.com/configuration/ for more information.', 400 );
 		}
 
 		$this->settings = $settings;
@@ -108,10 +108,9 @@ final class Config {
 	 */
 	public function validate() {
 
-		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
-			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 2 );
+		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\GravityView\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
+			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 501 );
 		}
-
 
 		$errors = array();
 
@@ -190,7 +189,7 @@ final class Config {
 			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
-			throw new Exception( $exception_text, 3 );
+			throw new Exception( $exception_text, 406 );
 		}
 
 		return true;
