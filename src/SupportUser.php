@@ -148,7 +148,6 @@ final class SupportUser {
 			return new WP_Error( 'user_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
 		}
 
-		$user_name   = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 		$role_exists = $this->role->create();
 
 		if ( is_wp_error( $role_exists ) ) {
@@ -173,9 +172,9 @@ final class SupportUser {
 		}
 
 		$user_data = array(
-			'user_login'      => $user_name,
 			'user_url'        => $this->config->get_setting( 'vendor/website' ),
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
+			'user_login'      => $this->generate_unique_username(),
 			'user_email'      => $user_email,
 			'role'            => $this->role->get_name(),
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
@@ -193,6 +192,28 @@ final class SupportUser {
 		$this->logging->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
 
 		return $new_user_id;
+	}
+
+	/**
+	 * Always return a unique username
+	 *
+	 * @return string Username, with possible number trailing, if clashes exist.
+	 */
+	private function generate_unique_username() {
+
+		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+
+		if ( ! username_exists( $username ) ) {
+			return $username;
+		}
+
+		$i = 1;
+		$new_username = $username;
+		while( username_exists( $new_username ) ) {
+			$new_username = sprintf( '%s %d', $username, $i + 1 );
+		}
+
+		return $new_username;
 	}
 
 	/**
