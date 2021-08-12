@@ -939,8 +939,8 @@ background-size: contain!important;
 				'close'      => esc_html__( 'Close', 'trustedlogin' ),
 				'cancel'     => esc_html__( 'Cancel', 'trustedlogin' ),
 				'revoke'     => sprintf( __( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
-				'copy'       => __( 'Copy', 'trustedlogin' ),
-				'copied'     => __( 'Copied!', 'trustedlogin' ),
+				'copy'       => esc_html__( 'Copy', 'trustedlogin' ),
+				'copied'     => esc_html__( 'Copied!', 'trustedlogin' ),
 			),
 			'status'  => array(
 				'synced'             => array(
