@@ -1072,7 +1072,7 @@ background-size: contain!important;
 		<p>Maecenas sed diam eget risus varius blandit sit amet non magna. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
 		<input type="text" value="%4\$s" size="33" class="tl-%1\$s-auth__accesskey_field code" style="background: #fcfcfc; padding-right: 100px; box-sizing: border-box;" aria-label="%3\$s">
 	</label>
-		<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button button button-outline" aria-live="polite" style="position: absolute; left: -100px; display: none;">%5\$s</button>
+		<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button button button-outline" aria-live="assertive" style="position: absolute; left: -100px; display: none;">%5\$s</button>
 </%6\$s>
 EOD;
 
