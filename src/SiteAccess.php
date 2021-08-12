@@ -179,7 +179,7 @@ class SiteAccess {
 	 */
 	private function generate_access_key() {
 
-		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/public_key' ), 32 );
+		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/api_key' ), 32 );
 
 		if ( is_wp_error( $hash ) ) {
 			return $hash;
@@ -205,7 +205,7 @@ class SiteAccess {
 		}
 
 		$body = array(
-			'publicKey' => $this->config->get_setting( 'auth/public_key' ),
+			'publicKey' => $this->config->get_setting( 'auth/api_key' ),
 		);
 
 		$api_response = $remote->send( 'sites/' . $secret_id, $body, 'DELETE' );
