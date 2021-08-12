@@ -241,7 +241,7 @@ final class SupportUser {
 			return new WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
 		}
 
-		$expires = $this->get_expiration( $support_user );
+		$expires = $this->get_expiration( $support_user, false, true );
 
 		// This user has expired, but the cron didn't run...
 		if ( $expires && time() > (int) $expires ) {
@@ -323,12 +323,15 @@ final class SupportUser {
 	}
 
 	/**
+	 * Returns the expiration for user access as either a human-readable string or timestamp.
+	 *
 	 * @param WP_User $user
 	 * @param bool $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
+	 * @param bool $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
 	 *
 	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
-	public function get_expiration( WP_User $user, $human_readable = false ) {
+	public function get_expiration( WP_User $user, $human_readable = false, $gmt = false ) {
 
 		$expiration = get_user_option( $this->expires_meta_key, $user->ID );
 
@@ -336,7 +339,7 @@ final class SupportUser {
 			return false;
 		}
 
-		return $human_readable ? human_time_diff( time(), $expiration ) : $expiration;
+		return $human_readable ? human_time_diff( current_time( 'timestamp', $gmt ), $expiration ) : $expiration;
 	}
 
 	/**
