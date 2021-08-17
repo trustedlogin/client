@@ -1093,63 +1093,6 @@ EOD;
 
 		$return .= $access_key_output;
 
-		$return .= '<h2>' . sprintf( esc_html__( '%s users:', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h2>';
-		$return .= '<table class="wp-list-table widefat plugins">';
-
-		$table_header =
-			sprintf( '
-                <thead>
-                    <tr>
-                        <th scope="col">%1$s</th>
-                        <th scope="col">%2$s</th>
-                        <th scope="col">%3$s</th>
-                        <th scope="col">%4$s</td>
-                        <th scope="col">%5$s</th>
-                    </tr>
-                </thead>',
-				esc_html__( 'User', 'trustedlogin' ),
-				esc_html__( 'Created', 'trustedlogin' ),
-				esc_html__( 'Expires', 'trustedlogin' ),
-				esc_html__( 'Created By', 'trustedlogin' ),
-				esc_html__( 'Revoke Access', 'trustedlogin' )
-			);
-
-		$return .= $table_header;
-
-		$return .= '<tbody>';
-
-		foreach ( $support_users as $support_user ) {
-
-			$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID );
-			$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
-
-			$return .= '<tr>';
-			$return .= '<th scope="row">';
-			$return .= '<a href="' . esc_url( admin_url( 'user-edit.php?user_id=' . $support_user->ID ) ) . '">';
-			$return .= sprintf( '%s (#%d)', esc_html( $support_user->display_name ), $support_user->ID );
-			$return .= '</a>';
-			$return .= '</th>';
-
-			$return .= '<td>' . sprintf( esc_html__( '%s ago', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ) ) . '</td>';
-			$return .= '<td>' . sprintf( esc_html__( 'In %s', 'trustedlogin' ), $this->support_user->get_expiration( $support_user, true ) ) . '</td>';
-
-			if ( $_user_creator && $_user_creator->exists() ) {
-				$return .= '<td>' . ( $_user_creator->exists() ? esc_html( $_user_creator->display_name ) : sprintf( esc_html__( 'Unknown (User #%d)', 'trustedlogin' ), $_user_creator_id ) ) . '</td>';
-			} else {
-				$return .= '<td>' . esc_html__( 'Unknown', 'trustedlogin' ) . '</td>';
-			}
-
-			if ( $revoke_url = $this->support_user->get_revoke_url( $support_user, $atts['current_url'] ) ) {
-				$return .= '<td><a class="trustedlogin tl-revoke submitdelete" href="' . esc_url( $revoke_url ) . '">' . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a></td>';
-			} else {
-				$return .= '<td><a href="' . esc_url( admin_url( 'users.php?role=' . $this->support_user->role->get_name() ) ) . '">' . esc_html__( 'Manage from Users list', 'trustedlogin' ) . '</a></td>';
-			}
-			$return .= '</tr>';
-
-		}
-
-		$return .= '</tbody></table>';
-
 		if ( $print ) {
 			echo $return;
 		}
