@@ -1034,7 +1034,7 @@ background-size: contain!important;
 	 */
 	public function output_support_users( $print = true, $atts = array() ) {
 
-		if ( ! is_admin() || ! current_user_can( 'create_users' ) ) {
+		if ( ( ! is_admin() && ! $this->is_login_screen() ) || ! current_user_can( 'create_users' ) ) {
 			return '';
 		}
 
