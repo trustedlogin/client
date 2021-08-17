@@ -18,6 +18,16 @@
 		return false;
 	} );
 
+	/**
+	 * Adds a hidden <span> for screen readers alerting them that the link will open a new window.
+	 */
+	$( '.tl-' + namespace + '-auth' ).find( 'a[target=_blank]' ).each( function () {
+		$( this ).append( $( '<span>', {
+			'class': 'screen-reader-text',
+			'text': tl_obj.lang.a11y.opens_new_window
+		} ) );
+	} );
+
 	function grantAccess( $button ){
 
 		$button.addClass( 'disabled' );
