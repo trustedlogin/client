@@ -362,9 +362,25 @@ final class SupportUser {
 			'role' => $this->role->get_name(),
 		);
 
-		$support_users = get_users( $args );
+		return get_users( $args );
+	}
 
-		return $support_users;
+
+	/**
+	 * Returns the first support user active on the site, if any.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return WP_User|null
+	 */
+	public function get_first() {
+		$support_users = $this->get_all();
+
+		if( $support_users ) {
+			return $support_users[0];
+		}
+
+		return null;
 	}
 
 	/**
