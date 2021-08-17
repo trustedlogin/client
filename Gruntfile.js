@@ -48,6 +48,9 @@ module.exports = function( grunt ) {
 			scss: {
 				files: ['src/assets/src/*.scss'],
 				tasks: ['sass:dist', 'postcss:dist']
+			},
+			options: {
+				livereload: true
 			}
 		},
 
