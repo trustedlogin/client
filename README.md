@@ -41,6 +41,16 @@ add_filter( 'gravityview_noconflict_scripts', function ( $allowed_scripts = arra
 } );
 ```
 
+### When testing on local environments
+
+TrustedLogin won't work in local environments unless using a tunnel such as ngrok. Thus, TrustedLogin will display a warning when attempting to generate a login when in a local environment.
+
+To disable the warning, define `TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE` and set it to true:
+
+```php
+define( 'TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE', true );
+```
+
 ## Security details
 
 ### Logging in
@@ -69,6 +79,10 @@ Security checks will automatically be disabled for `local` and `development` sit
 
 You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's `wp-config.php` file.
 
+```php
+define( 'TRUSTEDLOGIN_TESTING_EXAMPLE', true );
+```
+
 ## TrustedLogin Client `Config` settings
 
 | Key | Type | Description | Default | Required? |
@@ -78,7 +92,7 @@ You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's 
 | `role` | `string` | The role to clone when creating a new Support User. | `editor` | ✅ |
 | `vendor/namespace` | `string` | Slug for vendor. Must be unique. Must be shorter than 96 characters. | `null` | ✅ |
 | `vendor/title` | `string` | Name of the vendor company. Used in text such as `Visit the %s website` | `null` | ✅ |
-| `vendor/email` | `string` | Email address for support. Used when creating usernames.<br><br>If supported, use a [task-specific email address](https://support.google.com/a/users/answer/9308648?hl=en), such as `support+specific-plugin@example.com`. | `null` | ✅ |
+| `vendor/email` | `string` | Email address for support. Used when creating usernames. Recommended: use `{hash}` dynamic replacement ([see below](#email-hash)). | `null` | ✅ |
 | `vendor/website` | `string` | URL to the vendor website. Must be a valid URL. | `null` | ✅ |
 | `vendor/support_url` | `string` | URL to the vendor support page. Shown to users in the Grant Access form and also serves as a backup to redirect users if the TrustedLogin server is unreachable. Must be a valid URL. | `null` | ✅ |
 | `vendor/display_name` | `string` | Optional. Display name for the support team. See "Display Name vs Title" below. | `null` | |
@@ -105,6 +119,15 @@ You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's 
 If `vendor/title` is set to `GravityView`, the default confirmation screen will say `Grant GravityView access to your site.`
 
 When `vendor/display_name` is also defined, the text will read `GravityView Support`, the default confirmation screen will say `Grant GravityView Support access to your site.`
+
+## Task-specific email addresses
+
+In order to prevent email address collision, we recommend using "plus addresses" (also called "task-specific email addresses") for your `vendor/email` setting.
+
+Rather than `support@example.com`, use `support+{hash}@example.com`. `{hash}` will be dynamically replaced when used in
+the email address.
+
+This is supported by many email providers, including [Gmail](https://docs.microsoft.com/en-us/exchange/recipients-in-exchange-online/plus-addressing-in-exchange-online), [Microsoft](https://docs.microsoft.com/en-us/exchange/recipients-in-exchange-online/plus-addressing-in-exchange-online), [Fastmail](https://www.fastmail.com/help/receive/addressing.html), and [ProtonMail](https://protonmail.com/support/knowledge-base/creating-aliases/).
 
 ## Invalid capabilities
 

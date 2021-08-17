@@ -31,7 +31,7 @@ final class Config {
 	 */
 	private $default_settings = array(
 		'auth' => array(
-			'public_key' => null, // @todo Rename to `api_key` again, since we're fetching an encryption public key from the Vendor site…
+			'api_key' => null,
 			'license_key' => null,
 		),
 		'caps' => array(
@@ -114,8 +114,8 @@ final class Config {
 
 		$errors = array();
 
-		if ( ! isset( $this->settings['auth']['public_key'] ) ) {
-			$errors[] = new WP_Error( 'missing_configuration', 'You need to set a public key. Get yours at https://app.trustedlogin.com' );
+		if ( ! isset( $this->settings['auth']['api_key'] ) ) {
+			$errors[] = new WP_Error( 'missing_configuration', 'You need to set an API key. Get yours at https://app.trustedlogin.com' );
 		}
 
 		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined('TL_DOING_TESTS') ) {

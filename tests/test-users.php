@@ -55,7 +55,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			),
 			'webhook_url' => 'https://www.trustedlogin.com/webhook-example/',
 			'auth' => array(
-				'public_key' => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key' => '9946ca31be6aa948', // Public key for encrypting the securedKey
 			),
 			'decay' => WEEK_IN_SECONDS,
 			'vendor' => array(

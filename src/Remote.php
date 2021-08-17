@@ -130,7 +130,7 @@ final class Remote {
 		$headers = array(
 			'Accept'        => 'application/json',
 			'Content-Type'  => 'application/json',
-			'Authorization' => 'Bearer ' . $this->config->get_setting( 'auth/public_key' ),
+			'Authorization' => 'Bearer ' . $this->config->get_setting( 'auth/api_key' ),
 		);
 
 		if ( ! empty( $additional_headers ) ) {

@@ -55,7 +55,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
 			'auth'           => array(
-				'public_key'   => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'   => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,

@@ -57,7 +57,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	 * @covers \TrustedLogin\Config::__construct
 	 * @covers \TrustedLogin\Config::validate
 	 */
-	public function test_config_public_key() {
+	public function test_config_api_key() {
 
 		$expected_codes = array(
 			1 => 'empty configuration array',
@@ -69,7 +69,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 			$config = new \TrustedLogin\Config(array(
 				'vendor' => true,
-				'auth' => array( 'public_key' => 'asdasd' ),
+				'auth' => array( 'api_key' => 'asdasd' ),
 			));
 
 			$config->validate();
@@ -96,7 +96,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$valid_config = array(
 			'auth' => array(
-				'public_key' => 'not empty',
+				'api_key' => 'not empty',
 			),
 			'webhook_url' => 'https://www.google.com',
 			'vendor' => array(
@@ -170,7 +170,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$config_array = array(
 			'auth' => array(
-				'public_key' => 'not empty',
+				'api_key' => 'not empty',
 			),
 			'webhook_url' => 'https://www.google.com',
 			'vendor' => array(
@@ -233,7 +233,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$valid_config = array(
 			'auth' => array(
-				'public_key' => 'not empty'
+				'api_key' => 'not empty'
 			),
 			'vendor' => array(
 				'namespace' => 'asdasd',
