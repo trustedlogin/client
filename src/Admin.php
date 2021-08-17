@@ -121,7 +121,7 @@ final class Admin {
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/js' ),
-			array(),
+			array( 'wp-a11y' ),
 			Client::VERSION,
 			true
 		);
@@ -941,6 +941,10 @@ background-size: contain!important;
 				'revoke'     => sprintf( __( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
 				'copy'       => esc_html__( 'Copy', 'trustedlogin' ),
 				'copied'     => esc_html__( 'Copied!', 'trustedlogin' ),
+			),
+			'a11y' => array(
+				'opens_new_window' => esc_attr__( '(This link opens in a new window.)', 'trustedlogin' ),
+				'copied_text' =>  esc_html__( 'The access key has been copied to your clipboard.', 'trustedlogin' ),
 			),
 			'status'  => array(
 				'synced'             => array(
