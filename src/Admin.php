@@ -297,6 +297,38 @@ background-size: contain!important;
 		echo $this->get_auth_screen();
 	}
 
+	public function get_auth_header_html() {
+		$support_users = $this->support_user->get_all();
+
+		if ( empty( $support_users ) ) {
+			return '';
+		}
+
+		$support_user = $support_users[0];
+
+		$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID );
+		$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
+
+		$unknown_user_text = sprintf( esc_html__( 'Unknown (User #%d)', 'trustedlogin' ), $_user_creator_id );
+
+		$auth_meta = ( $_user_creator && $_user_creator->exists() ) ? esc_html( $_user_creator->display_name ) : $unknown_user_text;
+
+		$revoke_url = $this->support_user->get_revoke_url( $support_user );
+
+		$template = '
+		{{revoke_access_button}}
+		<h3>{{display_name}}</h3>
+		<span class="tl-{{ns}}-auth__meta">{{auth_meta}}</span>';
+
+		$content = array(
+			'display_name' => $support_user->display_name,
+			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'auth_meta' => sprintf( 'Created 1 day ago by %s', $auth_meta ),
+		);
+
+		return $this->prepare_output( $template, $content );
+	}
+
 	/**
 	 * Output the contents of the Auth Link Page in wp-admin
 	 *
@@ -314,9 +346,12 @@ background-size: contain!important;
 			'notices'          => $this->get_notices_html(),
 			'header'           => $this->get_header_html(),
 			'intro'            => $this->get_intro(),
+			'auth_header'      => $this->get_auth_header_html(),
 			'details'          => $this->get_details_html(),
-			'button'           => $this->generate_button( 'size=hero&class="authlink button-primary"', false ),
+			'button'           => $this->generate_button( 'size=hero&class=authlink button-primary', false ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'           => $this->get_footer_html(),
+			'reference'        => $this->get_reference_html(),
 		);
 
 		$auth_screen_template = '
@@ -324,19 +359,24 @@ background-size: contain!important;
 			{{header}}
 			<section class="tl-{{ns}}-auth__body">
 				<h2 class="tl-{{ns}}-auth__intro">{{intro}}</h2>
-
-				<div class="tl-{{ns}}-auth__details">
-					{{details}}
+				<div class="tl-{{ns}}-auth__content">
+					<header class="tl-{{ns}}-auth__header">
+						{{auth_header}}
+					</header>
+					<div class="tl-{{ns}}-auth__details">
+						{{details}}
+					</div>
+					<div class="tl-{{ns}}-auth__response" aria-live="assertive"></div>
+					{{notices}}
+					<div class="tl-{{ns}}-auth__actions">
+						{{button}}
+					</div>
 				</div>
-				<div class="tl-{{ns}}-auth__response" aria-live="assertive">
-				</div>
-				{{notices}}
-				<div class="tl-{{ns}}-auth__actions">
-					{{button}}
-				</div>
+				<div class="tl-{{ns}}-auth__secured_by">{{secured_by_trustedlogin}}</div>
 			</section>
 			<footer class="tl-{{ns}}-auth__footer">
 				{{footer}}
+				{{reference}}
 			</footer>
 		</div>';
 
@@ -360,7 +400,7 @@ background-size: contain!important;
 		}
 
 		$header_template = '
-		<header class="tl-{{ns}}-auth__header">
+		<header class="tl-{{ns}}-auth__header__top">
 			<div class="tl-{{ns}}-auth__logo">{{logo}}</div>
 		</header>';
 
@@ -377,27 +417,22 @@ background-size: contain!important;
 	 *
 	 * @return string
 	 */
-	private function get_auth_meta_html() {
+	private function get_reference_html() {
 
 		if ( ! $this->is_login_screen() ) {
 			return '';
 		}
 
-		$reference_html = '';
-		$ref = self::get_reference_id();
-
-		if ( $ref ) {
-			$reference_html = sprintf( '&nbsp;<span class="tl-{{ns}}-auth__ref__middot">&middot;</span>&nbsp;<span class="tl-{{ns}}-auth_ref__id">%s</span>',
-				sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $ref )
-			);
-		}
-
-		$template =  '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-test-auth_ref__url">{{site_url}}</span>{{reference_html}}</p></div>';
-
 		$reference_id = self::get_reference_id();
 
+		if ( null === $reference_id ) {
+			return '';
+		}
+
+		$template =  '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-{{ns}}-auth_ref__id">{{reference_text}}</span></p></div>';
+
 		$content = array(
-			'reference_html' => $reference_html,
+			'reference_text' => sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $reference_id ),
 			'ns' => $this->config->ns(),
 			'site_url' => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
 		);
@@ -412,8 +447,9 @@ background-size: contain!important;
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
-				$intro = sprintf( esc_html__( '✅ %1$s has site access that expires in %2$s.', 'trustedlogin' ), $this->config->get_display_name(), $this->support_user->get_expiration( $access, true ) );
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting('vendor/website') ) . '" target="_blank" rel="noopener noreferrer">' . $this->config->get_setting( 'vendor/title' ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
 			}
+
 			return $intro;
 		}
 
@@ -434,9 +470,8 @@ background-size: contain!important;
 
 		// Has access
 		if ( $has_access ) {
-
-			$output_template = '{{users_table}}';
-
+			$output_template = '';
+			$output_template .= '{{users_table}}';
 			$content = array(
 				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
 			);
@@ -445,7 +480,6 @@ background-size: contain!important;
 		}
 
 		$output_template = '
-			{{auth_meta}}
 			<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 			<div class="tl-{{ns}}-auth__roles">
 				<h2><span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}</h2>
@@ -477,7 +511,6 @@ background-size: contain!important;
 			'expire_desc'    => $expire_desc,
 			'roles_summary'  => $roles_summary,
 			'caps'           => $this->get_caps_html(),
-			'auth_meta'      => $this->get_auth_meta_html(),
 		);
 
 		return $this->prepare_output( $output_template, $content );
@@ -583,7 +616,6 @@ background-size: contain!important;
 			'local_site' => sprintf( esc_html__( '%s support may not be able to access this site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
 			'need_access' => esc_html__( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
 			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
-			'opens_in_new_window' => esc_attr__( 'This link opens in a new window.', 'trustedlogin' ),
 			'learn_more' => esc_html__( 'Learn more.', 'trustedlogin' ),
 		);
 
@@ -710,7 +742,7 @@ background-size: contain!important;
 				'h3'      => array( 'class' => array(), 'id' => array(), 'style'       => array(), ),
 				'h4'      => array( 'class' => array(), 'id' => array() ),
 				'h5'      => array( 'class' => array(), 'id' => array() ),
-				'div'     => array( 'class' => array(), 'id' => array(), 'aria-live' => array(), 'style'       => array(), ),
+				'div'     => array( 'class' => array(), 'id' => array(), 'aria-live' => array(), 'style' => array(), ),
 				'small'   => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
 				'header'  => array( 'class' => array(), 'id' => array() ),
 				'footer'  => array( 'class' => array(), 'id' => array() ),
@@ -718,16 +750,23 @@ background-size: contain!important;
 				'br'      => array(),
 				'strong'  => array(),
 				'em'      => array(),
-				'input'   => array(
+				'input'  => array(
 					'class'     => array(),
 					'id'        => array(),
 					'type'      => array( 'text' ),
 					'value'     => array(),
 					'size'      => array(),
 					'aria-live' => array(),
-					'style'       => array(),
+					'aria-label' => array(),
+					'style'     => array(),
 				),
-				'button'  => array( 'class' => array(), 'id' => array(), 'aria-live' => array(), 'style'       => array(), ),
+				'button' => array(
+					'class'     => array(),
+					'id'        => array(),
+					'aria-live' => array(),
+					'style'     => array(),
+					'title'     => array(),
+				),
 			),
 				$allowed_protocols
 			);
@@ -816,7 +855,7 @@ background-size: contain!important;
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // "a", "button", "span"
-			'powered_by'  => true,
+			'powered_by'  => false,
 			'support_url' => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
@@ -938,7 +977,7 @@ background-size: contain!important;
 				'go_to_site' => sprintf( __( 'Go to %1$s support site', 'trustedlogin' ), $vendor_title ),
 				'close'      => esc_html__( 'Close', 'trustedlogin' ),
 				'cancel'     => esc_html__( 'Cancel', 'trustedlogin' ),
-				'revoke'     => sprintf( __( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
+				'revoke'     => sprintf( esc_html__( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
 				'copy'       => esc_html__( 'Copy', 'trustedlogin' ),
 				'copied'     => esc_html__( 'Copied!', 'trustedlogin' ),
 			),
@@ -1007,7 +1046,7 @@ background-size: contain!important;
 					),
 					'content' => sprintf(
 						wp_kses(
-							__( 'A support user for %1$s already exists. You can revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ),
+							__( 'A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ),
 							array( 'a' => array( 'href' => array(), 'target' => array() ) )
 						),
 						$vendor_title,
