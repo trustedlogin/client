@@ -118,8 +118,7 @@ $color-red: #c0461e !default;
 	}
 
 	.tl-#{$namespace}-auth__response_pending {
-		padding: 140px 40px 0 40px;
-		width: 100%;
+		padding: 140px 40px ( $vertical-spacing / 2 ) 40px; // Related to the size of the progress indicator
 		vertical-align: top;
 		background: url("../assets/loading.svg") center top no-repeat;
 		background-size: contain;
