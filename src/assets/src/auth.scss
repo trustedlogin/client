@@ -71,6 +71,11 @@ $color-red: #c0461e !default;
 		}
 	}
 
+	.tl-#{$namespace}-auth__ref p {
+		text-align: center;
+		font-family: Consolas, Monaco, monospace; // WP .code CSS class
+	}
+
 	.tl-#{$namespace}-auth__actions {
 		margin-bottom: 0;
 		padding-top: 0;
@@ -313,6 +318,7 @@ $color-red: #c0461e !default;
 		width: 100%;
 		min-height: $large-icon-size; // copy button height
 		background: transparent;
+		margin: 0; // Override WP login screen issues
 	}
 
 	.tl-#{$namespace}-auth__secured_by {
