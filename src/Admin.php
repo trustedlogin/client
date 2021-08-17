@@ -1066,17 +1066,13 @@ background-size: contain!important;
 
 		$access_key_template = <<<EOD
 <%6\$s class="tl-%1\$s-auth__accesskey">
-	<div style="background: #fcfcfc;">
-		<a href="#" class="button button-danger alignright">Revoke Access</a>
-		<h3>GravityView Support</h3>
-		<span>Created 1 day ago &middot; Expires in 7 days</span>
+	<label for="tl-%1\$s-access-key"><h3>%2\$s</h3></label>
+	<p>%8\$s</p>
+
+	<div class="tl-%1\$s-auth__accesskey_wrapper">
+		<input id="tl-%1\$s-access-key" type="text" value="%4\$s" size="64" class="tl-%1\$s-auth__accesskey_field code" aria-label="%3\$s">
+		<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button" aria-live="off" title="%7\$s"><span class="screen-reader-text">%5\$s</span></button>
 	</div>
-	<label>
-		<h3>%2\$s</h3>
-		<p>Maecenas sed diam eget risus varius blandit sit amet non magna. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-		<input type="text" value="%4\$s" size="33" class="tl-%1\$s-auth__accesskey_field code" style="background: #fcfcfc; padding-right: 100px; box-sizing: border-box;" aria-label="%3\$s">
-	</label>
-		<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button button button-outline" aria-live="assertive" style="position: absolute; left: -100px; display: none;">%5\$s</button>
 </%6\$s>
 EOD;
 
@@ -1088,7 +1084,9 @@ EOD;
 			/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
 			/* %4$s */ esc_attr( $this->site_access->get_access_key() ),
 			/* %5$s */ esc_html__( 'Copy', 'trustedlogin' ),
-			/* %6$s */ 'div'
+			/* %6$s */ 'div',
+			/* %7$s */ esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
+			sprintf( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', $this->support_user->get_first()->display_name )
 		);
 
 		$return .= $access_key_output;
