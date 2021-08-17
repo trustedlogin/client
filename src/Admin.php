@@ -606,6 +606,10 @@ background-size: contain!important;
 			return '';
 		}
 
+		if ( defined( 'TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE' ) && TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE ) {
+			return '';
+		}
+
 		$notice_template = '
 		<div class="inline notice notice-alt notice-warning">
 			<h3>{{local_site}}</h3>

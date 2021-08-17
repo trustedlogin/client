@@ -41,6 +41,16 @@ add_filter( 'gravityview_noconflict_scripts', function ( $allowed_scripts = arra
 } );
 ```
 
+### When testing on local environments
+
+TrustedLogin won't work in local environments unless using a tunnel such as ngrok. Thus, TrustedLogin will display a warning when attempting to generate a login when in a local environment.
+
+To disable the warning, define `TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE` and set it to true:
+
+```php
+define( 'TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE', true );
+```
+
 ## Security details
 
 ### Logging in
@@ -68,6 +78,10 @@ When setting up TrustedLogin on a testing site, it may be helpful to temporarily
 Security checks will automatically be disabled for `local` and `development` sites based on the value of the [`wp_get_environment_type()`](https://developer.wordpress.org/reference/functions/wp_get_environment_type/) function.
 
 You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's `wp-config.php` file.
+
+```php
+define( 'TRUSTEDLOGIN_TESTING_EXAMPLE', true );
+```
 
 ## TrustedLogin Client `Config` settings
 
