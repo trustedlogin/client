@@ -296,6 +296,10 @@ class Endpoint {
 			$endpoint_hash = $this->get_hash( $site_identifier_hash );
 		}
 
+		if ( is_wp_error( $endpoint_hash ) ) {
+			return $endpoint_hash;
+		}
+
 		return Encryption::hash( $endpoint_hash . $site_identifier_hash );
 	}
 
