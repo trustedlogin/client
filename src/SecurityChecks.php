@@ -71,11 +71,13 @@ final class SecurityChecks {
 	 *
 	 * Multiple security checks are performed, including brute-force and known-attacker-list checks
 	 *
-	 * @param string $user_identifier The identifier provided via {@see SupportUser::maybe_login()}
+	 * @param string $passed_user_identifier The identifier provided via {@see SupportUser::maybe_login()}
 	 *
 	 * @return true|WP_Error True if identifier passes checks. WP_Error if not.
 	 */
-	public function verify( $user_identifier ) {
+	public function verify( $passed_user_identifier = '' ) {
+
+		$user_identifier = $passed_user_identifier;
 
 		if ( $this->in_lockdown() ){
 
@@ -85,8 +87,8 @@ final class SecurityChecks {
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
-		if ( strlen( $user_identifier ) > 32 ) {
-			$user_identifier = Encryption::hash( $user_identifier );
+		if ( strlen( $passed_user_identifier ) > 32 ) {
+			$user_identifier = Encryption::hash( $passed_user_identifier );
 		}
 
 		$brute_force = $this->check_brute_force( $user_identifier );
