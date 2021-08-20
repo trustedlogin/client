@@ -222,6 +222,32 @@ final class SupportUser {
 	}
 
 	/**
+	 * Returns the site secret ID connected to the support user.
+	 *
+	 * @param string $user_identifier
+	 *
+	 * @return string|WP_Error|null Returns the secret ID. WP_Error if there was a problem generating any hashes. Null: No users were found using that user identifier.
+	 */
+	public function get_secret_id( $user_identifier ) {
+
+		$user = $this->get( $user_identifier );
+
+		if ( is_null( $user ) ) {
+			return null;
+		}
+
+		$site_identifier_hash = $this->get_site_hash( $user );
+
+		if ( is_wp_error( $site_identifier_hash ) ) {
+			return $site_identifier_hash;
+		}
+
+		$Endpoint = new Endpoint( $this->config, $this->logging );
+
+		return $Endpoint->generate_secret_id( $site_identifier_hash );
+	}
+
+	/**
 	 * Logs in a support user, if any exist at $user_identifier and haven't expired yet
 	 *
 	 * If the user access has expired, deletes the user with {@see SupportUser::delete()}

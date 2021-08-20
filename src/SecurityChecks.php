@@ -100,7 +100,11 @@ final class SecurityChecks {
 			return $brute_force;
 		}
 
-		$approved = $this->check_approved_identifier( $user_identifier );
+		$SupportUser = new SupportUser( $this->config, $this->logging );
+
+		$secret_id = $SupportUser->get_secret_id( $user_identifier );
+
+		$approved = $this->check_approved_identifier( $secret_id );
 
 		// Don't lock-down the site, since there could have been errors related to remote validation
 		if ( is_wp_error( $approved ) ){
