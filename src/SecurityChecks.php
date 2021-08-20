@@ -2,11 +2,15 @@
 /**
  * Class SecurityChecks
  *
- * @package TrustedLogin\Client
+ * @package GravityView\TrustedLogin\Client
  *
  * @copyright 2021 Katz Web Services, Inc.
+ *
+ * @license GPL-2.0-or-later
+ * Modified by gravityview on 17-August-2021 using Strauss.
+ * @see https://github.com/BrianHenryIE/strauss
  */
-namespace TrustedLogin;
+namespace GravityView\TrustedLogin;
 
 use \WP_Error;
 
@@ -208,11 +212,11 @@ final class SecurityChecks {
 	 * It is *only* ever triggered as part of the auto-login sequence.
 	 * The session data synced will only ever be from authorized support teams, or potential attackers.
 	 *
-	 * @param string $identifier The access key being used.
+	 * @param string $secret_id The secret ID for the site.
 	 *
 	 * @return true|WP_Error
 	 */
-	private function check_approved_identifier( $identifier ) {
+	private function check_approved_identifier( $secret_id ) {
 
 		/**
 		 * This array contains information from the Vendor's support agent
@@ -229,7 +233,7 @@ final class SecurityChecks {
 
 		$remote = new Remote( $this->config, $this->logging );
 
-		$api_response = $remote->send( 'sites/' . $identifier . '/' . self::VERIFY_SUPPORT_AGENT_ENDPOINT, $body, 'POST' );
+		$api_response = $remote->send( 'sites/' . $secret_id . '/' . self::VERIFY_SUPPORT_AGENT_ENDPOINT, $body, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
