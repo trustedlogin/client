@@ -5,12 +5,8 @@
  * @package GravityView\TrustedLogin\Client
  *
  * @copyright 2021 Katz Web Services, Inc.
- *
- * @license GPL-2.0-or-later
- * Modified by gravityview on 17-August-2021 using Strauss.
- * @see https://github.com/BrianHenryIE/strauss
  */
-namespace GravityView\TrustedLogin;
+namespace TrustedLogin;
 
 use \WP_Error;
 
