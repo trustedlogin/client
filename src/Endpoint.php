@@ -84,6 +84,7 @@ class Endpoint {
 
 		add_action( 'template_redirect', array( $this, 'maybe_login_support' ), 99 );
 		add_action( 'init', array( $this, 'maybe_revoke_support' ), 100 );
+		add_action( 'admin_init', array( $this, 'maybe_revoke_support' ), 100 );
 	}
 
 	/**
