@@ -210,7 +210,7 @@ final class SecurityChecks {
 	 *
 	 * @param string $secret_id The secret ID for the site.
 	 *
-	 * @return true|WP_Error
+	 * @return true|WP_Error True: the TrustedLogin service was reached and the login remains valid. WP_Error: The service wasn't reachable or the service responded that the secret ID wasn't valid.
 	 */
 	private function check_approved_identifier( $secret_id ) {
 
