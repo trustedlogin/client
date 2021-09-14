@@ -247,12 +247,18 @@ final class Admin {
 	}
 
 	public function print_request_screen() {
-		global $interim_login;
+		global $interim_login, $wp_version;
 
+		// Don't output a "← Back to site" link on the login page
 		$interim_login = true;
 
-		add_filter( 'login_headertext', '__return_empty_string' );
-		add_filter( 'login_headertitle', '__return_empty_string' );
+		// The login_headertitle filter was deprecated in WP 5.2.0 for login_headertext
+		if( version_compare( $wp_version, '5.2.0', '<' ) ) {
+			add_filter( 'login_headertitle', '__return_empty_string' );
+		} else {
+			add_filter( 'login_headertext', '__return_empty_string' );
+		}
+
 		add_filter( 'login_headerurl', function () {
 			return $this->config->get_setting( 'vendor/website' );
 		});
