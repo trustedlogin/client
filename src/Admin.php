@@ -263,13 +263,28 @@ final class Admin {
 			return $this->config->get_setting( 'vendor/website' );
 		});
 
-
 		login_header();
 
 		wp_enqueue_style( 'common');
 
-echo '
-<style>
+		wp_add_inline_style( 'common', $this->get_login_inline_css() );
+
+		echo $this->get_auth_screen();
+
+		login_footer();
+
+		die();
+	}
+
+	/**
+	 * Returns inline CSS overrides for the `common` CSS dependency
+	 *
+	 * @since 1.0
+	 *
+	 * @return string
+	 */
+	private function get_login_inline_css() {
+		return '
 #login {
 	width: auto;
 }
@@ -280,16 +295,10 @@ echo '
 	margin-top: 36px;
 }
 .login h1 a {
-background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ). '")!important;
-background-size: contain!important;
-};
-</style>';
-
-
-		echo $this->get_auth_screen();
-		login_footer();
-
-		die();
+	background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ). '")!important;
+	background-size: contain!important;
+}
+';
 	}
 
 	/**
