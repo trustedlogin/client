@@ -132,6 +132,7 @@ $color-red: #c0461e !default;
 
 	.tl-#{$namespace}-auth__response_error {
 		padding: 20px;
+		margin-bottom: $vertical-spacing / 2;
 		color: #23282D;
 		font-weight: 500;
 		vertical-align: top;
