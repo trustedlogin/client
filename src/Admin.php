@@ -681,7 +681,7 @@ background-size: contain!important;
 
 		$footer_links_output = '';
 		foreach ( $footer_links as $text => $link ) {
-			$footer_links_output .= sprintf( '<li><a href="%1$s">%2$s</a></li>',
+			$footer_links_output .= sprintf( '<li><a href="%1$s" target="_blank">%2$s</a></li>',
 				esc_url( $link ),
 				esc_html( $text )
 			);
