@@ -46,8 +46,11 @@ module.exports = function( grunt ) {
 
 		watch: {
 			scss: {
-				files: ['assets/src/*.scss'],
+				files: ['src/assets/src/*.scss'],
 				tasks: ['sass:dist', 'postcss:dist']
+			},
+			options: {
+				livereload: true
 			}
 		},
 
@@ -59,7 +62,7 @@ module.exports = function( grunt ) {
 				]
 			},
 			dist: {
-				src: 'assets/*.css'
+				src: 'src/assets/trustedlogin.css'
 			}
 		},
 
@@ -72,9 +75,9 @@ module.exports = function( grunt ) {
 			dist: {
 				files: [{
 					expand: true,
-					cwd: 'assets/src',
+					cwd: 'src/assets/src',
 					src: ['trustedlogin.scss'],
-					dest: 'assets',
+					dest: 'src/assets',
 					ext: '.css'
 				}]
 			}
