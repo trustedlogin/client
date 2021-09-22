@@ -85,7 +85,7 @@ final class Admin {
 	/**
 	 * Filter: Update the actions on the users.php list for our support users.
 	 *
-	 * @since 0.3.0
+	 * @since 1.0.0
 	 *
 	 * @param array $actions
 	 * @param WP_User $user_object
@@ -112,7 +112,7 @@ final class Admin {
 	/**
 	 * Register the required scripts and styles
 	 *
-	 * @since 0.2.0
+	 * @since 1.0.0
 	 */
 	public function register_assets() {
 
@@ -184,7 +184,7 @@ final class Admin {
 	 *
 	 * This simulates the addition of an admin submenu item with null as the menu location
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @return void
 	 */
@@ -279,7 +279,7 @@ final class Admin {
 	/**
 	 * Returns inline CSS overrides for the `common` CSS dependency
 	 *
-	 * @since 1.0
+	 * @since 1.0.0
 	 *
 	 * @return string
 	 */
@@ -304,7 +304,7 @@ final class Admin {
 	/**
 	 * Outputs the TrustedLogin authorization screen
 	 *
-	 * @since 0.8.0
+	 * @since 1.0.0
 	 *
 	 * @return void
 	 */
@@ -347,7 +347,7 @@ final class Admin {
 	/**
 	 * Output the contents of the Auth Link Page in wp-admin
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @return string HTML of the Auth screen
 	 */
@@ -673,7 +673,7 @@ final class Admin {
 		 *
 		 * Used to add/remove Footer Links on grantlink page
 		 *
-		 * @since 0.5.0
+		 * @since 1.0.0
 		 *
 		 * @param array Array of links to show in auth footer (Key is anchor text; Value is URL)
 		 * @param string $ns Namespace of the plugin initializing TrustedLogin
@@ -789,7 +789,7 @@ final class Admin {
 	/**
 	 * Output the TrustedLogin Button and required scripts
 	 *
-	 * @since 0.2.0
+	 * @since 1.0.0
 	 *
 	 * @param array $atts {@see get_button()} for configuration array
 	 * @param bool $print Should results be printed and returned (true) or only returned (false)
@@ -940,7 +940,7 @@ final class Admin {
 	/**
 	 * Helper function: Build translate-able strings for alert messages
 	 *
-	 * @since 0.4.3
+	 * @since 1.0.0
 	 *
 	 * @return array of Translations and strings to be localized to JS variables
 	 */
@@ -951,7 +951,7 @@ final class Admin {
 		/**
 		 * Filter: Allow for adding into GET parameters on support_url
 		 *
-		 * @since 0.4.3
+		 * @since 1.0.0
 		 *
 		 * ```
 		 * $url_query_args = [
@@ -1073,7 +1073,7 @@ final class Admin {
 	/**
 	 * Outputs table of created support users
 	 *
-	 * @since 0.2.1
+	 * @since 1.0.0
 	 *
 	 * @param bool $print Whether to print and return (true) or return (false) the results. Default: true
 	 * @param array $atts Settings for the table. {

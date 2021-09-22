@@ -34,9 +34,9 @@ final class Client {
 
 	/**
 	 * @var string The current drop-in file version
-	 * @since 0.1.0
+	 * @since 1.0.0
 	 */
-	const VERSION = '0.9.6';
+	const VERSION = '1.0.0';
 
 	/**
 	 * @var Config
@@ -528,7 +528,7 @@ final class Client {
 	/**
 	 * Adds PLAINTEXT metadata to the envelope, including reference ID.
 	 *
-	 * @since 1.0
+	 * @since 1.0.0
 	 *
 	 * @param array $metadata
 	 *
@@ -548,7 +548,7 @@ final class Client {
 	/**
 	 * Gets the reference ID passed to the $_REQUEST using `reference_id` or `ref` keys.
 	 *
-	 * @since 1.0
+	 * @since 1.0.0
 	 *
 	 * @return string|null Sanitized reference ID (escaped with esc_html) if exists. NULL if not.
 	 */

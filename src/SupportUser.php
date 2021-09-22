@@ -45,28 +45,28 @@ final class SupportUser {
 
 	/**
 	 * @var string $user_identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_id
 	 */
 	private $user_identifier_meta_key;
 
 	/**
 	 * @var string $site_hash_meta_key The namespaced setting name for storing the site identifier hash in user meta
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_site_hash
 	 */
 	private $site_hash_meta_key;
 
 	/**
 	 * @var int $expires_meta_key The namespaced setting name for storing the timestamp the user expires
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_expires
 	 */
 	private $expires_meta_key;
 
 	/**
 	 * @var int $created_by_meta_key The ID of the user who created the TrustedLogin access
-	 * @since 0.9.7
+	 * @since 1.0.0
 	 */
 	private $created_by_meta_key;
 
@@ -131,7 +131,7 @@ final class SupportUser {
 	/**
 	 * Create the Support User with custom role.
 	 *
-	 * @since 0.1.0
+	 * @since 1.0.0
 	 *
 	 * @uses wp_insert_user()
 	 *
@@ -317,7 +317,7 @@ final class SupportUser {
 	/**
 	 * Helper Function: Get the generated support user(s).
 	 *
-	 * @since 0.1.0
+	 * @since 1.0.0
 	 *
 	 * @param string $user_identifier_or_hash
 	 *
@@ -371,7 +371,7 @@ final class SupportUser {
 	/**
 	 * Get all users with the support role
 	 *
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 *
 	 * @return WP_User[]
 	 */
@@ -467,7 +467,7 @@ final class SupportUser {
 	/**
 	 * Get the ID of the best-guess appropriate admin user
 	 *
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 *
 	 * @return int|null User ID if there are admins, null if not
 	 */

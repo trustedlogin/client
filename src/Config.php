@@ -27,7 +27,7 @@ final class Config {
 	/**
 	 * @var array Default settings values
 	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
-	 * @since 0.9.6
+	 * @since 1.0.0
 	 */
 	private $default_settings = array(
 		'auth' => array(
@@ -80,7 +80,7 @@ final class Config {
 
 	/**
 	 * @var array $settings Configuration array after parsed and validated
-	 * @since 0.1.0
+	 * @since 1.0.0
 	 */
 	private $settings = array();
 
@@ -269,7 +269,7 @@ final class Config {
 	/**
 	 * Gets the default settings for the Client and define dynamic defaults (like paths/css and paths/js)
 	 *
-	 * @since 0.9.6
+	 * @since 1.0.0
 	 *
 	 * @return array Array of default settings.
 	 */
@@ -302,7 +302,7 @@ final class Config {
 	/**
 	 * Helper Function: Get a specific setting or return a default value.
 	 *
-	 * @since 0.1.0
+	 * @since 1.0.0
 	 *
 	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name'])
 	 * @param mixed $default - if no setting found or settings not init, return this value.
@@ -381,7 +381,7 @@ final class Config {
 	/**
 	 * Checks whether SSL requirements are met.
 	 *
-	 * @since 0.9.2
+	 * @since 1.0.0
 	 *
 	 * @return bool  Whether the vendor-defined SSL requirements are met.
 	 */

@@ -36,7 +36,7 @@ final class Encryption {
 
 	/**
 	 * @var string $vendor_public_key_option Where the plugin should store the public key for encrypting data
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 */
 	private $vendor_public_key_option;
 
@@ -61,7 +61,7 @@ final class Encryption {
 		/**
 		 * Filter: Sets the site option name for the Public Key for encryption functions
 		 *
-		 * @since 0.5.0
+		 * @since 1.0.0
 		 *
 		 * @param string $vendor_public_key_option
 		 * @param Config $config
@@ -169,7 +169,7 @@ final class Encryption {
 	/**
 	 * Fetches the Public Key from local or db
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @return string|WP_Error  If found, it returns the publicKey, if not a WP_Error
 	 */
@@ -203,7 +203,7 @@ final class Encryption {
 		/**
 		 * Filter: Override the public key functions.
 		 *
-		 * @since 0.5.0
+		 * @since 1.0.0
 		 *
 		 * @param string $vendor_public_key
 		 * @param Config $config
@@ -214,7 +214,7 @@ final class Encryption {
 	/**
 	 * Fetches the Public Key from the `TrustedLogin-vendor` plugin on support website.
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @return string|WP_Error  If successful, will return the Public Key string. Otherwise WP_Error on failure.
 	 */
@@ -260,7 +260,7 @@ final class Encryption {
 	/**
 	 * Encrypts a string using the Public Key provided by the plugin/theme developers' server.
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 * @uses \sodium_crypto_box_keypair_from_secretkey_and_publickey() to generate key.
 	 * @uses \sodium_crypto_secretbox() to encrypt.
 	 *
@@ -314,7 +314,7 @@ final class Encryption {
 	/**
 	 * Gets and returns a random nonce.
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @return string|WP_Error  Nonce if created, otherwise WP_Error
 	 */
@@ -336,7 +336,7 @@ final class Encryption {
 	/**
 	 * Generate unique Client encryption keys.
 	 *
-	 * @since 0.5.0
+	 * @since 1.0.0
 	 *
 	 * @uses sodium_crypto_box_keypair()
 	 * @uses sodium_crypto_box_publickey()

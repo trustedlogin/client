@@ -106,7 +106,7 @@ class SiteAccess {
 	 * @uses SiteAccess::get_license_key()
 	 * @uses SiteAccess::generate_access_key()
 	 *
-	 * @since 0.9.2
+	 * @since 1.0.0
 	 *
 	 * @return string|null $access_key, if exists. Either a hashed license key or a generated hash. If error occurs, returns null.
 	 */
@@ -131,7 +131,7 @@ class SiteAccess {
 	/**
 	 * Get the license key for the current user.
 	 *
-	 * @since 0.7.0
+	 * @since 1.0.0
 	 *
 	 * @param bool $hashed Should the value be hashed using SHA256?
 	 *
@@ -145,7 +145,7 @@ class SiteAccess {
 		/**
 		 * Filter: Allow for over-riding the 'accessKey' sent to SaaS platform
 		 *
-		 * @since 0.4.0
+		 * @since 1.0.0
 		 *
 		 * @param string|null $license_key
 		 */
@@ -173,7 +173,7 @@ class SiteAccess {
 	 *
 	 * Access Keys can only be used by authenticated support agents to request logged access to a site via their TrustedLogin plugin.
 	 *
-	 * @since 0.9.2
+	 * @since 1.0.0
 	 *
 	 * @return  string|WP_Error  Access Key prepended with TL, or something went wrong.
 	 */

@@ -35,7 +35,7 @@ final class SupportRole {
 
 	/**
 	 * @var array These capabilities will never be allowed for users created by TrustedLogin
-	 * @since 0.9.6
+	 * @since 1.0.0
 	 */
 	static $prevented_caps = array(
 		'create_users',
@@ -101,8 +101,8 @@ final class SupportRole {
 	/**
 	 * Creates the custom Support Role if it doesn't already exist
 	 *
-	 * @since 0.1.0
-	 * @since 0.9.2 removed excluded_caps from generated role
+	 * @since 1.0.0
+	 * @since 1.0.0 removed excluded_caps from generated role
 	 *
 	 * @param string $new_role_slug    The slug for the new role (optional). Default: {@see SupportRole::get_name()}
 	 * @param string $clone_role_slug  The slug for the role to clone (optional). Default: {@see SupportRole::get_cloned_name()}.

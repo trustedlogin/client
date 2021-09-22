@@ -25,7 +25,7 @@ final class Remote {
 
 	/**
 	 * @var string The API url for the TrustedLogin SaaS Platform (with trailing slash)
-	 * @since 0.4.0
+	 * @since 1.0.0
 	 */
 	const API_URL = 'https://app.trustedlogin.com/api/v1/';
 
@@ -57,7 +57,7 @@ final class Remote {
 	/**
 	 * POSTs to `webhook_url`, if defined in the configuration array
 	 *
-	 * @since 0.3.1
+	 * @since 1.0.0
 	 *
 	 * @param array $data {
 	 *   @type string $url The site URL as returned by get_site_url()
@@ -108,7 +108,7 @@ final class Remote {
 	/**
 	 * API Function: send the API request
 	 *
-	 * @since 0.4.0
+	 * @since 1.0.0
 	 *
 	 * @param string $path - the path for the REST API request (no initial or trailing slash needed)
 	 * @param array $data Data passed as JSON-encoded body for
@@ -172,7 +172,7 @@ final class Remote {
 	/**
 	 * Builds URL to API endpoints
 	 *
-	 * @since 0.9.3
+	 * @since 1.0.0
 	 *
 	 * @param string $endpoint Endpoint to hit on the API; example "sites" or "sites/{$site_identifier}"
 	 *
@@ -264,7 +264,7 @@ final class Remote {
 	/**
 	 * API Response Handler
 	 *
-	 * @since 0.4.1
+	 * @since 1.0.0
 	 *
 	 * @param array|WP_Error $api_response - the response from HTTP API
 	 * @param array $required_keys If the response JSON must have specific keys in it, pass them here
