@@ -121,7 +121,7 @@ final class Admin {
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting( 'paths/js' ),
-			array( 'wp-a11y' ),
+			array( 'jquery', 'wp-a11y' ),
 			Client::VERSION,
 			true
 		);
