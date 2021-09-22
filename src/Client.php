@@ -283,7 +283,7 @@ final class Client {
 			return $secret_id;
 		}
 
-		$reference_id = ( isset( $_POST['ref'] ) ? esc_html( $_POST['ref'] ) : null );
+		$reference_id = self::get_reference_id();
 
 		$timing_local = timer_stop( 0, 5 );
 
@@ -515,6 +515,27 @@ final class Client {
 		) );
 
 		return $site_revoked;
+	}
+
+
+	/**
+	 * Gets the reference ID passed to the $_POST or $_GET request.
+	 *
+	 * @since 1.0
+	 *
+	 * @return string|null
+	 */
+	public static function get_reference_id() {
+
+		if ( isset( $_REQUEST['reference_id'] ) ) {
+			return esc_html( $_REQUEST['reference_id'] );
+		}
+
+		if ( isset( $_REQUEST['ref'] ) ) {
+			return esc_html( $_REQUEST['ref'] );
+		}
+
+		return null;
 	}
 
 }

@@ -438,7 +438,7 @@ final class Admin {
 			return '';
 		}
 
-		$reference_id = self::get_reference_id();
+		$reference_id = Client::get_reference_id();
 
 		if ( null === $reference_id ) {
 			return '';
@@ -652,7 +652,7 @@ final class Admin {
 
 		$support_url = $this->config->get_setting( 'vendor/support_url' );
 
-		if ( $reference_id = self::get_reference_id() ) {
+		if ( $reference_id = Client::get_reference_id() ) {
 
 			$support_args = array(
 				'tl'  => Client::VERSION,
@@ -819,7 +819,7 @@ final class Admin {
 			'lang'         => $this->translations(),
 			'debug'        => $this->logging->is_enabled(),
 			'selector'     => '.button-trustedlogin-' . $this->config->ns(),
-			'reference_id' => self::get_reference_id(),
+			'reference_id' => Client::get_reference_id(),
 			'query_string' => esc_url( remove_query_arg( array(
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 				'_wpnonce'
@@ -1182,17 +1182,5 @@ EOD;
 		<?php
 
 		$displayed_notice = true;
-	}
-
-	/**
-	 * @return string|null
-	 */
-	public static function get_reference_id() {
-
-		if ( ! isset( $_GET['ref'] ) ) {
-			return null;
-		}
-
-		return esc_html( $_GET['ref'] );
 	}
 }
