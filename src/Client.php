@@ -546,11 +546,11 @@ final class Client {
 	}
 
 	/**
-	 * Gets the reference ID passed to the $_POST or $_GET request.
+	 * Gets the reference ID passed to the $_REQUEST using `reference_id` or `ref` keys.
 	 *
 	 * @since 1.0
 	 *
-	 * @return string|null
+	 * @return string|null Sanitized reference ID (escaped with esc_html) if exists. NULL if not.
 	 */
 	public static function get_reference_id() {
 
