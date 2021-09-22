@@ -162,7 +162,7 @@ If the `webhook_url` setting is defined and a valid URL, the URL will be pinged 
 
 ## Logging
 
-The most secure option is to disable logging. This should be the default, but sometimes logs are necessary.
+We recommend disabling logging by default, but sometimes logs are necessary.
 
 1. TrustedLogin creates a `trustedlogin-logs` directory inside the `wp-content/uploads/` directory.
 2. An empty `index.html` file is placed inside the directory to prevent browsing.
@@ -170,7 +170,19 @@ The most secure option is to disable logging. This should be the default, but so
    - `{date}` is `YYYY-MM-DD` format
    - The hash is generated using `wp_hash()` using on the `vendor/namespace`, site `home_url()`, and the day of the year (`date('z')`). The point of the hash is to make log names harder to guess (security by obscurity).
 
+### Using your own logging library
+
+If you add an action for `trustedlogin/{namespace}/logging/log`, TrustedLogin will let you handle logging. See hook description below.
+
 ## Hooks
+
+### `trustedlogin/{namespace}/logging/log`
+
+| Parameter | Type | Description |
+| --- | ---  | :--- |
+| `$message` | `string` |  Message to log. Pre-processed to convert `WP_Error` and exceptions into strings. |
+| `$level` | `string` | A [PSR-3 log level](https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php) ('emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug') |
+| `$data` | `array`| Additional error data. |
 
 ### `trustedlogin/{namespace}/login/refused`
 
