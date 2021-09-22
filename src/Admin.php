@@ -405,7 +405,7 @@ final class Admin {
 
 		$output = $this->prepare_output( $auth_screen_template, $content );
 
-		return $output . $this->get_script();
+		return $output;
 	}
 
 	private function get_header_html() {
@@ -584,27 +584,6 @@ final class Admin {
 		$output .= '</div>';
 
 		return $output;
-	}
-
-	private function get_script() {
-		ob_start();
-		?>
-		<script>
-			jQuery( document ).ready( function ( $ ) {
-				$( '.tl-{{ns}}-toggle' ).on( 'click', function () {
-					$( this ).find( '.dashicons' ).toggleClass( 'dashicons-arrow-down-alt2' ).toggleClass( 'dashicons-arrow-up-alt2' );
-					$( $( this ).data( 'toggle' ) ).toggleClass( 'hidden' );
-				} );
-			} );
-		</script>
-		<?php
-		$output = ob_get_clean();
-
-		$content = array(
-			'ns' => $this->config->ns(),
-		);
-
-		return $this->prepare_output( $output, $content, false );
 	}
 
 	/**
