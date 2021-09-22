@@ -1,5 +1,11 @@
-# trustedlogin-client
- Easily and securely log in to your customers sites when providing support.
+# TrustedLogin SDK
+Easily and securely log in to your customers sites when providing support.
+
+## Our priority: [SDKs should not crash sites](https://www.bugsnag.com/blog/sdks-should-not-crash-apps)
+
+When you integrate TrustedLogin into your project (theme, plugin, or custom code), you are counting on us not to mess up your customer or clients' sites. We take that extremely seriously.
+
+-------
 
 ## Including in your plugin or theme
 
