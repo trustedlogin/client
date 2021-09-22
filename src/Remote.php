@@ -227,7 +227,7 @@ final class Remote {
 				return new WP_Error( 'unauthenticated', esc_html__( 'Authentication failed.', 'trustedlogin' ), $api_response );
 
 			case 402:
-				return new WP_Error( 'account_error', esc_html__( 'TrustedLogin Account issue.', 'trustedlogin' ), $api_response );
+				return new WP_Error( 'account_error', esc_html__( 'TrustedLogin account issue.', 'trustedlogin' ), $api_response );
 
 			case 403:
 				return new WP_Error( 'invalid_token', esc_html__( 'Invalid tokens.', 'trustedlogin' ), $api_response );
