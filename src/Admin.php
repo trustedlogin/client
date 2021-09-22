@@ -650,9 +650,22 @@ final class Admin {
 	 */
 	private function get_footer_html() {
 
+		$support_url = $this->config->get_setting( 'vendor/support_url' );
+
+		if ( $reference_id = self::get_reference_id() ) {
+
+			$support_args = array(
+				'tl'  => Client::VERSION,
+				'ref' => $reference_id,
+				'ns'  => $this->config->ns(),
+			);
+
+			$support_url = add_query_arg( $support_args, $support_url );
+		}
+
 		$footer_links = array(
-			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                    => self::ABOUT_TL_URL,
-			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $this->config->get_setting( 'vendor/support_url' ),
+			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                   => self::ABOUT_TL_URL,
+			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $support_url,
 		);
 
 		/**
