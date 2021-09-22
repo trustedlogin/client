@@ -1,5 +1,5 @@
 {
-  "name": "trustedlogin-client",
+  "name": "client",
   "version": "1.0.0",
   "main": "Gruntfile.js",
   "author": "TrustedLogin",
