@@ -89,6 +89,12 @@ You can also define a `TRUSTEDLOGIN_TESTING_{NAMESPACE}` constant in the site's 
 define( 'TRUSTEDLOGIN_TESTING_EXAMPLE', true );
 ```
 
+### Disabling TrustedLogin
+
+To disable TrustedLogin, define a `TRUSTEDLOGIN_DISABLE` constant in the site's `wp-config.php` file. That will prevent all code that uses TrustedLogin from loading TrustedLogin.
+
+To prevent a single TrustedLogin installation, you will need to know the namespace. Once you have the namespace,  define a `TRUSTEDLOGIN_DISABLE_{NAMESPACE}` constant in the site's `wp-config.php` file. The namespace must be in all caps.
+
 ## TrustedLogin Client `Config` settings
 
 | Key | Type | Description | Default | Required? |
