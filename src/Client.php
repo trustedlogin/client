@@ -302,9 +302,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			// TODO: If fails test, return WP_Error instead
-			// TODO: Write test for this
-			return new WP_Error( 'fails_ssl_requirement', __( 'TODO', 'trustedlogin' ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
 		}
 
 		timer_start();
@@ -406,9 +404,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			// TODO: If fails test, return WP_Error instead
-			// TODO: Write test for this
-			return new WP_Error( 'fails_ssl_requirement', __( 'TODO', 'trustedlogin' ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
 		}
 
 		timer_start();
