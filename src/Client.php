@@ -511,7 +511,7 @@ final class Client {
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
-			return new WP_Error( 'support_user_not_deleted', __( 'The support user was not deleted.', 'trustedlogin' ) );
+			return new WP_Error( 'support_user_not_deleted', esc_html__( 'The support user was not deleted.', 'trustedlogin' ) );
 		}
 
 		/**
