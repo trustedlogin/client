@@ -539,7 +539,7 @@ final class SupportUser {
 	public function extend( $user_id, $identifier_hash, $expiration_timestamp = null, $cron = null ) {
 
 		if ( ! $user_id || ! $identifier_hash || ! $expiration_timestamp ) {
-			return new WP_Error( 'no-action', 'Error extending Support User access, missing required parameter.' );
+			return new WP_Error( 'missing_action_parameter', 'Error extending Support User access, missing required parameter.' );
 		}
 
 		if ( ! $cron || ! $cron instanceof Cron ) {
@@ -555,7 +555,7 @@ final class SupportUser {
 			return true;
 		}
 
-		return new WP_Error( 'extend-failed', 'Error rescheduling cron task' );
+		return new WP_Error( 'extend_failed', 'Error rescheduling cron task' );
 
 	}
 

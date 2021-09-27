@@ -3,6 +3,7 @@
 ## develop
 
 - Added `ref` to the to `trustedlogin/{namespace}/access/extended` hook `$data` argument
+- Modified some `WP_Error` error codes to be more consistent
 
 ## 1.0.1 (2021-09-27)
 
