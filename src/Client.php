@@ -444,6 +444,7 @@ final class Client {
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array(
 			'url'    => get_site_url(),
 			'action' => 'extended',
+			'ref' => self::get_reference_id(),
 		) );
 
 		return $return_data;

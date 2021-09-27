@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## develop
+
+- Added `ref` to the to `trustedlogin/{namespace}/access/extended` hook `$data` argument
+
 ## 1.0.1 (2021-09-27)
 
 - Fixed issue where non-support users may see the "Revoke TrustedLogin" admin bar link.
