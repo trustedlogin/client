@@ -159,6 +159,18 @@ final class Admin {
 			return;
 		}
 
+		$current_user = wp_get_current_user();
+
+		if ( ! $current_user || ! $current_user->exists() ) {
+			return;
+		}
+
+		$has_expiration = $this->support_user->get_expiration( $current_user );
+
+		if ( ! $has_expiration ) {
+			return;
+		}
+
 		$icon = '<span style="
 			height: 32px;
 			width: 23px;
