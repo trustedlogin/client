@@ -159,12 +159,32 @@ support access to their site.
 
 ## Webhooks
 
-If the `webhook_url` setting is defined and a valid URL, the URL will be pinged when a Support User is created, access is extended, or access is revoked.
+If the `webhook_url` setting is set and is a valid URL, the URL will be pinged when creating a Support User, extending access, or revoking access.
 
 | Key | Type | Description |
 | ---  | ---  | --- |
 | `url` | `string` | The site URL from where the webhook was triggered, as returned by `get_site_url()` |
 | `action` | `string` | The type of trigger: `created`, `extended`, or `revoked` |
+| `ref` | `string`,`null` | A sanitized reference ID, if passed. Otherwise, null.
+
+The default actions that trigger the webhooks to run are:
+
+- `trustedlogin/{namespace}/access/created`
+- `trustedlogin/{namespace}/access/extended`
+- `trustedlogin/{namespace}/access/revoked`
+- `trustedlogin/{namespace}/logged_in`
+
+See hook documentation below.
+
+## Reference IDs
+
+Reference IDs are useful when you want to attach a specific ticket ID or conversation ID to a login.
+
+Reference IDs can be passed via URL like so: `wp-login.php?action=trustedlogin&ns={namespace}&ref=[123]`
+
+When a Reference ID exists, users will see the reference while granting access:
+
+![Reference ID is shown below the footer links in the Grant Access screen](https://d.pr/2bVGbj+)
 
 ## Logging
 
@@ -190,11 +210,87 @@ If you add an action for `trustedlogin/{namespace}/logging/log`, TrustedLogin wi
 | `$level` | `string` | A [PSR-3 log level](https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php) ('emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug') |
 | `$data` | `array`| Additional error data. |
 
+### `trustedlogin/{namespace}/login/before`
+
+Runs before the support user is (maybe) logged-in.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `user_identifier` | `string` | Unique identifier for support user.
+
 ### `trustedlogin/{namespace}/login/refused`
 
-Runs after the identifier fails security checks. Could be triggered for the following reasons:
+Runs after the identifier fails security checks.
 
-- The site is in lockdown mode (brute force attacks detected)
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `user_identifier` | `string` | Unique identifier for support user.
+| `is_verified` | `WP_Error` | The error encountered when verifying the identifier.
+
+Can be triggered with the following error codes:
+
+- `brute_force_detected`: Due to the current request triggering brute force checks, the site has entered lockdown mode.
+- `in_lockdown`: The site is currently in lockdown mode for a period of time.
+
+### `trustedlogin/{namespace}/login/error`
+
+Runs after the support user fails to log in.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `user_identifier` | `string` | Unique identifier for support user.
+| `is_verified` | `WP_Error` | The error encountered when verifying the identifier.
+
+Can be triggered with the following error codes:
+
+- `user_not_found`: There is no longer an existing support user (perhaps possibly because access has been revoked)
+- `access_expired`: Access has expired due to configuration expiration settings
+
+### `trustedlogin/{namespace}/login/after`
+
+Runs after the support user is logged-in.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `user_identifier` | `string` | Unique identifier for support user.
+
+### `trustedlogin/{namespace}/access/created`
+
+Access has been granted.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `url` | `string` | The site URL from where the access was granted, as returned by `get_site_url()` |
+| `action` | `string` | The type of trigger: `created`, `extended`, or `revoked` |
+| `ref` | `string`,`null` | A sanitized reference ID, if passed. Otherwise, null.
+
+### `trustedlogin/{namespace}/access/extended`
+
+Existing access has been extended.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `url` | `string` | The site URL from where the webhook was triggered, as returned by `get_site_url()` |
+| `action` | `string` | The type of trigger: `created`, `extended`, or `revoked` |
+| `ref` | `string`,`null` | A sanitized reference ID, if passed. Otherwise, null.
+
+### `trustedlogin/{namespace}/access/revoked`
+
+Access has been revoked.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `url` | `string` | The site URL from where the webhook was triggered, as returned by `get_site_url()` |
+| `action` | `string` | The type of trigger: `created`, `extended`, or `revoked` |
+
+### `trustedlogin/{namespace}/logged_in`
+
+Action run when a support user has logged-in to a site.
+
+| Key | Type | Description |
+| ---  | ---  | --- |
+| `url` | `string` | The site URL from where the webhook was triggered, as returned by `get_site_url()` |
+| `action` | `string` | Set to `logged_in`
 
 ## FAQ
 

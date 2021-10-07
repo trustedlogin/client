@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## 1.0.2 (2021-10-07)
+
+- Added `SupportUser::is_active()` method to check whether the passed user exists and has an expiration time in the future.
+- Added `ref` to the to `trustedlogin/{namespace}/access/extended` hook `$data` argument
+- Modified some `WP_Error` error codes to be more consistent
+
 ## 1.0.1 (2021-09-27)
 
 - Fixed issue where non-support users may see the "Revoke TrustedLogin" admin bar link.

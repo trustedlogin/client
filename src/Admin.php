@@ -159,15 +159,9 @@ final class Admin {
 			return;
 		}
 
-		$current_user = wp_get_current_user();
+		$is_user_active = $this->support_user->is_active();
 
-		if ( ! $current_user || ! $current_user->exists() ) {
-			return;
-		}
-
-		$has_expiration = $this->support_user->get_expiration( $current_user );
-
-		if ( ! $has_expiration ) {
+		if ( ! $is_user_active ) {
 			return;
 		}
 
