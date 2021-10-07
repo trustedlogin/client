@@ -1,7 +1,8 @@
 # Changelog for TrustedLogin Client
 
-## develop
+## 1.0.2 (2021-10-07)
 
+- Added `SupportUser::is_active()` method to check whether the passed user exists and has an expiration time in the future.
 - Added `ref` to the to `trustedlogin/{namespace}/access/extended` hook `$data` argument
 - Modified some `WP_Error` error codes to be more consistent
 
