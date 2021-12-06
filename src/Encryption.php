@@ -345,7 +345,7 @@ final class Encryption {
 	 * @return object|WP_Error $alice_keys or WP_Error if there's any issues.
 	 *   $alice_keys = [
 	 *      'publicKey'  =>  (string)  The public key.
-	 *      'privatekey' =>  (string)  The private key.
+	 *      'privateKey' =>  (string)  The private key.
 	 *   ]
 	 */
 	public function generate_keys() {
