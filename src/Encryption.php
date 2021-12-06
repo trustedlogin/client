@@ -180,7 +180,7 @@ final class Encryption {
 
 		if ( $public_key ) {
 			// Documented below
-			return apply_filters( 'trustedlogin/' . $this->config->ns() . '/public_key', $public_key, $this->config );
+			return apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor_public_key', $public_key, $this->config );
 		}
 
 		// Fetch a key from Vendor site
