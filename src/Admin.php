@@ -198,7 +198,8 @@ final class Admin {
 
 		$parent_slug = $this->config->get_setting( 'menu/slug', null );
 
-		if ( empty( $parent_slug ) ) {
+		// When false, there will be no menus added.
+		if ( false === $parent_slug ) {
 			return;
 		}
 
@@ -207,6 +208,21 @@ final class Admin {
 		$slug = apply_filters( 'trustedlogin/' . $this->config->ns() . '/admin/grantaccess/slug', 'grant-' . $ns . '-access', $ns );
 
 		$menu_title = $this->config->get_setting( 'menu/title', esc_html__( 'Grant Support Access', 'trustedlogin' ) );
+
+		// If empty (null or empty string), add top-level menu
+		if ( empty( $parent_slug ) ) {
+			add_menu_page(
+				$menu_title,
+				$menu_title,
+				'create_users',
+				$slug,
+				array( $this, 'print_auth_screen' ),
+				$this->config->get_setting( 'menu/icon_url', '' ),
+				$this->config->get_setting( 'menu/position', null )
+			);
+
+			return;
+		}
 
 		add_submenu_page(
 			$parent_slug,
