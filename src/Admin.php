@@ -205,17 +205,18 @@ final class Admin {
 
 		$ns = $this->config->ns();
 
-		$slug = apply_filters( 'trustedlogin/' . $this->config->ns() . '/admin/grantaccess/slug', 'grant-' . $ns . '-access', $ns );
+		$menu_slug = apply_filters( 'trustedlogin/' . $this->config->ns() . '/admin/menu/menu_slug', 'grant-' . $ns . '-access' );
 
 		$menu_title = $this->config->get_setting( 'menu/title', esc_html__( 'Grant Support Access', 'trustedlogin' ) );
 
 		// If empty (null or empty string), add top-level menu
 		if ( empty( $parent_slug ) ) {
+
 			add_menu_page(
 				$menu_title,
 				$menu_title,
 				'create_users',
-				$slug,
+				$menu_slug,
 				array( $this, 'print_auth_screen' ),
 				$this->config->get_setting( 'menu/icon_url', '' ),
 				$this->config->get_setting( 'menu/position', null )
@@ -229,7 +230,7 @@ final class Admin {
 			$menu_title,
 			$menu_title,
 			'create_users',
-			$slug,
+			$menu_slug,
 			array( $this, 'print_auth_screen' ),
 			$this->config->get_setting( 'menu/position', null )
 		);
