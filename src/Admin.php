@@ -422,9 +422,8 @@ final class Admin {
 		 * Filter trustedlogin/{ns}/template/auth
 		 *
 		 * @param string $output_template The Auth form HTML
-		 * @param string $ns The namespace of the plugin initializing TrustedLogin.
 		 */
-		$auth_screen_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template, $this->config->ns() );
+		$auth_screen_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template );
 
 		$output = $this->prepare_output( $auth_screen_template, $content );
 
@@ -699,9 +698,8 @@ final class Admin {
 		 * @since 1.0.0
 		 *
 		 * @param array Array of links to show in auth footer (Key is anchor text; Value is URL)
-		 * @param string $ns Namespace of the plugin initializing TrustedLogin
 		 **/
-		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links, $this->config->ns() );
+		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links );
 
 		$footer_links_output = '';
 		foreach ( $footer_links as $text => $link ) {
