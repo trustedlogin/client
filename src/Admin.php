@@ -981,12 +981,13 @@ final class Admin {
 		 * ```
 		 *
 		 * @param array $url_query_args {
-		 *
 		 * @type string $message What error should be sent to the support system.
+		 * @type string|null $ref A sanitized reference ID, if passed. Otherwise, null.
 		 * }
 		 */
 		$query_args = apply_filters( 'trustedlogin/' . $this->config->ns() . '/support_url/query_args', array(
-				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' )
+				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' ),
+				'ref' => Client::get_reference_id(),
 			)
 		);
 
