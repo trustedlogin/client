@@ -82,7 +82,7 @@ final class Cron {
 	 */
 	public function reschedule( $expiration_timestamp, $site_identifier_hash ) {
 
-		$unschedule_expiration = wp_unschedule_hook( $this->hook_name );
+		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, array( $site_identifier_hash ) );
 
 		if ( false === $unschedule_expiration ){
 			$this->logging->log( sprintf( 'Could not unschedule event for %s', $this->hook_name ), __METHOD__, 'error' );
