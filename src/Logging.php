@@ -89,13 +89,15 @@ class Logging {
 
 		try {
 
+			$DateTime = new \DateTime( '@' . time() );
+
 			// Filename hash changes every day, make it harder to guess
-			$filename_hash_data = $this->ns . home_url( '/' ) . wp_date( 'z' );
+			$filename_hash_data = $this->ns . home_url( '/' ) . $DateTime->format( 'z' );
 
 			$default_options = array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', wp_date( 'Y-m-d' ), wp_hash( $filename_hash_data ) ),
+				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', $DateTime->format( 'Y-m-d' ), wp_hash( $filename_hash_data ) ),
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
@@ -114,6 +116,12 @@ class Logging {
 		} catch ( \RuntimeException $exception ) {
 
 			$this->log( 'Could not initialize KLogger: ' . $exception->getMessage(), __METHOD__, 'error' );
+
+			return false;
+
+		} catch ( \Exception $exception ) {
+
+			$this->log( 'DateTime could not be created: ' . $exception->getMessage(), __METHOD__, 'error' );
 
 			return false;
 		}

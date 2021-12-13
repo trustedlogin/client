@@ -56,6 +56,7 @@ final class Config {
 			'slug' => null,
 			'title' => null,
 			'priority' => null,
+			'icon_url' => '',
 			'position' => null,
 		),
 		'paths' => array(
