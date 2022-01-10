@@ -340,6 +340,7 @@ final class SupportUser {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
 			'url' => get_site_url(),
+			'ns' => $this->config->ns(),
 			'action' => 'logged_in',
 		) );
 	}

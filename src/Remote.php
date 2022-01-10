@@ -60,7 +60,9 @@ final class Remote {
 	 * @since 1.0.0
 	 *
 	 * @param array $data {
+	 *
 	 *   @type string $url The site URL as returned by get_site_url()
+	 *   @type string $ns Namespace of the plugin
 	 *   @type string $action "created", "extended", "logged_in", or "revoked"
 	 *   @type string $ref (Optional) Support ticket Reference ID
 	 * }

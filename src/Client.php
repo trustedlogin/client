@@ -341,6 +341,7 @@ final class Client {
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array(
 			'url'    => get_site_url(),
+			'ns' => $this->config->ns(),
 			'action' => 'created',
 			'ref' => $reference_id,
 		) );
@@ -443,6 +444,7 @@ final class Client {
 
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array(
 			'url'    => get_site_url(),
+			'ns' => $this->config->ns(),
 			'action' => 'extended',
 			'ref' => self::get_reference_id(),
 		) );
@@ -516,6 +518,7 @@ final class Client {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array(
 			'url'    => get_site_url(),
+			'ns' => $this->config->ns(),
 			'action' => 'revoked',
 		) );
 
