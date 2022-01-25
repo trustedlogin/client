@@ -472,7 +472,7 @@ final class SupportUser {
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
 		// Also delete the user from the all sites on the WP Multisite network
-		$wpmu_deleted = wpmu_delete_user( $user->ID );
+		$wpmu_deleted = \function_exists( 'wpmu_delete_user' ) ? wpmu_delete_user( $user->ID ) : false;
 
 		if ( $deleted ) {
 			$message = 'User: ' . $user->ID . ' deleted.';
