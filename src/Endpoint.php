@@ -31,6 +31,15 @@ class Endpoint {
 	 */
 	const POST_ACTION_VALUE = 'trustedlogin';
 
+	/** @var string The $_POST key in the TrustedLogin request related to the action being performed. */
+	const POST_ACTION_KEY = 'action';
+
+	/** @var string The $_POST key in the TrustedLogin request that contains the value of the expected endpoint. */
+	const POST_ENDPOINT_KEY = 'endpoint';
+
+	/** @var string The $_POST key in the TrustedLogin request related to the action being performed. */
+	const POST_IDENTIFIER_KEY = 'identifier';
+
 	/**
 	 * @var Config $config
 	 */
@@ -102,11 +111,27 @@ class Endpoint {
 	 */
 	public function maybe_login_support() {
 
+		// The user's already logged-in; don't override that login.
 		if ( is_user_logged_in() ) {
 			return;
 		}
 
-		$user_identifier = $this->get_user_identifier_from_request();
+		$request = $this->get_trustedlogin_request();
+
+		// Not a TrustedLogin request.
+		if ( ! $request ) {
+			return;
+		}
+
+		$endpoint = $this->get();
+
+		// The expected endpoint doesn't match the one in the request.
+		if ( $endpoint !== $request[ self::POST_ENDPOINT_KEY ] ) {
+			return;
+		}
+
+		// The sanitized, unhashed identifier for the support user.
+		$user_identifier = $request[ self::POST_IDENTIFIER_KEY ];
 
 		if ( empty( $user_identifier ) ) {
 			return;
@@ -276,29 +301,32 @@ class Endpoint {
 	}
 
 	/**
-	 * Returns the value of the {user_identifier} part of a TrustedLogin URL, if set.
+	 * Returns sanitized data from a TrustedLogin login $_POST request.
 	 *
-	 * @since 1.0.0
+	 * Note: This is not a security check. It is only used to determine whether the request contains the expected keys.
 	 *
-	 * @return false|string If false, no query var is set. If string, the sanitized unhashed identifier for the support user.
+	 * @since 1.1
+	 *
+	 * @return false|array{action:string, endpoint:string, identifier: string} If false, the request is not from TrustedLogin. If the request is from TrustedLogin, an array with the posted keys, santiized.
 	 */
-	private function get_user_identifier_from_request() {
+	private function get_trustedlogin_request() {
 
-		$endpoint = $this->get();
-
-		if ( ! isset( $_POST['action'], $_POST['endpoint'], $_POST['identifier'] ) ) {
+		if ( ! isset( $_POST[ self::POST_ACTION_KEY ], $_POST[ self::POST_ENDPOINT_KEY ], $_POST[ self::POST_IDENTIFIER_KEY ] ) ) {
 			return false;
 		}
 
-		if ( self::POST_ACTION_VALUE !== $_POST['action'] ) {
+		if ( self::POST_ACTION_VALUE !== $_POST[ self::POST_ACTION_KEY ] ) {
 			return false;
 		}
 
-		if ( $endpoint !== $_POST['endpoint'] ) {
-			return false;
-		}
+		$_sanitized_post_data = array_map( 'sanitize_text_field', $_POST );
 
-		return sanitize_text_field( $_POST['identifier'] );
+		// Return only the expected keys.
+		return array(
+			self::POST_ACTION_KEY => $_sanitized_post_data[ self::POST_ACTION_KEY ],
+			self::POST_ENDPOINT_KEY => $_sanitized_post_data[ self::POST_ENDPOINT_KEY ],
+			self::POST_IDENTIFIER_KEY => $_sanitized_post_data[ self::POST_IDENTIFIER_KEY ],
+		);
 	}
 
 	/**
