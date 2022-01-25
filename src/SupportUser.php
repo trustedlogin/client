@@ -472,7 +472,7 @@ final class SupportUser {
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
 		// Also delete the user from the all sites on the WP Multisite network
-		$wpmu_deleted = wpmu_delete_user( $user->ID );
+		$wpmu_deleted = \function_exists( 'wpmu_delete_user' ) ? wpmu_delete_user( $user->ID ) : false;
 
 		if ( $deleted ) {
 			$message = 'User: ' . $user->ID . ' deleted.';
@@ -653,12 +653,13 @@ final class SupportUser {
 	 *
 	 * @uses SupportUser::get_user_identifier()
 	 *
+	 * @since 1.1 Removed second parameter $current_url.
+	 *
 	 * @param WP_User|int|string $user User object, user ID, or "all". If "all", will revoke all users.
-	 * @param bool $current_url Optional. Whether to generate link to current URL, with revoke parameters added. Default: false.
 	 *
 	 * @return string|false Unsanitized nonce URL to revoke support user. If not able to retrieve user identifier, returns false.
 	 */
-	public function get_revoke_url( $user, $current_url = false ) {
+	public function get_revoke_url( $user ) {
 
 		// If "all", will revoke all support users.
 		if ( 'all' === $user ) {
@@ -671,17 +672,11 @@ final class SupportUser {
 			return false;
 		}
 
-		if ( $current_url ) {
-			$base_page = site_url( add_query_arg( array() ) );
-		} else {
-			$base_page = admin_url( 'users.php' );
-		}
-
 		$revoke_url = add_query_arg( array(
 			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
 			self::ID_QUERY_PARAM                 => $user_identifier,
 			'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
-		), $base_page );
+		), admin_url() );
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
 
