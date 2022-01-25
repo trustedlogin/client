@@ -468,17 +468,27 @@ final class SupportUser {
 			$secret_ids = array();
 		}
 
-		$this->logging->log( "Processing user ID " . $user->ID, __METHOD__, 'debug' );
+		$this->logging->log( 'Processing user ID ' . $user->ID, __METHOD__, 'debug' );
 
 		// Remove auto-cleanup hook
 		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
+		// Delete first using wp_delete_user() to allow for reassignment of posts
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
+		// Also delete the user from the all sites on the WP Multisite network
+		$wpmu_deleted = wpmu_delete_user( $user->ID );
+
 		if ( $deleted ) {
-			$this->logging->log( "User: " . $user->ID . " deleted.", __METHOD__, 'info' );
+			$message = 'User: ' . $user->ID . ' deleted.';
+
+			if ( $wpmu_deleted ) {
+				$message .= ' Also deleted from the Multisite network.';
+			}
+
+			$this->logging->log( $message, __METHOD__, 'info' );
 		} else {
-			$this->logging->log( "User: " . $user->ID . " NOT deleted.", __METHOD__, 'error' );
+			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
 		if ( $delete_role ) {
