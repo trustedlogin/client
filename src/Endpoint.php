@@ -370,7 +370,7 @@ class Endpoint {
 	 */
 	public function update( $endpoint ) {
 
-		$updated = update_site_option( $this->option_name, $endpoint, true );
+		$updated = update_site_option( $this->option_name, $endpoint );
 
 		update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
