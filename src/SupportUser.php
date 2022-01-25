@@ -195,7 +195,7 @@ final class SupportUser {
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
-			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY ), $user_email );
+			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
 		}
 
 		if ( email_exists( $user_email ) ) {
