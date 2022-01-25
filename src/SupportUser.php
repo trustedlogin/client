@@ -463,11 +463,6 @@ final class SupportUser {
 
 		$reassign_id_or_null = $this->get_reassign_user_id();
 
-		if ( $delete_endpoint ) {
-			$Endpoint   = new Endpoint( $this->config, $this->logging );
-			$secret_ids = array();
-		}
-
 		$this->logging->log( 'Processing user ID ' . $user->ID, __METHOD__, 'debug' );
 
 		// Remove auto-cleanup hook
