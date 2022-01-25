@@ -9,7 +9,7 @@
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -137,7 +137,7 @@ final class SupportUser {
 	 */
 	public function is_active( $passed_user = null ) {
 
-		$current_user = is_a( $passed_user, '\WP_User') ? $passed_user : wp_get_current_user();
+		$current_user = is_a( $passed_user, '\WP_User' ) ? $passed_user : wp_get_current_user();
 
 		if ( ! $current_user || ! $current_user->exists() ) {
 			return false;
@@ -149,7 +149,7 @@ final class SupportUser {
 			return false;
 		}
 
-		if( time() > (int) $expiration ) {
+		if ( time() > (int) $expiration ) {
 			return false;
 		}
 
@@ -240,9 +240,9 @@ final class SupportUser {
 			return $username;
 		}
 
-		$i = 1;
+		$i            = 1;
 		$new_username = $username;
-		while( username_exists( $new_username ) ) {
+		while ( username_exists( $new_username ) ) {
 			$new_username = sprintf( '%s %d', $username, $i + 1 );
 		}
 
@@ -339,8 +339,7 @@ final class SupportUser {
 		 * Action run when TrustedLogin has logged-in
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
-			'url' => get_site_url(),
-			'ns' => $this->config->ns(),
+			'url'    => get_site_url(),
 			'action' => 'logged_in',
 		) );
 	}
@@ -433,7 +432,7 @@ final class SupportUser {
 	public function get_first() {
 		$support_users = $this->get_all();
 
-		if( $support_users ) {
+		if ( $support_users ) {
 			return $support_users[0];
 		}
 
