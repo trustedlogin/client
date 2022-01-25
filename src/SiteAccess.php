@@ -179,7 +179,7 @@ class SiteAccess {
 	 */
 	private function generate_access_key() {
 
-		$hash = Encryption::hash( get_site_url() . $this->config->get_setting( 'auth/api_key' ), 32 );
+		$hash = Encryption::hash( get_current_blog_id() . get_site_url() . $this->config->get_setting( 'auth/api_key' ), 32 );
 
 		if ( is_wp_error( $hash ) ) {
 			return $hash;
