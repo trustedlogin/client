@@ -27,6 +27,11 @@ class Endpoint {
 	const PERMALINK_FLUSH_OPTION_NAME = 'tl_permalinks_flushed';
 
 	/**
+	 * @var string Expected value of $_POST['action'] before adding the endpoint and starting a login flow.
+	 */
+	const POST_ACTION_VALUE = 'trustedlogin';
+
+	/**
 	 * @var Config $config
 	 */
 	private $config;
@@ -285,7 +290,7 @@ class Endpoint {
 			return false;
 		}
 
-		if ( 'trustedlogin' !== $_POST['action'] ) {
+		if ( self::POST_ACTION_VALUE !== $_POST['action'] ) {
 			return false;
 		}
 
