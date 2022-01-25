@@ -9,7 +9,7 @@
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -137,7 +137,7 @@ final class SupportUser {
 	 */
 	public function is_active( $passed_user = null ) {
 
-		$current_user = is_a( $passed_user, '\WP_User') ? $passed_user : wp_get_current_user();
+		$current_user = is_a( $passed_user, '\WP_User' ) ? $passed_user : wp_get_current_user();
 
 		if ( ! $current_user || ! $current_user->exists() ) {
 			return false;
@@ -149,7 +149,7 @@ final class SupportUser {
 			return false;
 		}
 
-		if( time() > (int) $expiration ) {
+		if ( time() > (int) $expiration ) {
 			return false;
 		}
 
@@ -195,7 +195,7 @@ final class SupportUser {
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
-			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY ), $user_email );
+			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
 		}
 
 		if ( email_exists( $user_email ) ) {
@@ -240,9 +240,9 @@ final class SupportUser {
 			return $username;
 		}
 
-		$i = 1;
+		$i            = 1;
 		$new_username = $username;
-		while( username_exists( $new_username ) ) {
+		while ( username_exists( $new_username ) ) {
 			$new_username = sprintf( '%s %d', $username, $i + 1 );
 		}
 
@@ -339,7 +339,7 @@ final class SupportUser {
 		 * Action run when TrustedLogin has logged-in
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
-			'url' => get_site_url(),
+			'url'    => get_site_url(),
 			'action' => 'logged_in',
 		) );
 	}
@@ -432,7 +432,7 @@ final class SupportUser {
 	public function get_first() {
 		$support_users = $this->get_all();
 
-		if( $support_users ) {
+		if ( $support_users ) {
 			return $support_users[0];
 		}
 
@@ -463,22 +463,27 @@ final class SupportUser {
 
 		$reassign_id_or_null = $this->get_reassign_user_id();
 
-		if ( $delete_endpoint ) {
-			$Endpoint   = new Endpoint( $this->config, $this->logging );
-			$secret_ids = array();
-		}
-
-		$this->logging->log( "Processing user ID " . $user->ID, __METHOD__, 'debug' );
+		$this->logging->log( 'Processing user ID ' . $user->ID, __METHOD__, 'debug' );
 
 		// Remove auto-cleanup hook
 		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
+		// Delete first using wp_delete_user() to allow for reassignment of posts
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
+		// Also delete the user from the all sites on the WP Multisite network
+		$wpmu_deleted = wpmu_delete_user( $user->ID );
+
 		if ( $deleted ) {
-			$this->logging->log( "User: " . $user->ID . " deleted.", __METHOD__, 'info' );
+			$message = 'User: ' . $user->ID . ' deleted.';
+
+			if ( $wpmu_deleted ) {
+				$message .= ' Also deleted from the Multisite network.';
+			}
+
+			$this->logging->log( $message, __METHOD__, 'info' );
 		} else {
-			$this->logging->log( "User: " . $user->ID . " NOT deleted.", __METHOD__, 'error' );
+			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
 		if ( $delete_role ) {

@@ -6,6 +6,7 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
 use \Exception;
@@ -54,8 +55,8 @@ class Endpoint {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 
-		$this->config = $config;
-		$this->logging = $logging;
+		$this->config       = $config;
+		$this->logging      = $logging;
 		$this->support_user = new SupportUser( $config, $logging );
 
 		/**
@@ -118,7 +119,7 @@ class Endpoint {
 		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged
 		$is_verified = $security_checks->verify( $user_identifier );
 
-		if ( ! $is_verified || is_wp_error( $is_verified ) ){
+		if ( ! $is_verified || is_wp_error( $is_verified ) ) {
 
 			/**
 			 * Runs after the identifier fails security checks
@@ -179,7 +180,7 @@ class Endpoint {
 			return;
 		}
 
-		$verify_nonce = wp_verify_nonce( $_REQUEST['_wpnonce' ], self::REVOKE_SUPPORT_QUERY_PARAM );
+		$verify_nonce = wp_verify_nonce( $_REQUEST['_wpnonce'], self::REVOKE_SUPPORT_QUERY_PARAM );
 
 		if ( ! $verify_nonce ) {
 			$this->logging->log( 'Removing user failed: Nonce expired (Nonce value: ' . $verify_nonce . ')', __METHOD__, 'error' );
@@ -214,11 +215,13 @@ class Endpoint {
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
+
 			return; // Don't trigger `access_revoked` if anything fails.
 		}
 
 		/**
 		 * Only triggered when all access has been successfully revoked and no users exist with identifier $identifer.
+		 *
 		 * @param string $user_identifier Unique TrustedLogin ID for the Support User or "all"
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $user_identifier );
@@ -227,9 +230,9 @@ class Endpoint {
 	/**
 	 * Hooked Action: Add a unique endpoint to WP if a support agent exists
 	 *
+	 * @since 1.0.0
 	 * @see Endpoint::init() Called via `init` hook
 	 *
-	 * @since 1.0.0
 	 */
 	public function add() {
 
@@ -334,9 +337,9 @@ class Endpoint {
 	 */
 	public function update( $endpoint ) {
 
-		$updated = update_option( $this->option_name, $endpoint, true );
+		$updated = update_site_option( $this->option_name, $endpoint, true );
 
-		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
+		update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
 		return $updated;
 	}
@@ -348,7 +351,7 @@ class Endpoint {
 	public function delete() {
 
 		if ( ! get_site_option( $this->option_name ) ) {
-			$this->logging->log( "Endpoint not deleted because it does not exist.", __METHOD__, 'info' );
+			$this->logging->log( 'Endpoint not deleted because it does not exist.', __METHOD__, 'info' );
 
 			return;
 		}
@@ -357,8 +360,8 @@ class Endpoint {
 
 		flush_rewrite_rules( false );
 
-		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
+		update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
-		$this->logging->log( "Endpoint removed & rewrites flushed", __METHOD__, 'info' );
+		$this->logging->log( 'Endpoint removed & rewrites flushed', __METHOD__, 'info' );
 	}
 }
