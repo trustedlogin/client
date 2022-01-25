@@ -266,6 +266,11 @@ class Endpoint {
 	 */
 	public function add() {
 
+		// Only add the endpoint if a TrustedLogin request is being made.
+		if ( ! $this->get_trustedlogin_request() ) {
+			return;
+		}
+
 		$endpoint = $this->get();
 
 		if ( ! $endpoint ) {
