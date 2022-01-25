@@ -337,9 +337,9 @@ class Endpoint {
 	 */
 	public function update( $endpoint ) {
 
-		$updated = update_option( $this->option_name, $endpoint, true );
+		$updated = update_site_option( $this->option_name, $endpoint, true );
 
-		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
+		update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
 		return $updated;
 	}
@@ -360,7 +360,7 @@ class Endpoint {
 
 		flush_rewrite_rules( false );
 
-		update_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
+		update_site_option( self::PERMALINK_FLUSH_OPTION_NAME, 0 );
 
 		$this->logging->log( 'Endpoint removed & rewrites flushed', __METHOD__, 'info' );
 	}
