@@ -1,7 +1,9 @@
 # TrustedLogin SDK
 Easily and securely log in to your customers sites when providing support.
 
-### [Read the Documentation](https://trustedlogin.github.io/docs/Client/intro)
+### [🔍 See the Changelog](https://github.com/trustedlogin/client/blob/main/CHANGELOG.md)
+
+### [📖 Read the Documentation](https://trustedlogin.github.io/docs/Client/intro)
 
 ### Requirements:
 
