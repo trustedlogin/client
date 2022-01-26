@@ -1,6 +1,6 @@
 # Changelog for TrustedLogin Client
 
-## 1.1 (2022-01-25)
+## 1.2 (2022-01-25)
 
 - Fixed WPMU support  ([#84](https://github.com/trustedlogin/client/issues/84))
   - Also run `wpmu_delete_user()` when deleting support users
@@ -10,7 +10,22 @@
 - Removed unnecessary database call by only registering endpoint when there's a valid TrustedLogin login request ([#75](https://github.com/trustedlogin/client/issues/75))
 - Revoke TrustedLogin now always points to the Dashboard
   - Removed second argument from the `SupportUser::get_revoke_url()` method (`$current_url`)
-- Added namespace (as `ns`) in passed webhook data to allow for more complex webhook functionality ([#83](https://github.com/trustedlogin/client/issues/83))
+- Added namespace in passed webhook data (under the key `ns`) to allow for more complex webhook functionality ([#83](https://github.com/trustedlogin/client/issues/83))
+
+## 1.1 (2021-12-13)
+
+- Improved admin menu configuration
+  - Enhanced logic around whether and how to add a TrustedLogin menu to the sidebar depending on the `menu/slug` setting:
+    - If `null`, the a top-level menu will be added.
+    - If `false`, a menu item will not be added.
+    - If a string, the `menu/slug` setting will be used as the `$parent_slug` argument passed to the [`add_submenu_page()` function](https://developer.wordpress.org/reference/functions/add_submenu_page/)
+  - Added `menu/icon_url` setting that is used as the `$icon_url` parameter in [`add_menu_page()` function](https://developer.wordpress.org/reference/functions/add_menu_page/)
+- If granting access fails, the reference ID is now passed onto the support URL using the `?ref=` query parameter
+- Removed third arguments for `trustedlogin/{ns}/template/auth` and `'trustedlogin/{ns}/template/auth/footer_links` filters, since the namespace is already known
+- Improved WordPress backward-compatibility by removing usage of:
+  - `wp_date()` (added in WordPress 5.3); used `DateTime` instead
+  - `wp_clear_scheduled_hook()` (added in WP 4.9); used `wp_clear_scheduled_hook()` instead
+- Fixed filter naming: `trustedlogin/{ns}/public_key` renamed to `trustedlogin/{ns}/vendor_public_key`
 
 ## 1.0.2 (2021-10-07)
 
