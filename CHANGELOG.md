@@ -2,7 +2,7 @@
 
 ## 1.2 (2022-01-25)
 
-- Fixed WPMU support  ([#84](https://github.com/trustedlogin/client/issues/84))
+- Fixed WordPress Multisite support  ([#84](https://github.com/trustedlogin/client/issues/84))
   - Also run `wpmu_delete_user()` when deleting support users
   - Use `{get|update|delete}_site_option` instead of `{get|update|delete}_option`
   - Add blog ID to hashes for unique keys and email hashes for each blog on a network
