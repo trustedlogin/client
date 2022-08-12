@@ -452,17 +452,30 @@ final class Admin {
 	/**
 	 * Shows the current site URL and, if passed as $_GET['ref'], a support reference ID
 	 *
-	 * @return string
+	 * @return string Empty string if there is no reference or if the `trustedlogin/{ns}/template/auth/display_reference` filter returns false.
 	 */
 	private function get_reference_html() {
-
-		if ( ! $this->is_login_screen() ) {
-			return '';
-		}
 
 		$reference_id = Client::get_reference_id();
 
 		if ( null === $reference_id ) {
+			return '';
+		}
+
+		/**
+		 * Filter trustedlogin/{ns}/template/auth/display_reference
+		 *
+		 * Used to hide or show the reference ID in the auth screen template.
+		 *
+		 * @since 1.3
+		 *
+		 * @param bool $display_reference Whether to display the reference ID on the auth screen. Default: true.
+		 * @param bool $is_login_screen Whether the auth form is being displayed on the login screen.
+		 * @param string $ref The reference ID.
+		 */
+		$display_reference = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/display_reference', true, $this->is_login_screen(), $reference_id );
+
+		if ( ! $display_reference ) {
 			return '';
 		}
 
@@ -691,14 +704,14 @@ final class Admin {
 		);
 
 		/**
-		 * Filter trustedlogin/template/auth/footer_links
+		 * Filter trustedlogin/{ns}/template/auth/footer_links
 		 *
 		 * Used to add/remove Footer Links on grantlink page
 		 *
 		 * @since 1.0.0
 		 *
-		 * @param array Array of links to show in auth footer (Key is anchor text; Value is URL)
-		 **/
+		 * @param array $footer_links Array of links to show in auth footer (Key is anchor text; Value is URL)
+		 */
 		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links );
 
 		$footer_links_output = '';
@@ -1128,15 +1141,30 @@ final class Admin {
 			return $return;
 		}
 
-		$default_atts = array(
-			'current_url' => false,
-		);
-
-		$atts = wp_parse_args( $atts, $default_atts );
-
 		$return = '';
 
-		$access_key_template = <<<EOD
+		$access_key = $this->site_access->get_access_key();
+
+		if ( is_wp_error( $access_key ) ) {
+
+			$access_key_template = <<<EOD
+<%3\$s class="tl-%1\$s-auth__accesskey">
+	<h3>%2\$s</h3>
+	<p>%4\$s <samp>%5\$s</samp></p>
+</%3\$s>
+EOD;
+			$access_key_output   = sprintf(
+				$access_key_template,
+				/* %1$s */ sanitize_title( $this->config->ns() ),
+				/* %2$s */ esc_html__( 'Error', 'trustedlogin' ),
+				/* %3$s */ 'div',
+				/* %4$s */ esc_html__( 'There was an error returning the access key.', 'trustedlogin' ),
+				/* %5$s */ esc_html( $access_key->get_error_message() )
+			);
+
+		} else {
+
+			$access_key_template = <<<EOD
 <%6\$s class="tl-%1\$s-auth__accesskey">
 	<label for="tl-%1\$s-access-key"><h3>%2\$s</h3></label>
 	<p>%8\$s</p>
@@ -1147,26 +1175,27 @@ final class Admin {
 	</div>
 </%6\$s>
 EOD;
+			$access_key_output   = sprintf(
+				$access_key_template,
+				/* %1$s */ sanitize_title( $this->config->ns() ),
+				/* %2$s */ esc_html__( 'Site access key:', 'trustedlogin' ),
+				/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
+				/* %4$s */ esc_attr( $access_key ),
+				/* %5$s */ esc_html__( 'Copy', 'trustedlogin' ),
+				/* %6$s */ 'div',
+				/* %7$s */ esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
+				// translators: %s is the display name of the TrustedLogin support user.
+				/* %8$s */ sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), $this->support_user->get_first()->display_name )
+			);
 
+		}
 
-		$access_key_output = sprintf(
-			$access_key_template,
-			/* %1$s */ sanitize_title( $this->config->ns() ),
-			/* %2$s */ esc_html__( 'Site access key:', 'trustedlogin' ),
-			/* %3$s */ esc_html__( 'Access Key', 'trustedlogin' ),
-			/* %4$s */ esc_attr( $this->site_access->get_access_key() ),
-			/* %5$s */ esc_html__( 'Copy', 'trustedlogin' ),
-			/* %6$s */ 'div',
-			/* %7$s */ esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
-			sprintf( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', $this->support_user->get_first()->display_name )
-		);
 
 		$return .= $access_key_output;
 
 		if ( $print ) {
 			echo $return;
 		}
-
 
 		return $return;
 	}

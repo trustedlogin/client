@@ -78,7 +78,7 @@ class Endpoint {
 		 *
 		 * @since 1.0.0
 		 *
-		 * @param string
+		 * @param string $option_name
 		 * @param Config $config
 		 */
 		$this->option_name = apply_filters(
