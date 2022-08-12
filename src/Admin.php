@@ -1128,12 +1128,8 @@ final class Admin {
 			return $return;
 		}
 
-		$default_atts = array(
-			'current_url' => false,
-		);
 		$return = '';
 
-		$atts = wp_parse_args( $atts, $default_atts );
 		$access_key = $this->site_access->get_access_key();
 
 		if ( is_wp_error( $access_key ) ) {
