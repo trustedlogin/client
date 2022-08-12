@@ -452,17 +452,30 @@ final class Admin {
 	/**
 	 * Shows the current site URL and, if passed as $_GET['ref'], a support reference ID
 	 *
-	 * @return string
+	 * @return string Empty string if there is no reference or if the `trustedlogin/{ns}/template/auth/display_reference` filter returns false.
 	 */
 	private function get_reference_html() {
-
-		if ( ! $this->is_login_screen() ) {
-			return '';
-		}
 
 		$reference_id = Client::get_reference_id();
 
 		if ( null === $reference_id ) {
+			return '';
+		}
+
+		/**
+		 * Filter trustedlogin/{ns}/template/auth/display_reference
+		 *
+		 * Used to hide or show the reference ID in the auth screen template.
+		 *
+		 * @since 1.3
+		 *
+		 * @param bool $display_reference Whether to display the reference ID on the auth screen. Default: true.
+		 * @param bool $is_login_screen Whether the auth form is being displayed on the login screen.
+		 * @param string $ref The reference ID.
+		 */
+		$display_reference = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/display_reference', true, $this->is_login_screen(), $reference_id );
+
+		if ( ! $display_reference ) {
 			return '';
 		}
 
