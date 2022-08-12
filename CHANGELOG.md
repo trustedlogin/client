@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## 1.3 (2022-08-12)
+
+- Changed: Now display the reference ID by default in both the login screen and the Grant Access screen
+- Added `trustedlogin/{ns}/template/auth/display_reference` filter to control whether the reference ID is shown in the access form
+- Added error handling when `SiteAccess::get_access_key()` fails
+
 ## 1.2 (2022-01-25)
 
 - Fixed WordPress Multisite support  ([#84](https://github.com/trustedlogin/client/issues/84))
