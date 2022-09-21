@@ -158,7 +158,7 @@ final class Config {
 
 		// TODO: Add namespace collision check?
 		foreach ( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
-			$value = $this->get_setting( $settings_key, null, $this->settings );
+			$value = $this->get_setting( $settings_key, '', $this->settings );
 			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 				$errors[] = new WP_Error(
