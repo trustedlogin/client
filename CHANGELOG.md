@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.1 (2022-09-21)
+
+- Fixed: PHP 8.1 warning related to performing string actions on `null`
+
 ## 1.3 (2022-08-12)
 
 - Changed: Now display the reference ID by default in both the login screen and the Grant Access screen
