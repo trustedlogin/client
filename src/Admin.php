@@ -386,7 +386,7 @@ final class Admin {
 			'intro'            => $this->get_intro(),
 			'auth_header'      => $this->get_auth_header_html(),
 			'details'          => $this->get_details_html(),
-			'button'           => $this->generate_button( 'size=hero&class=authlink button-primary', false ),
+			'button'           => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
 			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'           => $this->get_footer_html(),
 			'reference'        => $this->get_reference_html(),
