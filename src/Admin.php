@@ -360,7 +360,7 @@ final class Admin {
 
 		$content = array(
 			'display_name' => $support_user->display_name,
-			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			'auth_meta' => sprintf( 'Created 1 day ago by %s', $auth_meta ),
 		);
 
