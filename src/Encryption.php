@@ -188,7 +188,7 @@ final class Encryption {
 
 		if ( is_wp_error( $remote_key ) ) {
 
-			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'notice' );
+			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'error' );
 
 			return $remote_key;
 		}
@@ -220,14 +220,20 @@ final class Encryption {
 	 */
 	private function get_remote_encryption_key() {
 
-		$vendor_url = $this->config->get_setting( 'vendor/website' );
+		$vendor_website = $this->config->get_setting( 'vendor/website', '' );
+
+		/**
+		 * @param string $public_key_website Root URL of the website from where the vendor's public key is fetched. May be different than the vendor/website configuration setting.
+		 * @since 1.3.2
+		 */
+		$public_key_website = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/website', $vendor_website );
 
 		/**
 		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
 		 */
-		$key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
+		$public_key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
 
-		$url = trailingslashit( $vendor_url ) . $key_endpoint;
+		$url = trailingslashit( $public_key_website ) . $public_key_endpoint;
 
 		$headers = array(
 			'Accept'       => 'application/json',

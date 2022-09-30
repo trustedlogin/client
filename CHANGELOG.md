@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.2 (2022-09-30)
+
+- Added `trustedlogin/{ns}/vendor/public_key/website` filter to modify the website used to fetch public key (this can be helpful when running tests)
+- Added `.tl-client-grant-button` and `.tl-client-revoke-button` CSS classes to the respective buttons in the Auth screen
+- Changed logging levels from `notice` to `error` when fetching the Vendor public key fails
+
 ## 1.3.1 (2022-09-21)
 
 - Fixed: PHP 8.1 warning related to performing string actions on `null`
