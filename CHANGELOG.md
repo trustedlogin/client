@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.2 (2022-09-30)
+
+- Added: `.tl-client-grant-button` and `.tl-client-revoke-button` CSS classes to the respective buttons in the Auth screen.
+
 ## 1.3.1 (2022-09-21)
 
 - Fixed: PHP 8.1 warning related to performing string actions on `null`
