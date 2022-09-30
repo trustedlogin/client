@@ -2,7 +2,8 @@
 
 ## 1.3.2 (2022-09-30)
 
-- Added: `.tl-client-grant-button` and `.tl-client-revoke-button` CSS classes to the respective buttons in the Auth screen.
+- Added `.tl-client-grant-button` and `.tl-client-revoke-button` CSS classes to the respective buttons in the Auth screen.
+- Changed logging levels from `notice` to `error` when fetching the Vendor public key fails
 
 ## 1.3.1 (2022-09-21)
 

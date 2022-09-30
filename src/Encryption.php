@@ -188,7 +188,7 @@ final class Encryption {
 
 		if ( is_wp_error( $remote_key ) ) {
 
-			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'notice' );
+			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'error' );
 
 			return $remote_key;
 		}
