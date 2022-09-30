@@ -577,7 +577,7 @@ final class SupportUser {
 			return new WP_Error( 'missing_action_parameter', 'Error extending Support User access, missing required parameter.' );
 		}
 
-		if ( ! $cron || ! $cron instanceof Cron ) {
+		if ( ! $cron instanceof Cron ) {
 			// Avoid a Fatal error if `$cron` parameter is not provided.
 			$cron = new Cron( $this->config, $this->logging );
 		}
