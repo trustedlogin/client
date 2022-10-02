@@ -145,6 +145,10 @@ class SiteAccess {
 		 */
 		$license_key = apply_filters( 'trustedlogin/' . $this->config->ns() . '/licence_key', $license_key_config );
 
+		if ( empty( $license_key ) ) {
+			return null;
+		}
+
 		if ( ! is_string( $license_key ) ) {
 
 			$this->logging->log( '', '', 'error', array(
@@ -159,7 +163,7 @@ class SiteAccess {
 			return hash( 'sha256', $license_key );
 		}
 
-		return empty( $license_key ) ? null : $license_key;
+		return $license_key;
 	}
 
 	/**

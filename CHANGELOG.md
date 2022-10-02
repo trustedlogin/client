@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.3 (2022-10-02)
+
+- Fixed logging an error when license key configuration was undefined
+
 ## 1.3.2 (2022-09-30)
 
 - Added `trustedlogin/{ns}/vendor/public_key/website` filter to modify the website used to fetch public key (this can be helpful when running tests)
@@ -8,11 +12,11 @@
 
 ## 1.3.1 (2022-09-21)
 
-- Fixed: PHP 8.1 warning related to performing string actions on `null`
+- Fixed PHP 8.1 warning related to performing string actions on `null`
 
 ## 1.3 (2022-08-12)
 
-- Changed: Now display the reference ID by default in both the login screen and the Grant Access screen
+- Changed Now display the reference ID by default in both the login screen and the Grant Access screen
 - Added `trustedlogin/{ns}/template/auth/display_reference` filter to control whether the reference ID is shown in the access form
 - Added error handling when `SiteAccess::get_access_key()` fails
 
