@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## develop
+
+- Fixed logging an error when license key wasn't defined
+
 ## 1.3.2 (2022-09-30)
 
 - Added `trustedlogin/{ns}/vendor/public_key/website` filter to modify the website used to fetch public key (this can be helpful when running tests)
