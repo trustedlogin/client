@@ -1,5 +1,10 @@
 # Changelog for TrustedLogin Client
 
+## develop
+
+- Changed to use `hash()` instead of `wp_hash()` for log naming; `wp_hash()` can be overridden, which is potentially insecure
+- Switched to naming logs using a `sha256` hash for additional security
+
 ## 1.3.3 (2022-10-02)
 
 - Fixed logging an error when license key configuration was undefined
