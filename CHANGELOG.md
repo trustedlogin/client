@@ -1,6 +1,6 @@
 # Changelog for TrustedLogin Client
 
-## develop
+## 1.3.4 (2022-10-11)
 
 - Changed to use `hash()` instead of `wp_hash()` for log naming; `wp_hash()` can be overridden, which is potentially insecure
 - Switched to naming logs using a `sha256` hash for additional security
