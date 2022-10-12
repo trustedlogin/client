@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.5 (2022-10-12)
+
+- Fixed rescheduling cron hooks when support access is extended
+
 ## 1.3.4 (2022-10-11)
 
 - Changed to use `hash()` instead of `wp_hash()` for log naming; `wp_hash()` can be overridden, which is potentially insecure
