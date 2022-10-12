@@ -82,11 +82,23 @@ final class Cron {
 	 */
 	public function reschedule( $expiration_timestamp, $site_identifier_hash ) {
 
-		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, array( $site_identifier_hash ) );
+		$hash = Encryption::hash( $site_identifier_hash );
 
-		if ( false === $unschedule_expiration ){
-			$this->logging->log( sprintf( 'Could not unschedule event for %s', $this->hook_name ), __METHOD__, 'error' );
+		if ( is_wp_error( $hash ) ) {
+			$this->logging->log( $hash, __METHOD__ );
+
 			return false;
+		}
+
+		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, array( $hash ) );
+
+		switch( $unschedule_expiration ) {
+			case false:
+				$this->logging->log( sprintf( 'Could not clear scheduled hook for %s', $this->hook_name ), __METHOD__, 'error' );
+				return false;
+			case 0:
+				$this->logging->log( sprintf( 'Cron event not found for %s', $this->hook_name ), __METHOD__, 'error' );
+				return false;
 		}
 
 		return $this->schedule( $expiration_timestamp, $site_identifier_hash );
