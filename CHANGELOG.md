@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.6 (2022-10-13)
+
+- Fixed hard-coded message about the support user being created "1 day ago"
+- Added missing translation hints
+- Updated npm dependencies
+
 ## 1.3.5 (2022-10-12)
 
 - Fixed rescheduling cron hooks when support access is extended
