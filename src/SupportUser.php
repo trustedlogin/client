@@ -234,6 +234,7 @@ final class SupportUser {
 	 */
 	private function generate_unique_username() {
 
+		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( ! username_exists( $username ) ) {
