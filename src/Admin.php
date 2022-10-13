@@ -362,7 +362,7 @@ final class Admin {
 			'display_name' => $support_user->display_name,
 			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			// translators: %s is the display name of the user who granted access
-			'auth_meta' => sprintf( 'Created 1 day ago by %s', $auth_meta ),
+			'auth_meta' => sprintf( esc_html__( 'Created %s ago by %s', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ), $auth_meta ),
 		);
 
 		return $this->prepare_output( $template, $content );
