@@ -361,6 +361,7 @@ final class Admin {
 		$content = array(
 			'display_name' => $support_user->display_name,
 			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			// translators: %s is the display name of the user who granted access
 			'auth_meta' => sprintf( 'Created 1 day ago by %s', $auth_meta ),
 		);
 
@@ -482,6 +483,7 @@ final class Admin {
 		$template =  '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-{{ns}}-auth_ref__id">{{reference_text}}</span></p></div>';
 
 		$content = array(
+			// translators: %s is the reference ID
 			'reference_text' => sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $reference_id ),
 			'ns' => $this->config->ns(),
 			'site_url' => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
@@ -540,17 +542,21 @@ final class Admin {
 			</div>
 		';
 
-		// translators: %1$s and %3$s are replaced with HTML tags. %2$s is the amount of time that the login will be active for (e.g. "1 week")
+		// translators: %s is replaced with the of time that the login will be active for (e.g. "1 week")
 		$expire_summary = sprintf( esc_html__( 'Access this site for %s.', 'trustedlogin' ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
+
+		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
 		$expire_desc    = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
 
 		$ns          = $this->config->ns();
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
 
 		if ( array_filter( $this->config->get_setting( 'caps' ), array( $this->config, 'is_not_null' ) ) ) {
+			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
 		} else {
+			// translators: %s is replaced with the name of the role (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 		}
 
@@ -646,6 +652,7 @@ final class Admin {
 		</div>';
 
 		$content = array(
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			'local_site' => sprintf( esc_html__( '%s support may not be able to access this site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
 			'need_access' => esc_html__( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
 			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
@@ -700,6 +707,7 @@ final class Admin {
 
 		$footer_links = array(
 			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                   => self::ABOUT_TL_URL,
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $support_url,
 		);
 
@@ -895,7 +903,9 @@ final class Admin {
 	public function get_button( $atts = array() ) {
 
 		$defaults = array(
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_display_name() ),
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
@@ -1006,10 +1016,12 @@ final class Admin {
 
 		$error_content = sprintf( '<p>%s</p><p>%s</p>',
 			sprintf(
+				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 				esc_html__( 'The user details could not be sent to %1$s automatically.', 'trustedlogin' ),
 				$vendor_title
 			),
 			sprintf(
+				// translators: %1$s is the vendor support url and %2$s is the vendor title
 				__( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin' ),
 				esc_url( add_query_arg( $query_args, $this->config->get_setting( 'vendor/support_url' ) ) ),
 				$vendor_title
@@ -1020,9 +1032,11 @@ final class Admin {
 			'buttons' => array(
 				'confirm'    => esc_html__( 'Confirm', 'trustedlogin' ),
 				'ok'         => esc_html__( 'Ok', 'trustedlogin' ),
+				// translators: %1$s is the vendor title
 				'go_to_site' => sprintf( __( 'Go to %1$s support site', 'trustedlogin' ), $vendor_title ),
 				'close'      => esc_html__( 'Close', 'trustedlogin' ),
 				'cancel'     => esc_html__( 'Cancel', 'trustedlogin' ),
+				// translators: %1$s is the vendor title
 				'revoke'     => sprintf( esc_html__( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
 				'copy'       => esc_html__( 'Copy', 'trustedlogin' ),
 				'copied'     => esc_html__( 'Copied!', 'trustedlogin' ),
@@ -1035,17 +1049,21 @@ final class Admin {
 				'synced'             => array(
 					'title'   => esc_html__( 'Support access granted', 'trustedlogin' ),
 					'content' => sprintf(
+					// translators: %1$s is the vendor title
 						__( 'A temporary support user has been created, and sent to %1$s support.', 'trustedlogin' ),
 						$vendor_title
 					),
 				),
 				'pending'            => array(
+					// translators: %1$s is the vendor title
 					'content' => sprintf( __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin' ), $vendor_title ),
 				),
 				'extending'          => array(
+					// translators: %1$s is the vendor title and %2$s is the human-readable expiration time (for example, "1 week")
 					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ), $vendor_title, human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing'            => array(
+					// translators: %1$s is the vendor title
 					'content' => sprintf( __( 'Sending encrypted access to %1$s.', 'trustedlogin' ), $vendor_title ),
 				),
 				'error'              => array(
@@ -1062,6 +1080,7 @@ final class Admin {
 				'cancel'             => array(
 					'title'   => esc_html__( 'Action Cancelled', 'trustedlogin' ),
 					'content' => sprintf(
+						// translators: %1$s is the vendor title
 						__( 'A support account for %1$s was not created.', 'trustedlogin' ),
 						$vendor_title
 					),
@@ -1076,6 +1095,7 @@ final class Admin {
 				'accesskey'          => array(
 					'title'       => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
 					'content'     => sprintf(
+						// translators: %1$s is the vendor title
 						__( 'Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin' ),
 						$vendor_title
 					),
@@ -1087,11 +1107,13 @@ final class Admin {
 				),
 				'error409'           => array(
 					'title'   => sprintf(
+						// translators: %1$s is the vendor title
 						__( '%1$s Support user already exists', 'trustedlogin' ),
 						$vendor_title
 					),
 					'content' => sprintf(
 						wp_kses(
+							// translators: %1$s is the vendor title, %2$s is the URL to the users list page
 							__( 'A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ),
 							array( 'a' => array( 'href' => array(), 'target' => array() ) )
 						),
@@ -1132,6 +1154,7 @@ final class Admin {
 
 		if ( empty( $support_users ) ) {
 
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
 			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
 
 			if ( $print ) {
@@ -1225,7 +1248,10 @@ EOD;
 
 		?>
 		<div class="notice notice-success is-dismissible">
-			<h3><?php echo esc_html( sprintf( __( '%s access revoked.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) ); ?></h3>
+			<h3><?php
+				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
+				echo esc_html( sprintf( __( '%s access revoked.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) );
+				?></h3>
 			<?php if ( ! current_user_can( 'delete_users' ) ) { ?>
 				<p><?php echo esc_html__( 'You may safely close this window.', 'trustedlogin' ); ?></p>
 			<?php } ?>

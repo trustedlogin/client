@@ -317,6 +317,7 @@ final class Remote {
 
 		foreach ( (array) $required_keys as $required_key ) {
 			if ( ! isset( $response_json[ $required_key ] ) ) {
+				// translators: %s is the name of the missing data from the server
 				return new WP_Error( 'missing_required_key', sprintf( esc_html__( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
 			}
 		}

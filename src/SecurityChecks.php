@@ -111,6 +111,7 @@ final class SecurityChecks {
 
 			$this->logging->log(
 				sprintf(
+					// translators: %s is the error message
 					__( 'There was an issue verifying the user identifier with TrustedLogin, aborting login. (%s)', 'trustedlogin' ),
 					$approved->get_error_message()
 				),
