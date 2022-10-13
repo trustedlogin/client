@@ -19,14 +19,6 @@ module.exports = function( grunt ) {
 			}
 		},
 
-		wp_readme_to_markdown: {
-			your_target: {
-				files: {
-					'README.md': 'readme.txt'
-				}
-			},
-		},
-
 		makepot: {
 			target: {
 				options: {
@@ -88,9 +80,8 @@ module.exports = function( grunt ) {
 	grunt.loadNpmTasks( 'grunt-contrib-sass' );
 	grunt.loadNpmTasks( 'grunt-contrib-watch' );
 	grunt.loadNpmTasks( 'grunt-postcss' );
-	grunt.registerTask( 'default', [ 'i18n','readme', 'sass', 'watch' ] );
+	grunt.registerTask( 'default', [ 'i18n', 'sass', 'watch' ] );
 	grunt.registerTask( 'i18n', ['addtextdomain', 'makepot'] );
-	grunt.registerTask( 'readme', ['wp_readme_to_markdown'] );
 
 	grunt.util.linefeed = '\n';
 
