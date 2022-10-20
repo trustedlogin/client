@@ -193,7 +193,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->assertNotFalse( $user_id );
 		$this->assertNotWPError( $user_id );
 
-		$support_user = new WP_User( $user_id );
+		$support_user = new \WP_User( $user_id );
 		$this->assertTrue( $support_user->exists() );
 
 		// Was the role created?

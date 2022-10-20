@@ -116,7 +116,7 @@ final class SupportRole {
 		}
 
 		if ( ! is_string( $new_role_slug ) ) {
-			return new WP_Error( 'new_role_slug_not_string', 'The slug for the new support role must be a string.' );
+			return new \WP_Error( 'new_role_slug_not_string', 'The slug for the new support role must be a string.' );
 		}
 
 		if ( empty( $clone_role_slug ) ) {
@@ -124,7 +124,7 @@ final class SupportRole {
 		}
 
 		if ( ! is_string( $clone_role_slug ) ) {
-			return new WP_Error( 'cloned_role_slug_not_string', 'The slug for the cloned support role must be a string.' );
+			return new \WP_Error( 'cloned_role_slug_not_string', 'The slug for the cloned support role must be a string.' );
 		}
 
 		$role_exists = get_role( $new_role_slug );
@@ -139,7 +139,7 @@ final class SupportRole {
 		$old_role = get_role( $clone_role_slug );
 
 		if ( empty( $old_role ) ) {
-			return new WP_Error( 'role_does_not_exist', 'Error: the role to clone does not exist: ' . $clone_role_slug );
+			return new \WP_Error( 'role_does_not_exist', 'Error: the role to clone does not exist: ' . $clone_role_slug );
 		}
 
 		$capabilities = $old_role->capabilities;
@@ -168,7 +168,7 @@ final class SupportRole {
 
 		if ( ! $new_role ){
 
-			return new WP_Error(
+			return new \WP_Error(
 				'add_role_failed',
 				'Error: the role was not created using add_role()', compact(
 					"new_role_slug",

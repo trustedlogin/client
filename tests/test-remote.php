@@ -171,7 +171,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	public function test_handle_response() {
 
 		// Response is an error itself
-		$WP_Error = new WP_Error( 'example', 'Testing 123' );
+		$WP_Error = new \WP_Error( 'example', 'Testing 123' );
 		$this->assertSame( $WP_Error, $this->remote->handle_response( $WP_Error ) );
 
 		// Missing body

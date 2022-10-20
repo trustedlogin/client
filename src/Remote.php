@@ -79,7 +79,7 @@ final class Remote {
 
 		if ( ! wp_http_validate_url( $webhook_url ) ) {
 
-			$error = new WP_Error( 'invalid_webhook_url', 'An invalid `webhook_url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ) );
+			$error = new \WP_Error( 'invalid_webhook_url', 'An invalid `webhook_url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ) );
 
 			$this->logging->log( $error, __METHOD__, 'error' );
 
@@ -103,7 +103,7 @@ final class Remote {
 
 			$this->logging->log( 'A fatal error was triggered while sending a webhook to ' . esc_attr( $webhook_url ) . ': ' . $exception->getMessage(), __METHOD__, 'error' );
 
-			return new WP_Error( $exception->getCode(), $exception->getMessage() );
+			return new \WP_Error( $exception->getCode(), $exception->getMessage() );
 		}
 	}
 
@@ -126,7 +126,7 @@ final class Remote {
 		if ( ! is_string( $method ) || ! in_array( $method, array( 'POST', 'PUT', 'GET', 'HEAD', 'PUSH', 'DELETE' ), true ) ) {
 			$this->logging->log( sprintf( 'Error: Method not in allowed array list (%s)', print_r( $method, true ) ), __METHOD__, 'critical' );
 
-			return new WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s" is not in the list of allowed methods', print_r( $method, true ) ) );
+			return new \WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s" is not in the list of allowed methods', print_r( $method, true ) ) );
 		}
 
 		$headers = array(
@@ -159,7 +159,7 @@ final class Remote {
 
 		} catch ( Exception $exception ) {
 
-			$error = new WP_Error( 'wp_remote_request_exception', sprintf( 'There was an exception during the remote request: %s (%s)', $exception->getMessage(), $exception->getCode() ) );
+			$error = new \WP_Error( 'wp_remote_request_exception', sprintf( 'There was an exception during the remote request: %s (%s)', $exception->getMessage(), $exception->getCode() ) );
 
 			$this->logging->log( $error, __METHOD__, 'error' );
 
@@ -223,40 +223,40 @@ final class Remote {
 
 			case 400:
 			case 423:
-				return new WP_Error( 'unable_to_verify', esc_html__( 'Unable to verify Pause Mode.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unable_to_verify', esc_html__( 'Unable to verify Pause Mode.', 'trustedlogin' ), $api_response );
 
 			case 401:
-				return new WP_Error( 'unauthenticated', esc_html__( 'Authentication failed.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unauthenticated', esc_html__( 'Authentication failed.', 'trustedlogin' ), $api_response );
 
 			case 402:
-				return new WP_Error( 'account_error', esc_html__( 'TrustedLogin account issue.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'account_error', esc_html__( 'TrustedLogin account issue.', 'trustedlogin' ), $api_response );
 
 			case 403:
-				return new WP_Error( 'invalid_token', esc_html__( 'Invalid tokens.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_token', esc_html__( 'Invalid tokens.', 'trustedlogin' ), $api_response );
 
 			// the KV store was not found, possible issue with endpoint
 			case 404:
-				return new WP_Error( 'not_found', esc_html__( 'The TrustedLogin vendor was not found.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'not_found', esc_html__( 'The TrustedLogin vendor was not found.', 'trustedlogin' ), $api_response );
 
 			// The site is a teapot.
 			case 418:
-				return new WP_Error( 'teapot', '🫖', $api_response );
+				return new \WP_Error( 'teapot', '🫖', $api_response );
 
 			// Server offline
 			case 500:
 			case 503:
 			case 'http_request_failed':
-				return new WP_Error( 'unavailable', esc_html__( 'The TrustedLogin site is not currently online.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unavailable', esc_html__( 'The TrustedLogin site is not currently online.', 'trustedlogin' ), $api_response );
 
 			// Server error
 			case 501:
 			case 502:
 			case 522:
-				return new WP_Error( 'server_error', esc_html__( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'server_error', esc_html__( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
 
 			// wp_remote_retrieve_response_code() couldn't parse the $api_response
 			case '':
-				return new WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
 
 			default:
 				return (int) $response_code;
@@ -293,13 +293,13 @@ final class Remote {
 		if ( empty( $response_body ) ) {
 			$this->logging->log( "Response body not set: " . print_r( $response_body, true ), __METHOD__, 'error' );
 
-			return new WP_Error( 'missing_response_body', esc_html__( 'The response was invalid.', 'trustedlogin' ), $api_response );
+			return new \WP_Error( 'missing_response_body', esc_html__( 'The response was invalid.', 'trustedlogin' ), $api_response );
 		}
 
 		$response_json = json_decode( $response_body, true );
 
 		if ( empty( $response_json ) ) {
-			return new WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $response_body );
+			return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $response_body );
 		}
 
 		if ( isset( $response_json['errors'] ) ) {
@@ -312,13 +312,13 @@ final class Remote {
 				$errors .= $error;
 			}
 
-			return new WP_Error( 'errors_in_response', esc_html( $errors ), $response_body );
+			return new \WP_Error( 'errors_in_response', esc_html( $errors ), $response_body );
 		}
 
 		foreach ( (array) $required_keys as $required_key ) {
 			if ( ! isset( $response_json[ $required_key ] ) ) {
 				// translators: %s is the name of the missing data from the server
-				return new WP_Error( 'missing_required_key', sprintf( esc_html__( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
+				return new \WP_Error( 'missing_required_key', sprintf( esc_html__( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
 			}
 		}
 
