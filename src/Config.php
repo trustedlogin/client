@@ -141,8 +141,10 @@ final class Config {
 
 		if ( isset( $this->settings['vendor']['namespace'] ) ) {
 
-			// This seems like a reasonable max limit on namespace length.
-			// @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+			/**
+			 * This seems like a reasonable max limit on the ns length.
+			 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+			 */
 			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
 				$errors[] = new \WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
 			}
@@ -156,7 +158,8 @@ final class Config {
 			$errors[] = new \WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
 		}
 
-		// TODO: Add namespace collision check?
+		// TODO: Add ns collision check?
+
 		foreach ( array( 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, '', $this->settings );
 			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
