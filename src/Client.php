@@ -36,7 +36,7 @@ final class Client {
 	 * @var string The current drop-in file version
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.3.6';
+	const VERSION = '1.3.7';
 
 	/**
 	 * @var Config
@@ -189,7 +189,7 @@ final class Client {
 	public function get_access_key() {
 
 		if ( ! self::$valid_config ) {
-			return new WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
+			return new \WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
 		}
 
 		return $this->site_access->get_access_key();
@@ -203,11 +203,11 @@ final class Client {
 	public function grant_access() {
 
 		if ( ! self::$valid_config ) {
-			return new WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
+			return new \WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
 		}
 
 		if ( ! current_user_can( 'create_users' ) ) {
-			return new WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
+			return new \WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
 		}
 
 		// If the user exists already, extend access
@@ -223,7 +223,7 @@ final class Client {
 
 			$this->logging->log( 'An exception occurred trying to create a support user.', __METHOD__, 'critical', $exception );
 
-			return new WP_Error( 'support_user_exception', $exception->getMessage(), array( 'error_code' => 500 ) );
+			return new \WP_Error( 'support_user_exception', $exception->getMessage(), array( 'error_code' => 500 ) );
 		}
 
 		if ( is_wp_error( $support_user_id ) ) {
@@ -243,7 +243,7 @@ final class Client {
 
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
 
-			return new WP_Error( 'secure_secret_failed', 'Could not generate a secure secret.', array( 'error_code' => 501 ) );
+			return new \WP_Error( 'secure_secret_failed', 'Could not generate a secure secret.', array( 'error_code' => 501 ) );
 		}
 
 		$endpoint_hash = $this->endpoint->get_hash( $site_identifier_hash );
@@ -269,7 +269,7 @@ final class Client {
 		}
 
 		if ( empty( $did_setup ) ) {
-			return new WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
+			return new \WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
 		}
 
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
@@ -302,7 +302,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
+			return new \WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
 		}
 
 		timer_start();
@@ -317,7 +317,7 @@ final class Client {
 
 		} catch ( Exception $e ) {
 
-			$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
+			$exception_error = new \WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
 
 			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
 
@@ -405,7 +405,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
+			return new \WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
 		}
 
 		timer_start();
@@ -420,7 +420,7 @@ final class Client {
 
 		} catch ( Exception $e ) {
 
-			$exception_error = new WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
+			$exception_error = new \WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
 
 			$this->logging->log( 'There was an error updating TrustedLogin servers.', __METHOD__, 'error', $e );
 
@@ -510,7 +510,7 @@ final class Client {
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
-			return new WP_Error( 'support_user_not_deleted', esc_html__( 'The support user was not deleted.', 'trustedlogin' ) );
+			return new \WP_Error( 'support_user_not_deleted', esc_html__( 'The support user was not deleted.', 'trustedlogin' ) );
 		}
 
 		/**

@@ -83,7 +83,7 @@ final class SecurityChecks {
 
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 
-			return new WP_Error( 'in_lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
+			return new \WP_Error( 'in_lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
@@ -149,7 +149,7 @@ final class SecurityChecks {
 				'notice'
 			);
 
-			return new WP_Error( 'brute_force_detected', 'Login aborted due to potential brute force detection.');
+			return new \WP_Error( 'brute_force_detected', 'Login aborted due to potential brute force detection.');
 		}
 
 		return true;

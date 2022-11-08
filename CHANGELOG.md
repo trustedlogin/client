@@ -1,5 +1,12 @@
 # Changelog for TrustedLogin Client
 
+## 1.3.7 (2022-11-08)
+
+- Improved styling of the authorization form
+- Fixed `php-scoper` support by setting the root namespace for `\WP_Error` and `\WP_User`
+- Fixed the role message always showing "similar" to a role when it was the same role
+- Fix docblock to prevent Strauss from namespacing it
+
 ## 1.3.6 (2022-10-13)
 
 - Fixed hard-coded message about the support user being created "1 day ago"

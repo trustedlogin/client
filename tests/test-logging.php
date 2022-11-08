@@ -89,7 +89,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 		$this->assertTrue( $logging_enabled->is_enabled() );
 
 		add_filter( 'trustedlogin/' . $config->ns() . '/logging/enabled', function() {
-			return new WP_Error( 'asdasdsad', 'not boolean' );
+			return new \WP_Error( 'asdasdsad', 'not boolean' );
 		});
 
 		$this->assertTrue( $logging_enabled->is_enabled(), 'The WP_Error should be seen as true when cast as boolean' );
