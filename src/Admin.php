@@ -347,6 +347,7 @@ final class Admin {
 		$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID );
 		$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
 
+		// translators: %s is the ID of the user who created the support session. The user can't be found; only the User ID is known.
 		$unknown_user_text = sprintf( esc_html__( 'Unknown (User #%d)', 'trustedlogin' ), $_user_creator_id );
 
 		$auth_meta = ( $_user_creator && $_user_creator->exists() ) ? esc_html( $_user_creator->display_name ) : $unknown_user_text;
@@ -1067,6 +1068,7 @@ final class Admin {
 					'content' => sprintf( __( 'Sending encrypted access to %1$s.', 'trustedlogin' ), $vendor_title ),
 				),
 				'error'              => array(
+					// translators: %1$s is the vendor title
 					'title'   => sprintf( __( 'Error syncing support user to %1$s', 'trustedlogin' ), $vendor_title ),
 					'content' => wp_kses( $error_content, array(
 						'a' => array(
