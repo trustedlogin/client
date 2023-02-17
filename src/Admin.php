@@ -543,6 +543,17 @@ final class Admin {
 			</div>
 		';
 
+		if( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
+			$output_template .= '
+			<div class="tl-{{ns}}-auth__debug">
+				<h2><span class="dashicons dashicons-admin-tools dashicons--large"></span>{{debug_data_summary}}{{debug_data_desc}}</h2>
+			</div>';
+		}
+
+		// translators: %s is replaced with the kind of information that the support team will receive.
+		$debug_data_summary = sprintf( esc_html__( 'Receive %s.', 'trustedlogin' ), '<strong>' . esc_html__( 'a report used for troubleshooting', 'describing what kind information the support team will receive', 'trustedlogin' ) . '</strong>' );
+		$debug_data_desc    = '<small>' . esc_html__( 'The report includes site configuration details, such as installed themes, plugins, and server settings.', 'trustedlogin' ) . '</small>';
+
 		// translators: %s is replaced with the of time that the login will be active for (e.g. "1 week")
 		$expire_summary = sprintf( esc_html__( 'Access this site for %s.', 'trustedlogin' ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
 
@@ -562,12 +573,14 @@ final class Admin {
 		}
 
 		$content = array(
-			'ns'             => $ns,
-			'name'           => $this->config->get_display_name(),
-			'expire_summary' => $expire_summary,
-			'expire_desc'    => $expire_desc,
-			'roles_summary'  => $roles_summary,
-			'caps'           => $this->get_caps_html(),
+			'ns'                 => $ns,
+			'name'               => $this->config->get_display_name(),
+			'expire_summary'     => $expire_summary,
+			'expire_desc'        => $expire_desc,
+			'roles_summary'      => $roles_summary,
+			'debug_data_desc'    => $debug_data_desc,
+			'debug_data_summary' => $debug_data_summary,
+			'caps'               => $this->get_caps_html(),
 		);
 
 		return $this->prepare_output( $output_template, $content );

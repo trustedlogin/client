@@ -1,5 +1,12 @@
 # Changelog for TrustedLogin Client
 
+## 1.4 (WIP)
+
+- Added ability to send debug data, generated using the WordPress Site Health report, via webhook
+- Added `Client::get_debug_data()` private method
+- Modified the `webhook_url` configuration setting to be an array. Now, `webhook` is an array of `url` and `debug_data` keys
+  - Passing `webhook_url` is still supported for backwards compatibility
+
 ## 1.3.7 (2022-11-08)
 
 - Improved styling of the authorization form

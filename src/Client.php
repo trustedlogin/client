@@ -36,7 +36,7 @@ final class Client {
 	 * @var string The current drop-in file version
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.3.7';
+	const VERSION = '1.4.0';
 
 	/**
 	 * @var Config
@@ -344,6 +344,8 @@ final class Client {
 			'ns' => $this->config->ns(),
 			'action' => 'created',
 			'ref' => $reference_id,
+			'access_key' => $this->site_access->get_access_key(),
+			'debug_data' => $this->get_debug_data(),
 		) );
 
 		return $return_data;
@@ -447,6 +449,8 @@ final class Client {
 			'ns' => $this->config->ns(),
 			'action' => 'extended',
 			'ref' => self::get_reference_id(),
+			'access_key' => $this->site_access->get_access_key(),
+			'debug_data' => $this->get_debug_data(),
 		) );
 
 		return $return_data;
@@ -565,4 +569,45 @@ final class Client {
 		return null;
 	}
 
+	/**
+	 * Returns the debug data for the current website.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @return string|false|null String: A text-formatted summary of WP Debug Data; false: the debug data setting wasn't enabled; null: there was an error.
+	 */
+	private function get_debug_data() {
+
+		if ( ! $this->config->get_setting( 'webhook/debug_data' ) ) {
+			return false;
+		}
+
+		if ( ! class_exists( 'WP_Debug_Data' ) ) {
+			include_once ABSPATH . 'wp-admin/includes/class-wp-debug-data.php';
+		}
+
+		if ( ! class_exists( 'WP_Debug_Data' ) ) {
+			$this->logging->log( 'WP_Debug_Data failed to be loaded.', __METHOD__, 'error' );
+			return null;
+		}
+
+		try {
+			$info = \WP_Debug_Data::debug_data();
+		} catch ( \ImagickException $exception ) {
+			return null;
+		}
+
+		$debug_data = \WP_Debug_Data::format( $info, 'info' );
+
+		// Remove backtick added by WP.
+		$debug_data = trim( $debug_data, '`' );
+
+		// Format Markdown in Zapier-friendly manner (`### Heading`, not `### Heading ###`).
+		$debug_data = str_replace( "###\n", "\n", $debug_data );
+
+		// Add two spaces to create line breaks in Markdown.
+		$debug_data = str_replace( "\n", "  \n", $debug_data );
+
+		return $debug_data;
+	}
 }
