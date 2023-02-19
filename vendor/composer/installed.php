@@ -3,7 +3,7 @@
         'name' => 'trustedlogin/client',
         'pretty_version' => 'dev-develop',
         'version' => 'dev-develop',
-        'reference' => '1818e814e906a1ebaed6785d5f54ccba7da30b4d',
+        'reference' => 'cd9edddc4efca76c3f31f9208427a1cc57904618',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -33,7 +33,7 @@
         'trustedlogin/client' => array(
             'pretty_version' => 'dev-develop',
             'version' => 'dev-develop',
-            'reference' => '1818e814e906a1ebaed6785d5f54ccba7da30b4d',
+            'reference' => 'cd9edddc4efca76c3f31f9208427a1cc57904618',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
