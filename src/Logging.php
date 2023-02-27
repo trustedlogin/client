@@ -8,7 +8,6 @@
  */
 namespace TrustedLogin;
 
-use Katzgrau\KLogger\Logger;
 
 class Logging {
 
@@ -53,12 +52,6 @@ class Logging {
 	 */
 	private function setup_klogger( $config ) {
 
-		if ( ! class_exists( 'Katzgrau\KLogger\Logger' ) ) {
-
-			$this->log( 'KLogger not found.', __METHOD__, 'error' );
-
-			return false;
-		}
 
 		$logging_directory = null;
 
