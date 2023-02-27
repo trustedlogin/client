@@ -7,4 +7,5 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'TrustedLogin\\' => array($baseDir . '/src'),
+    'Psr\\Log\\' => array($vendorDir . '/psr/log/Psr/Log'),
 );

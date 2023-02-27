@@ -16,12 +16,20 @@ class ComposerStaticInitb5638313a52df4893eb45c04efdaa356
         array (
             'TrustedLogin\\' => 13,
         ),
+        'P' => 
+        array (
+            'Psr\\Log\\' => 8,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
         'TrustedLogin\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',
+        ),
+        'Psr\\Log\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
         ),
     );
 
