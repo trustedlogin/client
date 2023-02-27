@@ -16,14 +16,6 @@ class ComposerStaticInitb5638313a52df4893eb45c04efdaa356
         array (
             'TrustedLogin\\' => 13,
         ),
-        'P' => 
-        array (
-            'Psr\\Log\\' => 8,
-        ),
-        'K' => 
-        array (
-            'Katzgrau\\KLogger\\' => 17,
-        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -31,19 +23,10 @@ class ComposerStaticInitb5638313a52df4893eb45c04efdaa356
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
-        'Psr\\Log\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
-        ),
-        'Katzgrau\\KLogger\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/katzgrau/klogger/src',
-        ),
     );
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Katzgrau\\KLogger\\Logger' => __DIR__ . '/..' . '/katzgrau/klogger/src/Logger.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
