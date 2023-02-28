@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+# 1.3.8 (?)
+
+- Removed logger composer dependency and added our own logger
+
 ## 1.3.7 (2022-11-08)
 
 - Improved styling of the authorization form
