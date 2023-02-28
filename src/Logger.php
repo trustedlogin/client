@@ -1,18 +1,18 @@
 <?php
-namespace Katzgrau\KLogger;
-
+namespace TrustedLogin;
 use DateTime;
 use RuntimeException;
-use TrustedLogin\Psr\Log\AbstractLogger;
-use TrustedLogin\Psr\Log\LogLevel;
 
 /**
- * Finally, a light, permissions-checking logging class.
+ * Copied from https://github.com/katzgrau/KLogger/blob/3c19e350232e5fee0c3e96e3eff1e7be5f37d617/src/Logger.php
+ * See: https://github.com/trustedlogin/client/issues/105
+ *
+ * A light, permissions-checking logging class.
  *
  * Originally written for use with wpSearch
  *
  * Usage:
- * $log = new Katzgrau\KLogger\Logger('/var/log/', TrustedLogin\Psr\Log\LogLevel::INFO);
+ * $log = new Katzgrau\KLogger\Logger('/var/log/', Psr\Log\LogLevel::INFO);
  * $log->info('Returned a million search results'); //Prints to the log file
  * $log->error('Oh dear.'); //Prints to the log file
  * $log->debug('x = 5'); //Prints nothing due to current severity threshhold
@@ -23,11 +23,17 @@ use TrustedLogin\Psr\Log\LogLevel;
  * @version 1.0.0
  */
 
-/**
- * Class documentation
- */
-class TrustedLogin_Logger extends AbstractLogger
+class Logger
 {
+	const EMERGENCY = 'emergency';
+    const ALERT     = 'alert';
+    const CRITICAL  = 'critical';
+    const ERROR     = 'error';
+    const WARNING   = 'warning';
+    const NOTICE    = 'notice';
+    const INFO      = 'info';
+    const DEBUG     = 'debug';
+
     /**
      * KLogger options
      *  Anything options not considered 'core' to the logging library should be
@@ -57,7 +63,7 @@ class TrustedLogin_Logger extends AbstractLogger
      * Current minimum logging threshold
      * @var integer
      */
-    protected $logLevelThreshold = LogLevel::DEBUG;
+    protected $logLevelThreshold = self::DEBUG;
 
     /**
      * The number of lines logged in this instance's lifetime
@@ -70,14 +76,14 @@ class TrustedLogin_Logger extends AbstractLogger
      * @var array
      */
     protected $logLevels = array(
-        LogLevel::EMERGENCY => 0,
-        LogLevel::ALERT     => 1,
-        LogLevel::CRITICAL  => 2,
-        LogLevel::ERROR     => 3,
-        LogLevel::WARNING   => 4,
-        LogLevel::NOTICE    => 5,
-        LogLevel::INFO      => 6,
-        LogLevel::DEBUG     => 7
+        self::EMERGENCY => 0,
+        self::ALERT     => 1,
+        self::CRITICAL  => 2,
+        self::ERROR     => 3,
+        self::WARNING   => 4,
+        self::NOTICE    => 5,
+        self::INFO      => 6,
+        self::DEBUG     => 7
     );
 
     /**
@@ -109,7 +115,7 @@ class TrustedLogin_Logger extends AbstractLogger
      * @internal param string $logFilePrefix The prefix for the log file name
      * @internal param string $logFileExt The extension for the log file
      */
-    public function __construct($logDirectory, $logLevelThreshold = LogLevel::DEBUG, array $options = array())
+    public function __construct($logDirectory, $logLevelThreshold = self::DEBUG, array $options = array())
     {
         $this->logLevelThreshold = $logLevelThreshold;
         $this->options = array_merge($this->options, $options);
@@ -305,7 +311,7 @@ class TrustedLogin_Logger extends AbstractLogger
     {
         $originalTime = microtime(true);
         $micro = sprintf("%06d", ($originalTime - floor($originalTime)) * 1000000);
-        $date = new DateTime(date('Y-m-d H:i:s.'.$micro, $originalTime));
+        $date = new DateTime(date('Y-m-d H:i:s.'.$micro, (int)$originalTime));
 
         return $date->format($this->options['dateFormat']);
     }
@@ -345,5 +351,120 @@ class TrustedLogin_Logger extends AbstractLogger
     protected function indent($string, $indent = '    ')
     {
         return $indent.str_replace("\n", "\n".$indent, $string);
+    }
+
+	/**
+     * System is unusable.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function emergency($message, array $context = array())
+    {
+        $this->log(self::EMERGENCY, $message, $context);
+    }
+
+    /**
+     * Action must be taken immediately.
+     *
+     * Example: Entire website down, database unavailable, etc. This should
+     * trigger the SMS alerts and wake you up.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function alert($message, array $context = array())
+    {
+        $this->log(self::ALERT, $message, $context);
+    }
+
+    /**
+     * Critical conditions.
+     *
+     * Example: Application component unavailable, unexpected exception.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function critical($message, array $context = array())
+    {
+        $this->log(self::CRITICAL, $message, $context);
+    }
+
+    /**
+     * Runtime errors that do not require immediate action but should typically
+     * be logged and monitored.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function error($message, array $context = array())
+    {
+        $this->log(self::ERROR, $message, $context);
+    }
+
+    /**
+     * Exceptional occurrences that are not errors.
+     *
+     * Example: Use of deprecated APIs, poor use of an API, undesirable things
+     * that are not necessarily wrong.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function warning($message, array $context = array())
+    {
+        $this->log(self::WARNING, $message, $context);
+    }
+
+    /**
+     * Normal but significant events.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function notice($message, array $context = array())
+    {
+        $this->log(self::NOTICE, $message, $context);
+    }
+
+    /**
+     * Interesting events.
+     *
+     * Example: User logs in, SQL logs.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function info($message, array $context = array())
+    {
+        $this->log(self::INFO, $message, $context);
+    }
+
+    /**
+     * Detailed debug information.
+     *
+     * @param string  $message
+     * @param mixed[] $context
+     *
+     * @return void
+     */
+    public function debug($message, array $context = array())
+    {
+        $this->log(self::DEBUG, $message, $context);
     }
 }

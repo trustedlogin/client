@@ -33,7 +33,7 @@ use \WP_Error;
 final class Client {
 
 	/**
-	 * @var string The current drop-in file version
+	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
 	const VERSION = '1.4.0';
@@ -104,8 +104,8 @@ final class Client {
 
 		$should_initialize = $this->should_init( $config );
 
-		if ( ! $should_initialize ) {
-			throw new \Exception( 'TrustedLogin was prevented from loading by constants defined on the site.', 403 );
+		if ( is_wp_error( $should_initialize ) ) {
+			throw new \Exception( $should_initialize->get_error_message(), 403 );
 		}
 
 		try {
@@ -143,25 +143,31 @@ final class Client {
 	 *
 	 * @param Config $config
 	 *
-	 * @return bool
+	 * @return true|WP_Error
 	 */
 	private function should_init( Config $config ) {
 
-		// Disables all TL clients.
+		// Disables all TL clients for the site.
 		if ( defined( 'TRUSTEDLOGIN_DISABLE' ) && TRUSTEDLOGIN_DISABLE ) {
-			return false;
+			return new WP_Error( 'disabled_globally', 'TrustedLogin has been disabled globally for this site using the TRUSTEDLOGIN_DISABLE constant.' );
 		}
 
 		$ns = $config->ns();
 
 		// Namespace isn't set; allow Config
-		if( empty( $ns ) ) {
+		if ( empty( $ns ) ) {
 			return true;
 		}
 
 		// Disables namespaced client if `TRUSTEDLOGIN_DISABLE_{NS}` is defined and truthy.
 		if ( defined( 'TRUSTEDLOGIN_DISABLE_' . strtoupper( $ns ) ) && constant( 'TRUSTEDLOGIN_DISABLE_' . strtoupper( $ns ) ) ) {
-			return false;
+			return new WP_Error( 'disabled_for_namespace', 'TrustedLogin has been disabled for this namespace using the TRUSTEDLOGIN_DISABLE_' . $ns .' constant.' );
+		}
+
+		$meets_requirements = Encryption::meets_requirements();
+
+		if ( ! $meets_requirements ) {
+			return new WP_Error( 'does_not_meet_requirements', 'TrustedLogin could not load: the site does not meet encryption requirements.' );
 		}
 
 		return true;
