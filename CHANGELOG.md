@@ -1,5 +1,14 @@
 # Changelog for TrustedLogin Client
 
+## 1.4.0 [WIP]
+
+- The SDK will no longer load on sites that lack Sodium, which is bundled with PHP 7.2+ and WordPress 5.2+, and available as a [PECL extension](https://pecl.php.net/package/libsodium) for PHP 7.0 and 7.1
+- Added a public `Encryption::meets_requirements()` method to check whether the site meets the requirements for encryption
+- Removed all Composer package dependencies
+  - Added our own logging class
+  - Removed Sodium crypto library
+- Fixed typo in `trustedlogin/{namespace}/license_key` filter name
+
 ## 1.3.7 (2022-11-08)
 
 - Improved styling of the authorization form
