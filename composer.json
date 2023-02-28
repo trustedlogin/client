@@ -26,7 +26,6 @@
         "ext-curl": "*",
         "ext-json": "*",
         "paragonie/random_compat": "<9.99",
-        "paragonie/sodium_compat": "^1.12",
-        "psr/log": "^1.1"
+        "paragonie/sodium_compat": "^1.12"
     }
 }
