@@ -24,8 +24,6 @@
     "require": {
         "php": ">=5.3.0",
         "ext-curl": "*",
-        "ext-json": "*",
-        "paragonie/random_compat": "<9.99",
-        "paragonie/sodium_compat": "^1.12"
+        "ext-json": "*"
     }
 }
