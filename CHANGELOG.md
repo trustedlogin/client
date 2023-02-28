@@ -7,6 +7,7 @@
 - Removed all Composer package dependencies
   - Added our own logging class
   - Removed Sodium crypto library
+- Fixed typo in `trustedlogin/{namespace}/license_key` filter name
 
 ## 1.3.7 (2022-11-08)
 
