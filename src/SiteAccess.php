@@ -6,8 +6,12 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
-
 namespace TrustedLogin;
+
+// Exit if accessed directly
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 use \WP_Error;
 

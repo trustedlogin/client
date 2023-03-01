@@ -1,9 +1,15 @@
 <?php
-
+/**
+ * Class Ajax
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2021 Katz Web Services, Inc.
+ */
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 

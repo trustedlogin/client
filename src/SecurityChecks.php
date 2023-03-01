@@ -8,6 +8,11 @@
  */
 namespace TrustedLogin;
 
+// Exit if accessed directly
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use \WP_Error;
 
 final class SecurityChecks {

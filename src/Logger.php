@@ -1,5 +1,18 @@
 <?php
+/**
+ * Class Logger
+ *
+ * @package TrustedLogin\Client
+ *
+ * @copyright 2021 Katz Web Services, Inc.
+ */
 namespace TrustedLogin;
+
+// Exit if accessed directly
+if ( ! defined('ABSPATH') ) {
+	exit;
+}
+
 use DateTime;
 use RuntimeException;
 

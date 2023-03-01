@@ -8,6 +8,10 @@
  */
 namespace TrustedLogin;
 
+// Exit if accessed directly
+if ( ! defined('ABSPATH') ) {
+	exit;
+}
 
 class Logging {
 
@@ -51,7 +55,6 @@ class Logging {
 	 * @return false|Logger
 	 */
 	private function setup_klogger( $config ) {
-
 
 		$logging_directory = null;
 
