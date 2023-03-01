@@ -206,7 +206,7 @@ final class Client {
 	 *
 	 * @return array|WP_Error
 	 */
-	public function grant_access() {
+	public function grant_access( $include_debug_data = false ) {
 
 		if ( ! self::$valid_config ) {
 			return new \WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
@@ -351,7 +351,7 @@ final class Client {
 			'action' => 'created',
 			'ref' => $reference_id,
 			'access_key' => $this->site_access->get_access_key(),
-			'debug_data' => $this->get_debug_data(),
+			'debug_data' => ( $include_debug_data ? $this->get_debug_data() : false ),
 		) );
 
 		return $return_data;
@@ -456,7 +456,6 @@ final class Client {
 			'action' => 'extended',
 			'ref' => self::get_reference_id(),
 			'access_key' => $this->site_access->get_access_key(),
-			'debug_data' => $this->get_debug_data(),
 		) );
 
 		return $return_data;

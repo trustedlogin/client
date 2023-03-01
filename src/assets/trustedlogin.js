@@ -79,6 +79,7 @@
 			'vendor': namespace,
 			'_nonce': tl_obj._nonce,
 			'reference_id': tl_obj.reference_id,
+			'debug_data_consent': $( '#tl-' + namespace + '-debug-data-consent' ).is( ':checked' ),
 		};
 
 		if ( tl_obj.debug ) {

@@ -546,7 +546,7 @@ final class Admin {
 		if( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
 			$output_template .= '
 			<div class="tl-{{ns}}-auth__debug">
-				<h2><span class="dashicons dashicons-admin-tools dashicons--large"></span>{{debug_data_summary}}{{debug_data_desc}}</h2>
+				{{debug_data_consent}}
 			</div>';
 		}
 
@@ -581,9 +581,34 @@ final class Admin {
 			'debug_data_desc'    => $debug_data_desc,
 			'debug_data_summary' => $debug_data_summary,
 			'caps'               => $this->get_caps_html(),
+			'debug_data_consent' => $this->get_debug_data_consent_html(),
 		);
 
 		return $this->prepare_output( $output_template, $content );
+	}
+
+	/**
+	 * Get the HTML for the debug data consent checkbox.
+	 *
+	 * This is only shown if the webhook/url is defined and webhook/debug_data setting is true.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @return string
+	 */
+	private function get_debug_data_consent_html() {
+
+		// translators: [link] and [/link] are replaced with a link to the Site Health page. Do not translate.
+		$output = sprintf( '<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>', strtr( esc_html__( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ), array(
+			'[link]' => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
+			'[/link]' => '</a>',
+		) ) );
+
+		$content = array(
+			'ns' => $this->config->ns(),
+		);
+
+		return $this->prepare_output( $output, $content );
 	}
 
 	/**
