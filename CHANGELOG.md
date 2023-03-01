@@ -1,11 +1,12 @@
 # Changelog for TrustedLogin Client
 
-## 1.4.0 [WIP]
+## 1.4.0 (2023-03-01)
 
 - Added ability to send debug data, generated using the WordPress Site Health report, via webhook
-- Added `Client::get_debug_data()` private method
-- Modified the `webhook_url` configuration setting to be an array. Now, `webhook` is an array of `url` and `debug_data` keys
+- Modified the `webhook_url` configuration setting to be an array. Now, `webhook` is an array of `url` and `debug_data` keys.
+  - Set `debug_data` to `true` to send Site Health data with the webhook
   - Passing `webhook_url` is still supported for backwards compatibility
+- Added `Client::get_debug_data()` private method
 - The SDK will no longer load on sites that lack Sodium, which is bundled with PHP 7.2+ and WordPress 5.2+, and available as a [PECL extension](https://pecl.php.net/package/libsodium) for PHP 7.0 and 7.1
 - Added a public `Encryption::meets_requirements()` method to check whether the site meets the requirements for encryption
 - Removed all Composer package dependencies
