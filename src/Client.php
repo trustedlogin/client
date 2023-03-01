@@ -347,17 +347,22 @@ final class Client {
 
 		timer_start();
 
-		/**
-		 * @usedby Remote::maybe_send_webhook()
-		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array(
+		$action_data = array(
 			'url'    => get_site_url(),
 			'ns' => $this->config->ns(),
 			'action' => 'created',
 			'ref' => $reference_id,
 			'access_key' => $this->site_access->get_access_key(),
-			'debug_data' => ( $include_debug_data ? $this->get_debug_data() : false ),
-		) );
+		);
+
+		if ( $include_debug_data ) {
+			$action_data['debug_data'] = $this->get_debug_data();
+		}
+
+		/**
+		 * @usedby Remote::maybe_send_webhook()
+		 */
+		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', $action_data );
 
 		$return_data['timing']['access_created_action'] = timer_stop( 0, 5 );
 
