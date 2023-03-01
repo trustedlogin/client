@@ -294,14 +294,14 @@ final class Client {
 		$timing_local = timer_stop( 0, 5 );
 
 		$return_data = array(
-			'type'       => 'new',
-			'site_url'   => get_site_url(),
-			'endpoint'   => $endpoint_hash,
-			'identifier' => $site_identifier_hash,
-			'user_id'    => $support_user_id,
-			'expiry'     => $expiration_timestamp,
+			'type'         => 'new',
+			'site_url'     => get_site_url(),
+			'endpoint'     => $endpoint_hash,
+			'identifier'   => $site_identifier_hash,
+			'user_id'      => $support_user_id,
+			'expiry'       => $expiration_timestamp,
 			'reference_id' => $reference_id,
-			'timing'     => array(
+			'timing'       => array(
 				'local'  => $timing_local,
 				'remote' => null, // Updated later
 			),
@@ -315,11 +315,17 @@ final class Client {
 
 		try {
 
-			add_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array( $this, 'add_meta_to_envelope' ) );
+			add_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
+				$this,
+				'add_meta_to_envelope'
+			) );
 
 			$created = $this->site_access->sync_secret( $secret_id, $site_identifier_hash, 'create' );
 
-			remove_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array( $this, 'add_meta_to_envelope' ) );
+			remove_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
+				$this,
+				'add_meta_to_envelope'
+			) );
 
 		} catch ( Exception $e ) {
 
@@ -348,10 +354,10 @@ final class Client {
 		timer_start();
 
 		$action_data = array(
-			'url'    => get_site_url(),
-			'ns' => $this->config->ns(),
-			'action' => 'created',
-			'ref' => $reference_id,
+			'url'        => get_site_url(),
+			'ns'         => $this->config->ns(),
+			'action'     => 'created',
+			'ref'        => $reference_id,
 			'access_key' => $this->site_access->get_access_key(),
 		);
 
@@ -608,6 +614,7 @@ final class Client {
 
 		if ( ! class_exists( 'WP_Debug_Data' ) ) {
 			$this->logging->log( 'WP_Debug_Data failed to be loaded.', __METHOD__, 'error' );
+
 			return null;
 		}
 

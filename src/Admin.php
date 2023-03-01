@@ -525,7 +525,7 @@ final class Admin {
 		if ( $has_access ) {
 			$output_template = '';
 			$output_template .= '{{users_table}}';
-			$content = array(
+			$content         = array(
 				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
 			);
 
@@ -543,7 +543,7 @@ final class Admin {
 			</div>
 		';
 
-		if( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
+		if ( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
 			$output_template .= '
 			<div class="tl-{{ns}}-auth__debug">
 				{{debug_data_consent}}
@@ -554,7 +554,7 @@ final class Admin {
 		$expire_summary = sprintf( esc_html__( 'Access this site for %s.', 'trustedlogin' ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
-		$expire_desc    = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
+		$expire_desc = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
 
 		$ns          = $this->config->ns();
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
@@ -594,7 +594,7 @@ final class Admin {
 
 		// translators: [link] and [/link] are replaced with a link to the Site Health page. Do not translate.
 		$output = sprintf( '<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>', strtr( esc_html__( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ), array(
-			'[link]' => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
+			'[link]'  => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
 			'[/link]' => '</a>',
 		) ) );
 
