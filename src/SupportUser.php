@@ -13,10 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
 use \WP_Error;
 use \WP_User;
-use \WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
