@@ -345,6 +345,11 @@ final class Client {
 
 		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
+		timer_start();
+
+		/**
+		 * @usedby Remote::maybe_send_webhook()
+		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array(
 			'url'    => get_site_url(),
 			'ns' => $this->config->ns(),
@@ -353,6 +358,8 @@ final class Client {
 			'access_key' => $this->site_access->get_access_key(),
 			'debug_data' => ( $include_debug_data ? $this->get_debug_data() : false ),
 		) );
+
+		$return_data['timing']['access_created_action'] = timer_stop( 0, 5 );
 
 		return $return_data;
 	}
@@ -450,6 +457,9 @@ final class Client {
 
 		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
+		/**
+		 * @usedby Remote::maybe_send_webhook()
+		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array(
 			'url'    => get_site_url(),
 			'ns' => $this->config->ns(),
@@ -599,6 +609,8 @@ final class Client {
 		try {
 			$info = \WP_Debug_Data::debug_data();
 		} catch ( \ImagickException $exception ) {
+			return null;
+		} catch ( \Exception $exception ) {
 			return null;
 		}
 
