@@ -1,0 +1,102 @@
+{
+    "builder" : {
+        "label"  : "Trusted Login Client",
+        "fields": [
+            {
+
+                "id": "php.namespace",
+                "name": "php.namespace",
+                "label": "PHP Namespace",
+                "type": "text",
+                "defaultValue": null,
+                "description": "The PHP namespace for the package",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.auth.api_key",
+                "name": "tl.auth.api_key",
+                "label": "TrustedLogin Public Key",
+                "type": "text",
+                "defaultValue": null,
+                "description": "The API key for the TrustedLogin API",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.vendor.namespace",
+                "name": "tl.vendor.namespace",
+                "label": "Vendor Namespace",
+                "type": "text",
+                "defaultValue": null,
+                "description": "Slug for vendor.",
+                "options": [],
+                "required": true
+            },{
+
+                "id": "tl.vendor.title",
+                "name": "tl.vendor.title",
+                "label": "Title",
+                "type": "text",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.vendor.email",
+                "name": "tl.vendor.email",
+                "label": "Email",
+                "type": "text",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.vendor.website",
+                "name": "tl.vendor.website",
+                "label": "Website",
+                "type": "text",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.vendor.support_url",
+                "name": "tl.vendor.support_url",
+                "label": "Support URL",
+                "type": "text",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+
+                "id": "tl.role",
+                "name": "tl.role",
+                "label": "Role",
+                "type": "select",
+                "defaultValue": "editor",
+                "description": "",
+                "options": [
+                    {
+                        "value": "editor",
+                        "label": "Editor"
+                    },
+                    {
+                        "value": "admin",
+                        "label": "Administrator"
+                    }
+                ]
+            }
+        ]
+    }
+}
