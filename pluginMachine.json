@@ -89,6 +89,147 @@
                 "options": [
                     {
                         "value": "editor",
+             {
+    "builder": {
+        "id": "trustedlogin-client",
+        "label": "Trusted Login Client",
+        "includePaths": [
+            "src/"
+        ],
+        "groups": [
+            {
+                "id": "vendor",
+                "label": "Vendor Info",
+                "order": "1",
+                "description": "The vendor information",
+                "link": "https://docs.trustedlogin.com/Client/configuration",
+                "fields": [
+                    "vendor.namespace",
+                    "vendor.title",
+                    "vendor.email",
+                    "vendor.website",
+                    "vendor.support_url"
+                ]
+            },
+            {
+                "id": "auth",
+                "label": "Auth",
+                "order": "2",
+                "description": "The Public API key for the TrustedLogin API.",
+                "link": "https://docs.trustedlogin.com/Client/configuration",
+                "fields": [
+                    "auth.api_key"
+                ]
+            },
+            {
+                "id": "role",
+                "label": "Role",
+                "order": "3",
+                "description": "The role to assign to the user.",
+                "link": "https://docs.trustedlogin.com/Client/configuration",
+                "fields": [
+                    "role"
+                ]
+            },
+            {
+                "id": "php",
+                "label": "PHP",
+                "order": "4",
+                "description": "PHP Namespace for the package.",
+                "link": "https://docs.trustedlogin.com/Client/configuration",
+                "fields": [
+                    "php.namespace"
+                ]
+            }
+        ],
+        "fields": [
+            {
+                "id": "php.namespace",
+                "name": "php.namespace",
+                "label": "PHP Namespace",
+                "type": "text",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "The PHP namespace for the package",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "auth.api_key",
+                "name": "auth.api_key",
+                "label": "TrustedLogin Public Key",
+                "type": "text",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "The API key for the TrustedLogin API",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "vendor.namespace",
+                "name": "vendor.namespace",
+                "label": "Vendor Namespace",
+                "type": "text",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "Slug for vendor.",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "vendor.title",
+                "name": "vendor.title",
+                "label": "Title",
+                "type": "text",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "vendor.email",
+                "name": "vendor.email",
+                "label": "Email",
+                "type": "text",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "vendor.website",
+                "name": "vendor.website",
+                "label": "Website",
+                "type": "url",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "vendor.support_url",
+                "name": "vendor.support_url",
+                "label": "Support URL",
+                "type": "url",
+                "fieldType": "input",
+                "defaultValue": null,
+                "description": "",
+                "options": [],
+                "required": true
+            },
+            {
+                "id": "role",
+                "name": "role",
+                "label": "Role",
+                "type": "select",
+                "defaultValue": "editor",
+                "description": "",
+                "options": [
+                    {
+                        "value": "editor",
                         "label": "Editor"
                     },
                     {
@@ -100,3 +241,4 @@
         ]
     }
 }
+
