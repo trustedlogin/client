@@ -1,101 +1,11 @@
 {
-    "builder" : {
-        "label"  : "Trusted Login Client",
-        "fields": [
-            {
-
-                "id": "php.namespace",
-                "name": "php.namespace",
-                "label": "PHP Namespace",
-                "type": "text",
-                "defaultValue": null,
-                "description": "The PHP namespace for the package",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.auth.api_key",
-                "name": "tl.auth.api_key",
-                "label": "TrustedLogin Public Key",
-                "type": "text",
-                "defaultValue": null,
-                "description": "The API key for the TrustedLogin API",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.vendor.namespace",
-                "name": "tl.vendor.namespace",
-                "label": "Vendor Namespace",
-                "type": "text",
-                "defaultValue": null,
-                "description": "Slug for vendor.",
-                "options": [],
-                "required": true
-            },{
-
-                "id": "tl.vendor.title",
-                "name": "tl.vendor.title",
-                "label": "Title",
-                "type": "text",
-                "defaultValue": null,
-                "description": "",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.vendor.email",
-                "name": "tl.vendor.email",
-                "label": "Email",
-                "type": "text",
-                "defaultValue": null,
-                "description": "",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.vendor.website",
-                "name": "tl.vendor.website",
-                "label": "Website",
-                "type": "text",
-                "defaultValue": null,
-                "description": "",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.vendor.support_url",
-                "name": "tl.vendor.support_url",
-                "label": "Support URL",
-                "type": "text",
-                "defaultValue": null,
-                "description": "",
-                "options": [],
-                "required": true
-            },
-            {
-
-                "id": "tl.role",
-                "name": "tl.role",
-                "label": "Role",
-                "type": "select",
-                "defaultValue": "editor",
-                "description": "",
-                "options": [
-                    {
-                        "value": "editor",
-             {
     "builder": {
         "id": "trustedlogin-client",
         "label": "Trusted Login Client",
         "includePaths": [
             "src/"
         ],
+        "originalNamespace": "TrustedLogin",
         "groups": [
             {
                 "id": "vendor",
@@ -152,7 +62,8 @@
                 "defaultValue": null,
                 "description": "The PHP namespace for the package",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "camel"
             },
             {
                 "id": "auth.api_key",
@@ -163,7 +74,8 @@
                 "defaultValue": null,
                 "description": "The API key for the TrustedLogin API",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "lowercase|alpha_num"
             },
             {
                 "id": "vendor.namespace",
@@ -172,9 +84,10 @@
                 "type": "text",
                 "fieldType": "input",
                 "defaultValue": null,
-                "description": "Slug for vendor.",
+                "description": "Slug for vendor. Must be unique. Must be shorter than 96 characters. Must not be a reserved namespace: trustedlogin, client, vendor, admin, wordpress.",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "lowercase|alpha_dash"
             },
             {
                 "id": "vendor.title",
@@ -183,7 +96,7 @@
                 "type": "text",
                 "fieldType": "input",
                 "defaultValue": null,
-                "description": "",
+                "description": "Name of the vendor company. Used in text such as Visit the %s website",
                 "options": [],
                 "required": true
             },
@@ -191,12 +104,14 @@
                 "id": "vendor.email",
                 "name": "vendor.email",
                 "label": "Email",
-                "type": "text",
+                "type": "email",
                 "fieldType": "input",
                 "defaultValue": null,
-                "description": "",
+                "link": "https://docs.trustedlogin.com/Client/configuration#email-hash",
+                "description": "Email address for support. Used when creating usernames. Recommended: use {hash} dynamic replacement ",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "email"
             },
             {
                 "id": "vendor.website",
@@ -205,9 +120,10 @@
                 "type": "url",
                 "fieldType": "input",
                 "defaultValue": null,
-                "description": "",
+                "description": "URL to the vendor support page. Shown to users in the Grant Access form and also serves as a backup to redirect users if the TrustedLogin server is unreachable. Must be a valid URL.",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "url"
             },
             {
                 "id": "vendor.support_url",
@@ -218,7 +134,8 @@
                 "defaultValue": null,
                 "description": "",
                 "options": [],
-                "required": true
+                "required": true,
+                "rules": "url"
             },
             {
                 "id": "role",
@@ -236,9 +153,10 @@
                         "value": "admin",
                         "label": "Administrator"
                     }
-                ]
+                ],
+                "required": true,
+                "rules": "in:editor,admin"
             }
         ]
     }
 }
-
