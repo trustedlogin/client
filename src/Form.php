@@ -69,31 +69,6 @@ final class Form
 		$this->support_user = new SupportUser($config, $logging);
 	}
 
-
-	public function init()
-	{
-		//@todo: call these in Admin::init() instead
-		add_action('trustedlogin/' . $this->config->ns() . '/button', array($this, 'generate_button'), 10, 2);
-		add_action('trustedlogin/' . $this->config->ns() . '/users_table', array(
-			$this,
-			'output_support_users'
-		), 20);
-		add_action('trustedlogin/' . $this->config->ns() . '/auth_screen', array($this, 'print_auth_screen'), 20);
-		add_action('login_form_trustedlogin', array($this, 'maybe_print_request_screen'), 20);
-
-		if ($this->config->get_setting('menu')) {
-			$menu_priority = $this->config->get_setting('menu/priority', 100);
-		}
-
-		if ($this->config->get_setting('register_assets', true)) {
-			add_action('admin_enqueue_scripts', array($this, 'register_assets'));
-			add_action('login_enqueue_scripts', array($this, 'register_assets'));
-		}
-
-		add_action('trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array($this, 'admin_notices'));
-	}
-
-
 	/**
 	 * Register the required scripts and styles
 	 *

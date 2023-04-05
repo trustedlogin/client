@@ -41,10 +41,9 @@ final class Admin {
 	private $support_user;
 
 	/**
-	 * @var null|Logging $logging
-	 * @todo Remove this once we're sure we don't need it.
+	 * @var Form $form
 	 */
-	private $logging;
+	private $form;
 
 	/**
 	 * Admin constructor.
@@ -52,37 +51,57 @@ final class Admin {
 	 * @param Config $config
 	 * @todo Form as a dependency
 	 */
-	public function __construct( Config $config, Logging $logging ) {
+	public function __construct( Config $config, Logging $logging,Form $form ) {
 		$this->config       = $config;
-		$this->logging      = $logging;
+		$this->form = $form;
 		$this->site_access  = new SiteAccess( $config, $logging );
 		$this->support_user = new SupportUser( $config, $logging );
 	}
 
 
 	public function init() {
-		//Some of these hooks are on Form - use that here? or keep Form::init()
-		add_action( 'trustedlogin/' . $this->config->ns() . '/button', array( $this, 'generate_button' ), 10, 2 );
+		add_action( 'trustedlogin/' . $this->config->ns() . '/button',
+			array(
+				$this->form,
+				'generate_button'
+			), 10, 2
+		);
 		add_action( 'trustedlogin/' . $this->config->ns() . '/users_table', array(
-			$this,
+			$this->form,
 			'output_support_users'
 		), 20 );
-		add_action( 'trustedlogin/' . $this->config->ns() . '/auth_screen', array( $this, 'print_auth_screen' ), 20 );
-		add_action( 'login_form_trustedlogin', array( $this, 'maybe_print_request_screen' ), 20 );
-		add_filter( 'user_row_actions', array( $this, 'user_row_action_revoke' ), 10, 2 );
-		add_action( 'admin_bar_menu', array( $this, 'admin_bar_add_toolbar_items' ), 100 );
+		add_action( 'trustedlogin/' . $this->config->ns() . '/auth_screen', array(
+			 $this, 'print_auth_screen' ), 20
+		);
+		add_action( 'login_form_trustedlogin', array(
+			$this->form, 'maybe_print_request_screen' ), 20
+		);
+		add_filter( 'user_row_actions', array(
+			 $this, 'user_row_action_revoke' ),
+		10, 2 );
+		add_action( 'admin_bar_menu', array(
+			$this, 'admin_bar_add_toolbar_items' ),
+		100 );
 
 		if ( $this->config->get_setting( 'menu' ) ) {
 			$menu_priority = $this->config->get_setting( 'menu/priority', 100 );
-			add_action( 'admin_menu', array( $this, 'admin_menu_auth_link_page' ), $menu_priority );
+			add_action( 'admin_menu', array(
+				 $this, 'admin_menu_auth_link_page'
+			), $menu_priority );
 		}
 
 		if ( $this->config->get_setting( 'register_assets', true ) ) {
-			add_action( 'admin_enqueue_scripts', array( $this, 'register_assets' ) );
-			add_action( 'login_enqueue_scripts', array( $this, 'register_assets' ) );
+			add_action( 'admin_enqueue_scripts', array(
+				$this->form, 'register_assets'
+			) );
+			add_action( 'login_enqueue_scripts',array(
+				$this->form, 'register_assets'
+			) );
 		}
 
-		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array( $this, 'admin_notices' ) );
+		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array(
+			$this, 'admin_notices' )
+		);
 	}
 
 	/**
@@ -189,7 +208,7 @@ final class Admin {
 				$menu_title,
 				'create_users',
 				$menu_slug,
-				array( $this, 'print_auth_screen' ),
+				array( $this->form, 'print_auth_screen' ),
 				$this->config->get_setting( 'menu/icon_url', '' ),
 				$this->config->get_setting( 'menu/position', null )
 			);
@@ -203,7 +222,7 @@ final class Admin {
 			$menu_title,
 			'create_users',
 			$menu_slug,
-			array( $this, 'print_auth_screen' ),
+			array( $this->form, 'print_auth_screen' ),
 			$this->config->get_setting( 'menu/position', null )
 		);
 	}
