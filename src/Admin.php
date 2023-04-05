@@ -31,11 +31,6 @@ final class Admin {
 	private $config;
 
 	/**
-	 * @var SiteAccess $site_access
-	 */
-	private $site_access;
-
-	/**
 	 * @var SupportUser $support_user
 	 */
 	private $support_user;
@@ -51,13 +46,11 @@ final class Admin {
 	 * @param Config $config
 	 * @todo Form as a dependency
 	 */
-	public function __construct( Config $config, Logging $logging,Form $form ) {
+	public function __construct( Config $config, Form $form, SupportUser $support_user ) {
 		$this->config       = $config;
 		$this->form = $form;
-		$this->site_access  = new SiteAccess( $config, $logging );
-		$this->support_user = new SupportUser( $config, $logging );
+		$this->support_user = $support_user;
 	}
-
 
 	public function init() {
 		add_action( 'trustedlogin/' . $this->config->ns() . '/button',

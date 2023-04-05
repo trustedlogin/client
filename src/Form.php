@@ -61,12 +61,12 @@ final class Form
 	 *
 	 * @param Config $config
 	 */
-	public function __construct(Config $config, Logging $logging)
+	public function __construct(Config $config, Logging $logging,SupportUser $support_user, SiteAccess $site_access)
 	{
 		$this->config       = $config;
 		$this->logging      = $logging;
-		$this->site_access  = new SiteAccess($config, $logging);
-		$this->support_user = new SupportUser($config, $logging);
+		$this->support_user = $support_user;
+		$this->site_access  = $site_access;
 	}
 
 	/**
@@ -101,9 +101,6 @@ final class Form
 			$this->logging->log('Not all scripts and styles were registered: ' . print_r($registered_filtered, true), __METHOD__, 'error');
 		}
 	}
-
-
-
 
 	/**
 	 * If the current request is a valid login screen override, print the TrustedLogin request screen.

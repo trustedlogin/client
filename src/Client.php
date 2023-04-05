@@ -88,11 +88,6 @@ final class Client {
 	 */
 	private $site_access;
 
-	/**
-	 * @var Form
-	 *
-	 */
-	private $form;
 
 	/**
 	 * TrustedLogin constructor.
@@ -131,15 +126,16 @@ final class Client {
 
 		$this->support_user = new SupportUser( $this->config, $this->logging );
 
-		$this->form = new Form( $this->config, $this->logging );
+		$this->site_access = new SiteAccess( $this->config, $this->logging );
 
-		$this->admin = new Admin( $this->config, $this->logging,$this->form );
+		$form = new Form( $this->config, $this->logging,$this->support_user, $this->site_access );
+
+		$this->admin = new Admin( $this->config, $form,$this->support_user );
 
 		$this->ajax = new Ajax( $this->config, $this->logging );
 
 		$this->remote = new Remote( $this->config, $this->logging );
 
-		$this->site_access = new SiteAccess( $this->config, $this->logging );
 
 		if ( $init ) {
 			$this->init();
