@@ -440,7 +440,7 @@ final class Form
 				</textarea>
 			', );
 			$output_template .= '
-				<div class="tl-{{ns}}-auth__message">
+				<div class="tl-{{ns}}-message">
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
 						{{message_summary}}
