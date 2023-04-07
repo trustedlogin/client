@@ -60,8 +60,11 @@ final class Form
 	 * Admin constructor.
 	 *
 	 * @param Config $config
+	 * @param Logging $logging
+	 * @param SupportUser $support_user
+	 * @param SiteAccess $site_access
 	 */
-	public function __construct(Config $config, Logging $logging,SupportUser $support_user, SiteAccess $site_access)
+	public function __construct( Config $config, Logging $logging, SupportUser $support_user, SiteAccess $site_access )
 	{
 		$this->config       = $config;
 		$this->logging      = $logging;
