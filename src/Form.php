@@ -425,16 +425,19 @@ final class Form
 			$message_summary = sprintf(
 				'<span
 					class="tl-' . $ns . '-toggle"
-					data-toggle=".tl-' . $ns . '- message__text_area">
+					data-toggle=".tl-' . $ns . '-message__text_area">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
 				esc_html__('Add a message', 'trustedlogin')
 			);
 			$message_textarea = sprintf('
 				<textarea
-					class="tl-' . $ns . '- message__text_area"
+					class="tl-' . $ns . '-message__text_area large-text hidden"
 					name="tl-' . $ns . '-message"
-				></textarea>
+					cols="80"
+					rows="10"
+				>
+				</textarea>
 			', );
 			$output_template .= '
 				<div class="tl-{{ns}}-auth__message">
@@ -761,6 +764,12 @@ final class Form
 						'aria-live' => array(),
 						'aria-label' => array(),
 						'style'     => array(),
+					),
+					'textarea'  => array(
+						'class'     => array(),
+						'id'        => array(),
+						'rows'      => array(),
+						'cols'      => array(),
 					),
 					'button' => array(
 						'class'     => array(),
