@@ -3,9 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"Report-Msgid-Bugs-To: "
-"https://wordpress.org/support/plugin/trustedlogin-client\n"
-"POT-Creation-Date: 2023-03-01 21:25:00+00:00\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client\n"
+"POT-Creation-Date: 2023-04-07 15:12:32+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -25,261 +24,277 @@ msgstr ""
 "X-Textdomain-Support: yes\n"
 "X-Generator: grunt-wp-i18n 1.0.3\n"
 
-#: src/Admin.php:108 src/Admin.php:364
+#: src/Admin.php:123 src/Form.php:226
 msgid "Revoke Access"
 msgstr ""
 
-#: src/Admin.php:180
+#: src/Admin.php:164
 msgid "Revoke TrustedLogin"
 msgstr ""
 
-#: src/Admin.php:210
+#: src/Admin.php:194
 msgid "Grant Support Access"
 msgstr ""
 
-#: src/Admin.php:351
+#: src/Client.php:315 src/Client.php:438
+msgid "TrustedLogin requires a secure connection using HTTPS."
+msgstr ""
+
+#: src/Client.php:547
+msgid "The support user was not deleted."
+msgstr ""
+
+#: src/Encryption.php:286
+msgid "Encryption key could not be fetched, Vendor site returned 404."
+msgstr ""
+
+#: src/Form.php:213
 #. translators: %s is the ID of the user who created the support session. The
 #. user can't be found; only the User ID is known.
 msgid "Unknown (User #%d)"
 msgstr ""
 
-#: src/Admin.php:366
+#: src/Form.php:228
 #. translators: %s is the display name of the user who granted access
 msgid "Created %s ago by %s"
 msgstr ""
 
-#: src/Admin.php:392 src/Admin.php:1000
+#: src/Form.php:255 src/Form.php:934
 msgid "Secured by TrustedLogin"
 msgstr ""
 
-#: src/Admin.php:488
+#: src/Form.php:353
 #. translators: %s is the reference ID
 msgid "Reference #%s"
 msgstr ""
 
-#: src/Admin.php:503
+#: src/Form.php:370
 #. translators: %1$s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
 msgid "%1$s has site access that expires in %2$s."
 msgstr ""
 
-#: src/Admin.php:511
+#: src/Form.php:378
 #. translators: %1$s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "%1$s would like support access to this site."
 msgstr ""
 
-#: src/Admin.php:514
+#: src/Form.php:381
 #. translators: %1$s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "Grant %1$s access to this site."
 msgstr ""
 
-#: src/Admin.php:554
+#: src/Form.php:435
+msgid "Add a message"
+msgstr ""
+
+#: src/Form.php:469
 #. translators: %s is replaced with the of time that the login will be active
 #. for (e.g. "1 week")
 msgid "Access this site for %s."
 msgstr ""
 
-#: src/Admin.php:557
+#: src/Form.php:472
 #. translators: %s is replaced by the amount of time that the login will be
 #. active for (e.g. "1 week")
 msgid "Access auto-expires in %s. You may revoke access at any time."
 msgstr ""
 
-#: src/Admin.php:564
+#: src/Form.php:476
 #. translators: %s is replaced with the name of the role being cloned (e.g.
 #. "Administrator")
 msgid "Create a user with a role similar to %s."
 msgstr ""
 
-#: src/Admin.php:565
+#: src/Form.php:477
 msgid "View role capabilities"
 msgstr ""
 
-#: src/Admin.php:568
+#: src/Form.php:480
 #. translators: %s is replaced with the name of the role (e.g. "Administrator")
 msgid "Create a user with a role of %s."
 msgstr ""
 
-#: src/Admin.php:596
+#: src/Form.php:511
 #. translators: [link] and [/link] are replaced with a link to the Site Health
 #. page. Do not translate.
 msgid "Include the [link]Site Health[/link] troubleshooting report"
 msgstr ""
 
-#: src/Admin.php:619
+#: src/Form.php:535
 msgid "Additional capabilities:"
 msgstr ""
 
-#: src/Admin.php:620
+#: src/Form.php:536
 msgid "Removed capabilities:"
 msgstr ""
 
-#: src/Admin.php:689
+#: src/Form.php:607
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "%s support may not be able to access this site."
 msgstr ""
 
-#: src/Admin.php:690
+#: src/Form.php:608
 msgid ""
 "This website is running in a local development environment. To provide "
 "support, we must be able to access your site using a publicly-accessible "
 "URL."
 msgstr ""
 
-#: src/Admin.php:692
+#: src/Form.php:610
 msgid "Learn more."
 msgstr ""
 
-#: src/Admin.php:742
+#: src/Form.php:662
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "Learn about TrustedLogin"
 msgstr ""
 
-#: src/Admin.php:940
+#: src/Form.php:873
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "Grant %s Access"
 msgstr ""
 
-#: src/Admin.php:942
+#: src/Form.php:875
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "Extend %s Access"
 msgstr ""
 
-#: src/Admin.php:1045
+#: src/Form.php:988
 msgid "Could not create TrustedLogin access."
 msgstr ""
 
-#: src/Admin.php:1053
+#: src/Form.php:997
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "The user details could not be sent to %1$s automatically."
 msgstr ""
 
-#: src/Admin.php:1058
+#: src/Form.php:1002
 #. translators: %1$s is the vendor support url and %2$s is the vendor title
 msgid ""
 "Please <a href=\"%1$s\" target=\"_blank\">click here</a> to go to the %2$s "
 "support site"
 msgstr ""
 
-#: src/Admin.php:1066
+#: src/Form.php:1010
 msgid "Confirm"
 msgstr ""
 
-#: src/Admin.php:1067
+#: src/Form.php:1011
 msgid "Ok"
 msgstr ""
 
-#: src/Admin.php:1069
+#: src/Form.php:1013
 #. translators: %1$s is the vendor title
 msgid "Go to %1$s support site"
 msgstr ""
 
-#: src/Admin.php:1070
+#: src/Form.php:1014
 msgid "Close"
 msgstr ""
 
-#: src/Admin.php:1071
+#: src/Form.php:1015
 msgid "Cancel"
 msgstr ""
 
-#: src/Admin.php:1073
+#: src/Form.php:1017
 #. translators: %1$s is the vendor title
 msgid "Revoke %1$s support access"
 msgstr ""
 
-#: src/Admin.php:1074 src/Admin.php:1241
+#: src/Form.php:1018 src/Form.php:1195
 msgid "Copy"
 msgstr ""
 
-#: src/Admin.php:1075
+#: src/Form.php:1019
 msgid "Copied!"
 msgstr ""
 
-#: src/Admin.php:1078
+#: src/Form.php:1022
 msgid "(This link opens in a new window.)"
 msgstr ""
 
-#: src/Admin.php:1079
+#: src/Form.php:1023
 msgid "The access key has been copied to your clipboard."
 msgstr ""
 
-#: src/Admin.php:1083
+#: src/Form.php:1027
 msgid "Support access granted"
 msgstr ""
 
-#: src/Admin.php:1086
+#: src/Form.php:1030
 #. translators: %1$s is the vendor title
 msgid "A temporary support user has been created, and sent to %1$s support."
 msgstr ""
 
-#: src/Admin.php:1092
+#: src/Form.php:1036
 #. translators: %1$s is the vendor title
 msgid "Generating & encrypting secure support access for %1$s"
 msgstr ""
 
-#: src/Admin.php:1096
+#: src/Form.php:1040
 #. translators: %1$s is the vendor title and %2$s is the human-readable
 #. expiration time (for example, "1 week")
 msgid "Extending support access for %1$s by %2$s"
 msgstr ""
 
-#: src/Admin.php:1100
+#: src/Form.php:1044
 #. translators: %1$s is the vendor title
 msgid "Sending encrypted access to %1$s."
 msgstr ""
 
-#: src/Admin.php:1104
+#: src/Form.php:1048
 #. translators: %1$s is the vendor title
 msgid "Error syncing support user to %1$s"
 msgstr ""
 
-#: src/Admin.php:1115
+#: src/Form.php:1059
 msgid "Action Cancelled"
 msgstr ""
 
-#: src/Admin.php:1118
+#: src/Form.php:1062
 #. translators: %1$s is the vendor title
 msgid "A support account for %1$s was not created."
 msgstr ""
 
-#: src/Admin.php:1123
+#: src/Form.php:1067
 msgid "Support Access Was Not Granted"
 msgstr ""
 
-#: src/Admin.php:1124
+#: src/Form.php:1068
 msgid "There was an error granting access: "
 msgstr ""
 
-#: src/Admin.php:1127
+#: src/Form.php:1071
 msgid "Your authorized session has expired. Please refresh the page."
 msgstr ""
 
-#: src/Admin.php:1130
+#: src/Form.php:1074
 msgid "TrustedLogin Key Created"
 msgstr ""
 
-#: src/Admin.php:1133
+#: src/Form.php:1077
 #. translators: %1$s is the vendor title
 msgid "Share this TrustedLogin Key with %1$s to give them secure access:"
 msgstr ""
 
-#: src/Admin.php:1139
+#: src/Form.php:1083
 msgid "The TrustedLogin vendor could not be found."
 msgstr ""
 
-#: src/Admin.php:1145
+#: src/Form.php:1089
 #. translators: %1$s is the vendor title
 msgid "%1$s Support user already exists"
 msgstr ""
 
-#: src/Admin.php:1151
+#: src/Form.php:1095
 #. translators: %1$s is the vendor title, %2$s is the URL to the users list
 #. page
 msgid ""
@@ -287,59 +302,47 @@ msgid ""
 "from your <a href=\"%2$s\" target=\"_blank\">Users list</a>."
 msgstr ""
 
-#: src/Admin.php:1192
+#: src/Form.php:1137
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "No %s users exist."
 msgstr ""
 
-#: src/Admin.php:1216
+#: src/Form.php:1163
 msgid "Error"
 msgstr ""
 
-#: src/Admin.php:1218
+#: src/Form.php:1167
 msgid "There was an error returning the access key."
 msgstr ""
 
-#: src/Admin.php:1238
+#: src/Form.php:1189
 msgid "Site access key:"
 msgstr ""
 
-#: src/Admin.php:1239
+#: src/Form.php:1191
 msgid "Access Key"
 msgstr ""
 
-#: src/Admin.php:1243
+#: src/Form.php:1199
 msgid "Copy the access key to your clipboard"
 msgstr ""
 
-#: src/Admin.php:1245
+#: src/Form.php:1202
 #. translators: %s is the display name of the TrustedLogin support user.
 msgid ""
 "The access key is not a password; only %1$s will be able to access your "
 "site using this code. You may share this access key on support forums."
 msgstr ""
 
-#: src/Admin.php:1287
+#: src/Form.php:1236
 #. translators: %s is replaced with the name of the software developer (e.g.
 #. "Acme Widgets")
 msgid "%s access revoked."
 msgstr ""
 
-#: src/Admin.php:1290
+#: src/Form.php:1239
 msgid "You may safely close this window."
-msgstr ""
-
-#: src/Client.php:311 src/Client.php:434
-msgid "TrustedLogin requires a secure connection using HTTPS."
-msgstr ""
-
-#: src/Client.php:543
-msgid "The support user was not deleted."
-msgstr ""
-
-#: src/Encryption.php:286
-msgid "Encryption key could not be fetched, Vendor site returned 404."
 msgstr ""
 
 #: src/Remote.php:233

@@ -83,7 +83,7 @@ final class Form
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting('paths/js'),
 			array('jquery', 'wp-a11y'),
-			Client::VERSION,
+			Client::VERSION .rand(1,100000),
 			true
 		);
 
@@ -384,6 +384,12 @@ final class Form
 		return $intro;
 	}
 
+	private function create_ticket_enabled()
+	{
+		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
+		return $this->config->get_setting('create_ticket',false);
+	}
+
 	private function get_details_html()
 	{
 
@@ -416,11 +422,9 @@ final class Form
 					</h2>
 				</div>
 			';
-			$ns          = $this->config->ns();
+		$ns          = $this->config->ns();
 
-		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
-		$show_message = $this->config->get_setting('create_ticket');
-		if( $show_message ) {
+		if( $this->create_ticket_enabled() ) {
 
 			$message_summary = sprintf(
 				'<span
@@ -826,6 +830,7 @@ final class Form
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 				'_wpnonce'
 			))),
+			'create_ticket' => $this->create_ticket_enabled(),
 		);
 
 		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor
