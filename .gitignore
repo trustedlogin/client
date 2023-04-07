@@ -9,3 +9,4 @@ site/
 *.sql
 *.tar.gz
 *.zip
+.phpunit.result.cache

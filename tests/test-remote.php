@@ -27,8 +27,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	 */
 	private $remote;
 
-	public function setUp() {
-
+	public function setUp() :void {
 		parent::setUp();
 
 		$config = array(
