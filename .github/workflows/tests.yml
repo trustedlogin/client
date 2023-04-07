@@ -26,6 +26,9 @@ jobs:
           php-version: '7.4'
           tools: composer:v2
 
+      - name: Install Composer dependencies
+        run: npm run composer install
+
       - name: Install NPM dependencies
         run: npm install
 
