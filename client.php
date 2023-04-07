@@ -41,11 +41,17 @@ $config = [
         'support_url' => 'https://help.example.com',
     ],
     'role' => 'editor',
+	'caps' => [
+		'add' => [
+			'gf_full_access' => 'Support will need to see and edit the forms, entries, and Gravity Forms settings on your site.'
+		],
+	],
+	'message_option' => true,
 ];
-
+$config = new \TrustedLogin\Config( $config );
 try {
 	new \TrustedLogin\Client(
-		new \TrustedLogin\Config( $config )
+		$config
 	);
 } catch ( \Exception $exception ) {
     error_log( $exception->getMessage() );

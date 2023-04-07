@@ -361,6 +361,7 @@ final class Form
 	private function get_intro()
 	{
 
+
 		$has_access = $this->support_user->get_all();
 
 		if ($has_access) {
@@ -402,13 +403,52 @@ final class Form
 		$output_template = '
 				<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 				<div class="tl-{{ns}}-auth__roles">
-					<h2><span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}</h2>
+					<h2>
+						<span class="dashicons dashicons-admin-users dashicons--large"></span>
+						{{roles_summary}}
+					</h2>
 					{{caps}}
 				</div>
 				<div class="tl-{{ns}}-auth__expire">
-					<h2><span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_desc}}</h2>
+					<h2>
+						<span class="dashicons dashicons-clock dashicons--large"></span>
+						{{expire_summary}}{{expire_desc}}
+					</h2>
 				</div>
 			';
+			$ns          = $this->config->ns();
+
+		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
+		$show_message = $this->config->get_setting('message_option');
+		if( $show_message ) {
+
+			$message_summary = sprintf(
+				'<span
+					class="tl-' . $ns . '-toggle"
+					data-toggle=".tl-' . $ns . '- message__text_area">
+						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
+				</span>',
+				esc_html__('Add a message', 'trustedlogin')
+			);
+			$message_textarea = sprintf('
+				<textarea
+					class="tl-' . $ns . '- message__text_area"
+					name="tl-' . $ns . '-message"
+				></textarea>
+			', );
+			$output_template .= '
+				<div class="tl-{{ns}}-auth__message">
+					<h2>
+						<span class="dashicons dashicons-format-chat dashicons--large"></span>
+						{{message_summary}}
+					</h2>
+					{{message_textarea}}
+				</div>
+			';
+		}else{
+			$message_summary = null;
+			$message_textarea = null;
+		}
 
 		if ($this->config->get_setting('webhook/url') && $this->config->get_setting('webhook/debug_data')) {
 			$output_template .= '
@@ -422,10 +462,7 @@ final class Form
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
 		$expire_desc = '<small>' . sprintf(esc_html__('Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin'), human_time_diff(0, $this->config->get_setting('decay'))) . '</small>';
-
-		$ns          = $this->config->ns();
 		$cloned_role = translate_user_role(ucfirst($this->config->get_setting('role')));
-
 		if ($this->config->get_setting('caps/add') || $this->config->get_setting('caps/remove')) {
 			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
 			$roles_summary = sprintf(esc_html__('Create a user with a role similar to %s.', 'trustedlogin'), '<strong>' . $cloned_role . '</strong>');
@@ -435,6 +472,7 @@ final class Form
 			$roles_summary = sprintf(esc_html__('Create a user with a role of %s.', 'trustedlogin'), '<strong>' . $cloned_role . '</strong>');
 		}
 
+
 		$content = array(
 			'ns'                 => $ns,
 			'name'               => $this->config->get_display_name(),
@@ -443,8 +481,9 @@ final class Form
 			'debug_data_consent' => $this->get_debug_data_consent_html(),
 			'roles_summary'      => $roles_summary,
 			'caps'               => $this->get_caps_html(),
+			'message_summary'    => $message_summary,
+			'message_textarea'   => $message_textarea
 		);
-
 		return $this->prepare_output($output_template, $content);
 	}
 
