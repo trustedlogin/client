@@ -425,22 +425,23 @@ final class Form
 			$message_summary = sprintf(
 				'<span
 					class="tl-' . $ns . '-toggle"
-					data-toggle=".tl-' . $ns . '-message__text_area">
+					data-toggle=".tl-' . $ns . '-create_ticket__text_area">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
 				esc_html__('Add a message', 'trustedlogin')
 			);
 			$message_textarea = sprintf('
 				<textarea
-					class="tl-' . $ns . '-message__text_area large-text hidden"
-					name="tl-' . $ns . '-message"
+					class="tl-' . $ns . '-create_ticket__text_area large-text hidden"
+					name="create_ticket"
+					id="tl-' . $ns . '-create_ticket"
 					cols="80"
 					rows="10"
 				>
 				</textarea>
 			', );
 			$output_template .= '
-				<div class="tl-{{ns}}-message">
+				<div class="tl-{{ns}}-create_ticket">
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
 						{{message_summary}}
