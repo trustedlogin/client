@@ -83,7 +83,7 @@ final class Form
 			'trustedlogin-' . $this->config->ns(),
 			$this->config->get_setting('paths/js'),
 			array('jquery', 'wp-a11y'),
-			Client::VERSION .rand(1,100000),
+			Client::VERSION,
 			true
 		);
 
