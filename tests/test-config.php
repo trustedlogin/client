@@ -261,10 +261,10 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 	/**
 	 * @covers Config::get_setting
-	 * Test the "message_option" setting.
+	 * Test the "create_ticket" setting.
 	 *
 	 */
-	function test_get_setting_message_option() {
+	function test_get_setting_create_ticket() {
 		$config = new \TrustedLogin\Config( array(
 			'auth' => array(
 				'api_key' => 'not empty'
@@ -278,9 +278,9 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			)
 		) );
 
-		$this->assertSame(false , $config->get_setting( 'message_option' ) );
+		$this->assertSame(false , $config->get_setting( 'create_ticket' ) );
 		$config = new \TrustedLogin\Config( array(
-			'message_option' => true,
+			'create_ticket' => true,
 			'auth' => array(
 				'api_key' => 'not empty'
 			),
@@ -293,6 +293,6 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			)
 		) );
 
-		$this->assertSame(true , $config->get_setting( 'message_option' ) );
+		$this->assertSame(true , $config->get_setting( 'create_ticket' ) );
 	}
 }

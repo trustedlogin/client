@@ -419,7 +419,7 @@ final class Form
 			$ns          = $this->config->ns();
 
 		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
-		$show_message = $this->config->get_setting('message_option');
+		$show_message = $this->config->get_setting('create_ticket');
 		if( $show_message ) {
 
 			$message_summary = sprintf(

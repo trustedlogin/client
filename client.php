@@ -46,7 +46,7 @@ $config = [
 			'gf_full_access' => 'Support will need to see and edit the forms, entries, and Gravity Forms settings on your site.'
 		],
 	],
-	'message_option' => true,
+	'create_ticket' => true,
 ];
 $config = new \TrustedLogin\Config( $config );
 try {
