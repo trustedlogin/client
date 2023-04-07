@@ -80,6 +80,7 @@ final class Config {
 			'url' => null,
 			'debug_data' => false,
 		),
+		'message_option' => false,
 	);
 
 	/**

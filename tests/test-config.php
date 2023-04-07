@@ -258,4 +258,41 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		$config_no_decay = new \TrustedLogin\Config( $valid_config );
 		$this->assertSame( false, $config_no_decay->get_expiration_timestamp() );
 	}
+
+	/**
+	 * @covers Config::get_setting
+	 * Test the "message_option" setting.
+	 *
+	 */
+	function test_get_setting_message_option() {
+		$config = new \TrustedLogin\Config( array(
+			'auth' => array(
+				'api_key' => 'not empty'
+			),
+			'vendor' => array(
+				'namespace' => 'asdasd',
+				'email' => 'asdasds',
+				'title' => 'asdasdsad',
+				'website' => 'https://example.com',
+				'support_url' => 'https://example.com/support/',
+			)
+		) );
+
+		$this->assertSame(false , $config->get_setting( 'message_option' ) );
+		$config = new \TrustedLogin\Config( array(
+			'message_option' => true,
+			'auth' => array(
+				'api_key' => 'not empty'
+			),
+			'vendor' => array(
+				'namespace' => 'asdasd',
+				'email' => 'asdasds',
+				'title' => 'asdasdsad',
+				'website' => 'https://example.com',
+				'support_url' => 'https://example.com/support/',
+			)
+		) );
+
+		$this->assertSame(true , $config->get_setting( 'message_option' ) );
+	}
 }
