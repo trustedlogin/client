@@ -429,6 +429,9 @@ final class Form
 			';
 		$ns          = $this->config->ns();
 
+		$message_summary = null;
+		$message_fields = null;
+
 		if( $this->is_create_ticket_enabled() ) {
 
 			$message_summary = sprintf(
@@ -458,9 +461,6 @@ final class Form
 					{{message_textarea}}
 				</div>
 			';
-		}else{
-			$message_summary = null;
-			$message_textarea = null;
 		}
 
 		if ($this->config->get_setting('webhook/url') && $this->config->get_setting('webhook/debug_data')) {
