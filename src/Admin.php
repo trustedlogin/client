@@ -44,7 +44,6 @@ final class Admin {
 	 * Admin constructor.
 	 *
 	 * @param Config $config
-	 * @todo Form as a dependency
 	 */
 	public function __construct( Config $config, Form $form, SupportUser $support_user ) {
 		$this->config       = $config;
@@ -220,17 +219,13 @@ final class Admin {
 		);
 	}
 
-
-
-
 	/**
 	 * Add admin_notices hooks
 	 *
 	 * @return void
 	 */
 	public function admin_notices() {
-		add_action( 'admin_notices', array( $this, 'admin_notice_revoked' ) );
+		add_action( 'admin_notices', array( $this->form, 'admin_notice_revoked' ) );
 	}
-
 
 }
