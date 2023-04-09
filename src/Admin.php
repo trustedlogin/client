@@ -64,7 +64,7 @@ final class Admin {
 			'output_support_users'
 		), 20 );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/auth_screen', array(
-			 $this, 'print_auth_screen' ), 20
+			 $this->form, 'print_auth_screen' ), 20
 		);
 		add_action( 'login_form_trustedlogin', array(
 			$this->form, 'maybe_print_request_screen' ), 20
