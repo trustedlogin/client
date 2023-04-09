@@ -386,7 +386,12 @@ final class Form
 
 	private function is_create_ticket_enabled()
 	{
-		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
+
+		// There's already an existing ticket; no need to create another one.
+		if ( Client::get_reference_id() ) {
+			return false;
+		}
+
 		return $this->config->get_setting('create_ticket',false);
 	}
 
