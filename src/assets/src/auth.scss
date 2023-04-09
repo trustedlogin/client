@@ -88,11 +88,17 @@ $color-red: #c0461e !default;
 		transform: scale( 1.2 );
 	}
 
-	.dashicons--small {
+	.dashicons--small,
+	.dashicons--medium {
 		height: $small-icon-size;
 		width: $small-icon-size;
 		font-size: $small-icon-size;
 		vertical-align: text-top;
+	}
+
+	.dashicons--medium {
+		vertical-align: text-bottom;
+		line-height: 1.2;
 	}
 
 	.dashicons--large {
