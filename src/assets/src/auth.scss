@@ -234,7 +234,7 @@ $color-red: #c0461e !default;
 
 	h2 {
 		font-size: 1.25em;
-		line-height: 1.75;
+		line-height: 1.7;
 		font-weight: 400;
 		margin: 0;
 
@@ -252,7 +252,7 @@ $color-red: #c0461e !default;
 		&.tl-#{$namespace}-auth__intro {
 			text-align: center;
 			font-size: 2em;
-			line-height: 1.4;
+			line-height: 1.375;
 			padding: $gutter-width $gutter-width * 3;
 		}
 	}
@@ -417,7 +417,7 @@ $color-red: #c0461e !default;
 		margin: 0 ( $gutter-width * 2 ) ( $vertical-spacing / 2 );
 		h3 {
 			font-size: 1.2em;
-			line-height: 1.4;
+			line-height: 1.375;
 			margin: 12px 0 $vertical-spacing / 2;
 		}
 
