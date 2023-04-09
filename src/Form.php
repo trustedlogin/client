@@ -384,7 +384,7 @@ final class Form
 		return $intro;
 	}
 
-	private function create_ticket_enabled()
+	private function is_create_ticket_enabled()
 	{
 		//@todo If the ?ref={ref ID} is set, do not show anything; the ticket already exists.
 		return $this->config->get_setting('create_ticket',false);
@@ -424,7 +424,7 @@ final class Form
 			';
 		$ns          = $this->config->ns();
 
-		if( $this->create_ticket_enabled() ) {
+		if( $this->is_create_ticket_enabled() ) {
 
 			$message_summary = sprintf(
 				'<span
@@ -830,7 +830,7 @@ final class Form
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
 				'_wpnonce'
 			))),
-			'create_ticket' => $this->create_ticket_enabled(),
+			'create_ticket' => $this->is_create_ticket_enabled(),
 		);
 
 		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor
