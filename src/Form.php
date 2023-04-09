@@ -439,7 +439,7 @@ final class Form
 				</span>',
 				esc_html__('Add a message', 'trustedlogin')
 			);
-			$message_textarea = sprintf('
+			$message_fields = sprintf('
 				<textarea
 					class="tl-' . $ns . '-create_ticket__text_area large-text hidden"
 					name="create_ticket"
@@ -453,7 +453,7 @@ final class Form
 				<div class="tl-{{ns}}-create_ticket">
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
-						{{message_summary}}
+						{{message_fields}}
 					</h2>
 					{{message_textarea}}
 				</div>
@@ -494,7 +494,7 @@ final class Form
 			'debug_data_consent' => $this->get_debug_data_consent_html(),
 			'roles_summary'      => $roles_summary,
 			'caps'               => $this->get_caps_html(),
-			'message_summary'    => $message_summary,
+			'message_fields'     => $message_fields,
 			'message_textarea'   => $message_textarea
 		);
 		return $this->prepare_output($output_template, $content);
