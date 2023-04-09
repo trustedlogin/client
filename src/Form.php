@@ -427,7 +427,6 @@ final class Form
 					</h2>
 				</div>
 			';
-		$ns          = $this->config->ns();
 
 		$message_summary = null;
 		$message_fields = null;
@@ -436,17 +435,17 @@ final class Form
 
 			$message_summary = sprintf(
 				'<span
-					class="tl-' . $ns . '-toggle"
-					data-toggle=".tl-' . $ns . '-create_ticket__text_area">
+					class="tl-{{ns}}-toggle"
+					data-toggle=".tl-{{ns}}-create_ticket__text_area">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
 				esc_html__('Add a message', 'trustedlogin')
 			);
 			$message_fields = sprintf('
 				<textarea
-					class="tl-' . $ns . '-create_ticket__text_area large-text hidden"
+					class="tl-{{ns}}-create_ticket__text_area large-text hidden"
 					name="create_ticket"
-					id="tl-' . $ns . '-create_ticket"
+					id="tl-{{ns}}-create_ticket"
 					cols="80"
 					rows="10"
 				>
