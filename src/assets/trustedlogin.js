@@ -88,7 +88,9 @@
 			//add value of textarea  with name "create_ticket"
 			var $ticket_message = $( '#tl-' + namespace + '-ticket-message' );
 			if ( $ticket_message && $ticket_message.is(':visible') && $ticket_message.val() ) {
-				data.ticket = { 'message': $ticket.val() };
+				data.ticket = {
+					'message': $ticket_message.val(),
+				};
 			}
 		}
 
