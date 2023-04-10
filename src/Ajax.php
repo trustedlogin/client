@@ -89,14 +89,14 @@ final class Ajax {
 		}
 
 		if ( ! check_ajax_referer( 'tl_nonce-' . get_current_user_id(), '_nonce', false ) ) {
-			wp_send_json_error( array( 'message' => 'Verification issue: Request could not be verified. Please reload the page.' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Verification issue: Request could not be verified. Please reload the page.', 'trustedlogin' ) ) );
 		}
 
 		if ( ! current_user_can( 'create_users' ) ) {
 
 			$this->logging->log( 'Current user does not have `create_users` capability when trying to grant access.', __METHOD__, 'error' );
 
-			wp_send_json_error( array( 'message' => 'You do not have the ability to create users.' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'You do not have the ability to create users.', 'trustedlogin' ) ) );
 		}
 
 		$client = new Client( $this->config, false );
