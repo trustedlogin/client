@@ -6,10 +6,11 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -26,24 +27,24 @@ final class Config {
 
 	/**
 	 * @var array Default settings values
-	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 * @since 1.0.0
+	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 */
 	private $default_settings = array(
-		'auth' => array(
-			'api_key' => null,
+		'auth'           => array(
+			'api_key'     => null,
 			'license_key' => null,
 		),
-		'caps' => array(
-			'add' => array(),
+		'caps'           => array(
+			'add'    => array(),
 			'remove' => array(),
 		),
-		'decay' => WEEK_IN_SECONDS,
-		'logging' => array(
-			'enabled' => false,
+		'decay'          => WEEK_IN_SECONDS,
+		'logging'        => array(
+			'enabled'   => false,
 			'directory' => null,
 			'threshold' => 'notice',
-			'options' => array(
+			'options'   => array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
 				'filename'       => null, // Overridden in Logging.php
@@ -52,35 +53,35 @@ final class Config {
 				'appendContext'  => true,
 			),
 		),
-		'menu' => array(
-			'slug' => null,
-			'title' => null,
+		'menu'           => array(
+			'slug'     => null,
+			'title'    => null,
 			'priority' => null,
 			'icon_url' => '',
 			'position' => null,
 		),
-		'paths' => array(
+		'paths'          => array(
 			'css' => null,
 			'js'  => null, // Default is defined in get_default_settings()
 		),
 		'reassign_posts' => true,
-		'require_ssl' => true,
-		'role' => 'editor',
-		'vendor' => array(
-			'namespace' => null,
-			'title' => null,
-			'email' => null,
-			'website' => null,
-			'support_url' => null,
-			'display_name' => null,
-			'logo_url' => null,
+		'require_ssl'    => true,
+		'role'           => 'editor',
+		'vendor'         => array(
+			'namespace'             => null,
+			'title'                 => null,
+			'email'                 => null,
+			'website'               => null,
+			'support_url'           => null,
+			'display_name'          => null,
+			'logo_url'              => null,
 			'about_live_access_url' => null,
 		),
-		'webhook' => array(
-			'url' => null,
+		'webhook'        => array(
+			'url'        => null,
 			'debug_data' => false,
 		),
-		'create_ticket' => false,
+		'create_ticket'  => false,
 	);
 
 	/**
@@ -113,7 +114,10 @@ final class Config {
 	 */
 	public function validate() {
 
-		if ( in_array( __NAMESPACE__, array( 'ReplaceMe', 'ReplaceMe\GravityView\TrustedLogin' ) ) && ! defined('TL_DOING_TESTS') ) {
+		if ( in_array( __NAMESPACE__, array(
+				'ReplaceMe',
+				'ReplaceMe\GravityView\TrustedLogin',
+			) ) && ! defined( 'TL_DOING_TESTS' ) ) {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 501 );
 		}
 
@@ -123,7 +127,7 @@ final class Config {
 			$errors[] = new \WP_Error( 'missing_configuration', 'You need to set an API key. Get yours at https://app.trustedlogin.com' );
 		}
 
-		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined('TL_DOING_TESTS') ) {
+		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined( 'TL_DOING_TESTS' ) ) {
 			$errors[] = new \WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
 		}
 
@@ -147,6 +151,7 @@ final class Config {
 
 			/**
 			 * This seems like a reasonable max limit on the ns length.
+			 *
 			 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
 			 */
 			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
@@ -158,7 +163,7 @@ final class Config {
 			}
 		}
 
-		if ( isset( $this->settings['vendor'][ 'email' ] ) && ! filter_var( $this->settings['vendor'][ 'email' ], FILTER_VALIDATE_EMAIL ) ) {
+		if ( isset( $this->settings['vendor']['email'] ) && ! filter_var( $this->settings['vendor']['email'], FILTER_VALIDATE_EMAIL ) ) {
 			$errors[] = new \WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
 		}
 
@@ -404,6 +409,7 @@ final class Config {
 		/**
 		 * @internal Do not rely on this!!!!
 		 * @todo Remove this
+		 *
 		 * @param bool $return Does this site meet the SSL requirement?
 		 */
 		return apply_filters( 'trustedlogin/' . $this->ns() . '/meets_ssl_requirement', $return );
