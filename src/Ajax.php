@@ -3,7 +3,7 @@
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -81,6 +81,7 @@ final class Ajax {
 			$this->logging->log( 'Vendor does not match TrustedLogin configuration.', __METHOD__, 'critical' );
 
 			wp_send_json_error( array( 'message' => 'Vendor does not match.' ) );
+
 			return;
 		}
 

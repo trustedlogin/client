@@ -6,6 +6,7 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
 // Exit if accessed directly
@@ -47,7 +48,7 @@ final class Admin {
 	 */
 	public function __construct( Config $config, Form $form, SupportUser $support_user ) {
 		$this->config       = $config;
-		$this->form = $form;
+		$this->form         = $form;
 		$this->support_user = $support_user;
 	}
 
@@ -122,7 +123,6 @@ final class Admin {
 			'revoke' => "<a class='trustedlogin tl-revoke submitdelete' href='" . esc_url( $revoke_url ) . "'>" . esc_html__( 'Revoke Access', 'trustedlogin' ) . '</a>',
 		);
 	}
-
 
 
 	/**

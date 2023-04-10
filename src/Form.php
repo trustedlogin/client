@@ -11,7 +11,7 @@
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -20,14 +20,13 @@ use \WP_User;
 
 /**
  * Creates the TrustedLogin support user form.
- * 	- Makes the HTML
+ *    - Makes the HTML
  *  - Manages assets
  * Does not
- * 	- Handle the form submission ./Ajax.php
+ *    - Handle the form submission ./Ajax.php
  *  - Setup the menu ./Admin.php
  */
-final class Form
-{
+final class Form {
 
 	/**
 	 * URL pointing to the "About TrustedLogin" page, shown below the Grant Access dialog
@@ -61,8 +60,7 @@ final class Form
 	 *
 	 * @param Config $config
 	 */
-	public function __construct(Config $config, Logging $logging,SupportUser $support_user, SiteAccess $site_access)
-	{
+	public function __construct( Config $config, Logging $logging, SupportUser $support_user, SiteAccess $site_access ) {
 		$this->config       = $config;
 		$this->logging      = $logging;
 		$this->support_user = $support_user;
@@ -74,31 +72,30 @@ final class Form
 	 *
 	 * @since 1.0.0
 	 */
-	public function register_assets()
-	{
+	public function register_assets() {
 
 		$registered = array();
 
 		$registered['trustedlogin-js'] = wp_register_script(
 			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting('paths/js'),
-			array('jquery', 'wp-a11y'),
+			$this->config->get_setting( 'paths/js' ),
+			array( 'jquery', 'wp-a11y' ),
 			Client::VERSION,
 			true
 		);
 
 		$registered['trustedlogin-css'] = wp_register_style(
 			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting('paths/css'),
+			$this->config->get_setting( 'paths/css' ),
 			array(),
 			Client::VERSION,
 			'all'
 		);
 
-		$registered_filtered = array_filter($registered);
+		$registered_filtered = array_filter( $registered );
 
-		if (count($registered) !== count($registered_filtered)) {
-			$this->logging->log('Not all scripts and styles were registered: ' . print_r($registered_filtered, true), __METHOD__, 'error');
+		if ( count( $registered ) !== count( $registered_filtered ) ) {
+			$this->logging->log( 'Not all scripts and styles were registered: ' . print_r( $registered_filtered, true ), __METHOD__, 'error' );
 		}
 	}
 
@@ -107,49 +104,48 @@ final class Form
 	 *
 	 * @return void
 	 */
-	public function maybe_print_request_screen()
-	{
+	public function maybe_print_request_screen() {
 
-		if (!$this->is_login_screen()) {
+		if ( ! $this->is_login_screen() ) {
 			return;
 		}
 
 		// Once logged-in, take user back to auth request screen.
-		if (!is_user_logged_in()) {
-			$_REQUEST['redirect_to'] = site_url(add_query_arg(array()));
+		if ( ! is_user_logged_in() ) {
+			$_REQUEST['redirect_to'] = site_url( add_query_arg( array() ) );
+
 			return;
 		}
 
-		if (!current_user_can('create_users')) {
+		if ( ! current_user_can( 'create_users' ) ) {
 			return;
 		}
 
 		$this->print_request_screen();
 	}
 
-	public function print_request_screen()
-	{
+	public function print_request_screen() {
 		global $interim_login, $wp_version;
 
 		// Don't output a "← Back to site" link on the login page
 		$interim_login = true;
 
 		// The login_headertitle filter was deprecated in WP 5.2.0 for login_headertext
-		if (version_compare($wp_version, '5.2.0', '<')) {
-			add_filter('login_headertitle', '__return_empty_string');
+		if ( version_compare( $wp_version, '5.2.0', '<' ) ) {
+			add_filter( 'login_headertitle', '__return_empty_string' );
 		} else {
-			add_filter('login_headertext', '__return_empty_string');
+			add_filter( 'login_headertext', '__return_empty_string' );
 		}
 
-		add_filter('login_headerurl', function () {
-			return $this->config->get_setting('vendor/website');
-		});
+		add_filter( 'login_headerurl', function () {
+			return $this->config->get_setting( 'vendor/website' );
+		} );
 
 		login_header();
 
-		wp_enqueue_style('common');
+		wp_enqueue_style( 'common' );
 
-		wp_add_inline_style('common', $this->get_login_inline_css());
+		wp_add_inline_style( 'common', $this->get_login_inline_css() );
 
 		echo $this->get_auth_screen();
 
@@ -165,8 +161,7 @@ final class Form
 	 *
 	 * @return string
 	 */
-	private function get_login_inline_css()
-	{
+	private function get_login_inline_css() {
 		return '
 	#login {
 		width: auto;
@@ -178,7 +173,7 @@ final class Form
 		margin-top: 36px;
 	}
 	.login h1 a {
-		background-image: url("' . $this->config->get_setting('vendor/logo_url') . '")!important;
+		background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ) . '")!important;
 		background-size: contain!important;
 	}
 	';
@@ -191,30 +186,28 @@ final class Form
 	 *
 	 * @return void
 	 */
-	public function print_auth_screen()
-	{
+	public function print_auth_screen() {
 		echo $this->get_auth_screen();
 	}
 
-	public function get_auth_header_html()
-	{
+	public function get_auth_header_html() {
 		$support_users = $this->support_user->get_all();
 
-		if (empty($support_users)) {
+		if ( empty( $support_users ) ) {
 			return '';
 		}
 
 		$support_user = $support_users[0];
 
-		$_user_creator_id = get_user_option($this->support_user->created_by_meta_key, $support_user->ID);
-		$_user_creator    = $_user_creator_id ? get_user_by('id', $_user_creator_id) : false;
+		$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID );
+		$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
 
 		// translators: %s is the ID of the user who created the support session. The user can't be found; only the User ID is known.
-		$unknown_user_text = sprintf(esc_html__('Unknown (User #%d)', 'trustedlogin'), $_user_creator_id);
+		$unknown_user_text = sprintf( esc_html__( 'Unknown (User #%d)', 'trustedlogin' ), $_user_creator_id );
 
-		$auth_meta = ($_user_creator && $_user_creator->exists()) ? esc_html($_user_creator->display_name) : $unknown_user_text;
+		$auth_meta = ( $_user_creator && $_user_creator->exists() ) ? esc_html( $_user_creator->display_name ) : $unknown_user_text;
 
-		$revoke_url = $this->support_user->get_revoke_url($support_user);
+		$revoke_url = $this->support_user->get_revoke_url( $support_user );
 
 		$template = '
 			{{revoke_access_button}}
@@ -222,13 +215,13 @@ final class Form
 			<span class="tl-{{ns}}-auth__meta">{{auth_meta}}</span>';
 
 		$content = array(
-			'display_name' => $support_user->display_name,
-			'revoke_access_button' => sprintf('<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__('Revoke Access', 'trustedlogin')),
+			'display_name'         => $support_user->display_name,
+			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			// translators: %s is the display name of the user who granted access
-			'auth_meta' => sprintf(esc_html__('Created %s ago by %s', 'trustedlogin'), human_time_diff(strtotime($support_user->user_registered)), $auth_meta),
+			'auth_meta'            => sprintf( esc_html__( 'Created %s ago by %s', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ), $auth_meta ),
 		);
 
-		return $this->prepare_output($template, $content);
+		return $this->prepare_output( $template, $content );
 	}
 
 	/**
@@ -238,23 +231,22 @@ final class Form
 	 *
 	 * @return string HTML of the Auth screen
 	 */
-	public function get_auth_screen()
-	{
+	public function get_auth_screen() {
 
-		wp_enqueue_style('trustedlogin-' . $this->config->ns());
+		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$content = array(
-			'ns'               => $this->config->ns(),
-			'has_access_class' => $this->support_user->get_all() ? 'has-access' : 'grant-access',
-			'notices'          => $this->get_notices_html(),
-			'header'           => $this->get_header_html(),
-			'intro'            => $this->get_intro(),
-			'auth_header'      => $this->get_auth_header_html(),
-			'details'          => $this->get_details_html(),
-			'button'           => $this->generate_button('size=hero&class=authlink button-primary tl-client-grant-button', false),
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__('Secured by TrustedLogin', 'trustedlogin'),
-			'footer'           => $this->get_footer_html(),
-			'reference'        => $this->get_reference_html(),
+			'ns'                      => $this->config->ns(),
+			'has_access_class'        => $this->support_user->get_all() ? 'has-access' : 'grant-access',
+			'notices'                 => $this->get_notices_html(),
+			'header'                  => $this->get_header_html(),
+			'intro'                   => $this->get_intro(),
+			'auth_header'             => $this->get_auth_header_html(),
+			'details'                 => $this->get_details_html(),
+			'button'                  => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
+			'footer'                  => $this->get_footer_html(),
+			'reference'               => $this->get_reference_html(),
 		);
 
 		$auth_screen_template = '
@@ -288,17 +280,16 @@ final class Form
 		 *
 		 * @param string $output_template The Auth form HTML
 		 */
-		$auth_screen_template = apply_filters('trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template);
+		$auth_screen_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template );
 
-		$output = $this->prepare_output($auth_screen_template, $content);
+		$output = $this->prepare_output( $auth_screen_template, $content );
 
 		return $output;
 	}
 
-	private function get_header_html()
-	{
+	private function get_header_html() {
 
-		if ($this->is_login_screen()) {
+		if ( $this->is_login_screen() ) {
 			return '';
 		}
 
@@ -312,7 +303,7 @@ final class Form
 			'logo' => $this->get_logo_html(),
 		);
 
-		return $this->prepare_output($header_template, $variables);
+		return $this->prepare_output( $header_template, $variables );
 	}
 
 	/**
@@ -320,12 +311,11 @@ final class Form
 	 *
 	 * @return string Empty string if there is no reference or if the `trustedlogin/{ns}/template/auth/display_reference` filter returns false.
 	 */
-	private function get_reference_html()
-	{
+	private function get_reference_html() {
 
 		$reference_id = Client::get_reference_id();
 
-		if (null === $reference_id) {
+		if ( null === $reference_id ) {
 			return '';
 		}
 
@@ -340,75 +330,72 @@ final class Form
 		 * @param bool $is_login_screen Whether the auth form is being displayed on the login screen.
 		 * @param string $ref The reference ID.
 		 */
-		$display_reference = apply_filters('trustedlogin/' . $this->config->ns() . '/template/auth/display_reference', true, $this->is_login_screen(), $reference_id);
+		$display_reference = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/display_reference', true, $this->is_login_screen(), $reference_id );
 
-		if (!$display_reference) {
+		if ( ! $display_reference ) {
 			return '';
 		}
 
-		$template =  '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-{{ns}}-auth_ref__id">{{reference_text}}</span></p></div>';
+		$template = '<div class="tl-{{ns}}-auth__ref"><p><span class="tl-{{ns}}-auth_ref__id">{{reference_text}}</span></p></div>';
 
 		$content = array(
 			// translators: %s is the reference ID
-			'reference_text' => sprintf(esc_html__('Reference #%s', 'trustedlogin'), $reference_id),
-			'ns' => $this->config->ns(),
-			'site_url' => esc_html(str_replace(array('https://', 'http://'), '', get_site_url())),
+			'reference_text' => sprintf( esc_html__( 'Reference #%s', 'trustedlogin' ), $reference_id ),
+			'ns'             => $this->config->ns(),
+			'site_url'       => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
 		);
 
-		return $this->prepare_output($template, $content);
+		return $this->prepare_output( $template, $content );
 	}
 
-	private function get_intro()
-	{
+	private function get_intro() {
 
 
 		$has_access = $this->support_user->get_all();
 
-		if ($has_access) {
-			foreach ($has_access as $access) {
+		if ( $has_access ) {
+			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week")
-				$intro = sprintf(esc_html__('%1$s has site access that expires in %2$s.', 'trustedlogin'), '<a href="' . esc_url($this->config->get_setting('vendor/website')) . '" target="_blank" rel="noopener noreferrer">' . $this->config->get_setting('vendor/title') . '</a>', str_replace(' ', '&nbsp;', $this->support_user->get_expiration($access, true, false)));
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . $this->config->get_setting( 'vendor/title' ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
 			}
 
 			return $intro;
 		}
 
-		if ($this->is_login_screen()) {
+		if ( $this->is_login_screen() ) {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			$intro = sprintf(esc_html__('%1$s would like support access to this site.', 'trustedlogin'), '<a href="' . esc_url($this->config->get_setting('vendor/website')) . '">' . $this->config->get_display_name() . '</a>');
+			$intro = sprintf( esc_html__( '%1$s would like support access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
 		} else {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			$intro = sprintf(esc_html__('Grant %1$s access to this site.', 'trustedlogin'), '<a href="' . esc_url($this->config->get_setting('vendor/website')) . '">' . $this->config->get_display_name() . '</a>');
+			$intro = sprintf( esc_html__( 'Grant %1$s access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
 		}
 
 		return $intro;
 	}
 
-	private function is_create_ticket_enabled()
-	{
+	private function is_create_ticket_enabled() {
 
 		// There's already an existing ticket; no need to create another one.
 		if ( Client::get_reference_id() ) {
 			return false;
 		}
 
-		return $this->config->get_setting('create_ticket',false);
+		return $this->config->get_setting( 'create_ticket', false );
 	}
 
-	private function get_details_html()
-	{
+	private function get_details_html() {
 
 		$has_access = $this->support_user->get_all();
 
 		// Has access
-		if ($has_access) {
+		if ( $has_access ) {
 			$output_template = '';
 			$output_template .= '{{users_table}}';
 			$content         = array(
-				'users_table' => $this->output_support_users(false, array('current_url' => true)),
+				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
 			);
 
-			return $this->prepare_output($output_template, $content, false);
+			return $this->prepare_output( $output_template, $content, false );
 		}
 
 		$output_template = '
@@ -429,9 +416,9 @@ final class Form
 			';
 
 		$message_summary = null;
-		$message_fields = null;
+		$message_fields  = null;
 
-		if( $this->is_create_ticket_enabled() ) {
+		if ( $this->is_create_ticket_enabled() ) {
 
 			$message_summary = sprintf(
 				'<span
@@ -439,9 +426,9 @@ final class Form
 					data-toggle=".tl-{{ns}}-ticket__fields">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
-				esc_html__('Include a message for support?', 'trustedlogin')
+				esc_html__( 'Include a message for support?', 'trustedlogin' )
 			);
-			$message_fields = sprintf('
+			$message_fields  = sprintf( '
 				<fieldset class="tl-{{ns}}-ticket__fields">
 					<textarea
 						class="tl-{{ns}}-ticket-field__message large-text hidden"
@@ -451,7 +438,7 @@ final class Form
 						rows="8"
 					></textarea>
 				</fieldset>
-			', esc_html__('Please describe the issue you are having.', 'trustedlogin' ));
+			', esc_html__( 'Please describe the issue you are having.', 'trustedlogin' ) );
 
 			$output_template .= $this->prepare_output( '<div class="tl-{{ns}}-ticket">
 					<h2>
@@ -460,13 +447,13 @@ final class Form
 					</h2>
 					{{message_textarea}}
 				</div>', array(
-					'message_summary' => $message_summary,
+					'message_summary'  => $message_summary,
 					'message_textarea' => $message_fields,
 				)
 			);
 		}
 
-		if ($this->config->get_setting('webhook/url') && $this->config->get_setting('webhook/debug_data')) {
+		if ( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
 			$output_template .= '
 				<div class="tl-{{ns}}-auth__debug">
 					{{debug_data_consent}}
@@ -474,18 +461,18 @@ final class Form
 		}
 
 		// translators: %s is replaced with the of time that the login will be active for (e.g. "1 week")
-		$expire_summary = sprintf(esc_html__('Access this site for %s.', 'trustedlogin'), '<strong>' . human_time_diff(0, $this->config->get_setting('decay')) . '</strong>');
+		$expire_summary = sprintf( esc_html__( 'Access this site for %s.', 'trustedlogin' ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
-		$expire_desc = '<small>' . sprintf(esc_html__('Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin'), human_time_diff(0, $this->config->get_setting('decay'))) . '</small>';
-		$cloned_role = translate_user_role(ucfirst($this->config->get_setting('role')));
-		if ($this->config->get_setting('caps/add') || $this->config->get_setting('caps/remove')) {
+		$expire_desc = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
+		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
+		if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
 			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
-			$roles_summary = sprintf(esc_html__('Create a user with a role similar to %s.', 'trustedlogin'), '<strong>' . $cloned_role . '</strong>');
-			$roles_summary .= sprintf('<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__('View role capabilities', 'trustedlogin'));
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
+			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
 		} else {
 			// translators: %s is replaced with the name of the role (e.g. "Administrator")
-			$roles_summary = sprintf(esc_html__('Create a user with a role of %s.', 'trustedlogin'), '<strong>' . $cloned_role . '</strong>');
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 		}
 
 
@@ -498,9 +485,10 @@ final class Form
 			'roles_summary'      => $roles_summary,
 			'caps'               => $this->get_caps_html(),
 			'message_fields'     => $message_fields,
-			'message_textarea'   => $message_textarea
+			'message_textarea'   => $message_textarea,
 		);
-		return $this->prepare_output($output_template, $content);
+
+		return $this->prepare_output( $output_template, $content );
 	}
 
 	/**
@@ -512,20 +500,19 @@ final class Form
 	 *
 	 * @return string
 	 */
-	private function get_debug_data_consent_html()
-	{
+	private function get_debug_data_consent_html() {
 
 		// translators: [link] and [/link] are replaced with a link to the Site Health page. Do not translate.
-		$output = sprintf('<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>', strtr(esc_html__('Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin'), array(
-			'[link]'  => '<a href="' . esc_url(admin_url('site-health.php?tab=debug')) . '">',
+		$output = sprintf( '<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>', strtr( esc_html__( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ), array(
+			'[link]'  => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
 			'[/link]' => '</a>',
-		)));
+		) ) );
 
 		$content = array(
 			'ns' => $this->config->ns(),
 		);
 
-		return $this->prepare_output($output, $content);
+		return $this->prepare_output( $output, $content );
 	}
 
 	/**
@@ -533,17 +520,16 @@ final class Form
 	 *
 	 * @return string Empty string if there are no caps defined. Otherwise, HTML of caps in lists.
 	 */
-	private function get_caps_html()
-	{
+	private function get_caps_html() {
 
-		$added   = $this->config->get_setting('caps/add');
-		$removed = $this->config->get_setting('caps/remove');
+		$added   = $this->config->get_setting( 'caps/add' );
+		$removed = $this->config->get_setting( 'caps/remove' );
 
 		$caps = '';
-		$caps .= $this->get_caps_section($added, __('Additional capabilities:', 'trustedlogin'), 'dashicons-yes-alt');
-		$caps .= $this->get_caps_section($removed, __('Removed capabilities:', 'trustedlogin'), 'dashicons-dismiss');
+		$caps .= $this->get_caps_section( $added, __( 'Additional capabilities:', 'trustedlogin' ), 'dashicons-yes-alt' );
+		$caps .= $this->get_caps_section( $removed, __( 'Removed capabilities:', 'trustedlogin' ), 'dashicons-dismiss' );
 
-		if (empty($caps)) {
+		if ( empty( $caps ) ) {
 			return $caps;
 		}
 
@@ -559,24 +545,23 @@ final class Form
 	 *
 	 * @return string
 	 */
-	private function get_caps_section($caps_array, $heading = '', $dashicon = '')
-	{
+	private function get_caps_section( $caps_array, $heading = '', $dashicon = '' ) {
 
-		$caps_array = array_filter((array) $caps_array, array($this->config, 'is_not_null'));
+		$caps_array = array_filter( (array) $caps_array, array( $this->config, 'is_not_null' ) );
 
-		if (empty($caps_array)) {
+		if ( empty( $caps_array ) ) {
 			return '';
 		}
 
 		$output = '';
 		$output .= '<div>';
-		$output .= '<h3>' . esc_html($heading) . '</h3>';
+		$output .= '<h3>' . esc_html( $heading ) . '</h3>';
 		$output .= '<ul>';
 
-		foreach ((array) $caps_array as $cap => $reason) {
-			$dashicon = '<span class="dashicons ' . esc_attr($dashicon) . ' dashicons--small"></span>';
-			$reason   = empty($reason) ? '' : '<small>' . esc_html($reason) . '</small>';
-			$output   .= sprintf('<li>%s<span class="code">%s</span>%s</li>', $dashicon, esc_html($cap), $reason);
+		foreach ( (array) $caps_array as $cap => $reason ) {
+			$dashicon = '<span class="dashicons ' . esc_attr( $dashicon ) . ' dashicons--small"></span>';
+			$reason   = empty( $reason ) ? '' : '<small>' . esc_html( $reason ) . '</small>';
+			$output   .= sprintf( '<li>%s<span class="code">%s</span>%s</li>', $dashicon, esc_html( $cap ), $reason );
 		}
 
 		$output .= '</ul>';
@@ -587,20 +572,20 @@ final class Form
 
 	/**
 	 * Generates HTML for notices about current server environment perhaps not being accessible.
+	 *
 	 * @return string
 	 */
-	private function get_notices_html()
-	{
+	private function get_notices_html() {
 
-		if (!function_exists('wp_get_environment_type')) {
+		if ( ! function_exists( 'wp_get_environment_type' ) ) {
 			return '';
 		}
 
-		if (in_array(wp_get_environment_type(), array('staging', 'production'), true)) {
+		if ( in_array( wp_get_environment_type(), array( 'staging', 'production' ), true ) ) {
 			return '';
 		}
 
-		if (defined('TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE') && TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE) {
+		if ( defined( 'TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE' ) && TRUSTEDLOGIN_DISABLE_LOCAL_NOTICE ) {
 			return '';
 		}
 
@@ -612,33 +597,32 @@ final class Form
 
 		$content = array(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			'local_site' => sprintf(esc_html__('%s support may not be able to access this site.', 'trustedlogin'), $this->config->get_setting('vendor/title')),
-			'need_access' => esc_html__('This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin'),
-			'about_live_access_url' => esc_url($this->config->get_setting('vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL)),
-			'learn_more' => esc_html__('Learn more.', 'trustedlogin'),
+			'local_site'            => sprintf( esc_html__( '%s support may not be able to access this site.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			'need_access'           => esc_html__( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ),
+			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
+			'learn_more'            => esc_html__( 'Learn more.', 'trustedlogin' ),
 		);
 
-		return $this->prepare_output($notice_template, $content);
+		return $this->prepare_output( $notice_template, $content );
 	}
 
 	/**
 	 * @return string
 	 */
-	private function get_logo_html()
-	{
+	private function get_logo_html() {
 
-		$logo_url = $this->config->get_setting('vendor/logo_url');
+		$logo_url = $this->config->get_setting( 'vendor/logo_url' );
 
 		$logo_output = '';
 
-		if (!empty($logo_url)) {
+		if ( ! empty( $logo_url ) ) {
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%3$s" alt="%4$s" /></a>',
-				esc_url($this->config->get_setting('vendor/website')),
+				esc_url( $this->config->get_setting( 'vendor/website' ) ),
 				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-				sprintf('Visit the %s website (opens in a new tab)', $this->config->get_setting('vendor/title')),
-				esc_attr($this->config->get_setting('vendor/logo_url')),
-				esc_attr($this->config->get_setting('vendor/title'))
+				sprintf( 'Visit the %s website (opens in a new tab)', $this->config->get_setting( 'vendor/title' ) ),
+				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
+				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
 		}
 
@@ -650,12 +634,11 @@ final class Form
 	 *
 	 * @return string
 	 */
-	private function get_footer_html()
-	{
+	private function get_footer_html() {
 
-		$support_url = $this->config->get_setting('vendor/support_url');
+		$support_url = $this->config->get_setting( 'vendor/support_url' );
 
-		if ($reference_id = Client::get_reference_id()) {
+		if ( $reference_id = Client::get_reference_id() ) {
 
 			$support_args = array(
 				'tl'  => Client::VERSION,
@@ -663,13 +646,13 @@ final class Form
 				'ns'  => $this->config->ns(),
 			);
 
-			$support_url = add_query_arg($support_args, $support_url);
+			$support_url = add_query_arg( $support_args, $support_url );
 		}
 
 		$footer_links = array(
-			esc_html__('Learn about TrustedLogin', 'trustedlogin')                   => self::ABOUT_TL_URL,
+			esc_html__( 'Learn about TrustedLogin', 'trustedlogin' )                    => self::ABOUT_TL_URL,
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			sprintf('Visit %s support', $this->config->get_setting('vendor/title')) => $support_url,
+			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $support_url,
 		);
 
 		/**
@@ -681,35 +664,34 @@ final class Form
 		 *
 		 * @param array $footer_links Array of links to show in auth footer (Key is anchor text; Value is URL)
 		 */
-		$footer_links = apply_filters('trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links);
+		$footer_links = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/footer_links', $footer_links );
 
 		$footer_links_output = '';
-		foreach ($footer_links as $text => $link) {
+		foreach ( $footer_links as $text => $link ) {
 			$footer_links_output .= sprintf(
 				'<li><a href="%1$s" target="_blank">%2$s</a></li>',
-				esc_url($link),
-				esc_html($text)
+				esc_url( $link ),
+				esc_html( $text )
 			);
 		}
 
 		$footer_output = '';
-		if (!empty($footer_links_output)) {
-			$footer_output = sprintf('<ul>%1$s</ul>', $footer_links_output);
+		if ( ! empty( $footer_links_output ) ) {
+			$footer_output = sprintf( '<ul>%1$s</ul>', $footer_links_output );
 		}
 
 		return $footer_output;
 	}
 
-	private function prepare_output($template, $content, $wp_kses = true)
-	{
+	private function prepare_output( $template, $content, $wp_kses = true ) {
 
 		$output_html = $template;
 
-		foreach ($content as $key => $value) {
-			$output_html = str_replace('{{' . $key . '}}', $value, $output_html);
+		foreach ( $content as $key => $value ) {
+			$output_html = str_replace( '{{' . $key . '}}', $value, $output_html );
 		}
 
-		if ($wp_kses) {
+		if ( $wp_kses ) {
 
 			// Allow SVGs for logos
 			$allowed_protocols   = wp_allowed_protocols();
@@ -718,7 +700,7 @@ final class Form
 			$output_html = wp_kses(
 				$output_html,
 				array(
-					'a'       => array(
+					'a'        => array(
 						'class'       => array(),
 						'id'          => array(),
 						'href'        => array(),
@@ -728,7 +710,7 @@ final class Form
 						'data-toggle' => array(),
 						'data-access' => array(),
 					),
-					'img'     => array(
+					'img'      => array(
 						'class' => array(),
 						'id'    => array(),
 						'src'   => array(),
@@ -736,55 +718,64 @@ final class Form
 						'alt'   => array(),
 						'title' => array(),
 					),
-					'span'    => array(
+					'span'     => array(
 						'class'       => array(),
 						'id'          => array(),
 						'title'       => array(),
 						'data-toggle' => array(),
 						'style'       => array(),
 					),
-					'label'   => array('class' => array(), 'id' => array(), 'for' => array()),
-					'code'    => array('class' => array(), 'id' => array()),
-					'tt'      => array('class' => array(), 'id' => array()),
-					'pre'     => array('class' => array(), 'id' => array()),
-					'table'   => array('class' => array(), 'id' => array()),
-					'thead'   => array(),
-					'tfoot'   => array(),
-					'td'      => array('class' => array(), 'id' => array(), 'colspan' => array()),
-					'th'      => array('class' => array(), 'id' => array(), 'colspan' => array(), 'scope' => array()),
-					'ul'      => array('class' => array(), 'id' => array()),
-					'li'      => array('class' => array(), 'id' => array()),
-					'p'       => array('class' => array(), 'id' => array()),
-					'h1'      => array('class' => array(), 'id' => array()),
-					'h2'      => array('class' => array(), 'id' => array()),
-					'h3'      => array('class' => array(), 'id' => array(), 'style'       => array(),),
-					'h4'      => array('class' => array(), 'id' => array()),
-					'h5'      => array('class' => array(), 'id' => array()),
-					'div'     => array('class' => array(), 'id' => array(), 'aria-live' => array(), 'style' => array(),),
-					'small'   => array('class' => array(), 'id' => array(), 'data-toggle' => array()),
-					'header'  => array('class' => array(), 'id' => array()),
-					'footer'  => array('class' => array(), 'id' => array()),
-					'section' => array('class' => array(), 'id' => array()),
-					'br'      => array(),
-					'strong'  => array(),
-					'em'      => array(),
-					'input'  => array(
+					'label'    => array( 'class' => array(), 'id' => array(), 'for' => array() ),
+					'code'     => array( 'class' => array(), 'id' => array() ),
+					'tt'       => array( 'class' => array(), 'id' => array() ),
+					'pre'      => array( 'class' => array(), 'id' => array() ),
+					'table'    => array( 'class' => array(), 'id' => array() ),
+					'thead'    => array(),
+					'tfoot'    => array(),
+					'td'       => array( 'class' => array(), 'id' => array(), 'colspan' => array() ),
+					'th'       => array( 'class'   => array(),
+										 'id'      => array(),
+										 'colspan' => array(),
+										 'scope'   => array(),
+					),
+					'ul'       => array( 'class' => array(), 'id' => array() ),
+					'li'       => array( 'class' => array(), 'id' => array() ),
+					'p'        => array( 'class' => array(), 'id' => array() ),
+					'h1'       => array( 'class' => array(), 'id' => array() ),
+					'h2'       => array( 'class' => array(), 'id' => array() ),
+					'h3'       => array( 'class' => array(), 'id' => array(), 'style' => array(), ),
+					'h4'       => array( 'class' => array(), 'id' => array() ),
+					'h5'       => array( 'class' => array(), 'id' => array() ),
+					'div'      => array(
 						'class'     => array(),
 						'id'        => array(),
-						'type'      => array('text'),
-						'value'     => array(),
-						'size'      => array(),
 						'aria-live' => array(),
-						'aria-label' => array(),
 						'style'     => array(),
 					),
-					'textarea'  => array(
-						'class'     => array(),
-						'id'        => array(),
-						'rows'      => array(),
-						'cols'      => array(),
+					'small'    => array( 'class' => array(), 'id' => array(), 'data-toggle' => array() ),
+					'header'   => array( 'class' => array(), 'id' => array() ),
+					'footer'   => array( 'class' => array(), 'id' => array() ),
+					'section'  => array( 'class' => array(), 'id' => array() ),
+					'br'       => array(),
+					'strong'   => array(),
+					'em'       => array(),
+					'input'    => array(
+						'class'      => array(),
+						'id'         => array(),
+						'type'       => array( 'text' ),
+						'value'      => array(),
+						'size'       => array(),
+						'aria-live'  => array(),
+						'aria-label' => array(),
+						'style'      => array(),
 					),
-					'button' => array(
+					'textarea' => array(
+						'class' => array(),
+						'id'    => array(),
+						'rows'  => array(),
+						'cols'  => array(),
+					),
+					'button'   => array(
 						'class'     => array(),
 						'id'        => array(),
 						'aria-live' => array(),
@@ -796,7 +787,7 @@ final class Form
 			);
 		}
 
-		return normalize_whitespace($output_html);
+		return normalize_whitespace( $output_html );
 	}
 
 	/**
@@ -809,46 +800,45 @@ final class Form
 	 *
 	 * @return string the HTML output
 	 */
-	public function generate_button($atts = array(), $print = true)
-	{
+	public function generate_button( $atts = array(), $print = true ) {
 
-		if (!current_user_can('create_users')) {
+		if ( ! current_user_can( 'create_users' ) ) {
 			return '';
 		}
 
-		if (!wp_script_is('trustedlogin-' . $this->config->ns(), 'registered')) {
-			$this->logging->log('JavaScript is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error');
+		if ( ! wp_script_is( 'trustedlogin-' . $this->config->ns(), 'registered' ) ) {
+			$this->logging->log( 'JavaScript is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
-		if (!wp_style_is('trustedlogin-' . $this->config->ns(), 'registered')) {
-			$this->logging->log('Style is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error');
+		if ( ! wp_style_is( 'trustedlogin-' . $this->config->ns(), 'registered' ) ) {
+			$this->logging->log( 'Style is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
-		wp_enqueue_style('trustedlogin-' . $this->config->ns());
+		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$button_settings = array(
-			'vendor'       => $this->config->get_setting('vendor'),
-			'ajaxurl'      => admin_url('admin-ajax.php'),
-			'_nonce'       => wp_create_nonce('tl_nonce-' . get_current_user_id()),
-			'lang'         => $this->translations(),
-			'debug'        => $this->logging->is_enabled(),
-			'selector'     => '.button-trustedlogin-' . $this->config->ns(),
-			'reference_id' => Client::get_reference_id(),
-			'query_string' => esc_url(remove_query_arg(array(
+			'vendor'        => $this->config->get_setting( 'vendor' ),
+			'ajaxurl'       => admin_url( 'admin-ajax.php' ),
+			'_nonce'        => wp_create_nonce( 'tl_nonce-' . get_current_user_id() ),
+			'lang'          => $this->translations(),
+			'debug'         => $this->logging->is_enabled(),
+			'selector'      => '.button-trustedlogin-' . $this->config->ns(),
+			'reference_id'  => Client::get_reference_id(),
+			'query_string'  => esc_url( remove_query_arg( array(
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM,
-				'_wpnonce'
-			))),
+				'_wpnonce',
+			) ) ),
 			'create_ticket' => $this->is_create_ticket_enabled(),
 		);
 
 		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor
-		wp_localize_script('trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings);
+		wp_localize_script( 'trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings );
 
-		wp_enqueue_script('trustedlogin-' . $this->config->ns());
+		wp_enqueue_script( 'trustedlogin-' . $this->config->ns() );
 
-		$return = $this->get_button($atts);
+		$return = $this->get_button( $atts );
 
-		if ($print) {
+		if ( $print ) {
 			echo $return;
 		}
 
@@ -859,40 +849,40 @@ final class Form
 	 * Generates HTML for a TrustedLogin Grant Access button
 	 *
 	 * @param array $atts {
-	 *   @type string $text Button text to grant access. Sanitized using esc_html(). Default: "Grant %s Access"
+	 *
+	 * @type string $text Button text to grant access. Sanitized using esc_html(). Default: "Grant %s Access"
 	 *                      (%s replaced with vendor/title setting)
-	 *   @type string $exists_text Button text when vendor already has a support account. Sanitized using esc_html().
+	 * @type string $exists_text Button text when vendor already has a support account. Sanitized using esc_html().
 	 *                      Default: "Extend %s Access" (%s replaced with vendor/title setting)
-	 *   @type string $size WordPress CSS button size. Options: 'small', 'normal', 'large', 'hero'. Default: "hero"
-	 *   @type string $class CSS class added to the button. Default: "button-primary"
-	 *   @type string $tag Tag used to display the button. Options: 'a', 'button', 'span'. Default: "a"
-	 *   @type bool   $powered_by Whether to display the TrustedLogin badge on the button. Default: true
-	 *   @type string $support_url The URL to use as a backup if JavaScript fails or isn't available. Sanitized using
+	 * @type string $size WordPress CSS button size. Options: 'small', 'normal', 'large', 'hero'. Default: "hero"
+	 * @type string $class CSS class added to the button. Default: "button-primary"
+	 * @type string $tag Tag used to display the button. Options: 'a', 'button', 'span'. Default: "a"
+	 * @type bool $powered_by Whether to display the TrustedLogin badge on the button. Default: true
+	 * @type string $support_url The URL to use as a backup if JavaScript fails or isn't available. Sanitized using
 	 *                      esc_url(). Default: `vendor/support_url` configuration setting URL.
 	 * }
 	 *
 	 * @return string
 	 */
-	public function get_button($atts = array())
-	{
+	public function get_button( $atts = array() ) {
 
 		$defaults = array(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			'text'        => sprintf(esc_html__('Grant %s Access', 'trustedlogin'), $this->config->get_display_name()),
+			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_display_name() ),
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			'exists_text' => sprintf(esc_html__('Extend %s Access', 'trustedlogin'), $this->config->get_display_name(), ucwords(human_time_diff(time(), time() + $this->config->get_setting('decay')))),
+			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // "a", "button", "span"
 			'powered_by'  => false,
-			'support_url' => $this->config->get_setting('vendor/support_url'),
+			'support_url' => $this->config->get_setting( 'vendor/support_url' ),
 		);
 
-		$sizes = array('small', 'normal', 'large', 'hero');
+		$sizes = array( 'small', 'normal', 'large', 'hero' );
 
-		$atts = wp_parse_args($atts, $defaults);
+		$atts = wp_parse_args( $atts, $defaults );
 
-		switch ($atts['size']) {
+		switch ( $atts['size'] ) {
 			case '':
 				$css_class = '';
 				break;
@@ -900,16 +890,16 @@ final class Form
 				$css_class = 'button';
 				break;
 			default:
-				if (!in_array($atts['size'], $sizes)) {
+				if ( ! in_array( $atts['size'], $sizes ) ) {
 					$atts['size'] = 'hero';
 				}
 
 				$css_class = 'button button-' . $atts['size'];
 		}
 
-		$_valid_tags = array('a', 'button', 'span');
+		$_valid_tags = array( 'a', 'button', 'span' );
 
-		if (!empty($atts['tag']) && in_array(strtolower($atts['tag']), $_valid_tags, true)) {
+		if ( ! empty( $atts['tag'] ) && in_array( strtolower( $atts['tag'] ), $_valid_tags, true ) ) {
 			$tag = $atts['tag'];
 		} else {
 			$tag = 'a';
@@ -917,29 +907,29 @@ final class Form
 
 		$data_atts = array();
 
-		if ($this->support_user->get_all()) {
-			$text                = '<span class="dashicons dashicons-update-alt dashicons--small"></span> ' . esc_html($atts['exists_text']);
-			$href                = admin_url('users.php?role=' . $this->support_user->role->get_name());
+		if ( $this->support_user->get_all() ) {
+			$text                = '<span class="dashicons dashicons-update-alt dashicons--small"></span> ' . esc_html( $atts['exists_text'] );
+			$href                = admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
 			$data_atts['access'] = 'extend';
 		} else {
-			$text                = esc_html($atts['text']);
+			$text                = esc_html( $atts['text'] );
 			$href                = $atts['support_url'];
 			$data_atts['access'] = 'grant';
 		}
 
-		$css_class = implode(' ', array($css_class, $atts['class']));
-		$css_class = trim($css_class);
+		$css_class = implode( ' ', array( $css_class, $atts['class'] ) );
+		$css_class = trim( $css_class );
 
 		$data_string = '';
-		foreach ($data_atts as $key => $value) {
-			$data_string .= sprintf(' data-%s="%s"', esc_attr($key), esc_attr($value));
+		foreach ( $data_atts as $key => $value ) {
+			$data_string .= sprintf( ' data-%s="%s"', esc_attr( $key ), esc_attr( $value ) );
 		}
 
 		$powered_by = '';
-		if ($atts['powered_by']) {
+		if ( $atts['powered_by'] ) {
 			$powered_by = sprintf(
 				'<small><span class="trustedlogin-logo"></span>%s</small>',
-				esc_html__('Secured by TrustedLogin', 'trustedlogin')
+				esc_html__( 'Secured by TrustedLogin', 'trustedlogin' )
 			);
 		}
 
@@ -950,9 +940,9 @@ final class Form
 			/* %1$s */
 			$tag,
 			/* %2$s */
-			esc_url($href),
+			esc_url( $href ),
 			/* %3$s */
-			esc_attr($css_class),
+			esc_attr( $css_class ),
 			/* %4$s */
 			$this->config->ns(),
 			/* %5$s */
@@ -969,10 +959,9 @@ final class Form
 	 *
 	 * @return array of Translations and strings to be localized to JS variables
 	 */
-	public function translations()
-	{
+	public function translations() {
 
-		$vendor_title = $this->config->get_setting('vendor/title');
+		$vendor_title = $this->config->get_setting( 'vendor/title' );
 
 		/**
 		 * Filter: Allow for adding into GET parameters on support_url
@@ -986,6 +975,7 @@ final class Form
 		 * ```
 		 *
 		 * @param array $url_query_args {
+		 *
 		 * @type string $message What error should be sent to the support system.
 		 * @type string|null $ref A sanitized reference ID, if passed. Otherwise, null.
 		 * }
@@ -993,118 +983,118 @@ final class Form
 		$query_args = apply_filters(
 			'trustedlogin/' . $this->config->ns() . '/support_url/query_args',
 			array(
-				'message' => __('Could not create TrustedLogin access.', 'trustedlogin'),
-				'ref' => Client::get_reference_id(),
+				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' ),
+				'ref'     => Client::get_reference_id(),
 			)
 		);
 
 		$error_content = sprintf(
 			'<p>%s</p><p>%s</p>',
 			sprintf(
-				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-				esc_html__('The user details could not be sent to %1$s automatically.', 'trustedlogin'),
+			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
+				esc_html__( 'The user details could not be sent to %1$s automatically.', 'trustedlogin' ),
 				$vendor_title
 			),
 			sprintf(
-				// translators: %1$s is the vendor support url and %2$s is the vendor title
-				__('Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin'),
-				esc_url(add_query_arg($query_args, $this->config->get_setting('vendor/support_url'))),
+			// translators: %1$s is the vendor support url and %2$s is the vendor title
+				__( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin' ),
+				esc_url( add_query_arg( $query_args, $this->config->get_setting( 'vendor/support_url' ) ) ),
 				$vendor_title
 			)
 		);
 
 		$translations = array(
 			'buttons' => array(
-				'confirm'    => esc_html__('Confirm', 'trustedlogin'),
-				'ok'         => esc_html__('Ok', 'trustedlogin'),
+				'confirm'    => esc_html__( 'Confirm', 'trustedlogin' ),
+				'ok'         => esc_html__( 'Ok', 'trustedlogin' ),
 				// translators: %1$s is the vendor title
-				'go_to_site' => sprintf(__('Go to %1$s support site', 'trustedlogin'), $vendor_title),
-				'close'      => esc_html__('Close', 'trustedlogin'),
-				'cancel'     => esc_html__('Cancel', 'trustedlogin'),
+				'go_to_site' => sprintf( __( 'Go to %1$s support site', 'trustedlogin' ), $vendor_title ),
+				'close'      => esc_html__( 'Close', 'trustedlogin' ),
+				'cancel'     => esc_html__( 'Cancel', 'trustedlogin' ),
 				// translators: %1$s is the vendor title
-				'revoke'     => sprintf(esc_html__('Revoke %1$s support access', 'trustedlogin'), $vendor_title),
-				'copy'       => esc_html__('Copy', 'trustedlogin'),
-				'copied'     => esc_html__('Copied!', 'trustedlogin'),
+				'revoke'     => sprintf( esc_html__( 'Revoke %1$s support access', 'trustedlogin' ), $vendor_title ),
+				'copy'       => esc_html__( 'Copy', 'trustedlogin' ),
+				'copied'     => esc_html__( 'Copied!', 'trustedlogin' ),
 			),
-			'a11y' => array(
-				'opens_new_window' => esc_attr__('(This link opens in a new window.)', 'trustedlogin'),
-				'copied_text' =>  esc_html__('The access key has been copied to your clipboard.', 'trustedlogin'),
+			'a11y'    => array(
+				'opens_new_window' => esc_attr__( '(This link opens in a new window.)', 'trustedlogin' ),
+				'copied_text'      => esc_html__( 'The access key has been copied to your clipboard.', 'trustedlogin' ),
 			),
 			'status'  => array(
 				'synced'             => array(
-					'title'   => esc_html__('Support access granted', 'trustedlogin'),
+					'title'   => esc_html__( 'Support access granted', 'trustedlogin' ),
 					'content' => sprintf(
-						// translators: %1$s is the vendor title
-						__('A temporary support user has been created, and sent to %1$s support.', 'trustedlogin'),
+					// translators: %1$s is the vendor title
+						__( 'A temporary support user has been created, and sent to %1$s support.', 'trustedlogin' ),
 						$vendor_title
 					),
 				),
 				'pending'            => array(
 					// translators: %1$s is the vendor title
-					'content' => sprintf(__('Generating & encrypting secure support access for %1$s', 'trustedlogin'), $vendor_title),
+					'content' => sprintf( __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin' ), $vendor_title ),
 				),
 				'extending'          => array(
 					// translators: %1$s is the vendor title and %2$s is the human-readable expiration time (for example, "1 week")
-					'content' => sprintf(__('Extending support access for %1$s by %2$s', 'trustedlogin'), $vendor_title, human_time_diff(time(), time() + $this->config->get_setting('decay'))),
+					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ), $vendor_title, human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing'            => array(
 					// translators: %1$s is the vendor title
-					'content' => sprintf(__('Sending encrypted access to %1$s.', 'trustedlogin'), $vendor_title),
+					'content' => sprintf( __( 'Sending encrypted access to %1$s.', 'trustedlogin' ), $vendor_title ),
 				),
 				'error'              => array(
 					// translators: %1$s is the vendor title
-					'title'   => sprintf(__('Error syncing support user to %1$s', 'trustedlogin'), $vendor_title),
-					'content' => wp_kses($error_content, array(
+					'title'   => sprintf( __( 'Error syncing support user to %1$s', 'trustedlogin' ), $vendor_title ),
+					'content' => wp_kses( $error_content, array(
 						'a' => array(
 							'href'   => array(),
 							'rel'    => array(),
-							'target' => array()
+							'target' => array(),
 						),
-						'p' => array()
-					)),
+						'p' => array(),
+					) ),
 				),
 				'cancel'             => array(
-					'title'   => esc_html__('Action Cancelled', 'trustedlogin'),
+					'title'   => esc_html__( 'Action Cancelled', 'trustedlogin' ),
 					'content' => sprintf(
-						// translators: %1$s is the vendor title
-						__('A support account for %1$s was not created.', 'trustedlogin'),
+					// translators: %1$s is the vendor title
+						__( 'A support account for %1$s was not created.', 'trustedlogin' ),
 						$vendor_title
 					),
 				),
 				'failed'             => array(
-					'title'   => esc_html__('Support Access Was Not Granted', 'trustedlogin'),
-					'content' => esc_html__('There was an error granting access: ', 'trustedlogin'),
+					'title'   => esc_html__( 'Support Access Was Not Granted', 'trustedlogin' ),
+					'content' => esc_html__( 'There was an error granting access: ', 'trustedlogin' ),
 				),
 				'failed_permissions' => array(
-					'content' => esc_html__('Your authorized session has expired. Please refresh the page.', 'trustedlogin'),
+					'content' => esc_html__( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ),
 				),
 				'accesskey'          => array(
-					'title'       => esc_html__('TrustedLogin Key Created', 'trustedlogin'),
+					'title'       => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
 					'content'     => sprintf(
-						// translators: %1$s is the vendor title
-						__('Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin'),
+					// translators: %1$s is the vendor title
+						__( 'Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin' ),
 						$vendor_title
 					),
-					'revoke_link' => esc_url(add_query_arg(array(Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns()), admin_url())),
+					'revoke_link' => esc_url( add_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns() ), admin_url() ) ),
 				),
 				'error404'           => array(
-					'title'   => esc_html__('The TrustedLogin vendor could not be found.', 'trustedlogin'),
+					'title'   => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
 					'content' => '',
 				),
 				'error409'           => array(
 					'title'   => sprintf(
-						// translators: %1$s is the vendor title
-						__('%1$s Support user already exists', 'trustedlogin'),
+					// translators: %1$s is the vendor title
+						__( '%1$s Support user already exists', 'trustedlogin' ),
 						$vendor_title
 					),
 					'content' => sprintf(
 						wp_kses(
-							// translators: %1$s is the vendor title, %2$s is the URL to the users list page
-							__('A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin'),
-							array('a' => array('href' => array(), 'target' => array()))
+						// translators: %1$s is the vendor title, %2$s is the URL to the users list page
+							__( 'A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ),
+							array( 'a' => array( 'href' => array(), 'target' => array() ) )
 						),
 						$vendor_title,
-						esc_url(admin_url('users.php?role=' . $this->support_user->role->get_name()))
+						esc_url( admin_url( 'users.php?role=' . $this->support_user->role->get_name() ) )
 					),
 				),
 			),
@@ -1120,31 +1110,31 @@ final class Form
 	 *
 	 * @param bool $print Whether to print and return (true) or return (false) the results. Default: true
 	 * @param array $atts Settings for the table. {
-	 *   @type bool $current_url Whether to generate Revoke links based on the current URL. Default: false.
+	 *
+	 * @type bool $current_url Whether to generate Revoke links based on the current URL. Default: false.
 	 * }
 	 *
 	 * @return string HTML table of active support users for vendor. Empty string if current user can't `create_users`
 	 */
-	public function output_support_users($print = true, $atts = array())
-	{
+	public function output_support_users( $print = true, $atts = array() ) {
 
-		if ((!is_admin() && !$this->is_login_screen()) || !current_user_can('create_users')) {
+		if ( ( ! is_admin() && ! $this->is_login_screen() ) || ! current_user_can( 'create_users' ) ) {
 			return '';
 		}
 
 		// The `trustedlogin/{$ns}/button` action passes an empty string
-		if ('' === $print) {
+		if ( '' === $print ) {
 			$print = true;
 		}
 
 		$support_users = $this->support_user->get_all();
 
-		if (empty($support_users)) {
+		if ( empty( $support_users ) ) {
 
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-			$return = '<h3>' . sprintf(esc_html__('No %s users exist.', 'trustedlogin'), $this->config->get_setting('vendor/title')) . '</h3>';
+			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
 
-			if ($print) {
+			if ( $print ) {
 				echo $return;
 			}
 
@@ -1155,7 +1145,7 @@ final class Form
 
 		$access_key = $this->site_access->get_access_key();
 
-		if (is_wp_error($access_key)) {
+		if ( is_wp_error( $access_key ) ) {
 
 			$access_key_template = <<<EOD
 	<%3\$s class="tl-%1\$s-auth__accesskey">
@@ -1166,15 +1156,15 @@ final class Form
 			$access_key_output   = sprintf(
 				$access_key_template,
 				/* %1$s */
-				sanitize_title($this->config->ns()),
+				sanitize_title( $this->config->ns() ),
 				/* %2$s */
-				esc_html__('Error', 'trustedlogin'),
+				esc_html__( 'Error', 'trustedlogin' ),
 				/* %3$s */
 				'div',
 				/* %4$s */
-				esc_html__('There was an error returning the access key.', 'trustedlogin'),
+				esc_html__( 'There was an error returning the access key.', 'trustedlogin' ),
 				/* %5$s */
-				esc_html($access_key->get_error_message())
+				esc_html( $access_key->get_error_message() )
 			);
 		} else {
 
@@ -1192,29 +1182,29 @@ final class Form
 			$access_key_output   = sprintf(
 				$access_key_template,
 				/* %1$s */
-				sanitize_title($this->config->ns()),
+				sanitize_title( $this->config->ns() ),
 				/* %2$s */
-				esc_html__('Site access key:', 'trustedlogin'),
+				esc_html__( 'Site access key:', 'trustedlogin' ),
 				/* %3$s */
-				esc_html__('Access Key', 'trustedlogin'),
+				esc_html__( 'Access Key', 'trustedlogin' ),
 				/* %4$s */
-				esc_attr($access_key),
+				esc_attr( $access_key ),
 				/* %5$s */
-				esc_html__('Copy', 'trustedlogin'),
+				esc_html__( 'Copy', 'trustedlogin' ),
 				/* %6$s */
 				'div',
 				/* %7$s */
-				esc_html__('Copy the access key to your clipboard', 'trustedlogin'),
+				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
 				// translators: %s is the display name of the TrustedLogin support user.
 				/* %8$s */
-				sprintf(esc_html__('The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin'), $this->support_user->get_first()->display_name)
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), $this->support_user->get_first()->display_name )
 			);
 		}
 
 
 		$return .= $access_key_output;
 
-		if ($print) {
+		if ( $print ) {
 			echo $return;
 		}
 
@@ -1227,27 +1217,26 @@ final class Form
 	 *
 	 * @return void
 	 */
-	public function admin_notice_revoked()
-	{
+	public function admin_notice_revoked() {
 
 		static $displayed_notice;
 
 		// Only show notice once
-		if ($displayed_notice) {
+		if ( $displayed_notice ) {
 			return;
 		}
 
-?>
+		?>
 		<div class="notice notice-success is-dismissible">
 			<h3><?php
 				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
-				echo esc_html(sprintf(__('%s access revoked.', 'trustedlogin'), $this->config->get_setting('vendor/title')));
+				echo esc_html( sprintf( __( '%s access revoked.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) );
 				?></h3>
-			<?php if (!current_user_can('delete_users')) { ?>
-				<p><?php echo esc_html__('You may safely close this window.', 'trustedlogin'); ?></p>
+			<?php if ( ! current_user_can( 'delete_users' ) ) { ?>
+				<p><?php echo esc_html__( 'You may safely close this window.', 'trustedlogin' ); ?></p>
 			<?php } ?>
 		</div>
-<?php
+		<?php
 
 		$displayed_notice = true;
 	}
@@ -1257,8 +1246,7 @@ final class Form
 	 *
 	 * @return bool
 	 */
-	private function is_login_screen()
-	{
-		return did_action('login_init') && isset($_GET['ns']) && $_GET['ns'] === $this->config->ns();
+	private function is_login_screen() {
+		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();
 	}
 }

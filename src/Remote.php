@@ -6,10 +6,11 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
 // Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -43,7 +44,7 @@ final class Remote {
 	 * SupportUser constructor.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
-		$this->config = $config;
+		$this->config  = $config;
 		$this->logging = $logging;
 	}
 
@@ -68,7 +69,7 @@ final class Remote {
 	 *   @type string $access_key The access key.
 	 *   @type string $debug_data (Optional) Site debug data from {@see WP_Debug_Data::debug_data()}, sent if `webhook/debug_data` is true.
 	 *   @type string $ref (Optional) Support ticket Reference ID.
-	 *   @type array  $ticket (Optional) Support ticket provided by customer with `message` key.
+	 *   @type array $ticket (Optional) Support ticket provided by customer with `message` key.
 	 * }
 	 *
 	 * @return bool|WP_Error False: webhook setting not defined; True: success; WP_Error: error!
@@ -101,6 +102,7 @@ final class Remote {
 
 			if ( is_wp_error( $posted ) ) {
 				$this->logging->log( 'An error encountered while sending a webhook to ' . esc_attr( $webhook_url ), __METHOD__, 'error', $posted );
+
 				return $posted;
 			}
 
@@ -132,7 +134,14 @@ final class Remote {
 
 		$method = is_string( $method ) ? strtoupper( $method ) : $method;
 
-		if ( ! is_string( $method ) || ! in_array( $method, array( 'POST', 'PUT', 'GET', 'HEAD', 'PUSH', 'DELETE' ), true ) ) {
+		if ( ! is_string( $method ) || ! in_array( $method, array(
+				'POST',
+				'PUT',
+				'GET',
+				'HEAD',
+				'PUSH',
+				'DELETE',
+			), true ) ) {
 			$this->logging->log( sprintf( 'Error: Method not in allowed array list (%s)', print_r( $method, true ) ), __METHOD__, 'critical' );
 
 			return new \WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s" is not in the list of allowed methods', print_r( $method, true ) ) );
@@ -194,9 +203,10 @@ final class Remote {
 		/**
 		 * Modifies the endpoint URL for the TrustedLogin service.
 		 *
-		 * @param string $url URL to TrustedLogin API
+		 * @internal This allows pointing requests to testing servers.
 		 *
-		 * @internal This allows pointing requests to testing servers
+		 * @param string $url URL to TrustedLogin API.
+		 *
 		 */
 		$base_url = apply_filters( 'trustedlogin/' . $this->config->ns() . '/api_url', self::API_URL );
 
