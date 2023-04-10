@@ -442,17 +442,17 @@ final class Form
 				esc_html__('Add a message', 'trustedlogin')
 			);
 			$message_fields = sprintf('
-				<textarea
-					class="tl-{{ns}}-create_ticket__text_area large-text hidden"
-					name="create_ticket"
-					id="tl-{{ns}}-create_ticket"
-					cols="80"
-					rows="10"
-				>
-				</textarea>
-			', );
 			$output_template .= '
 				<div class="tl-{{ns}}-create_ticket">
+					<textarea
+						class="tl-{{ns}}-create_ticket__text_area large-text hidden"
+						name="create_ticket"
+						id="tl-{{ns}}-create_ticket"
+						placeholder="%s"
+						cols="80"
+						rows="10"
+					></textarea>
+			', esc_html__('Please describe the issue you are having.', 'trustedlogin' ));
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
 						{{message_fields}}
