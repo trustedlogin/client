@@ -436,14 +436,13 @@ final class Form
 			$message_summary = sprintf(
 				'<span
 					class="tl-{{ns}}-toggle"
-					data-toggle=".tl-{{ns}}-create_ticket__text_area">
+					data-toggle=".tl-{{ns}}-create_ticket__fields">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
-				esc_html__('Add a message', 'trustedlogin')
+				esc_html__('Include a message for support?', 'trustedlogin')
 			);
 			$message_fields = sprintf('
-			$output_template .= '
-				<div class="tl-{{ns}}-create_ticket">
+				<fieldset class="tl-{{ns}}-create_ticket__fields">
 					<textarea
 						class="tl-{{ns}}-create_ticket__text_area large-text hidden"
 						name="create_ticket"
@@ -452,14 +451,20 @@ final class Form
 						cols="80"
 						rows="10"
 					></textarea>
+				</fieldset>
 			', esc_html__('Please describe the issue you are having.', 'trustedlogin' ));
+
+			$output_template .= $this->prepare_output( '<div class="tl-{{ns}}-create_ticket">
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
-						{{message_fields}}
+						{{message_summary}}
 					</h2>
 					{{message_textarea}}
-				</div>
-			';
+				</div>', array(
+					'message_summary' => $message_summary,
+					'message_textarea' => $message_fields,
+				)
+			);
 		}
 
 		if ($this->config->get_setting('webhook/url') && $this->config->get_setting('webhook/debug_data')) {
