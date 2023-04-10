@@ -296,7 +296,7 @@ $color-red: #c0461e !default;
 		margin-top: ($vertical-spacing / 2);
 
 		textarea {
-			padding: ( $vertical-spacing / 3 ) $gutter-width * 2;
+			padding: ( $vertical-spacing / 3 ) $gutter-width;
 			font-size: 17px;
 			line-height: 1.375;
 		}
