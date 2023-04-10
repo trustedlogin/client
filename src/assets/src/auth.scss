@@ -292,6 +292,16 @@ $color-red: #c0461e !default;
 		padding: ( $vertical-spacing / 2 ) $gutter-width * 2;
 	}
 
+	.tl-#{$namespace}-ticket__fields {
+		margin-top: ($vertical-spacing / 2);
+
+		textarea {
+			padding: ( $vertical-spacing / 3 ) $gutter-width * 2;
+			font-size: 17px;
+			line-height: 1.375;
+		}
+	}
+
 	.button-danger {
 		border: 1px solid $color-light-grey-900;
 		background: #fff;
