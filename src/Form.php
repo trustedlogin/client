@@ -429,9 +429,9 @@ final class Form {
 				esc_html__( 'Include a message for support?', 'trustedlogin' )
 			);
 			$message_fields  = sprintf( '
-				<fieldset class="tl-{{ns}}-ticket__fields">
+				<fieldset class="tl-{{ns}}-ticket__fields hidden">
 					<textarea
-						class="tl-{{ns}}-ticket-field__message large-text hidden"
+						class="tl-{{ns}}-ticket-field__message large-text"
 						id="tl-{{ns}}-ticket-message"
 						placeholder="%s"
 						cols="50"
@@ -445,10 +445,11 @@ final class Form {
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
 						{{message_summary}}
 					</h2>
-					{{message_textarea}}
+					{{message_fields}}
 				</div>', array(
-					'message_summary'  => $message_summary,
-					'message_textarea' => $message_fields,
+					'ns'              => $this->config->ns(),
+					'message_summary' => $this->prepare_output( $message_summary, array( 'ns' => $this->config->ns() ) ),
+					'message_fields'  => $this->prepare_output( $message_fields, array( 'ns' => $this->config->ns() ) ),
 				)
 			);
 		}
@@ -733,10 +734,11 @@ final class Form {
 					'thead'    => array(),
 					'tfoot'    => array(),
 					'td'       => array( 'class' => array(), 'id' => array(), 'colspan' => array() ),
-					'th'       => array( 'class'   => array(),
-										 'id'      => array(),
-										 'colspan' => array(),
-										 'scope'   => array(),
+					'th'       => array(
+						'class'   => array(),
+						'id'      => array(),
+						'colspan' => array(),
+						'scope'   => array(),
 					),
 					'ul'       => array( 'class' => array(), 'id' => array() ),
 					'li'       => array( 'class' => array(), 'id' => array() ),
@@ -759,6 +761,7 @@ final class Form {
 					'br'       => array(),
 					'strong'   => array(),
 					'em'       => array(),
+					'fieldset' => array( 'class' => array(), 'id' => array() ),
 					'input'    => array(
 						'class'      => array(),
 						'id'         => array(),
@@ -770,10 +773,11 @@ final class Form {
 						'style'      => array(),
 					),
 					'textarea' => array(
-						'class' => array(),
-						'id'    => array(),
-						'rows'  => array(),
-						'cols'  => array(),
+						'class'       => array(),
+						'id'          => array(),
+						'rows'        => array(),
+						'cols'        => array(),
+						'placeholder' => array(),
 					),
 					'button'   => array(
 						'class'     => array(),
