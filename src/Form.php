@@ -448,8 +448,8 @@ final class Form
 						name="create_ticket"
 						id="tl-{{ns}}-create_ticket"
 						placeholder="%s"
-						cols="80"
-						rows="10"
+						cols="50"
+						rows="8"
 					></textarea>
 				</fieldset>
 			', esc_html__('Please describe the issue you are having.', 'trustedlogin' ));
