@@ -153,17 +153,17 @@ $color-red: #c0461e !default;
 		border-radius: $border-radius-large;
 	}
 
+	.tl-#{$namespace}-toggle {
+		cursor: pointer;
+	}
+
 	.tl-#{$namespace}-auth__roles {
 
 		padding: $vertical-spacing $gutter-width $vertical-spacing;
 
-		.tl-#{$namespace}-toggle {
-			cursor: pointer;
-
-			.dashicons {
-				margin-left: 0;
-				vertical-align: middle;
-			}
+		.tl-#{$namespace}-toggle .dashicons {
+			margin-left: 0;
+			vertical-align: middle;
 		}
 
 		.tl-#{$namespace}-auth__role-container {
