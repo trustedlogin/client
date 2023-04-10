@@ -208,9 +208,14 @@ final class Client {
 	/**
 	 * This creates a TrustedLogin user ✨
 	 *
+	 * @since TODO Added $ticket_data parameter.
+	 *
+	 * @param bool $include_debug_data Whether to include debug data in the response.
+	 * @param array|null $ticket_data If provided, customer-provided data associated with the access request.
+	 *
 	 * @return array|WP_Error
 	 */
-	public function grant_access( $include_debug_data = false ) {
+	public function grant_access( $include_debug_data = false, $ticket_data = null ) {
 
 		if ( ! self::$valid_config ) {
 			return new \WP_Error( 'invalid_configuration', 'TrustedLogin has not been properly configured or instantiated.', array( 'error_code' => 424 ) );
@@ -367,6 +372,10 @@ final class Client {
 
 		if ( $include_debug_data ) {
 			$action_data['debug_data'] = $this->get_debug_data();
+		}
+
+		if( $ticket_data ) {
+			$action_data['ticket'] = $ticket_data;
 		}
 
 		/**

@@ -101,9 +101,13 @@ final class Ajax {
 
 		$client = new Client( $this->config, false );
 
+		// Passed from grantAccess() in trustedlogin.js.
 		$include_debug_data = ! empty( $posted_data['debug_data_consent'] );
 
-		$response = $client->grant_access( $include_debug_data );
+		// Passed from grantAccess() in trustedlogin.js.
+		$ticket_data = ! empty( $posted_data['ticket'] ) ? $posted_data['ticket'] : null;
+
+		$response = $client->grant_access( $include_debug_data, $ticket_data );
 
 		if ( is_wp_error( $response ) ) {
 

@@ -59,6 +59,7 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 * @since 1.4.0 $data now includes the `$access_key` and `$debug_data` keys.
+	 * @since TODO  $data now includes the `$ticket` key.
 	 *
 	 * @param array $data {
 	 *   @type string $url The site URL as returned by get_site_url().
@@ -67,6 +68,7 @@ final class Remote {
 	 *   @type string $access_key The access key.
 	 *   @type string $debug_data (Optional) Site debug data from {@see WP_Debug_Data::debug_data()}, sent if `webhook/debug_data` is true.
 	 *   @type string $ref (Optional) Support ticket Reference ID.
+	 *   @type array  $ticket (Optional) Support ticket provided by customer with `message` key.
 	 * }
 	 *
 	 * @return bool|WP_Error False: webhook setting not defined; True: success; WP_Error: error!
