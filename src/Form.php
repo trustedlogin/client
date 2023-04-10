@@ -436,17 +436,16 @@ final class Form
 			$message_summary = sprintf(
 				'<span
 					class="tl-{{ns}}-toggle"
-					data-toggle=".tl-{{ns}}-create_ticket__fields">
+					data-toggle=".tl-{{ns}}-ticket__fields">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
 				esc_html__('Include a message for support?', 'trustedlogin')
 			);
 			$message_fields = sprintf('
-				<fieldset class="tl-{{ns}}-create_ticket__fields">
+				<fieldset class="tl-{{ns}}-ticket__fields">
 					<textarea
-						class="tl-{{ns}}-create_ticket__text_area large-text hidden"
-						name="create_ticket"
-						id="tl-{{ns}}-create_ticket"
+						class="tl-{{ns}}-ticket-field__message large-text hidden"
+						id="tl-{{ns}}-ticket-message"
 						placeholder="%s"
 						cols="50"
 						rows="8"
@@ -454,7 +453,7 @@ final class Form
 				</fieldset>
 			', esc_html__('Please describe the issue you are having.', 'trustedlogin' ));
 
-			$output_template .= $this->prepare_output( '<div class="tl-{{ns}}-create_ticket">
+			$output_template .= $this->prepare_output( '<div class="tl-{{ns}}-ticket">
 					<h2>
 						<span class="dashicons dashicons-format-chat dashicons--large"></span>
 						{{message_summary}}

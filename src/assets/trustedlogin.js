@@ -86,9 +86,9 @@
 		//Add create_ticket value if allowed and set
 		if (tl_obj.create_ticket) {
 			//add value of textarea  with name "create_ticket"
-			var $ticket = $('.tl-pro-block-builder-create_ticket__text_area')
-			if ($ticket && !$ticket.hasClass('hidden') && $ticket.val()) {
-				data.create_ticket = $ticket.val();
+			var $ticket_message = $( '#tl-' + namespace + '-ticket-message' );
+			if ( $ticket_message && $ticket_message.is(':visible') && $ticket_message.val() ) {
+				data.ticket = { 'message': $ticket.val() };
 			}
 		}
 
