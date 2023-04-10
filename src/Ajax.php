@@ -25,6 +25,19 @@ final class Ajax {
 	private $logging;
 
 	/**
+	 * @var string[] Fields that may be included in the support data.
+	 * @see grantAccess() in trustedlogin.js
+	 */
+	private $generate_support_fields = array(
+		'action',
+		'vendor',
+		'_nonce',
+		'reference_id',
+		'debug_data_consent',
+		'ticket',
+	);
+
+	/**
 	 * Cron constructor.
 	 *
 	 * @param Config $config
@@ -51,7 +64,10 @@ final class Ajax {
 	 */
 	public function ajax_generate_support() {
 
-		if ( empty( $_POST['vendor'] ) ) {
+		// Remove any fields that are not in the $ajax_fields array.
+		$posted_data = array_intersect_key( $_POST, array_flip( $this->generate_support_fields ) );
+
+		if ( empty( $posted_data['vendor'] ) ) {
 
 			$this->logging->log( 'Vendor not defined in TrustedLogin configuration.', __METHOD__, 'critical' );
 
@@ -60,7 +76,7 @@ final class Ajax {
 
 		// There are multiple TrustedLogin instances, and this is not the one being called.
 		// This should not occur, since the AJAX action is namespaced.
-		if ( $this->config->ns() !== $_POST['vendor'] ) {
+		if ( $this->config->ns() !== $posted_data['vendor'] ) {
 
 			$this->logging->log( 'Vendor does not match TrustedLogin configuration.', __METHOD__, 'critical' );
 
@@ -68,7 +84,7 @@ final class Ajax {
 			return;
 		}
 
-		if ( empty( $_POST['_nonce'] ) ) {
+		if ( empty( $posted_data['_nonce'] ) ) {
 			wp_send_json_error( array( 'message' => 'Nonce not sent in the request.' ) );
 		}
 
@@ -85,7 +101,7 @@ final class Ajax {
 
 		$client = new Client( $this->config, false );
 
-		$include_debug_data = ! empty( $_POST['debug_data_consent'] );
+		$include_debug_data = ! empty( $posted_data['debug_data_consent'] );
 
 		$response = $client->grant_access( $include_debug_data );
 
