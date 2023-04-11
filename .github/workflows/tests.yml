@@ -36,7 +36,7 @@ jobs:
         run: wp-env start
 
       - name: Install Composer dependencies
-        run: npm run composer install
+        run: composer install
 
       - name: ls vendor
         run: ls vendor
