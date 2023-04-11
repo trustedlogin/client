@@ -18,6 +18,8 @@ Make sure to install [wp-env](https://developer.wordpress.org/block-editor/refer
 	- `wp-env start`
 - Stop local dev
 	- `wp-env stop`
+- If you want to run tests locally, must install composer dev first
+	- `npm run composer install first`
 - Run PHP tests in contatiner
 	- `npm run test:php`
 
