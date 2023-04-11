@@ -88,11 +88,17 @@ $color-red: #c0461e !default;
 		transform: scale( 1.2 );
 	}
 
-	.dashicons--small {
+	.dashicons--small,
+	.dashicons--medium {
 		height: $small-icon-size;
 		width: $small-icon-size;
 		font-size: $small-icon-size;
 		vertical-align: text-top;
+	}
+
+	.dashicons--medium {
+		vertical-align: text-bottom;
+		line-height: 1.2;
 	}
 
 	.dashicons--large {
@@ -147,17 +153,17 @@ $color-red: #c0461e !default;
 		border-radius: $border-radius-large;
 	}
 
+	.tl-#{$namespace}-toggle {
+		cursor: pointer;
+	}
+
 	.tl-#{$namespace}-auth__roles {
 
 		padding: $vertical-spacing $gutter-width $vertical-spacing;
 
-		.tl-#{$namespace}-toggle {
-			cursor: pointer;
-
-			.dashicons {
-				margin-left: 0;
-				vertical-align: middle;
-			}
+		.tl-#{$namespace}-toggle .dashicons {
+			margin-left: 0;
+			vertical-align: middle;
 		}
 
 		.tl-#{$namespace}-auth__role-container {
@@ -228,7 +234,7 @@ $color-red: #c0461e !default;
 
 	h2 {
 		font-size: 1.25em;
-		line-height: 1.75;
+		line-height: 1.7;
 		font-weight: 400;
 		margin: 0;
 
@@ -246,7 +252,7 @@ $color-red: #c0461e !default;
 		&.tl-#{$namespace}-auth__intro {
 			text-align: center;
 			font-size: 2em;
-			line-height: 1.4;
+			line-height: 1.375;
 			padding: $gutter-width $gutter-width * 3;
 		}
 	}
@@ -284,6 +290,16 @@ $color-red: #c0461e !default;
 	.tl-#{$namespace}-auth__intro,
 	.tl-#{$namespace}-auth__details {
 		padding: ( $vertical-spacing / 2 ) $gutter-width * 2;
+	}
+
+	.tl-#{$namespace}-ticket__fields {
+		margin-top: ($vertical-spacing / 2);
+
+		textarea {
+			padding: ( $vertical-spacing / 3 ) $gutter-width;
+			font-size: 17px;
+			line-height: 1.375;
+		}
 	}
 
 	.button-danger {
@@ -411,7 +427,7 @@ $color-red: #c0461e !default;
 		margin: 0 ( $gutter-width * 2 ) ( $vertical-spacing / 2 );
 		h3 {
 			font-size: 1.2em;
-			line-height: 1.4;
+			line-height: 1.375;
 			margin: 12px 0 $vertical-spacing / 2;
 		}
 

@@ -419,7 +419,9 @@ final class SupportUser {
 			'role' => $this->role->get_name(),
 		);
 
-		return get_users( $args );
+		$support_users = get_users( $args );
+
+		return $support_users;
 	}
 
 
