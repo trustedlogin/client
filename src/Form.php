@@ -415,9 +415,6 @@ final class Form {
 				</div>
 			';
 
-		$message_summary = null;
-		$message_fields  = null;
-
 		if ( $this->is_create_ticket_enabled() ) {
 
 			$message_summary = sprintf(
@@ -428,6 +425,7 @@ final class Form {
 				</span>',
 				esc_html__( 'Include a message for support?', 'trustedlogin' )
 			);
+
 			$message_fields  = sprintf( '
 				<fieldset class="tl-{{ns}}-ticket__fields hidden">
 					<textarea
@@ -470,12 +468,11 @@ final class Form {
 		if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
 			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
-			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
+			$roles_summary .= sprintf( '<small class="tl-' . $this->config->ns() . '-toggle" data-toggle=".tl-' . $this->config->ns() . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
 		} else {
 			// translators: %s is replaced with the name of the role (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 		}
-
 
 		$content = array(
 			'ns'                 => $ns,
@@ -485,8 +482,6 @@ final class Form {
 			'debug_data_consent' => $this->get_debug_data_consent_html(),
 			'roles_summary'      => $roles_summary,
 			'caps'               => $this->get_caps_html(),
-			'message_fields'     => $message_fields,
-			'message_textarea'   => $message_textarea,
 		);
 
 		return $this->prepare_output( $output_template, $content );
