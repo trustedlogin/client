@@ -52,14 +52,19 @@ call_user_func( function ( $version ) use ( $argv ) {
 		exit;
 	}
 
-	$assets_dir = $options['assets_dir'] ?? dirname( __FILE__, 2 ) . '/src/assets/';
+	$dirname = dirname( __FILE__, 2 );
+
+	// Point to the new namespace directory instead of the old one.
+	$namespaced_dirname = str_replace( 'trustedlogin/client', $options['namespace'] . '/trustedlogin/client', $dirname );
+
+	$assets_dir = $options['assets_dir'] ?? $namespaced_dirname . '/src/assets/';
 
 	if ( ! file_exists( $assets_dir ) ) {
 		echo 'Assets directory does not exist: ' . $assets_dir . PHP_EOL;
 		exit;
 	}
 
-	$export_dir = $options['export_dir'] ?? dirname( __FILE__, 2 ) . '/src/assets/';
+	$export_dir = $options['export_dir'] ?? $namespaced_dirname . '/src/assets/';
 
 	// Add trailing slash if missing
 	if ( substr( $export_dir, - 1 ) !== '/' ) {
