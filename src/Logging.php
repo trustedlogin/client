@@ -123,6 +123,22 @@ class Logging {
 	}
 
 	/**
+	 * Returns the full path to the log file
+	 *
+	 * @since TODO
+	 *
+	 * @return null|string Path to log file, if exists; null if not instantiated.
+	 */
+	public function get_log_file_path() {
+
+		if ( ! $this->klogger instanceof Logger ) {
+			return null;
+		}
+
+		return $this->klogger->getLogFilePath();
+	}
+
+	/**
 	 * Checks whether a path exists and is writable
 	 *
 	 * @param string $dirpath Path to directory

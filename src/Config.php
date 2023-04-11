@@ -341,6 +341,17 @@ final class Config {
 	}
 
 	/**
+	 * Returns the full settings array
+	 *
+	 * @since TODO
+	 *
+	 * @return array Settings as passed to the constructor.
+	 */
+	public function get_settings() {
+		return $this->settings;
+	}
+
+	/**
 	 * Gets a specific property value within a multidimensional array.
 	 *
 	 * @param array $array The array to search in.

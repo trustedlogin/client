@@ -697,6 +697,59 @@ final class Form {
 		return $footer_output;
 	}
 
+	/**
+	 * Returns the HTML for helpful debug info in the Auth form.
+	 *
+	 * Only shown if ?debug is present in the URL and the user has `manage_options` capability.
+	 *
+	 * @return string
+	 */
+	private function get_debug_html() {
+
+		if ( ! isset( $_GET['debug'] ) ) {
+			return '';
+		}
+
+		if(  ! current_user_can( 'manage_options' ) ) {
+			return '';
+		}
+
+		$remote = new Remote( $this->config, $this->logging );
+		$encryption = new Encryption( $this->config, $remote, $this->logging );
+
+		$items = array(
+			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', 'https://status.trustedlogin.com', is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
+			esc_html__( 'API Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/api_key' ) ),
+			esc_html__( 'License Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/license_key' ) ),
+			esc_html__( 'Log URL', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', str_replace( ABSPATH, get_site_url() . '/', $this->logging->get_log_file_path() ), esc_html__( 'Download the log', 'trustedlogin' ) ),
+			esc_html__( 'Log Level', 'trustedlogin' ) => $this->config->get_setting( 'logging/threshold', esc_html__( '(Default)', 'trustedlogin' ) ),
+			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'webhook/url', '(Empty)' ) ),
+			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', $encryption->get_vendor_public_key(), $encryption->get_remote_encryption_key_url(), esc_html__( 'Verify key', 'trustedlogin' ) ),
+		);
+
+		$debugging_info = '';
+		foreach( $items as $label => $value ) {
+			$debugging_info .= sprintf( '<p><strong>%s</strong>: %s</p>', $label, $value );
+		}
+
+		$debugging_output = '
+		<div class="tl-{{ns}}-auth__debugging">
+            <h3>{{debugging_label}}</h3>
+            {{debugging_info}}
+
+            <h3>{{tl_config_label}}</h3>
+            {{tl_config}}
+        </div>';
+
+		return $this->prepare_output( $debugging_output, array(
+			'ns' => $this->config->ns(),
+			'debugging_label' => esc_html__( 'Debugging Info', 'trustedlogin' ),
+			'debugging_info' => $debugging_info,
+			'tl_config_label' => esc_html__( 'TrustedLogin Config', 'trustedlogin' ),
+			'tl_config' => '<pre>' . print_r( $this->config->get_settings(), true ) . '</pre>',
+		) );
+	}
+
 	private function prepare_output( $template, $content, $wp_kses = true ) {
 
 		$output_html = $template;

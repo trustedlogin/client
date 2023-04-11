@@ -241,6 +241,35 @@ final class Encryption {
 	}
 
 	/**
+	 * Returns the URL for the vendor public key endpoint.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return string URL for the vendor public key endpoint, after being filtered.
+	 */
+	public function get_remote_encryption_key_url() {
+
+		$vendor_website = $this->config->get_setting( 'vendor/website', '' );
+
+		/**
+		 * @see https://docs.trustedlogin.com/Client/hooks#trustedloginnamespacevendorpublic_keywebsite
+		 * @since 1.3.2
+		 * @param string $public_key_website Root URL of the website from where the vendor's public key is fetched. May be different than the vendor/website configuration setting.
+		 */
+		$public_key_website = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/website', $vendor_website );
+
+		/**
+		 * @see https://docs.trustedlogin.com/Client/hooks#trustedloginnamespacevendorpublic_keyendpoint
+		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site.
+		 */
+		$key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
+
+		$public_key_url = trailingslashit( $public_key_website ) . ltrim( $key_endpoint, '/' );
+
+		return $public_key_url;
+	}
+
+	/**
 	 * Fetches the Public Key from the `TrustedLogin-vendor` plugin on support website.
 	 *
 	 * @since 1.0.0
@@ -248,21 +277,6 @@ final class Encryption {
 	 * @return string|WP_Error  If successful, will return the Public Key string. Otherwise WP_Error on failure.
 	 */
 	private function get_remote_encryption_key() {
-
-		$vendor_website = $this->config->get_setting( 'vendor/website', '' );
-
-		/**
-		 * @param string $public_key_website Root URL of the website from where the vendor's public key is fetched. May be different than the vendor/website configuration setting.
-		 * @since 1.3.2
-		 */
-		$public_key_website = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/website', $vendor_website );
-
-		/**
-		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site
-		 */
-		$public_key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
-
-		$url = trailingslashit( $public_key_website ) . $public_key_endpoint;
 
 		$headers = array(
 			'Accept'       => 'application/json',
@@ -275,6 +289,8 @@ final class Encryption {
 			'httpversion' => '1.1',
 			'headers'     => $headers
 		);
+
+		$url = $this->get_remote_encryption_key_url();
 
 		$response = wp_remote_request( $url, $request_options );
 

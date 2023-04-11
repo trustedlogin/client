@@ -453,6 +453,13 @@ $color-red: #c0461e !default;
 		}
 	}
 
+	.tl-#{$namespace}-auth__debugging {
+		text-align: left;
+		max-height: 25vh;
+		overflow-y: auto;
+		text-align: left;
+	}
+
 	footer {
 		padding: $vertical-spacing / 2;
 
