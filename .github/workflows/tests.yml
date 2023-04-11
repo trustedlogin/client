@@ -20,6 +20,9 @@ jobs:
           cache: 'npm'
           node-version-file: '.nvmrc'
 
+      - name: Node version
+        run: node -v
+
       - name: Setup PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
@@ -34,6 +37,9 @@ jobs:
 
       - name: Install Composer dependencies
         run: npm run composer install
+
+      - name: ls vendor
+        run: ls vendor
 
       - name: Install NPM dependencies
         run: npm install
