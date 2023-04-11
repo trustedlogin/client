@@ -18,6 +18,7 @@
     ],
     "minimum-stability": "dev",
     "prefer-stable": true,
+    "bin": ["bin/build-sass"],
     "autoload": {
         "psr-4": {
             "TrustedLogin\\": "src/"
@@ -27,6 +28,7 @@
       "php": ">=5.3.0"
     },
     "require-dev": {
+      "scssphp/scssphp": "^1",
       "ext-curl": "*",
       "ext-json": "*",
       "yoast/phpunit-polyfills": "^1.0"
