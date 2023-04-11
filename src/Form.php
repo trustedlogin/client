@@ -398,6 +398,8 @@ final class Form {
 			return $this->prepare_output( $output_template, $content, false );
 		}
 
+		$ns = $this->config->ns();
+
 		$output_template = '
 				<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 				<div class="tl-{{ns}}-auth__roles">
@@ -445,9 +447,9 @@ final class Form {
 					</h2>
 					{{message_fields}}
 				</div>', array(
-					'ns'              => $this->config->ns(),
-					'message_summary' => $this->prepare_output( $message_summary, array( 'ns' => $this->config->ns() ) ),
-					'message_fields'  => $this->prepare_output( $message_fields, array( 'ns' => $this->config->ns() ) ),
+					'ns'              => $ns,
+					'message_summary' => $this->prepare_output( $message_summary, array( 'ns' => $ns ) ),
+					'message_fields'  => $this->prepare_output( $message_fields, array( 'ns' => $ns ) ),
 				)
 			);
 		}
@@ -468,7 +470,7 @@ final class Form {
 		if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
 			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
-			$roles_summary .= sprintf( '<small class="tl-' . $this->config->ns() . '-toggle" data-toggle=".tl-' . $this->config->ns() . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
+			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
 		} else {
 			// translators: %s is replaced with the name of the role (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
