@@ -373,6 +373,12 @@ final class Form {
 		return $intro;
 	}
 
+	/**
+	 * Returns whether sending support ticket to the vendor is enabled.
+	 *
+	 * @since TODO
+	 * @return bool
+	 */
 	private function is_create_ticket_enabled() {
 
 		// There's already an existing ticket; no need to create another one.
@@ -381,6 +387,14 @@ final class Form {
 		}
 
 		return $this->config->get_setting( 'webhook/create_ticket', false );
+	/**
+	 * Returns whether sending debug data to the support vendor is enabled.
+	 *
+	 * @since TODO
+	 * @return bool
+	 */
+	private function is_debug_data_enabled() {
+		return $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data', false );
 	}
 
 	private function get_details_html() {
@@ -454,7 +468,7 @@ final class Form {
 			);
 		}
 
-		if ( $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data' ) ) {
+		if ( $this->is_debug_data_enabled() ) {
 			$output_template .= '
 				<div class="tl-{{ns}}-auth__debug">
 					{{debug_data_consent}}
