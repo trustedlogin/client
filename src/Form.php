@@ -732,8 +732,7 @@ final class Form {
 			$debugging_info .= sprintf( '<p><strong>%s</strong>: %s</p>', $label, $value );
 		}
 
-		$debugging_output = '
-		<div class="tl-{{ns}}-auth__debugging">
+		$debugging_output = '<div class="tl-{{ns}}-auth__admin_debugging">
             <h3>{{debugging_label}}</h3>
             {{debugging_info}}
 
