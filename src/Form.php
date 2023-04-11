@@ -857,7 +857,7 @@ final class Form {
 			);
 		}
 
-		return normalize_whitespace( $output_html );
+		return $output_html;
 	}
 
 	/**
