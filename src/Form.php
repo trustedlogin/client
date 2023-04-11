@@ -386,7 +386,9 @@ final class Form {
 			return false;
 		}
 
-		return $this->config->get_setting( 'webhook/create_ticket', false );
+		return $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/create_ticket', false );
+	}
+
 	/**
 	 * Returns whether sending debug data to the support vendor is enabled.
 	 *
