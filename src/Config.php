@@ -78,10 +78,10 @@ final class Config {
 			'about_live_access_url' => null,
 		),
 		'webhook'        => array(
-			'url'        => null,
-			'debug_data' => false,
+			'url'           => null,
+			'debug_data'    => false,
+			'create_ticket' => false,
 		),
-		'create_ticket'  => false,
 	);
 
 	/**

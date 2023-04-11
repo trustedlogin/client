@@ -380,7 +380,7 @@ final class Form {
 			return false;
 		}
 
-		return $this->config->get_setting( 'create_ticket', false );
+		return $this->config->get_setting( 'webhook/create_ticket', false );
 	}
 
 	private function get_details_html() {
