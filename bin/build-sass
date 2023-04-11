@@ -76,7 +76,7 @@ call_user_func( function ( $version ) use ( $argv ) {
 		exit;
 	}
 
-	$relative_images_dir_path = '';
+	$relative_images_dir_path = './';
 	if ( isset( $options['relative_images_dir'] ) ) {
 
 		$relative_images_dir_path = $options['relative_images_dir'];
@@ -90,9 +90,7 @@ call_user_func( function ( $version ) use ( $argv ) {
 	$scss_namespace = strtolower( $options['namespace'] );
 	$scss_prefix    = '/*! TrustedLogin CSS dynamically compiled by ' . $argv[0] . '. See https://docs.trustedlogin.com  */';
 	$scss_prefix    .= '$namespace: "' . $scss_namespace . '" !default;' . PHP_EOL;
-	if ( $relative_images_dir_path ) {
-		$scss_prefix .= '$path: "' . $relative_images_dir_path . '" !default;' . PHP_EOL;
-	}
+	$scss_prefix .= '$path: "' . $relative_images_dir_path . '" !default;' . PHP_EOL;
 	$inputFile  = $assets_dir . 'src/trustedlogin.scss';
 	$outputFile = $export_dir . 'trustedlogin.css';
 
