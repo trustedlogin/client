@@ -25,10 +25,10 @@
         }
     },
     "require": {
-      "php": ">=5.3.0"
+      "php": ">=5.3.0",
+      "scssphp/scssphp": "^1"
     },
     "require-dev": {
-      "scssphp/scssphp": "^1",
       "ext-curl": "*",
       "ext-json": "*",
       "yoast/phpunit-polyfills": "^1.0"
