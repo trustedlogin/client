@@ -4,6 +4,8 @@
 
 - Added the ability for users to create support tickets when granting access—to enable, set `webhook/create_ticket` to `true` in the configuration array
   - Added second parameter, `$ticket_data` to `Client::grant_access()` method
+  - Added `ticket` to the webhook data, with the following keys:
+	- `message` (string)
 - Added `Config::get_settings()` public method to get all settings
 - Added `Encryption::get_remote_encryption_key_url()` public method to get the final URL used to fetch the vendor public key
 - Added `Logging::get_log_file_path()` public method to get the full path to the log file
