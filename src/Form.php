@@ -249,6 +249,7 @@ final class Form {
 			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
+			'admin_debug'             => $this->get_admin_debug_html(),
 		);
 
 		$auth_screen_template = '
@@ -275,6 +276,7 @@ final class Form {
 					{{footer}}
 					{{reference}}
 				</footer>
+				{{admin_debug}}
 			</div>';
 
 		/**
@@ -704,9 +706,11 @@ final class Form {
 	 *
 	 * Only shown if ?debug is present in the URL and the user has `manage_options` capability.
 	 *
+	 * @since 1.5.0
+	 *
 	 * @return string
 	 */
-	private function get_debug_html() {
+	private function get_admin_debug_html() {
 
 		if ( ! isset( $_GET['debug'] ) ) {
 			return '';
