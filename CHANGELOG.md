@@ -1,6 +1,20 @@
 # Changelog for TrustedLogin Client
 
-## 1.4.0 [WIP]
+## 1.5.0 (2022-04-13)
+
+- Added the ability for users to create support tickets when granting access—to enable, set `webhook/create_ticket` to `true` in the configuration array
+  - Added second parameter, `$ticket_data` to `Client::grant_access()` method
+  - Added `ticket` to the webhook data, with the following keys:
+	- `message` (string)
+- Added `Config::get_settings()` public method to get all settings
+- Added `Encryption::get_remote_encryption_key_url()` public method to get the final URL used to fetch the vendor public key
+- Added `Logging::get_log_file_path()` public method to get the full path to the log file
+- Filtered the `$_POST` request that generates access to allow only defined fields
+- Created new `Form.php` file and `Form` class to handle form rendering
+  - Moved form-related methods from `Admin` to `Form`
+- Modified `auth.scss` to support new ticket fields, admin debugging rendering, and improve styling
+
+## 1.4.0 (2023-03-01)
 
 - Added ability to send debug data, generated using the WordPress Site Health report, via webhook
 - Added `Client::get_debug_data()` private method

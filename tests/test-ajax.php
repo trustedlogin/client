@@ -36,7 +36,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	private $_real_error_level;
 
-	public function setUp() {
+	public function setUp() :void {
 
 		$this->_real_error_level = error_reporting();
 
@@ -84,7 +84,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	}
 
-	public function tearDown() {
+	public function tearDown() : void {
 
 		parent::tearDown();
 

@@ -17,8 +17,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 	 */
 	private $config_array;
 
-	public function setUp() {
-
+	public function setUp() :void {
 		parent::setUp();
 
 		$config = array(

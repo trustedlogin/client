@@ -21,8 +21,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 
 	public static $openssl_crypto_strong = true;
 
-	public function setUp() {
-
+	public function setUp() :void {
 		parent::setUp();
 
 		$config = array(

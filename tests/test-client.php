@@ -32,7 +32,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 	 */
 	private $logging;
 
-	public function setUp() {
+	public function setUp() :void {
 
 		parent::setUp();
 
@@ -70,7 +70,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
 	}
 
-	public function tearDown() {
+	public function tearDown() : void {
 		parent::tearDown();
 	}
 

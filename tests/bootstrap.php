@@ -7,6 +7,9 @@
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
+//include autoloader
+require_once dirname( dirname( __FILE__ ) ) . '/vendor/autoload.php';
+
 if ( ! defined( 'TL_DOING_TESTS' ) ) {
 	define( 'TL_DOING_TESTS', true );
 }

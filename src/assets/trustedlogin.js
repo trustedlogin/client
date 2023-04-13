@@ -1,12 +1,10 @@
 /* global ajaxurl,jQuery,tl_obj */
-(function( $ ) {
+(function ($) {
 
 	'use strict';
 
-	var $body = $( 'body' ),
-		namespace = tl_obj.vendor.namespace,
-		$tl_container = $( '.tl-' + namespace + '-auth' ),
-		copy_button_timer = null,
+	var $body = $( 'body' ), namespace = tl_obj.vendor.namespace,
+		$tl_container = $( '.tl-' + namespace + '-auth' ), copy_button_timer = null,
 		second_status = null;
 
 	$body.on( 'click', tl_obj.selector, function ( e ) {
@@ -28,21 +26,21 @@
 		} ) );
 	} );
 
-	function grantAccess( $button ){
+	function grantAccess( $button ) {
 
 		$button.addClass( 'disabled' );
 
-		if ( 'extend' === $button.data('access') ){
+		if ( 'extend' === $button.data( 'access' ) ) {
 			outputStatus( tl_obj.lang.status.extending.content, 'pending' );
 		} else {
 			outputStatus( tl_obj.lang.status.pending.content, 'pending' );
 		}
 
-		second_status = setTimeout( function(){
+		second_status = setTimeout( function () {
 			outputStatus( tl_obj.lang.status.syncing.content, 'pending' );
 		}, 3000 );
 
-		var remote_error = function( response ) {
+		var remote_error = function ( response ) {
 
 			clearTimeout( second_status );
 
@@ -57,7 +55,7 @@
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.data.message, 'error' );
 			} else if ( typeof response.responseJSON === 'object' ) {
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseJSON.data.message, 'error' );
-			} else if( 'parsererror' === response.statusText ) {
+			} else if ( 'parsererror' === response.statusText ) {
 				outputStatus( tl_obj.lang.status.failed.content + ' ' + response.responseText, 'error' );
 			}
 		};
@@ -82,20 +80,32 @@
 			'debug_data_consent': $( '#tl-' + namespace + '-debug-data-consent:checked' ).length,
 		};
 
+
+		//Add create_ticket value if allowed and set
+		if ( tl_obj.create_ticket ) {
+			//add value of textarea  with name "create_ticket"
+			var $ticket_message = $( '#tl-' + namespace + '-ticket-message' );
+			if ( $ticket_message && $ticket_message.is( ':visible' ) && $ticket_message.val() ) {
+				data.ticket = {
+					'message': $ticket_message.val(),
+				};
+			}
+		}
+
 		if ( tl_obj.debug ) {
 			console.log( data );
 		}
 
-		$.ajax({
+		$.ajax( {
 			url: tl_obj.ajaxurl,
 			type: 'POST',
 			dataType: 'json',
 			data: data,
 			success: remote_success,
 			error: remote_error
-		}).always( function( response ) {
+		} ).always( function ( response ) {
 
-			if ( ! tl_obj.debug ) {
+			if ( !tl_obj.debug ) {
 				return;
 			}
 
@@ -105,32 +115,32 @@
 				console.log( 'TrustedLogin support login URL:' );
 				console.log( response.data.site_url + '/' + response.data.endpoint + '/' + response.data.identifier );
 			}
-		});
+		} );
 	}
 
-	function outputStatus( content, type ){
+	function outputStatus( content, type ) {
 
 		var responseClass = 'tl-' + namespace + '-auth__response';
 
 		var $responseDiv = $tl_container.find( '.' + responseClass );
 
-		if ( 0 === $responseDiv.length ){
+		if ( 0 === $responseDiv.length ) {
 			if ( tl_obj.debug ) {
-				console.log( responseClass + ' not found');
+				console.log( responseClass + ' not found' );
 			}
 			return;
 		}
 
 		// Reset the class and set the type for contextual styling.
 		$responseDiv
-			.attr('class', responseClass).addClass('tl-'+ namespace + '-auth__response_' + type )
+			.attr( 'class', responseClass ).addClass( 'tl-' + namespace + '-auth__response_' + type )
 			.text( content );
 
 		/**
 		 * Handle button actions/labels/etc to it's own function
 		 */
-		if ( 'error' === type ){
-			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).removeClass('disabled');
+		if ( 'error' === type ) {
+			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).removeClass( 'disabled' );
 			$body.off( 'click', tl_obj.selector );
 		}
 
@@ -143,7 +153,7 @@
 	$( '#tl-' + namespace + '-access-key', $tl_container ).on( 'click', function ( e ) {
 		e.preventDefault();
 
-		$( this ).trigger('focus').trigger('select');
+		$( this ).trigger( 'focus' ).trigger( 'select' );
 
 		return false;
 	} );
@@ -163,9 +173,9 @@
 	/**
 	 * Used for copy-to-clipboard functionality
 	 */
-	$( '.tl-' + namespace +'-auth__accesskey_copy', $tl_container ).on( 'click', function() {
+	$( '.tl-' + namespace + '-auth__accesskey_copy', $tl_container ).on( 'click', function () {
 		var $copyButton = $( this );
-		var $copyText = $( this ).find('span');
+		var $copyText = $( this ).find( 'span' );
 
 		copyToClipboard( $( '.tl-' + namespace + '-auth__accesskey_field' ).val() );
 

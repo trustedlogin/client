@@ -56,8 +56,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 	public static $functions_not_exist = array();
 
-	public function setUp() {
-
+	public function setUp() :void {
 		parent::setUp();
 
 		$config = array(
@@ -97,7 +96,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
 	}
 
-	public function tearDown() {
+	public function tearDown() :void {
 		parent::tearDown();
 	}
 

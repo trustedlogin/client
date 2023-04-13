@@ -16,14 +16,21 @@
             "homepage": "https://www.trustedlogin.com"
         }
     ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "bin": ["bin/build-sass"],
     "autoload": {
         "psr-4": {
             "TrustedLogin\\": "src/"
         }
     },
-    "require": {
-        "php": ">=5.3.0",
-        "ext-curl": "*",
-        "ext-json": "*"
+    "require-dev": {
+      "php": ">=5.3.0",
+      "ext-curl": "*",
+      "ext-json": "*",
+      "yoast/phpunit-polyfills": "^1.0"
+    },
+    "scripts": {
+        "test": "phpunit"
     }
 }

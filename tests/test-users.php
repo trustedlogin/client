@@ -34,7 +34,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 	static $default_roles;
 
-	public function setUp() {
+	public function setUp() :void {
 		global $wpdb;
 
 		parent::setUp();
