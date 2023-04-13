@@ -52,10 +52,14 @@ call_user_func( function ( $version ) use ( $argv ) {
 		exit;
 	}
 
-	$dirname = dirname( __FILE__, 2 );
+	$plugin_dirname = dirname( __FILE__, 5 ) . '/vendor-prefixed/';
 
-	// Point to the new namespace directory instead of the old one.
-	$namespaced_dirname = str_replace( 'trustedlogin/client', $options['namespace'] . '/trustedlogin/client', $dirname );
+	if ( file_exists(  $plugin_dirname ) ) {
+		$namespaced_dirname = $plugin_dirname . 'trustedlogin/client';
+	} else {
+		$dirname = dirname( __FILE__, 2 );
+		$namespaced_dirname = str_replace( 'trustedlogin/client', $options['namespace'] . '/trustedlogin/client', $dirname );
+	}
 
 	$assets_dir = $options['assets_dir'] ?? $namespaced_dirname . '/src/assets/';
 
@@ -112,4 +116,4 @@ call_user_func( function ( $version ) use ( $argv ) {
 		echo $e->getMessage();
 	}
 
-}, '0.1.0' );
+}, '0.2' );
