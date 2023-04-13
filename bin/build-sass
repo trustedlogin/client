@@ -63,6 +63,9 @@ call_user_func( function ( $version ) use ( $argv ) {
 
 	$assets_dir = $options['assets_dir'] ?? $namespaced_dirname . '/src/assets/';
 
+	// Add a slash to the end of the assets directory if it doesn't exist
+	$assets_dir = substr( $assets_dir, - 1 ) === '/' ? $assets_dir : $assets_dir . '/';
+
 	if ( ! file_exists( $assets_dir ) ) {
 		echo 'Assets directory does not exist: ' . $assets_dir . PHP_EOL;
 		exit;
