@@ -125,7 +125,7 @@ class Logging {
 	/**
 	 * Returns the full path to the log file
 	 *
-	 * @since TODO
+	 * @since 1.5.0
 	 *
 	 * @return null|string Path to log file, if exists; null if not instantiated.
 	 */

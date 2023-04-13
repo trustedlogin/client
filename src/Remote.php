@@ -60,7 +60,7 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 * @since 1.4.0 $data now includes the `$access_key` and `$debug_data` keys.
-	 * @since TODO  $data now includes the `$ticket` key.
+	 * @since 1.5.0 $data now includes the `$ticket` key.
 	 *
 	 * @param array $data {
 	 *   @type string $url The site URL as returned by get_site_url().

@@ -9,7 +9,7 @@
  *
  * 0. If you haven't already, sign up for a TrustedLogin account {@see https://www.trustedlogin.com}
  * 1. Namespace the installation ({@see https://www.trustedlogin.com/configuration/} to learn how)
- * 2. Instantiate this class with a configuration array (really, {@see https://www.trustedlogin.com/configuration/} for more info)
+ * 2. Instantiate this class with a configuration object (really, go see {@see https://www.trustedlogin.com/configuration/} for more info)
  *
  * Class Client
  *
@@ -37,7 +37,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.4.0';
+	const VERSION = '1.5.0';
 
 	/**
 	 * @var Config
@@ -209,7 +209,7 @@ final class Client {
 	/**
 	 * This creates a TrustedLogin user ✨
 	 *
-	 * @since TODO Added $ticket_data parameter.
+	 * @since 1.5.0 Added $ticket_data parameter.
 	 *
 	 * @param bool $include_debug_data Whether to include debug data in the response.
 	 * @param array|null $ticket_data If provided, customer-provided data associated with the access request.

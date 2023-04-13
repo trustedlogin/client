@@ -343,7 +343,7 @@ final class Config {
 	/**
 	 * Returns the full settings array
 	 *
-	 * @since TODO
+	 * @since 1.5.0
 	 *
 	 * @return array Settings as passed to the constructor.
 	 */

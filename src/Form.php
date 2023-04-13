@@ -20,11 +20,13 @@ use \WP_User;
 
 /**
  * Creates the TrustedLogin support user form.
- *    - Makes the HTML
+ *  - Makes the HTML
  *  - Manages assets
  * Does not
- *    - Handle the form submission ./Ajax.php
- *  - Setup the menu ./Admin.php
+ *  - Handle the form submission. {@see ./Ajax.php }
+ *  - Setup the menu {@see ./Admin.php}
+ *
+ * @since 1.5.0
  */
 final class Form {
 
@@ -376,7 +378,7 @@ final class Form {
 	/**
 	 * Returns whether sending support ticket to the vendor is enabled.
 	 *
-	 * @since TODO
+	 * @since 1.5.0
 	 * @return bool
 	 */
 	private function is_create_ticket_enabled() {
@@ -392,7 +394,7 @@ final class Form {
 	/**
 	 * Returns whether sending debug data to the support vendor is enabled.
 	 *
-	 * @since TODO
+	 * @since 1.5.0
 	 * @return bool
 	 */
 	private function is_debug_data_enabled() {
