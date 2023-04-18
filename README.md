@@ -12,13 +12,15 @@ Easily and securely log in to your customers sites when providing support.
 
 ### Local Development And Testing
 
-Make sure to install [wp-env](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) globally first -- `npm -g i @wordpress/env`.
+Make sure to install [wp-env](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) globally first by running `npm -g i @wordpress/env`.
 
 - Start local dev
 	- `wp-env start`
 - Stop local dev
 	- `wp-env stop`
-- Run PHP tests in contatiner
+- If you want to run tests locally, you must install composer dev first
+	- `npm run composer`
+- Run the PHP tests in container
 	- `npm run test:php`
 
 #### WordPress 4.1+ support

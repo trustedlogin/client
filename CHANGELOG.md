@@ -1,6 +1,10 @@
 # Changelog for TrustedLogin Client
 
-## 1.5.0 (2022-04-13)
+## 1.5.1 (2023-04-18)
+
+- Fixed PHP error caused by HEREDOC template formatting in `Form.php`
+
+## 1.5.0 (2023-04-13)
 
 - Added the ability for users to create support tickets when granting access—to enable, set `webhook/create_ticket` to `true` in the configuration array
   - Added second parameter, `$ticket_data` to `Client::grant_access()` method
