@@ -20,17 +20,29 @@ jobs:
           cache: 'npm'
           node-version-file: '.nvmrc'
 
+      - name: Node version
+        run: node -v
+
       - name: Setup PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.4'
           tools: composer:v2
 
+      - name: Install wp-env
+        run: npm -g i @wordpress/env
+
+      - name: Start the wp-env testing environment
+        run: wp-env start
+
+      - name: Install Composer dependencies
+        run: composer install
+
+      - name: ls vendor
+        run: ls vendor
+
       - name: Install NPM dependencies
         run: npm install
-
-      - name: Start the Docker testing environment
-        run: npm run env start --xdebug=coverage
 
       - name: Ensure uploads dir exists first
         run: mkdir -p wordpress/wp-content/uploads
