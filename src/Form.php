@@ -1227,7 +1227,7 @@ final class Form {
 		<h3>%2\$s</h3>
 		<p>%4\$s <samp>%5\$s</samp></p>
 	</%3\$s>
-	EOD;
+EOD;
 			$access_key_output   = sprintf(
 				$access_key_template,
 				/* %1$s */
@@ -1253,7 +1253,7 @@ final class Form {
 			<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button" aria-live="off" title="%7\$s"><span class="screen-reader-text">%5\$s</span></button>
 		</div>
 	</%6\$s>
-	EOD;
+EOD;
 			$access_key_output   = sprintf(
 				$access_key_template,
 				/* %1$s */
