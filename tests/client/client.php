@@ -11,7 +11,7 @@
  */
 spl_autoload_register(function ($class) {
     $prefix = 'TrustedLogin\\';
-    $base_dir = __DIR__ . '/src/';
+    $base_dir = dirname(__DIR__,3) . '/src/';
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
         return;
