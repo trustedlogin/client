@@ -1,4 +1,9 @@
+![TrustedLogin_TrustedLogin Logo Horizontal](https://user-images.githubusercontent.com/870979/234620734-0dbe5771-7b45-45e2-a68f-428dd92f9a3a.svg)
+
 # TrustedLogin SDK
+
+**[Download the Latest Version](https://github.com/trustedlogin/client/archive/refs/heads/main.zip)**
+
 Easily and securely log in to your customers sites when providing support.
 
 ### [🔍 See the Changelog](https://github.com/trustedlogin/client/blob/main/CHANGELOG.md)
