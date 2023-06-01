@@ -4,3 +4,5 @@
 @import "buttons";
 @import "global";
 
+@include trustedlogin-auth( $namespace );
+@include trustedlogin-button( $namespace );
