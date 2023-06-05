@@ -78,21 +78,30 @@ final class Form {
 
 		$registered = array();
 
-		$registered['trustedlogin-js'] = wp_register_script(
-			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting( 'paths/js' ),
-			array( 'jquery', 'wp-a11y' ),
-			Client::VERSION,
-			true
-		);
+		// Already registered by the integrating code.
+		if ( wp_script_is( 'trustedlogin-' . $this->config->ns() ) ) {
+			$registered['trustedlogin-js'] = true;
+		} else {
+			$registered['trustedlogin-js'] = wp_register_script(
+				'trustedlogin-' . $this->config->ns(),
+				$this->config->get_setting( 'paths/js' ),
+				array( 'jquery', 'wp-a11y' ),
+				Client::VERSION,
+				true
+			);
+		}
 
-		$registered['trustedlogin-css'] = wp_register_style(
-			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting( 'paths/css' ),
-			array(),
-			Client::VERSION,
-			'all'
-		);
+		if ( wp_style_is( 'trustedlogin-' . $this->config->ns() ) ) {
+			$registered['trustedlogin-css'] = true;
+		} else {
+			$registered['trustedlogin-css'] = wp_register_style(
+				'trustedlogin-' . $this->config->ns(),
+				$this->config->get_setting( 'paths/css' ),
+				array(),
+				Client::VERSION,
+				'all'
+			);
+		}
 
 		$registered_filtered = array_filter( $registered );
 
