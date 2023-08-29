@@ -192,16 +192,27 @@ final class SupportUser {
 		}
 
 		$user_email = $this->config->get_setting( 'vendor/email' );
+		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
 			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
+			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
 		}
 
-		if ( email_exists( $user_email ) ) {
+		$user_id_of_email = email_exists( $user_email );
+
+		if ( $user_id_of_email ) {
 			$this->logging->log( 'Support User not created; a user with that email already exists: ' . $user_email, __METHOD__, 'warning' );
 
-			return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+			// Only allow the user to be created if the email is not hashed; that way, it's not possible to accidentally
+			// create a user with the same email as an existing user.
+			if ( ! $allow_existing_user_match ) {
+				return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+			}
+
+			// If the user already exists and the email matches the hash, use that user.
+			return $user_id_of_email;
 		}
 
 		$user_data = array(
