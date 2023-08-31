@@ -43,7 +43,7 @@ final class Encryption {
 	/**
 	 * @var string Endpoint path to Vendor public key.
 	 */
-	private $vendor_public_key_endpoint = 'wp-json/trustedlogin/v1/public_key';
+	private $vendor_public_key_endpoint = '/trustedlogin/v1/public_key';
 
 	/**
 	 * Encryption constructor.
@@ -264,7 +264,7 @@ final class Encryption {
 		 */
 		$key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
 
-		$public_key_url = trailingslashit( $public_key_website ) . ltrim( $key_endpoint, '/' );
+		$public_key_url = add_query_arg( array( 'rest_route' => $key_endpoint ), trailingslashit( $public_key_website ) );
 
 		return $public_key_url;
 	}
