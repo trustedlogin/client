@@ -391,15 +391,20 @@ final class Config {
 			return $default;
 		}
 
-		if ( isset( $array[ $prop ] ) ) {
-			$value = $array[ $prop ];
-		} else {
-			$value = $default;
+		// Directly fetch the value if it exists, otherwise use the default.
+		$value = isset( $array[ $prop ] ) ? $array[ $prop ] : $default;
+
+		// Special handling for zero and false.
+		if ( 0 === $value || false === $value ) {
+			return $value;
 		}
 
-		$value_is_zero = 0 === $value;
+		// If the value is empty and a default is provided, use the default.
+		if ( empty( $value ) && null !== $default ) {
+			return $default;
+		}
 
-		return ( empty( $value ) && ! $value_is_zero ) && $default !== null ? $default : $value;
+		return $value;
 	}
 
 	/**
