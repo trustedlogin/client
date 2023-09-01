@@ -75,13 +75,23 @@ final class SupportRole {
 	 * @return string
 	 */
 	public function get_name() {
-		return (string) $this->role_name;
+
+		if ( $this->config->get_setting( 'clone_role' ) ) {
+			return (string) $this->role_name;
+		}
+
+		return (string) $this->config->get_setting( 'role' );
 	}
 
 	/**
 	 * @return string Sanitized with {@uses sanitize_title_with_dashes}
 	 */
 	private function set_name( ) {
+
+		// If we're not cloning a role, return the existing role name.
+		if ( ! $this->config->get_setting( 'clone_role' ) ) {
+			return (string) $this->config->get_setting( 'role' );
+		}
 
 		$default = $this->config->ns() . '-support';
 
@@ -96,6 +106,37 @@ final class SupportRole {
 		}
 
 		return sanitize_title_with_dashes( $role_name );
+	}
+
+	/**
+	 * Returns the Support Role, creating it if it doesn't already exist.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return \WP_Role|\WP_Error Pre-existing role, if successful. WP_Error if failure.
+	 */
+	public function get() {
+
+		// If cloning a role, create and return it.
+		if ( $this->config->get_setting( 'clone_role' ) ) {
+			return $this->create();
+		}
+
+		// Otherwise, confirm and return the existing role.
+		$role_slug = $this->config->get_setting( 'role' );
+
+		$role = get_role( $role_slug );
+
+		if ( is_null( $role ) ) {
+
+			$error = new \WP_Error( 'role_does_not_exist', 'Error: the role does not exist: ' . $role_slug );
+
+			$this->logging->log( $error->get_error_message(), __METHOD__, 'error' );
+
+			return $error;
+		}
+
+		return $role;
 	}
 
 	/**
