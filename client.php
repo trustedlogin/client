@@ -49,6 +49,7 @@ $config = [
     'webhook' => [
 		'url' => 'https://example.com/webhook',
 		'create_ticket' => true,
+		'debug_data' => true,
 	]
 ];
 $config = new \TrustedLogin\Config( $config );
