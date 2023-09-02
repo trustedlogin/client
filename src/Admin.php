@@ -160,10 +160,12 @@ final class Admin {
 
 		$admin_bar->add_menu( array(
 			'id'    => 'tl-' . $this->config->ns() . '-revoke',
-			'title' => $icon . esc_html__( 'Revoke TrustedLogin', 'trustedlogin' ),
+			'title' => $icon . esc_html__( 'Revoke Access', 'trustedlogin' ),
 			'href'  => $this->support_user->get_revoke_url( 'all' ),
+			'parent' => 'top-secondary',
 			'meta'  => array(
 				'class' => 'tl-destroy-session',
+				'title' => esc_html__( 'You are logged in as a support user. Click to permanently revoke access.', 'trustedlogin' ),
 			),
 		) );
 	}

@@ -495,12 +495,20 @@ final class Form {
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
 		$expire_desc = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
+
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
-		if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
-			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
-			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
-			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
+
+		if( $this->config->get_setting( 'clone_role' ) ) {
+
+			// translators: %s is replaced with the name of the role (e.g. "Administrator")
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role based on %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
+
+			if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
+				$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View modified role capabilities', 'trustedlogin' ) );
+			}
+
 		} else {
+
 			// translators: %s is replaced with the name of the role (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 		}

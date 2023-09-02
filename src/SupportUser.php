@@ -115,7 +115,6 @@ final class SupportUser {
 	public function exists() {
 
 		$args = array(
-			'role'         => $this->role->get_name(),
 			'number'       => 1,
 			'meta_key'     => $this->user_identifier_meta_key,
 			'meta_value'   => '',
@@ -157,7 +156,7 @@ final class SupportUser {
 	}
 
 	/**
-	 * Create the Support User with custom role.
+	 * Create the Support User.
 	 *
 	 * @since 1.0.0
 	 *
@@ -176,19 +175,10 @@ final class SupportUser {
 			return new \WP_Error( 'user_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
 		}
 
-		$role_exists = $this->role->create();
+		$role = $this->role->get();
 
-		if ( is_wp_error( $role_exists ) ) {
-
-			$error_output = $role_exists->get_error_message();
-
-			if ( $error_data = $role_exists->get_error_data() ) {
-				$error_output .= ' ' . print_r( $error_data, true );
-			}
-
-			$this->logging->log( $error_output, __METHOD__, 'error' );
-
-			return $role_exists;
+		if ( is_wp_error( $role ) ) {
+			return $role;
 		}
 
 		$user_email = $this->config->get_setting( 'vendor/email' );
@@ -220,7 +210,7 @@ final class SupportUser {
 			'user_login'      => $this->generate_unique_username(),
 			'user_email'      => $user_email,
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
-			'role'            => $this->role->get_name(),
+			'role'            => $role->name,
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
 			'user_registered' => date( 'Y-m-d H:i:s', time() ),
 		);
@@ -379,7 +369,6 @@ final class SupportUser {
 		}
 
 		$args = array(
-			'role'       => $this->role->get_name(),
 			'number'     => 1,
 			'meta_key'   => $this->user_identifier_meta_key,
 			'meta_value' => $user_identifier_hash,
@@ -411,7 +400,7 @@ final class SupportUser {
 	}
 
 	/**
-	 * Get all users with the support role
+	 * Get all users with the support role.
 	 *
 	 * @since 1.0.0
 	 *
@@ -427,7 +416,10 @@ final class SupportUser {
 		}
 
 		$args = array(
-			'role' => $this->role->get_name(),
+			'number'     => - 1,
+			'meta_key'   => $this->user_identifier_meta_key,
+			'meta_compare' => 'EXISTS',
+			'meta_value' => '',
 		);
 
 		$support_users = get_users( $args );

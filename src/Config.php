@@ -67,6 +67,7 @@ final class Config {
 		'reassign_posts' => true,
 		'require_ssl'    => true,
 		'role'           => 'editor',
+		'clone_role'     => true,
 		'vendor'         => array(
 			'namespace'             => null,
 			'title'                 => null,
@@ -183,11 +184,23 @@ final class Config {
 			}
 		}
 
-		$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+		if ( ! empty( $this->settings['clone_role'] ) ) {
+			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
 
-		foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
-			if ( array_key_exists( $invalid_cap, $added_caps ) ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
+			foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
+				if ( array_key_exists( $invalid_cap, $added_caps ) ) {
+					$errors[] = new \WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
+				}
+			}
+		} else {
+			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+			$removed_caps = $this->get_setting( 'caps/remove', array(), $this->settings );
+
+			$added_caps = array_filter( $added_caps );
+			$removed_caps = array_filter( $removed_caps );
+
+			if ( ! empty( $added_caps ) || ! empty( $removed_caps ) ) {
+				$errors[] = new \WP_Error( 'invalid_configuration', 'When `clone_role` is disabled, TrustedLogin cannot add or remove capabilities.' );
 			}
 		}
 
@@ -391,15 +404,20 @@ final class Config {
 			return $default;
 		}
 
-		if ( isset( $array[ $prop ] ) ) {
-			$value = $array[ $prop ];
-		} else {
-			$value = $default;
+		// Directly fetch the value if it exists, otherwise use the default.
+		$value = isset( $array[ $prop ] ) ? $array[ $prop ] : $default;
+
+		// Special handling for zero and false.
+		if ( 0 === $value || false === $value ) {
+			return $value;
 		}
 
-		$value_is_zero = 0 === $value;
+		// If the value is empty and a default is provided, use the default.
+		if ( empty( $value ) && null !== $default ) {
+			return $default;
+		}
 
-		return ( empty( $value ) && ! $value_is_zero ) && $default !== null ? $default : $value;
+		return $value;
 	}
 
 	/**
