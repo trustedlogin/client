@@ -19,7 +19,7 @@ final class SupportRole {
 
 	/**
 	 * @const The capability that is added to the Support Role to indicate that it was created by TrustedLogin.
-	 * @since 1.5.0
+	 * @since 1.6.0
 	 */
 	const CAPABILITY_FLAG = 'trustedlogin_{ns}_support_role';
 
@@ -55,7 +55,7 @@ final class SupportRole {
 
 	/**
 	 * @var array These roles cannot be deleted by TrustedLogin.
-	 * @since 1.5.0
+	 * @since 1.6.0
 	 */
 	static $protected_roles = array(
 		'administrator',
@@ -138,7 +138,7 @@ final class SupportRole {
 	/**
 	 * Returns the Support Role, creating it if it doesn't already exist.
 	 *
-	 * @since 1.5.0
+	 * @since 1.6.0
 	 *
 	 * @return \WP_Role|\WP_Error Role, if successful. WP_Error if failure.
 	 */
