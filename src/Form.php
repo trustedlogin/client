@@ -259,6 +259,7 @@ final class Form {
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
+			'terms_of_service'		  => $this->get_terms_of_service_html(),
 		);
 
 		$auth_screen_template = '
@@ -278,6 +279,7 @@ final class Form {
 						<div class="tl-{{ns}}-auth__actions">
 							{{button}}
 						</div>
+						{{terms_of_service}}
 					</div>
 					<div class="tl-{{ns}}-auth__secured_by">{{secured_by_trustedlogin}}</div>
 				</section>
@@ -317,6 +319,50 @@ final class Form {
 		);
 
 		return $this->prepare_output( $header_template, $variables );
+	}
+
+	/**
+	 * Returns the HTML for the optional Terms of Service agreement text & link.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @return string Empty if `terms_of_service/url` setting is not set.
+	 */
+	private function get_terms_of_service_html() {
+
+		$terms_of_service_url = $this->config->get_setting( 'terms_of_service/url' );
+
+		if ( ! $terms_of_service_url ) {
+			return '';
+		}
+
+		/**
+		 * Filter trustedlogin/{ns}/template/auth/terms_of_service/anchor.
+		 * @since 1.6.0
+		 * @param string $tos_anchor The text of the link to the Terms of Service.
+		 */
+		$tos_anchor = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/terms_of_service/anchor', esc_html__( 'Terms of Service', 'trustedlogin' ) );
+
+		$tos_link_template = '<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{anchor}}<span class="screen-reader-text">{{new_window_text}}</span></a>';
+
+		$tos_link_variables = array(
+			'url' => esc_url( $terms_of_service_url ),
+			'anchor' => esc_html( $tos_anchor ),
+			'new_window_text' => ' ' . esc_attr__( '(This link opens in a new window.)', 'trustedlogin' )
+		);
+
+		$terms_of_service_template = '
+			<div class="tl-{{ns}}-auth__tos">
+				<p>{{tos_text}}</p>
+			</div>';
+
+		$variables = array(
+			'ns'            => $this->config->ns(),
+			'tos_text'      => esc_html__( 'By granting access, you agree to the {{tos_link}}.', 'trustedlogin' ),
+			'tos_link'      => $this->prepare_output( $tos_link_template, $tos_link_variables ),
+		);
+
+		return $this->prepare_output( $terms_of_service_template, $variables );
 	}
 
 	/**
