@@ -343,12 +343,11 @@ final class Form {
 		 */
 		$tos_anchor = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/terms_of_service/anchor', esc_html__( 'Terms of Service', 'trustedlogin' ) );
 
-		$tos_link_template = '<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{anchor}}<span class="screen-reader-text">{{new_window_text}}</span></a>';
+		$tos_link_template = '<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{anchor}}</a>';
 
 		$tos_link_variables = array(
 			'url' => esc_url( $terms_of_service_url ),
 			'anchor' => esc_html( $tos_anchor ),
-			'new_window_text' => ' ' . esc_attr__( '(This link opens in a new window.)', 'trustedlogin' )
 		);
 
 		$terms_of_service_template = '
