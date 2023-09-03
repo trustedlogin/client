@@ -68,6 +68,9 @@ final class Config {
 		'require_ssl'    => true,
 		'role'           => 'editor',
 		'clone_role'     => true,
+		'terms_of_service' => array(
+			'url' => null,
+		),
 		'vendor'         => array(
 			'namespace'             => null,
 			'title'                 => null,
