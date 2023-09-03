@@ -52,10 +52,12 @@ call_user_func( function ( $version ) use ( $argv ) {
 		exit;
 	}
 
-	$plugin_dirname = dirname( __FILE__, 5 ) . '/vendor-prefixed/';
+	$plugin_dirname = dirname( __FILE__, 5 );
 
-	if ( file_exists(  $plugin_dirname ) ) {
-		$namespaced_dirname = $plugin_dirname . 'trustedlogin/client';
+	if ( file_exists(  $plugin_dirname . '/vendor-namespaced/trustedlogin/client' ) ) {
+		$namespaced_dirname = $plugin_dirname . '/vendor-namespaced/trustedlogin/client';
+	} elseif ( file_exists(  $plugin_dirname . '/vendor-prefixed/trustedlogin/client' ) ) {
+		$namespaced_dirname = $plugin_dirname . '/vendor-prefixed/trustedlogin/client';
 	} else {
 		$dirname = dirname( __FILE__, 2 );
 		$namespaced_dirname = str_replace( 'trustedlogin/client', $options['namespace'] . '/trustedlogin/client', $dirname );
