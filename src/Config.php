@@ -187,7 +187,7 @@ final class Config {
 			}
 		}
 
-		if ( ! empty( $this->settings['clone_role'] ) ) {
+		if ( false !== $this->get_setting( 'clone_role', $this->settings['clone_role'], $this->settings ) ) {
 			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
 
 			foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
