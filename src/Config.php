@@ -131,8 +131,15 @@ final class Config {
 			$errors[] = new \WP_Error( 'missing_configuration', 'You need to set an API key. Get yours at https://app.trustedlogin.com' );
 		}
 
-		if ( isset( $this->settings['vendor']['website'] ) && 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined( 'TL_DOING_TESTS' ) ) {
-			$errors[] = new \WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
+		if ( isset( $this->settings['vendor']['website'] ) ) {
+			if ( 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined( 'TL_DOING_TESTS' ) ) {
+				$errors[] = new \WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
+			}
+
+			/** @see https://core.trac.wordpress.org/ticket/54987 */
+			if ( 100 > strlen( $this->settings['vendor']['website'] ) ) {
+				$errors[] = new \WP_Error( 'invalid_configuration', 'The vendor website URL may not be longer than 100 characters.' );
+			}
 		}
 
 		foreach ( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
