@@ -206,7 +206,6 @@ final class SupportUser {
 		}
 
 		$user_data = array(
-			'user_url'        => $this->config->get_setting( 'vendor/website' ),
 			'user_login'      => $this->generate_unique_username(),
 			'user_email'      => $user_email,
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
