@@ -54,6 +54,7 @@
 			margin: 0;
 			margin-top: ( $vertical-spacing / 2 ) * -1;
 			margin-bottom: $vertical-spacing;
+			color: $color-666;
 		}
 
 		.tl-#{$namespace}-auth__checkbox--large {
@@ -130,8 +131,6 @@
 
 		.tl-#{$namespace}-auth__roles {
 
-			padding: $vertical-spacing $gutter-width $vertical-spacing;
-
 			.tl-#{$namespace}-toggle .dashicons {
 				margin-left: 0;
 				vertical-align: middle;
@@ -140,8 +139,8 @@
 			.tl-#{$namespace}-auth__role-container {
 				margin-top: $vertical-spacing/2;
 				margin-bottom: 0;
-				border-top: 1px solid $color-light-grey-500;
-				padding: 0 $gutter-width;
+				border-bottom: 1px solid $color-light-grey-500;
+				padding: 0 $gutter-width $vertical-spacing/2;
 
 				&.hidden {
 					display: none;
@@ -214,7 +213,6 @@
 			margin: 0;
 
 			.dashicons--large {
-				//margin-left: ( $large-icon-size + $gutter-width ) * -1;
 				padding-right: $gutter-width;
 			}
 
@@ -233,8 +231,12 @@
 			}
 		}
 
-		&.tl-#{$namespace}-grant-access .tl-#{$namespace}-auth__roles,
-			//&.tl-#{$namespace}-grant-access .tl-#{$namespace}-auth__expire, // When the expiration has an expanding section, uncomment this line.
+		&.tl-#{$namespace}-grant-access .tl-#{$namespace}-auth__roles {
+			margin-top: $vertical-spacing / 2;
+			padding: ($vertical-spacing / 2) 0 0 0;
+		}
+
+		//&.tl-#{$namespace}-grant-access .tl-#{$namespace}-auth__expire, // When the expiration has an expanding section, uncomment this line.
 		&.tl-#{$namespace}-has-access .tl-#{$namespace}-auth__content {
 			margin-top: $vertical-spacing / 2;
 			padding: ($vertical-spacing / 2) $gutter-width;
@@ -321,10 +323,10 @@
 
 		.tl-#{$namespace}-auth__secured_by {
 			text-align: center;
-			font-size: 1.25em;
+			font-size: 1.1em;
 			word-spacing: -.1em;
 			margin: ($vertical-spacing / 2) auto $vertical-spacing;
-			line-height: 30px;
+			line-height: 36px; // Height of the medium TL logo
 			color: $color-555;
 		}
 
