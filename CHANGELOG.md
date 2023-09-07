@@ -1,15 +1,19 @@
 # Changelog for TrustedLogin Client
 
-## 1.6.0 (TBD)
+## 1.6.0 (September 7, 2023)
 
 - Added `clone_role` configuration setting to allow the support user to be created with an existing role, rather than a clone of a role
 - Added a `trustedlogin_{ns}_support_role` capability to the cloned support user role in order to better identify that the role is created by TrustedLogin
+- Added `terms_of_service/url` setting to allow linking to a custom terms of service page
+  - If not defined, the Terms of Service text and link will not be shown
 - Converted CSS generation to use SCSS mixins to allow easier overrides by themes and plugins
+- Removed borders around the role descriptions in the Grant Access form
 - Clarified the language surrounding user roles in the Grant Access form
 - Moved the admin toolbar link to next to the "Howdy, {username}" menu
   - Relabeled the link from "Revoke TrustedLogin" to "Revoke Access"
 - Improved user creation flow to prevent errors when creating a user with an existing email address
 - Fixed error when using PHP in strict mode
+- Fixed error creating the Support User when the `vendor/website` configuration exceeded 100 characters in length
 
 ## 1.5.1 (2023-04-18)
 

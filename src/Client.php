@@ -15,7 +15,7 @@
  *
  * @package TrustedLogin\Client
  *
- * @copyright 2021 Katz Web Services, Inc.
+ * @copyright 2023 Katz Web Services, Inc.
  */
 
 namespace TrustedLogin;
@@ -37,7 +37,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.5.1';
+	const VERSION = '1.6.0';
 
 	/**
 	 * @var Config
