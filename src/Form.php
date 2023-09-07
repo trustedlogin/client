@@ -78,21 +78,30 @@ final class Form {
 
 		$registered = array();
 
-		$registered['trustedlogin-js'] = wp_register_script(
-			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting( 'paths/js' ),
-			array( 'jquery', 'wp-a11y' ),
-			Client::VERSION,
-			true
-		);
+		// Already registered by the integrating code.
+		if ( wp_script_is( 'trustedlogin-' . $this->config->ns() ) ) {
+			$registered['trustedlogin-js'] = true;
+		} else {
+			$registered['trustedlogin-js'] = wp_register_script(
+				'trustedlogin-' . $this->config->ns(),
+				$this->config->get_setting( 'paths/js' ),
+				array( 'jquery', 'wp-a11y' ),
+				Client::VERSION,
+				true
+			);
+		}
 
-		$registered['trustedlogin-css'] = wp_register_style(
-			'trustedlogin-' . $this->config->ns(),
-			$this->config->get_setting( 'paths/css' ),
-			array(),
-			Client::VERSION,
-			'all'
-		);
+		if ( wp_style_is( 'trustedlogin-' . $this->config->ns() ) ) {
+			$registered['trustedlogin-css'] = true;
+		} else {
+			$registered['trustedlogin-css'] = wp_register_style(
+				'trustedlogin-' . $this->config->ns(),
+				$this->config->get_setting( 'paths/css' ),
+				array(),
+				Client::VERSION,
+				'all'
+			);
+		}
 
 		$registered_filtered = array_filter( $registered );
 
@@ -246,10 +255,11 @@ final class Form {
 			'auth_header'             => $this->get_auth_header_html(),
 			'details'                 => $this->get_details_html(),
 			'button'                  => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
+			'terms_of_service'		  => $this->get_terms_of_service_html(),
 		);
 
 		$auth_screen_template = '
@@ -269,6 +279,7 @@ final class Form {
 						<div class="tl-{{ns}}-auth__actions">
 							{{button}}
 						</div>
+						{{terms_of_service}}
 					</div>
 					<div class="tl-{{ns}}-auth__secured_by">{{secured_by_trustedlogin}}</div>
 				</section>
@@ -308,6 +319,49 @@ final class Form {
 		);
 
 		return $this->prepare_output( $header_template, $variables );
+	}
+
+	/**
+	 * Returns the HTML for the optional Terms of Service agreement text & link.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @return string Empty if `terms_of_service/url` setting is not set.
+	 */
+	private function get_terms_of_service_html() {
+
+		$terms_of_service_url = $this->config->get_setting( 'terms_of_service/url' );
+
+		if ( ! $terms_of_service_url ) {
+			return '';
+		}
+
+		/**
+		 * Filter trustedlogin/{ns}/template/auth/terms_of_service/anchor.
+		 * @since 1.6.0
+		 * @param string $tos_anchor The text of the link to the Terms of Service.
+		 */
+		$tos_anchor = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/terms_of_service/anchor', esc_html__( 'Terms of Service', 'trustedlogin' ) );
+
+		$tos_link_template = '<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{anchor}}</a>';
+
+		$tos_link_variables = array(
+			'url' => esc_url( $terms_of_service_url ),
+			'anchor' => esc_html( $tos_anchor ),
+		);
+
+		$terms_of_service_template = '
+			<div class="tl-{{ns}}-auth__tos">
+				<p>{{tos_text}}</p>
+			</div>';
+
+		$variables = array(
+			'ns'            => $this->config->ns(),
+			'tos_text'      => esc_html__( 'By granting access, you agree to the {{tos_link}}.', 'trustedlogin' ),
+			'tos_link'      => $this->prepare_output( $tos_link_template, $tos_link_variables ),
+		);
+
+		return $this->prepare_output( $terms_of_service_template, $variables );
 	}
 
 	/**
@@ -424,15 +478,13 @@ final class Form {
 				<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 				<div class="tl-{{ns}}-auth__roles">
 					<h2>
-						<span class="dashicons dashicons-admin-users dashicons--large"></span>
-						{{roles_summary}}
+						<span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}
 					</h2>
 					{{caps}}
 				</div>
 				<div class="tl-{{ns}}-auth__expire">
 					<h2>
-						<span class="dashicons dashicons-clock dashicons--large"></span>
-						{{expire_summary}}{{expire_desc}}
+						<span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_desc}}
 					</h2>
 				</div>
 			';
@@ -486,12 +538,20 @@ final class Form {
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week")
 		$expire_desc = '<small>' . sprintf( esc_html__( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
+
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
-		if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
-			// translators: %s is replaced with the name of the role being cloned (e.g. "Administrator")
-			$roles_summary = sprintf( esc_html__( 'Create a user with a role similar to %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
-			$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View role capabilities', 'trustedlogin' ) );
+
+		if( $this->config->get_setting( 'clone_role' ) ) {
+
+			// translators: %s is replaced with the name of the role (e.g. "Administrator")
+			$roles_summary = sprintf( esc_html__( 'Create a user with a role based on %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
+
+			if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
+				$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html__( 'View modified role capabilities', 'trustedlogin' ) );
+			}
+
 		} else {
+
 			// translators: %s is replaced with the name of the role (e.g. "Administrator")
 			$roles_summary = sprintf( esc_html__( 'Create a user with a role of %s.', 'trustedlogin' ), '<strong>' . $cloned_role . '</strong>' );
 		}

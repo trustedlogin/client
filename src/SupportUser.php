@@ -115,7 +115,6 @@ final class SupportUser {
 	public function exists() {
 
 		$args = array(
-			'role'         => $this->role->get_name(),
 			'number'       => 1,
 			'meta_key'     => $this->user_identifier_meta_key,
 			'meta_value'   => '',
@@ -157,7 +156,7 @@ final class SupportUser {
 	}
 
 	/**
-	 * Create the Support User with custom role.
+	 * Create the Support User.
 	 *
 	 * @since 1.0.0
 	 *
@@ -176,40 +175,41 @@ final class SupportUser {
 			return new \WP_Error( 'user_exists', sprintf( 'A user with the User ID %d already exists', $user_id ) );
 		}
 
-		$role_exists = $this->role->create();
+		$role = $this->role->get();
 
-		if ( is_wp_error( $role_exists ) ) {
-
-			$error_output = $role_exists->get_error_message();
-
-			if ( $error_data = $role_exists->get_error_data() ) {
-				$error_output .= ' ' . print_r( $error_data, true );
-			}
-
-			$this->logging->log( $error_output, __METHOD__, 'error' );
-
-			return $role_exists;
+		if ( is_wp_error( $role ) ) {
+			return $role;
 		}
 
 		$user_email = $this->config->get_setting( 'vendor/email' );
+		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
 			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
+			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
 		}
 
-		if ( email_exists( $user_email ) ) {
+		$user_id_of_email = email_exists( $user_email );
+
+		if ( $user_id_of_email ) {
 			$this->logging->log( 'Support User not created; a user with that email already exists: ' . $user_email, __METHOD__, 'warning' );
 
-			return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+			// Only allow the user to be created if the email is not hashed; that way, it's not possible to accidentally
+			// create a user with the same email as an existing user.
+			if ( ! $allow_existing_user_match ) {
+				return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+			}
+
+			// If the user already exists and the email matches the hash, use that user.
+			return $user_id_of_email;
 		}
 
 		$user_data = array(
-			'user_url'        => $this->config->get_setting( 'vendor/website' ),
 			'user_login'      => $this->generate_unique_username(),
 			'user_email'      => $user_email,
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
-			'role'            => $this->role->get_name(),
+			'role'            => $role->name,
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
 			'user_registered' => date( 'Y-m-d H:i:s', time() ),
 		);
@@ -368,7 +368,6 @@ final class SupportUser {
 		}
 
 		$args = array(
-			'role'       => $this->role->get_name(),
 			'number'     => 1,
 			'meta_key'   => $this->user_identifier_meta_key,
 			'meta_value' => $user_identifier_hash,
@@ -400,7 +399,7 @@ final class SupportUser {
 	}
 
 	/**
-	 * Get all users with the support role
+	 * Get all users with the support role.
 	 *
 	 * @since 1.0.0
 	 *
@@ -416,7 +415,10 @@ final class SupportUser {
 		}
 
 		$args = array(
-			'role' => $this->role->get_name(),
+			'number'     => - 1,
+			'meta_key'   => $this->user_identifier_meta_key,
+			'meta_compare' => 'EXISTS',
+			'meta_value' => '',
 		);
 
 		$support_users = get_users( $args );

@@ -18,6 +18,12 @@ use WP_Error;
 final class SupportRole {
 
 	/**
+	 * @const The capability that is added to the Support Role to indicate that it was created by TrustedLogin.
+	 * @since 1.6.0
+	 */
+	const CAPABILITY_FLAG = 'trustedlogin_{ns}_support_role';
+
+	/**
 	 * @var Config $config
 	 */
 	private $config;
@@ -34,7 +40,7 @@ final class SupportRole {
 	private $role_name;
 
 	/**
-	 * @var array These capabilities will never be allowed for users created by TrustedLogin
+	 * @var array These capabilities will never be allowed for users created by TrustedLogin.
 	 * @since 1.0.0
 	 */
 	static $prevented_caps = array(
@@ -45,6 +51,25 @@ final class SupportRole {
 		'promote_users',
 		'delete_site',
 		'remove_users',
+	);
+
+	/**
+	 * @var array These roles cannot be deleted by TrustedLogin.
+	 * @since 1.6.0
+	 */
+	static $protected_roles = array(
+		'administrator',
+		'editor',
+		'author',
+		'contributor',
+		'subscriber',
+		'wpseo_editor',
+		'wpseo_manager',
+		'shop_manager',
+		'shop_accountant',
+		'shop_worker',
+		'shop_vendor',
+		'customer'
 	);
 
 	/**
@@ -75,13 +100,25 @@ final class SupportRole {
 	 * @return string
 	 */
 	public function get_name() {
-		return (string) $this->role_name;
+
+		if ( $this->config->get_setting( 'clone_role' ) ) {
+			return (string) $this->role_name;
+		}
+
+		return (string) $this->config->get_setting( 'role' );
 	}
 
 	/**
 	 * @return string Sanitized with {@uses sanitize_title_with_dashes}
 	 */
 	private function set_name( ) {
+
+		// If we're not cloning a role, return the existing role name.
+		if ( ! $this->config->get_setting( 'clone_role' ) ) {
+			$role_name = (string) $this->config->get_setting( 'role' );
+
+			return sanitize_title_with_dashes( $role_name );
+		}
 
 		$default = $this->config->ns() . '-support';
 
@@ -96,6 +133,48 @@ final class SupportRole {
 		}
 
 		return sanitize_title_with_dashes( $role_name );
+	}
+
+	/**
+	 * Returns the Support Role, creating it if it doesn't already exist.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @return \WP_Role|\WP_Error Role, if successful. WP_Error if failure.
+	 */
+	public function get() {
+
+		// If cloning a role, create and return it.
+		if ( $this->config->get_setting( 'clone_role' ) ) {
+			return $this->create();
+		}
+
+		// Otherwise, confirm and return the existing role.
+		$role_slug = $this->config->get_setting( 'role' );
+
+		$role = get_role( $role_slug );
+
+		if ( is_null( $role ) ) {
+
+			$error = new \WP_Error( 'role_does_not_exist', 'Error: the role does not exist: ' . $role_slug );
+
+			$this->logging->log( $error->get_error_message(), __METHOD__, 'error' );
+
+			return $error;
+		}
+
+		return $role;
+	}
+
+	/**
+	 * Returns the custom capability name that will be added to the role to indicate that it was created by TrustedLogin.
+	 *
+	 * @param string $ns The namespace of the vendor.
+	 *
+	 * @return string
+	 */
+	static private function get_capability_flag( $ns ) {
+		return str_replace( '{ns}', $ns, self::CAPABILITY_FLAG );
 	}
 
 	/**
@@ -164,6 +243,12 @@ final class SupportRole {
 			$this
 		);
 
+		/**
+		 * Add a flag to declare that this role was created by TrustedLogin.
+		 * @used-by SupportRole::delete()
+		 */
+		$capabilities[ self::get_capability_flag( $this->config->ns() ) ] = true;
+
 		$new_role = add_role( $new_role_slug, $role_display_name, $capabilities );
 
 		if ( ! $new_role ){
@@ -197,15 +282,33 @@ final class SupportRole {
 	 */
 	public function delete() {
 
-		if ( ! get_role( $this->get_name() ) ) {
+		$role_to_delete = get_role( $this->get_name() );
+
+		if ( ! $role_to_delete ) {
 			return null;
 		}
 
-		// Returns void; no way to tell if successful
+		$capability_flag = self::get_capability_flag( $this->config->ns() );
+
+		// Don't delete roles that weren't created by TrustedLogin.
+		if ( ! $role_to_delete->has_cap( $capability_flag ) ) {
+			$this->logging->log( "Role " . $this->get_name() . " is missing the CAPABILITY_FLAG. It is not possible to determine that it was created by TrustedLogin; it will not be removed.", __METHOD__, 'error' );
+
+			return false;
+		}
+
+		// Sanity check: don't ever, for any reason, delete protected roles.
+		if ( in_array( $this->get_name(), self::$protected_roles ) ) {
+			$this->logging->log( "Role " . $this->get_name() . " is protected and cannot be removed.", __METHOD__, 'error' );
+
+			return false;
+		}
+
+		// Returns void; no way to tell if successful...
 		remove_role( $this->get_name() );
 
+		// So we manually check if it was removed successfully.
 		if( get_role( $this->get_name() ) ) {
-
 			$this->logging->log( "Role " . $this->get_name() . " was not removed successfully.", __METHOD__, 'error' );
 
 			return false;
