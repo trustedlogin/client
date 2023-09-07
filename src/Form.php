@@ -255,7 +255,7 @@ final class Form {
 			'auth_header'             => $this->get_auth_header_html(),
 			'details'                 => $this->get_details_html(),
 			'button'                  => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-large"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
@@ -478,15 +478,13 @@ final class Form {
 				<p><span class="dashicons dashicons-info-outline dashicons--small"></span> This will allow <strong>{{name}}</strong> to:</p>
 				<div class="tl-{{ns}}-auth__roles">
 					<h2>
-						<span class="dashicons dashicons-admin-users dashicons--large"></span>
-						{{roles_summary}}
+						<span class="dashicons dashicons-admin-users dashicons--large"></span>{{roles_summary}}
 					</h2>
 					{{caps}}
 				</div>
 				<div class="tl-{{ns}}-auth__expire">
 					<h2>
-						<span class="dashicons dashicons-clock dashicons--large"></span>
-						{{expire_summary}}{{expire_desc}}
+						<span class="dashicons dashicons-clock dashicons--large"></span>{{expire_summary}}{{expire_desc}}
 					</h2>
 				</div>
 			';
