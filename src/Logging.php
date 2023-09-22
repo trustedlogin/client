@@ -94,7 +94,7 @@ class Logging {
 			$default_options = array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', $DateTime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
+				'filename'       => sprintf( 'client-%s-%s-%s', $this->ns, $DateTime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
