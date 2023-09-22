@@ -6,8 +6,12 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
+/**
+ * Handles all logging for the client.
+ */
 class Logging {
 
 	/**
@@ -16,22 +20,30 @@ class Logging {
 	const DIRECTORY_PATH = 'trustedlogin-logs/';
 
 	/**
-	 * @var string Namespace for the vendor
+	 * Namespace for the vendor.
+	 *
+	 * @var string
 	 */
 	private $ns;
 
 	/**
+	 * Whether logging is enabled. Can be overridden by a filter.
+	 *
 	 * @var bool $logging_enabled
 	 */
 	private $logging_enabled = false;
 
 	/**
+	 * KLogger instance.
+	 *
 	 * @var Logger|null|false Null: not instantiated; False: failed to instantiate.
 	 */
 	private $klogger = null;
 
 	/**
 	 * Logger constructor.
+	 *
+	 * @param Config $config Config object.
 	 */
 	public function __construct( Config $config ) {
 
@@ -45,7 +57,7 @@ class Logging {
 	/**
 	 * Attempts to initialize KLogger logging
 	 *
-	 * @param Config $config
+	 * @param Config $config Config object.
 	 *
 	 * @return false|Logger
 	 */
@@ -72,21 +84,21 @@ class Logging {
 			return false;
 		}
 
-		// Directory cannot be written to
+		// Directory cannot be written to.
 		if ( ! $this->check_directory( $logging_directory ) ) {
 			return false;
 		}
 
 		try {
-			$DateTime = new \DateTime( '@' . time() );
+			$datetime = new \DateTime( '@' . time() );
 
-			// Filename hash changes every day, make it harder to guess
-			$filename_hash_data = $this->ns . home_url( '/' ) . $DateTime->format( 'z' );
+			// Filename hash changes every day, make it harder to guess.
+			$filename_hash_data = $this->ns . home_url( '/' ) . $datetime->format( 'z' );
 
 			$default_options = array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', $DateTime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
+				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', $datetime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
@@ -133,7 +145,7 @@ class Logging {
 	/**
 	 * Checks whether a path exists and is writable
 	 *
-	 * @param string $dirpath Path to directory
+	 * @param string $dirpath Path to directory.
 	 *
 	 * @return bool|string If exists and writable, returns original string. Otherwise, returns false.
 	 */
@@ -148,7 +160,7 @@ class Logging {
 			return $dirpath;
 		}
 
-		// Otherwise, try and log default errors
+		// Otherwise, try and log default errors.
 		if ( ! $file_exists ) {
 			$this->log( 'The defined logging directory does not exist: ' . $dirpath, __METHOD__, 'error' );
 		}
@@ -173,26 +185,26 @@ class Logging {
 
 		$log_dir = trailingslashit( $upload_dir['basedir'] ) . self::DIRECTORY_PATH;
 
-		// Directory exists; return early
+		// Directory exists; return early.
 		if ( file_exists( $log_dir ) ) {
 			$this->prevent_directory_browsing( $log_dir );
 
 			return $log_dir;
 		}
 
-		// Create the folder using wp_mkdir_p() instead of relying on KLogger
+		// Create the folder using wp_mkdir_p() instead of relying on KLogger.
 		$folder_created = wp_mkdir_p( $log_dir );
 
-		// Something went wrong mapping the directory
+		// Something went wrong mapping the directory.
 		if ( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
 
-		// Protect directory from being browsed by adding index.html
+		// Protect directory from being browsed by adding index.html.
 		$this->prevent_directory_browsing( $log_dir );
 
-		// Make sure the new log directory can be written to
+		// Make sure the new log directory can be written to.
 		return $log_dir;
 	}
 
@@ -201,12 +213,13 @@ class Logging {
 	 *
 	 * Code inspired by @see wp_privacy_generate_personal_data_export_file()
 	 *
-	 * @param string $dirpath Path to directory to protect (in this case, logging)
+	 * @param string $dirpath Path to directory to protect (in this case, logging).
 	 *
 	 * @return bool True: File exists or was created; False: file could not be created.
 	 */
 	private function prevent_directory_browsing( $dirpath ) {
-		/** @var \WP_Filesystem_Base $wp_filesystem */
+		// phpcs:disable Generic.Commenting.DocComment.MissingShort
+		/** @global \WP_Filesystem_Base $wp_filesystem */
 		global $wp_filesystem;
 
 		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
