@@ -5,11 +5,11 @@ on:
         branches:
             - main
             - develop
+            - coding-standards
     pull_request:
         branches:
             - main
             - develop
-            - coding-standards
     workflow_dispatch:
 
 jobs:
