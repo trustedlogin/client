@@ -2,15 +2,15 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 final class Cron {
 
@@ -32,7 +32,7 @@ final class Cron {
 	/**
 	 * Cron constructor.
 	 *
-	 * @param Config $config
+	 * @param Config       $config
 	 * @param Logging|null $logging
 	 */
 	public function __construct( Config $config, Logging $logging ) {
@@ -50,7 +50,7 @@ final class Cron {
 	}
 
 	/**
-	 * @param int $expiration_timestamp
+	 * @param int    $expiration_timestamp
 	 * @param string $identifier_hash
 	 *
 	 * @return bool
@@ -75,7 +75,7 @@ final class Cron {
 	}
 
 	/**
-	 * @param int $expiration_timestamp
+	 * @param int    $expiration_timestamp
 	 * @param string $site_identifier_hash
 	 *
 	 * @return bool
@@ -92,7 +92,7 @@ final class Cron {
 
 		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, array( $hash ) );
 
-		switch( $unschedule_expiration ) {
+		switch ( $unschedule_expiration ) {
 			case false:
 				$this->logging->log( sprintf( 'Could not clear scheduled hook for %s', $this->hook_name ), __METHOD__, 'error' );
 				return false;

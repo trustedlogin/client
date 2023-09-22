@@ -27,12 +27,12 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	 */
 	private $remote;
 
-	public function setUp() :void {
+	public function setUp(): void {
 		parent::setUp();
 
 		$config = array(
-			'role' => 'editor',
-			'caps'     => array(
+			'role'           => 'editor',
+			'caps'           => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
@@ -40,7 +40,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
-				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -70,7 +70,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	private function _get_public_method( $name, $reflection_class = '\TrustedLogin\Remote' ) {
 
 		$Reflection = new \ReflectionClass( $reflection_class );
-		$method = $Reflection->getMethod( $name );
+		$method     = $Reflection->getMethod( $name );
 		$method->setAccessible( true );
 
 		return $method;
@@ -86,7 +86,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	private function _get_public_property( $name, $reflection_class = '\TrustedLogin\Remote' ) {
 
 		$Reflection = new \ReflectionClass( $reflection_class );
-		$prop = $Reflection->getProperty( $name );
+		$prop       = $Reflection->getProperty( $name );
 		$prop->setAccessible( true );
 
 		return $prop;
@@ -102,13 +102,17 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		$that = &$this;
 
 		// Make sure the body has been removed from methods that don't support it
-		add_filter( 'http_request_args', $filter_args = function ( $parsed_args, $url ) use ( $that ) {
-			$that->assertNull( $parsed_args['body'] );
-			return $parsed_args;
-		}, 10, 2 );
+		add_filter(
+			'http_request_args',
+			$filter_args = function ( $parsed_args, $url ) use ( $that ) {
+				$that->assertNull( $parsed_args['body'] );
+				return $parsed_args;
+			},
+			10,
+			2
+		);
 
 		unset( $that );
-
 
 		$uppercase = $this->remote->send( 'sites', 'any data', 'head' );
 
@@ -126,10 +130,15 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		remove_filter( 'http_request_args', $filter_args );
 
 		// Make sure that POST and DELETE are able to sent body and that the body is properly formatted
-		add_filter( 'http_request_args', $filter_args = function ( $parsed_args, $url ) {
-			$this->assertEquals( json_encode( array( 'test', 'array' ) ), $parsed_args['body'] );
-			return $parsed_args;
-		}, 10, 2 );
+		add_filter(
+			'http_request_args',
+			$filter_args = function ( $parsed_args, $url ) {
+				$this->assertEquals( json_encode( array( 'test', 'array' ) ), $parsed_args['body'] );
+				return $parsed_args;
+			},
+			10,
+			2
+		);
 
 		$this->assertNotWPError( $this->remote->send( 'sites', array( 'test', 'array' ), 'POST' ) );
 		$this->assertNotWPError( $this->remote->send( 'sites', array( 'test', 'array' ), 'DELETE' ) );
@@ -147,17 +156,27 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 
 		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote ) );
 
-		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote, array( 'not-a-string') ) );
+		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote, array( 'not-a-string' ) ) );
 
 		$this->assertEquals( \TrustedLogin\Remote::API_URL . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
-		add_filter( 'trustedlogin/not-my-namespace/api_url', function () { return 'https://www.google.com'; } );
+		add_filter(
+			'trustedlogin/not-my-namespace/api_url',
+			function () {
+				return 'https://www.google.com';
+			}
+		);
 
 		$this->assertEquals( \TrustedLogin\Remote::API_URL . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
 		remove_all_filters( 'trustedlogin/not-my-namespace/api_url' );
 
-		add_filter( 'trustedlogin/gravityview/api_url', function () { return 'https://www.google.com'; } );
+		add_filter(
+			'trustedlogin/gravityview/api_url',
+			function () {
+				return 'https://www.google.com';
+			}
+		);
 
 		$this->assertEquals( 'https://www.google.com/pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
@@ -187,7 +206,6 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		);
 
 		foreach ( $error_codes as $error_code => $response_code ) {
-
 			$invalid_code_response = array(
 				'body'     => 'Not Empty',
 				'response' => array(
@@ -214,7 +232,6 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		$this->assertWPError( $handled_response );
 		$this->assertSame( 'invalid_response', $handled_response->get_error_code(), $response_code . ' should have triggered ' . $error_code );
 		$this->assertSame( 'Not JSON, that is for sure.', $handled_response->get_error_data( 'invalid_response' ) );
-
 
 		// Finally, VALID JSON
 		$valid_json_response = array(

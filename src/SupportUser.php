@@ -8,15 +8,15 @@
  */
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -181,12 +181,12 @@ final class SupportUser {
 			return $role;
 		}
 
-		$user_email = $this->config->get_setting( 'vendor/email' );
+		$user_email                = $this->config->get_setting( 'vendor/email' );
 		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
-			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
+			$user_email                = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
 			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
 		}
 
@@ -290,7 +290,6 @@ final class SupportUser {
 		$support_user = $this->get( $user_identifier );
 
 		if ( empty( $support_user ) ) {
-
 			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $user_identifier ), __METHOD__, 'notice' );
 
 			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
@@ -300,7 +299,6 @@ final class SupportUser {
 
 		// This user has expired, but the cron didn't run...
 		if ( ! $is_active ) {
-
 			$expires = $this->get_expiration( $support_user, false, true );
 
 			$this->logging->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
@@ -323,7 +321,6 @@ final class SupportUser {
 	private function login( \WP_User $support_user ) {
 
 		if ( ! $support_user->exists() ) {
-
 			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'error' );
 
 			return;
@@ -339,10 +336,13 @@ final class SupportUser {
 		/**
 		 * Action run when TrustedLogin has logged-in
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
-			'url'    => get_site_url(),
-			'action' => 'logged_in',
-		) );
+		do_action(
+			'trustedlogin/' . $this->config->ns() . '/logged_in',
+			array(
+				'url'    => get_site_url(),
+				'action' => 'logged_in',
+			)
+		);
 	}
 
 	/**
@@ -382,8 +382,8 @@ final class SupportUser {
 	 * Returns the expiration for user access as either a human-readable string or timestamp.
 	 *
 	 * @param \WP_User $user
-	 * @param bool $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
-	 * @param bool $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
+	 * @param bool     $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
+	 * @param bool     $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
 	 *
 	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
@@ -415,10 +415,10 @@ final class SupportUser {
 		}
 
 		$args = array(
-			'number'     => - 1,
-			'meta_key'   => $this->user_identifier_meta_key,
+			'number'       => - 1,
+			'meta_key'     => $this->user_identifier_meta_key,
 			'meta_compare' => 'EXISTS',
-			'meta_value' => '',
+			'meta_value'   => '',
 		);
 
 		$support_users = get_users( $args );
@@ -451,8 +451,8 @@ final class SupportUser {
 	 * @used-by Client::revoke_access()
 	 *
 	 * @param string $user_identifier Unique identifier of the user to delete.
-	 * @param bool $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
-	 * @param bool $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
+	 * @param bool   $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
+	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
 	 *
 	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users matching $user_identifier; WP_Error: something went wrong.
 	 */
@@ -518,12 +518,14 @@ final class SupportUser {
 		}
 
 		// TODO: Add a filter to modify who gets auto-reassigned
-		$admins = get_users( array(
-			'role'    => 'administrator',
-			'orderby' => 'registered',
-			'order'   => 'DESC',
-			'number'  => 1,
-		) );
+		$admins = get_users(
+			array(
+				'role'    => 'administrator',
+				'orderby' => 'registered',
+				'order'   => 'DESC',
+				'number'  => 1,
+			)
+		);
 
 		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
 
@@ -535,16 +537,15 @@ final class SupportUser {
 	/**
 	 * Schedules cron job to auto-revoke, adds user meta with unique ids
 	 *
-	 * @param int $user_id ID of generated support user
+	 * @param int    $user_id ID of generated support user
 	 * @param string $site_identifier_hash
-	 * @param int $decay_timestamp Timestamp when user will be removed
+	 * @param int    $decay_timestamp Timestamp when user will be removed
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
 	public function setup( $user_id, $site_identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
 
 		if ( $expiration_timestamp ) {
-
 			$scheduled = $cron->schedule( $expiration_timestamp, $site_identifier_hash );
 
 			if ( $scheduled ) {
@@ -569,9 +570,9 @@ final class SupportUser {
 	/**
 	 * Updates the scheduled cron job to auto-revoke and updates the Support User's meta.
 	 *
-	 * @param int $user_id ID of generated support user.
-	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}
-	 * @param int $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
+	 * @param int       $user_id ID of generated support user.
+	 * @param string    $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}
+	 * @param int       $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
 	 * @param Cron|null $cron Optional. The Cron object for handling scheduling. Defaults to null.
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
@@ -596,7 +597,6 @@ final class SupportUser {
 		}
 
 		return new \WP_Error( 'extend_failed', 'Error rescheduling cron task' );
-
 	}
 
 	/**
@@ -617,7 +617,6 @@ final class SupportUser {
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
 		} else {
-
 			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
 
 			return new \WP_Error( 'invalid_type', '$user must be int or WP_User' );
@@ -644,7 +643,6 @@ final class SupportUser {
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
 		} else {
-
 			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
 
 			return new \WP_Error( 'invalid_type', '$user must be int or WP_User' );
@@ -677,11 +675,14 @@ final class SupportUser {
 			return false;
 		}
 
-		$revoke_url = add_query_arg( array(
-			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
-			self::ID_QUERY_PARAM                 => $user_identifier,
-			'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
-		), admin_url() );
+		$revoke_url = add_query_arg(
+			array(
+				Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
+				self::ID_QUERY_PARAM                 => $user_identifier,
+				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
+			),
+			admin_url()
+		);
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
 

@@ -2,15 +2,15 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 final class Ajax {
 
@@ -40,7 +40,7 @@ final class Ajax {
 	/**
 	 * Cron constructor.
 	 *
-	 * @param Config $config
+	 * @param Config       $config
 	 * @param Logging|null $logging
 	 */
 	public function __construct( Config $config, Logging $logging ) {
@@ -67,7 +67,6 @@ final class Ajax {
 		$posted_data = array_intersect_key( $_POST, array_flip( $this->generate_support_fields ) );
 
 		if ( empty( $posted_data['vendor'] ) ) {
-
 			$this->logging->log( 'Vendor not defined in TrustedLogin configuration.', __METHOD__, 'critical' );
 
 			wp_send_json_error( array( 'message' => 'Vendor not defined in TrustedLogin configuration.' ) );
@@ -76,7 +75,6 @@ final class Ajax {
 		// There are multiple TrustedLogin instances, and this is not the one being called.
 		// This should not occur, since the AJAX action is namespaced.
 		if ( $this->config->ns() !== $posted_data['vendor'] ) {
-
 			$this->logging->log( 'Vendor does not match TrustedLogin configuration.', __METHOD__, 'critical' );
 
 			wp_send_json_error( array( 'message' => 'Vendor does not match.' ) );
@@ -93,7 +91,6 @@ final class Ajax {
 		}
 
 		if ( ! current_user_can( 'create_users' ) ) {
-
 			$this->logging->log( 'Current user does not have `create_users` capability when trying to grant access.', __METHOD__, 'error' );
 
 			wp_send_json_error( array( 'message' => esc_html__( 'You do not have the ability to create users.', 'trustedlogin' ) ) );
@@ -110,8 +107,7 @@ final class Ajax {
 		$response = $client->grant_access( $include_debug_data, $ticket_data );
 
 		if ( is_wp_error( $response ) ) {
-
-			$error_data = $response->get_error_data();
+			$error_data  = $response->get_error_data();
 			$status_code = isset( $error_data['status_code'] ) ? $error_data['status_code'] : 500;
 
 			wp_send_json_error( array( 'message' => $response->get_error_message() ), $status_code );
@@ -119,5 +115,4 @@ final class Ajax {
 
 		wp_send_json_success( $response, 201 );
 	}
-
 }

@@ -9,7 +9,7 @@
 
 namespace TrustedLogin;
 
-use \WP_Error;
+use WP_Error;
 
 class SiteAccess {
 
@@ -28,7 +28,7 @@ class SiteAccess {
 	 */
 	private static $sync_actions = array(
 		'create',
-		'extend'
+		'extend',
 	);
 
 	/**
@@ -89,10 +89,13 @@ class SiteAccess {
 			return new \WP_Error( 'sync_error', __( 'Could not sync to TrustedLogin server', 'trustedlogin' ) );
 		}
 
-		do_action( 'trustedlogin/' . $this->config->ns() . '/secret/synced', array(
-			'url'    => get_site_url(),
-			'action' => $action,
-		) );
+		do_action(
+			'trustedlogin/' . $this->config->ns() . '/secret/synced',
+			array(
+				'url'    => get_site_url(),
+				'action' => $action,
+			)
+		);
 
 		return true;
 	}
@@ -151,11 +154,15 @@ class SiteAccess {
 		}
 
 		if ( ! is_string( $license_key ) ) {
-
-			$this->logging->log( '', '', 'error', array(
-				'$license from Config'    => $license_key_config,
-				'$license after filter: ' => $license_key,
-			) );
+			$this->logging->log(
+				'',
+				'',
+				'error',
+				array(
+					'$license from Config'    => $license_key_config,
+					'$license after filter: ' => $license_key,
+				)
+			);
 
 			return new \WP_Error( 'invalid_license_key', 'License key was not a string.' );
 		}
@@ -214,5 +221,4 @@ class SiteAccess {
 
 		return true;
 	}
-
 }

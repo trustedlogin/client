@@ -8,7 +8,6 @@
  */
 namespace TrustedLogin;
 
-
 class Logging {
 
 	/**
@@ -52,13 +51,11 @@ class Logging {
 	 */
 	private function setup_klogger( $config ) {
 
-
 		$logging_directory = null;
 
 		$configured_logging_dir = $config->get_setting( 'logging/directory', '' );
 
-		if( ! empty( $configured_logging_dir ) ) {
-
+		if ( ! empty( $configured_logging_dir ) ) {
 			$logging_directory = $this->check_directory( $configured_logging_dir );
 
 			if ( ! $logging_directory ) {
@@ -71,17 +68,16 @@ class Logging {
 		}
 
 		// Directory cannot be found or created. Cannot log.
-		if( ! $logging_directory ) {
+		if ( ! $logging_directory ) {
 			return false;
 		}
 
 		// Directory cannot be written to
-		if( ! $this->check_directory( $logging_directory ) ) {
+		if ( ! $this->check_directory( $logging_directory ) ) {
 			return false;
 		}
 
 		try {
-
 			$DateTime = new \DateTime( '@' . time() );
 
 			// Filename hash changes every day, make it harder to guess
@@ -100,20 +96,16 @@ class Logging {
 
 			$options = wp_parse_args( $settings_options, $default_options );
 
-			$klogger = new Logger (
+			$klogger = new Logger(
 				$logging_directory,
 				$config->get_setting( 'logging/threshold', 'notice' ),
 				$options
 			);
-
 		} catch ( \RuntimeException $exception ) {
-
 			$this->log( 'Could not initialize KLogger: ' . $exception->getMessage(), __METHOD__, 'error' );
 
 			return false;
-
 		} catch ( \Exception $exception ) {
-
 			$this->log( 'DateTime could not be created: ' . $exception->getMessage(), __METHOD__, 'error' );
 
 			return false;
@@ -147,21 +139,21 @@ class Logging {
 	 */
 	private function check_directory( $dirpath ) {
 
-		$dirpath = (string) $dirpath;
+		$dirpath     = (string) $dirpath;
 		$file_exists = file_exists( $dirpath );
 		$is_writable = wp_is_writable( $dirpath );
 
 		// If the configured setting path exists and is writeable, use it.
-		if( $file_exists && $is_writable ) {
+		if ( $file_exists && $is_writable ) {
 			return $dirpath;
 		}
 
 		// Otherwise, try and log default errors
-		if( ! $file_exists ) {
+		if ( ! $file_exists ) {
 			$this->log( 'The defined logging directory does not exist: ' . $dirpath, __METHOD__, 'error' );
 		}
 
-		if( ! $is_writable ) {
+		if ( ! $is_writable ) {
 			$this->log( 'The defined logging directory exists but could not be written to: ' . $dirpath, __METHOD__, 'error' );
 		}
 
@@ -182,8 +174,7 @@ class Logging {
 		$log_dir = trailingslashit( $upload_dir['basedir'] ) . self::DIRECTORY_PATH;
 
 		// Directory exists; return early
-		if( file_exists( $log_dir ) ) {
-
+		if ( file_exists( $log_dir ) ) {
 			$this->prevent_directory_browsing( $log_dir );
 
 			return $log_dir;
@@ -193,7 +184,7 @@ class Logging {
 		$folder_created = wp_mkdir_p( $log_dir );
 
 		// Something went wrong mapping the directory
-		if( ! $folder_created ) {
+		if ( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
@@ -258,13 +249,14 @@ class Logging {
 	}
 
 	/**
+	 * Log a message using KLogger or error_log().
+	 *
 	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
 	 *
-	 * @param string|\WP_Error $message Message or error to log. If a WP_Error is passed, $data is ignored.
-	 * @param string $method Method where the log was called
-	 * @param string $level PSR-3 log level
+	 * @param string|\WP_Error           $message Message or error to log. If a WP_Error is passed, $data is ignored.
+	 * @param string                     $method Method where the log was called.
+	 * @param string                     $level PSR-3 log level.
 	 * @param \WP_Error|\Exception|mixed $data Optional. Error data. Ignored if $message is WP_Error.
-	 *
 	 */
 	public function log( $message = '', $method = '', $level = 'debug', $data = array() ) {
 
@@ -274,21 +266,21 @@ class Logging {
 
 		$levels = array( 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug' );
 
-		if ( ! in_array( $level, $levels ) ) {
-
+		if ( ! in_array( $level, $levels, true ) ) {
 			$this->log( sprintf( 'Invalid level passed by %s method: %s', $method, $level ), __METHOD__, 'error' );
 
-			$level = 'debug'; // Continue processing original log
+			$level = 'debug'; // Continue processing original log.
 		}
 
 		$log_message = $message;
 
 		if ( is_wp_error( $log_message ) ) {
-			$data = $log_message; // Store WP_Error as extra data.
+			$data        = $log_message; // Store WP_Error as extra data.
 			$log_message = ''; // The message will be constructed below.
 		}
 
 		if ( ! is_string( $log_message ) ) {
+			// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$log_message = print_r( $log_message, true );
 		}
 
@@ -300,7 +292,7 @@ class Logging {
 			$log_message .= sprintf( '[%s] %s', $data->getCode(), $data->getMessage() );
 		}
 
-		// Keep PSR-4 compatible
+		// Keep PSR-4 compatible.
 		if ( $data && ! is_array( $data ) ) {
 			$data = array( $data );
 		}
@@ -308,24 +300,24 @@ class Logging {
 		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $message, $method, $level, $data );
 		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $message, $method, $data );
 
-		// If logging is in place, don't use the error_log
+		// If logging is in place, don't use the error_log.
 		if ( has_action( 'trustedlogin/' . $this->ns . '/logging/log' ) || has_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level ) ) {
 			return;
 		}
 
-		// The logger class didn't load for some reason
+		// The logger class didn't load for some reason.
 		if ( ! $this->klogger ) {
-
-			$wp_debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+			$wp_debug     = defined( 'WP_DEBUG' ) && WP_DEBUG;
 			$wp_debug_log = defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG;
 
 			// If WP_DEBUG and WP_DEBUG_LOG are enabled, log errors to that file.
 			if ( $wp_debug && $wp_debug_log ) {
-
 				if ( ! empty( $data ) ) {
+					// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_print_r
 					$log_message .= ' Error data: ' . print_r( $data, true );
 				}
 
+				// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( $method . ' (' . $level . '): ' . $log_message );
 			}
 
@@ -334,5 +326,4 @@ class Logging {
 
 		$this->klogger->{$level}( $log_message, (array) $data );
 	}
-
 }

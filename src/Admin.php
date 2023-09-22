@@ -9,13 +9,13 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \WP_User;
-use \WP_Admin_Bar;
+use WP_User;
+use WP_Admin_Bar;
 
 final class Admin {
 
@@ -53,47 +53,92 @@ final class Admin {
 	}
 
 	public function init() {
-		add_action( 'trustedlogin/' . $this->config->ns() . '/button',
+		add_action(
+			'trustedlogin/' . $this->config->ns() . '/button',
 			array(
 				$this->form,
-				'generate_button'
-			), 10, 2
+				'generate_button',
+			),
+			10,
+			2
 		);
-		add_action( 'trustedlogin/' . $this->config->ns() . '/users_table', array(
-			$this->form,
-			'output_support_users'
-		), 20 );
-		add_action( 'trustedlogin/' . $this->config->ns() . '/auth_screen', array(
-			 $this->form, 'print_auth_screen' ), 20
+		add_action(
+			'trustedlogin/' . $this->config->ns() . '/users_table',
+			array(
+				$this->form,
+				'output_support_users',
+			),
+			20
 		);
-		add_action( 'login_form_trustedlogin', array(
-			$this->form, 'maybe_print_request_screen' ), 20
+		add_action(
+			'trustedlogin/' . $this->config->ns() . '/auth_screen',
+			array(
+				$this->form,
+				'print_auth_screen',
+			),
+			20
 		);
-		add_filter( 'user_row_actions', array(
-			 $this, 'user_row_action_revoke' ),
-		10, 2 );
-		add_action( 'admin_bar_menu', array(
-			$this, 'admin_bar_add_toolbar_items' ),
-		100 );
+		add_action(
+			'login_form_trustedlogin',
+			array(
+				$this->form,
+				'maybe_print_request_screen',
+			),
+			20
+		);
+		add_filter(
+			'user_row_actions',
+			array(
+				$this,
+				'user_row_action_revoke',
+			),
+			10,
+			2
+		);
+		add_action(
+			'admin_bar_menu',
+			array(
+				$this,
+				'admin_bar_add_toolbar_items',
+			),
+			100
+		);
 
 		if ( $this->config->get_setting( 'menu' ) ) {
 			$menu_priority = $this->config->get_setting( 'menu/priority', 100 );
-			add_action( 'admin_menu', array(
-				 $this, 'admin_menu_auth_link_page'
-			), $menu_priority );
+			add_action(
+				'admin_menu',
+				array(
+					$this,
+					'admin_menu_auth_link_page',
+				),
+				$menu_priority
+			);
 		}
 
 		if ( $this->config->get_setting( 'register_assets', true ) ) {
-			add_action( 'admin_enqueue_scripts', array(
-				$this->form, 'register_assets'
-			) );
-			add_action( 'login_enqueue_scripts',array(
-				$this->form, 'register_assets'
-			) );
+			add_action(
+				'admin_enqueue_scripts',
+				array(
+					$this->form,
+					'register_assets',
+				)
+			);
+			add_action(
+				'login_enqueue_scripts',
+				array(
+					$this->form,
+					'register_assets',
+				)
+			);
 		}
 
-		add_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', array(
-			$this, 'admin_notices' )
+		add_action(
+			'trustedlogin/' . $this->config->ns() . '/admin/access_revoked',
+			array(
+				$this,
+				'admin_notices',
+			)
 		);
 	}
 
@@ -102,7 +147,7 @@ final class Admin {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array $actions
+	 * @param array   $actions
 	 * @param WP_User $user_object
 	 *
 	 * @return array
@@ -158,16 +203,18 @@ final class Admin {
 			background-size: 22px 23px;
 		"></span>';
 
-		$admin_bar->add_menu( array(
-			'id'    => 'tl-' . $this->config->ns() . '-revoke',
-			'title' => $icon . esc_html__( 'Revoke Access', 'trustedlogin' ),
-			'href'  => $this->support_user->get_revoke_url( 'all' ),
-			'parent' => 'top-secondary',
-			'meta'  => array(
-				'class' => 'tl-destroy-session',
-				'title' => esc_html__( 'You are logged in as a support user. Click to permanently revoke access.', 'trustedlogin' ),
-			),
-		) );
+		$admin_bar->add_menu(
+			array(
+				'id'     => 'tl-' . $this->config->ns() . '-revoke',
+				'title'  => $icon . esc_html__( 'Revoke Access', 'trustedlogin' ),
+				'href'   => $this->support_user->get_revoke_url( 'all' ),
+				'parent' => 'top-secondary',
+				'meta'   => array(
+					'class' => 'tl-destroy-session',
+					'title' => esc_html__( 'You are logged in as a support user. Click to permanently revoke access.', 'trustedlogin' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -196,7 +243,6 @@ final class Admin {
 
 		// If empty (null or empty string), add top-level menu
 		if ( empty( $parent_slug ) ) {
-
 			add_menu_page(
 				$menu_title,
 				$menu_title,
@@ -229,5 +275,4 @@ final class Admin {
 	public function admin_notices() {
 		add_action( 'admin_notices', array( $this->form, 'admin_notice_revoked' ) );
 	}
-
 }

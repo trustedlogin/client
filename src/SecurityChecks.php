@@ -8,7 +8,7 @@
  */
 namespace TrustedLogin;
 
-use \WP_Error;
+use WP_Error;
 
 final class SecurityChecks {
 
@@ -79,11 +79,10 @@ final class SecurityChecks {
 
 		$user_identifier = $passed_user_identifier;
 
-		if ( $this->in_lockdown() ){
-
+		if ( $this->in_lockdown() ) {
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 
-			return new \WP_Error( 'in_lockdown', __( 'TrustedLogin temporarily disabled.' , 'trustedlogin') );
+			return new \WP_Error( 'in_lockdown', __( 'TrustedLogin temporarily disabled.', 'trustedlogin' ) );
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
@@ -94,7 +93,6 @@ final class SecurityChecks {
 		$brute_force = $this->check_brute_force( $user_identifier );
 
 		if ( is_wp_error( $brute_force ) ) {
-
 			$this->do_lockdown();
 
 			return $brute_force;
@@ -107,8 +105,7 @@ final class SecurityChecks {
 		$approved = $this->check_approved_identifier( $secret_id );
 
 		// Don't lock-down the site, since there could have been errors related to remote validation
-		if ( is_wp_error( $approved ) ){
-
+		if ( is_wp_error( $approved ) ) {
 			$this->logging->log(
 				sprintf(
 					// translators: %s is the error message
@@ -142,14 +139,13 @@ final class SecurityChecks {
 
 		// Is the number of attempted accesses below the lockdown limit?
 		if ( count( $used_accesskeys ) >= self::ACCESSKEY_LIMIT_COUNT ) {
-
 			$this->logging->log(
 				'Potential Brute Force attack detected with identifier: ' . esc_attr( $identifier ),
 				__METHOD__,
 				'notice'
 			);
 
-			return new \WP_Error( 'brute_force_detected', 'Login aborted due to potential brute force detection.');
+			return new \WP_Error( 'brute_force_detected', 'Login aborted due to potential brute force detection.' );
 		}
 
 		return true;
@@ -166,7 +162,6 @@ final class SecurityChecks {
 
 		// This is a new access key
 		if ( ! in_array( $user_identifier, $used_accesskeys, true ) ) {
-
 			$used_accesskeys[] = $user_identifier;
 
 			$transient_set = set_site_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
@@ -174,7 +169,6 @@ final class SecurityChecks {
 			if ( ! $transient_set ) {
 				$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
 			}
-
 		}
 
 		return $used_accesskeys;
@@ -195,7 +189,7 @@ final class SecurityChecks {
 
 		$ip = trim( $ip );
 
-		if ( ! defined('TL_DOING_TESTS') ) {
+		if ( ! defined( 'TL_DOING_TESTS' ) ) {
 			$ip = filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE );
 		}
 
@@ -263,12 +257,12 @@ final class SecurityChecks {
 		$body = array(
 			'timestamp'  => time(),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
-			'user_ip'	 => $this->get_ip(),
-			'site_url'	 => get_site_url(),
+			'user_ip'    => $this->get_ip(),
+			'site_url'   => get_site_url(),
 		);
 
-		$remote = new Remote( $this->config, $this->logging );
-		$api_response = $remote->send( self::BRUTE_FORCE_ENDPOINT , $body, 'POST' );
+		$remote       = new Remote( $this->config, $this->logging );
+		$api_response = $remote->send( self::BRUTE_FORCE_ENDPOINT, $body, 'POST' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
@@ -281,7 +275,6 @@ final class SecurityChecks {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -299,7 +292,7 @@ final class SecurityChecks {
 
 		$notified = $this->report_lockdown();
 
-		if ( is_wp_error( $notified ) ){
+		if ( is_wp_error( $notified ) ) {
 			$this->logging->log( sprintf( 'Could not notify TrustedLogin (%s)', $notified->get_error_message() ), __METHOD__, 'error' );
 		}
 
@@ -352,7 +345,7 @@ final class SecurityChecks {
 	 *
 	 * @return int|false Int: in lockdown. The value returned is the timestamp when lockdown ends. False: not in lockdown, or overridden by a constant.
 	 */
-	public function in_lockdown(){
+	public function in_lockdown() {
 
 		if ( $this->in_local_development() ) {
 			return false;
@@ -360,5 +353,4 @@ final class SecurityChecks {
 
 		return get_site_transient( $this->in_lockdown_transient );
 	}
-
 }

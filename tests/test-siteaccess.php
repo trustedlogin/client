@@ -7,8 +7,8 @@
 
 namespace TrustedLogin;
 
-use \WP_UnitTestCase;
-use \WP_Error;
+use WP_UnitTestCase;
+use WP_Error;
 
 class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 
@@ -21,12 +21,12 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 
 	public static $openssl_crypto_strong = true;
 
-	public function setUp() :void {
+	public function setUp(): void {
 		parent::setUp();
 
 		$config = array(
-			'role' => 'editor',
-			'caps'     => array(
+			'role'           => 'editor',
+			'caps'           => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
@@ -34,7 +34,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
-				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -49,7 +49,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 			'reassign_posts' => true,
 		);
 
-		$config = new Config( $config );
+		$config  = new Config( $config );
 		$logging = new Logging( $config );
 
 		$this->site_access = new \TrustedLogin\SiteAccess( $config, $logging );

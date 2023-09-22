@@ -8,15 +8,15 @@
  */
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -41,12 +41,12 @@ final class Envelope {
 	/**
 	 * Envelope constructor.
 	 *
-	 * @param Config $config
+	 * @param Config     $config
 	 * @param Encryption $encryption
 	 */
 	public function __construct( Config $config, Encryption $encryption ) {
 		$this->config     = $config;
-		$this->api_key = $this->config->get_setting( 'auth/api_key' );
+		$this->api_key    = $this->config->get_setting( 'auth/api_key' );
 		$this->encryption = $encryption;
 	}
 
@@ -77,13 +77,13 @@ final class Envelope {
 
 		$e_keys = $this->encryption->generate_keys();
 
-		if ( is_wp_error( $e_keys ) ){
+		if ( is_wp_error( $e_keys ) ) {
 			return $e_keys;
 		}
 
 		$nonce = $this->encryption->get_nonce();
 
-		if ( is_wp_error( $nonce ) ){
+		if ( is_wp_error( $nonce ) ) {
 			return $nonce;
 		}
 
@@ -106,18 +106,17 @@ final class Envelope {
 		$metadata = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(), $this->config );
 
 		return array(
-			'secretId'   	  => $secret_id,
-			'identifier' 	  => $encrypted_identifier,
-			'siteUrl'    	  => get_site_url(),
-			'publicKey'  	  => $this->api_key,
-			'accessKey'  	  => $access_key,
-			'wpUserId'   	  => get_current_user_id(),
+			'secretId'        => $secret_id,
+			'identifier'      => $encrypted_identifier,
+			'siteUrl'         => get_site_url(),
+			'publicKey'       => $this->api_key,
+			'accessKey'       => $access_key,
+			'wpUserId'        => get_current_user_id(),
 			'expiresAt'       => $this->config->get_expiration_timestamp( null, true ),
-			'version'    	  => Client::VERSION,
-			'nonce'		 	  => \sodium_bin2hex( $nonce ),
+			'version'         => Client::VERSION,
+			'nonce'           => \sodium_bin2hex( $nonce ),
 			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
-			'metaData'		  => $metadata,
+			'metaData'        => $metadata,
 		);
 	}
-
 }

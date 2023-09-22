@@ -9,14 +9,14 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 use ArrayAccess;
-use \Exception;
-use \WP_Error;
+use Exception;
+use WP_Error;
 
 final class Config {
 
@@ -31,16 +31,16 @@ final class Config {
 	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 */
 	private $default_settings = array(
-		'auth'           => array(
+		'auth'             => array(
 			'api_key'     => null,
 			'license_key' => null,
 		),
-		'caps'           => array(
+		'caps'             => array(
 			'add'    => array(),
 			'remove' => array(),
 		),
-		'decay'          => WEEK_IN_SECONDS,
-		'logging'        => array(
+		'decay'            => WEEK_IN_SECONDS,
+		'logging'          => array(
 			'enabled'   => false,
 			'directory' => null,
 			'threshold' => 'notice',
@@ -53,25 +53,25 @@ final class Config {
 				'appendContext'  => true,
 			),
 		),
-		'menu'           => array(
+		'menu'             => array(
 			'slug'     => null,
 			'title'    => null,
 			'priority' => null,
 			'icon_url' => '',
 			'position' => null,
 		),
-		'paths'          => array(
+		'paths'            => array(
 			'css' => null,
 			'js'  => null, // Default is defined in get_default_settings()
 		),
-		'reassign_posts' => true,
-		'require_ssl'    => true,
-		'role'           => 'editor',
-		'clone_role'     => true,
+		'reassign_posts'   => true,
+		'require_ssl'      => true,
+		'role'             => 'editor',
+		'clone_role'       => true,
 		'terms_of_service' => array(
 			'url' => null,
 		),
-		'vendor'         => array(
+		'vendor'           => array(
 			'namespace'             => null,
 			'title'                 => null,
 			'email'                 => null,
@@ -81,7 +81,7 @@ final class Config {
 			'logo_url'              => null,
 			'about_live_access_url' => null,
 		),
-		'webhook'        => array(
+		'webhook'          => array(
 			'url'           => null,
 			'debug_data'    => false,
 			'create_ticket' => false,
@@ -114,14 +114,16 @@ final class Config {
 	/**
 	 * @return true|\WP_Error[]
 	 * @throws \Exception
-	 *
 	 */
 	public function validate() {
 
-		if ( in_array( __NAMESPACE__, array(
+		if ( in_array(
+			__NAMESPACE__,
+			array(
 				'ReplaceMe',
 				'ReplaceMe\GravityView\TrustedLogin',
-			) ) && ! defined( 'TL_DOING_TESTS' ) ) {
+			)
+		) && ! defined( 'TL_DOING_TESTS' ) ) {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 501 );
 		}
 
@@ -181,7 +183,8 @@ final class Config {
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 				$errors[] = new \WP_Error(
 					'invalid_configuration',
-					sprintf( 'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
+					sprintf(
+						'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
 						$settings_key,
 						print_r( $this->get_setting( $settings_key, null, $this->settings ), true )
 					)
@@ -198,10 +201,10 @@ final class Config {
 				}
 			}
 		} else {
-			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+			$added_caps   = $this->get_setting( 'caps/add', array(), $this->settings );
 			$removed_caps = $this->get_setting( 'caps/remove', array(), $this->settings );
 
-			$added_caps = array_filter( $added_caps );
+			$added_caps   = array_filter( $added_caps );
 			$removed_caps = array_filter( $removed_caps );
 
 			if ( ! empty( $added_caps ) || ! empty( $removed_caps ) ) {
@@ -217,7 +220,7 @@ final class Config {
 				}
 			}
 
-			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			$exception_text  = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
 			throw new Exception( $exception_text, 406 );
@@ -231,7 +234,7 @@ final class Config {
 	 *
 	 * Note: This is a server timestamp, not a WordPress timestamp
 	 *
-	 * @param int $decay_time If passed, override the `decay` setting
+	 * @param int  $decay_time If passed, override the `decay` setting
 	 * @param bool $gmt Whether to use server time (false) or GMT time (true). Default: false.
 	 *
 	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
@@ -336,8 +339,8 @@ final class Config {
 	 * @since 1.0.0
 	 *
 	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name'])
-	 * @param mixed $default - if no setting found or settings not init, return this value.
-	 * @param array $settings Pass an array to fetch value for instead of using the default settings array
+	 * @param mixed  $default - if no setting found or settings not init, return this value.
+	 * @param array  $settings Pass an array to fetch value for instead of using the default settings array
 	 *
 	 * @return string|array
 	 */
@@ -372,7 +375,7 @@ final class Config {
 	/**
 	 * Gets a specific property value within a multidimensional array.
 	 *
-	 * @param array $array The array to search in.
+	 * @param array  $array The array to search in.
 	 * @param string $name The name of the property to find.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
@@ -398,7 +401,7 @@ final class Config {
 	 *
 	 * Provide a default value if you want to return a specific value if the property is not set.
 	 *
-	 * @param array $array Array from which the property's value should be retrieved.
+	 * @param array  $array Array from which the property's value should be retrieved.
 	 * @param string $prop Name of the property to be retrieved.
 	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
@@ -448,5 +451,4 @@ final class Config {
 		 */
 		return apply_filters( 'trustedlogin/' . $this->ns() . '/meets_ssl_requirement', $return );
 	}
-
 }

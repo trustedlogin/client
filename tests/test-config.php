@@ -21,15 +21,15 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		);
 
 		try {
-
-			$config = new \TrustedLogin\Config(array(
-				'vendor' => true
-			));
+			$config = new \TrustedLogin\Config(
+				array(
+					'vendor' => true,
+				)
+			);
 
 			$config->validate();
-
 		} catch ( Exception $exception ) {
-			$this->assertEquals( 406, $exception->getCode(), $expected_codes[3] . ' ' .$exception->getMessage() );
+			$this->assertEquals( 406, $exception->getCode(), $expected_codes[3] . ' ' . $exception->getMessage() );
 			$this->assertContains( 'public key', $exception->getMessage(), $expected_codes[3] );
 			$this->assertContains( 'vendor/namespace', $exception->getMessage(), $expected_codes[3] );
 			$this->assertContains( 'vendor/title', $exception->getMessage(), $expected_codes[3] );
@@ -39,18 +39,17 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		}
 
 		try {
-			$config = new \TrustedLogin\Config( array(
-				'vendor' => true,
-			) );
+			$config = new \TrustedLogin\Config(
+				array(
+					'vendor' => true,
+				)
+			);
 
 			$client = new TrustedLogin\Client( $config );
 
 			$this->assertTrue( $client instanceof \Exception, 'When instantiating the Client, do not throw an exception; return one.' );
-
 		} catch ( Exception $exception ) {
-
 		}
-
 	}
 
 	/**
@@ -66,16 +65,16 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		);
 
 		try {
-
-			$config = new \TrustedLogin\Config(array(
-				'vendor' => true,
-				'auth' => array( 'api_key' => 'asdasd' ),
-			));
+			$config = new \TrustedLogin\Config(
+				array(
+					'vendor' => true,
+					'auth'   => array( 'api_key' => 'asdasd' ),
+				)
+			);
 
 			$config->validate();
 
 			$client = new TrustedLogin\Client( $config );
-
 		} catch ( \Exception $exception ) {
 			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
 			$this->assertNotContains( 'public key', $exception->getMessage(), $expected_codes[3] );
@@ -95,25 +94,25 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		);
 
 		$valid_config = array(
-			'auth' => array(
+			'auth'        => array(
 				'api_key' => 'not empty',
 			),
 			'webhook_url' => 'https://www.google.com',
-			'vendor' => array(
-				'namespace' => 'jonesbeach',
-				'title' => 'Jones Beach Party',
+			'vendor'      => array(
+				'namespace'    => 'jonesbeach',
+				'title'        => 'Jones Beach Party',
 				'display_name' => null,
-				'email' => 'beach@example.com',
-				'website' => 'https://example.com',
-				'support_url' => 'https://example.com',
+				'email'        => 'beach@example.com',
+				'website'      => 'https://example.com',
+				'support_url'  => 'https://example.com',
 			),
 		);
 
 		try {
-			$invalid_website_url = $valid_config;
-			$invalid_website_url['webhook_url'] = 'asdasdsd';
+			$invalid_website_url                          = $valid_config;
+			$invalid_website_url['webhook_url']           = 'asdasdsd';
 			$invalid_website_url['vendor']['support_url'] = 'asdasdsd';
-			$invalid_website_url['vendor']['website'] = 'asdasdsd';
+			$invalid_website_url['vendor']['website']     = 'asdasdsd';
 
 			$config = new \TrustedLogin\Config( $invalid_website_url );
 
@@ -169,22 +168,22 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	public function test_get_setting() {
 
 		$config_array = array(
-			'auth' => array(
+			'auth'        => array(
 				'api_key' => 'not empty',
 			),
 			'webhook_url' => 'https://www.google.com',
-			'vendor' => array(
-				'namespace' => 'jones-party',
-				'title' => 'Jones Beach Party',
+			'vendor'      => array(
+				'namespace'    => 'jones-party',
+				'title'        => 'Jones Beach Party',
 				'display_name' => null,
-				'email' => 'beach@example.com',
-				'website' => 'https://example.com',
-				'support_url' => 'https://asdasdsd.example.com/support/',
+				'email'        => 'beach@example.com',
+				'website'      => 'https://example.com',
+				'support_url'  => 'https://asdasdsd.example.com/support/',
 			),
-			'paths' => array(
+			'paths'       => array(
 				'css' => null,
 			),
-			'decay' => 0,
+			'decay'       => 0,
 		);
 
 		$config = new \TrustedLogin\Config( $config_array );
@@ -195,11 +194,11 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$this->assertEquals( 0, $config->get_setting( 'decay' ) );
 
-		$this->assertEquals( 'https://www.google.com', $config->get_setting( 'webhook_url') );
+		$this->assertEquals( 'https://www.google.com', $config->get_setting( 'webhook_url' ) );
 
-		$this->assertEquals( 'Jones Beach Party', $config->get_setting( 'vendor/title') );
+		$this->assertEquals( 'Jones Beach Party', $config->get_setting( 'vendor/title' ) );
 
-		$this->assertEquals( false, $config->get_setting( 'non-existent key') );
+		$this->assertEquals( false, $config->get_setting( 'non-existent key' ) );
 
 		$this->assertEquals( 'default override', $config->get_setting( 'non-existent key', 'default override' ) );
 
@@ -209,14 +208,13 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$this->assertEquals( '', $config->get_setting( 'vendor/last_name' ) );
 
-
 		$this->assertNotNull( $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 		$this->assertNotFalse( $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 		$this->assertContains( '.css', $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 
 		// Test passed array values
 		$passed_array = array(
-			'try' => 'and try again',
+			'try'   => 'and try again',
 			'first' => array(
 				'three_positive_integers' => 123,
 			),
@@ -232,16 +230,16 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	function test_get_expiration_timestamp() {
 
 		$valid_config = array(
-			'auth' => array(
-				'api_key' => 'not empty'
+			'auth'   => array(
+				'api_key' => 'not empty',
 			),
 			'vendor' => array(
-				'namespace' => 'asdasd',
-				'email' => 'asdasds',
-				'title' => 'asdasdsad',
-				'website' => 'https://example.com',
+				'namespace'   => 'asdasd',
+				'email'       => 'asdasds',
+				'title'       => 'asdasdsad',
+				'website'     => 'https://example.com',
 				'support_url' => 'https://example.com/support/',
-			)
+			),
 		);
 
 		$config = new \TrustedLogin\Config( $valid_config );
@@ -251,48 +249,51 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		$this->assertSame( false, $config->get_expiration_timestamp( 0 ) );
 
 		$valid_config['decay'] = 12345;
-		$config_with_decay = new \TrustedLogin\Config( $valid_config );
+		$config_with_decay     = new \TrustedLogin\Config( $valid_config );
 		$this->assertSame( time() + 12345, $config_with_decay->get_expiration_timestamp() );
 
 		$valid_config['decay'] = 0;
-		$config_no_decay = new \TrustedLogin\Config( $valid_config );
+		$config_no_decay       = new \TrustedLogin\Config( $valid_config );
 		$this->assertSame( false, $config_no_decay->get_expiration_timestamp() );
 	}
 
 	/**
 	 * @covers Config::get_setting
 	 * Test the "create_ticket" setting.
-	 *
 	 */
 	function test_get_setting_create_ticket() {
-		$config = new \TrustedLogin\Config( array(
-			'auth' => array(
-				'api_key' => 'not empty'
-			),
-			'vendor' => array(
-				'namespace' => 'asdasd',
-				'email' => 'asdasds',
-				'title' => 'asdasdsad',
-				'website' => 'https://example.com',
-				'support_url' => 'https://example.com/support/',
+		$config = new \TrustedLogin\Config(
+			array(
+				'auth'   => array(
+					'api_key' => 'not empty',
+				),
+				'vendor' => array(
+					'namespace'   => 'asdasd',
+					'email'       => 'asdasds',
+					'title'       => 'asdasdsad',
+					'website'     => 'https://example.com',
+					'support_url' => 'https://example.com/support/',
+				),
 			)
-		) );
+		);
 
-		$this->assertSame(false , $config->get_setting( 'create_ticket' ) );
-		$config = new \TrustedLogin\Config( array(
-			'create_ticket' => true,
-			'auth' => array(
-				'api_key' => 'not empty'
-			),
-			'vendor' => array(
-				'namespace' => 'asdasd',
-				'email' => 'asdasds',
-				'title' => 'asdasdsad',
-				'website' => 'https://example.com',
-				'support_url' => 'https://example.com/support/',
+		$this->assertSame( false, $config->get_setting( 'create_ticket' ) );
+		$config = new \TrustedLogin\Config(
+			array(
+				'create_ticket' => true,
+				'auth'          => array(
+					'api_key' => 'not empty',
+				),
+				'vendor'        => array(
+					'namespace'   => 'asdasd',
+					'email'       => 'asdasds',
+					'title'       => 'asdasdsad',
+					'website'     => 'https://example.com',
+					'support_url' => 'https://example.com/support/',
+				),
 			)
-		) );
+		);
 
-		$this->assertSame(true , $config->get_setting( 'create_ticket' ) );
+		$this->assertSame( true, $config->get_setting( 'create_ticket' ) );
 	}
 }

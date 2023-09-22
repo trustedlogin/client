@@ -34,7 +34,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 	static $default_roles;
 
-	public function setUp() :void {
+	public function setUp(): void {
 		global $wpdb;
 
 		parent::setUp();
@@ -46,26 +46,26 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		self::$default_roles = get_option( self::$role_key );
 
 		$this->default_settings = array(
-			'role' => 'editor',
-			'caps' => array(
+			'role'           => 'editor',
+			'caps'           => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
-					'edit_posts' => 'Access the posts that you created',
+					'edit_posts'     => 'Access the posts that you created',
 				),
 			),
-			'webhook_url' => 'https://www.trustedlogin.com/webhook-example/',
-			'auth' => array(
+			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
+			'auth'           => array(
 				'api_key' => '9946ca31be6aa948', // Public key for encrypting the securedKey
 			),
-			'decay' => WEEK_IN_SECONDS,
-			'vendor' => array(
-				'namespace' => 'gravityview',
-				'title' => 'GravityView',
+			'decay'          => WEEK_IN_SECONDS,
+			'vendor'         => array(
+				'namespace'    => 'gravityview',
+				'title'        => 'GravityView',
 				'display_name' => 'Floaty the Astronaut',
-				'email' => 'support@gravityview.co',
-				'website' => 'https://gravityview.co',
-				'support_url' => 'https://gravityview.co/support/', // Backup to redirect users if TL is down/etc
-				'logo_url' => '', // Displayed in the authentication modal
+				'email'        => 'support@gravityview.co',
+				'website'      => 'https://gravityview.co',
+				'support_url'  => 'https://gravityview.co/support/', // Backup to redirect users if TL is down/etc
+				'logo_url'     => '', // Displayed in the authentication modal
 			),
 			'reassign_posts' => true,
 		);
@@ -87,7 +87,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		}
 
 		$Reflection = new \ReflectionClass( $class );
-		$prop = $Reflection->getProperty( $name );
+		$prop       = $Reflection->getProperty( $name );
 		$prop->setAccessible( true );
 
 		return $prop;
@@ -116,16 +116,15 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$TL_Support_Role = new SupportRole( $this->config, $this->logging );
 
-		$not_string_new_role = $TL_Support_Role->create( array('asdasd'), 'administrator' );
+		$not_string_new_role = $TL_Support_Role->create( array( 'asdasd' ), 'administrator' );
 		$this->assertWPError( $not_string_new_role, 'not string new role' );
 		$this->assertEquals( 'new_role_slug_not_string', $not_string_new_role->get_error_code(), 'not string new role' );
 
-		$not_string_clone_role = $TL_Support_Role->create( 'administrator', array('asdasd') );
+		$not_string_clone_role = $TL_Support_Role->create( 'administrator', array( 'asdasd' ) );
 		$this->assertWPError( $not_string_clone_role, 'not string clone role' );
 		$this->assertEquals( 'cloned_role_slug_not_string', $not_string_clone_role->get_error_code(), 'not string clone role' );
 
 		$this->assertTrue( $TL_Support_Role->create( 'administrator', '1' ) instanceof WP_Role, 'role already exists' );
-
 	}
 
 	/**
@@ -136,8 +135,8 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$new_role = microtime();
 
 		$TL_Support_Role = new SupportRole( $this->config, $this->logging );
-		$support_user = $this->_get_public_property( 'support_user' );
-		$new_role = $TL_Support_Role->create( $new_role, $role );
+		$support_user    = $this->_get_public_property( 'support_user' );
+		$new_role        = $TL_Support_Role->create( $new_role, $role );
 
 		$this->assertTrue( $new_role instanceof WP_Role );
 
@@ -151,14 +150,14 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		);
 
 		$new_role_caps = $new_role->capabilities;
-		$cloned_caps = get_role( $role )->capabilities;
+		$cloned_caps   = get_role( $role )->capabilities;
 
 		foreach ( $remove_caps as $remove_cap ) {
 			$this->assertFalse( in_array( $remove_cap, $new_role_caps, true ) );
 			unset( $cloned_caps[ $remove_cap ] );
 		}
 
-		$added_caps = $this->config->get_setting('caps/add' );
+		$added_caps = $this->config->get_setting( 'caps/add' );
 
 		foreach ( (array) $added_caps as $added_cap => $reason ) {
 
@@ -166,10 +165,9 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			if ( in_array( $added_cap, $remove_caps, true ) ) {
 				$this->assertFalse( in_array( $added_cap, array_keys( $new_role_caps ), true ), 'restricted caps were added, but should not have been' );
 			} else {
-				$this->assertTrue( in_array( $added_cap, array_keys( $new_role_caps ), true ), $added_cap . ' was not added, but should have been (for ' . $role .' role)' );
+				$this->assertTrue( in_array( $added_cap, array_keys( $new_role_caps ), true ), $added_cap . ' was not added, but should have been (for ' . $role . ' role)' );
 				$cloned_caps[ $added_cap ] = true;
 			}
-
 		}
 
 		$this->assertEquals( $new_role_caps, $cloned_caps );
@@ -197,7 +195,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( $support_user->exists() );
 
 		// Was the role created?
-		$TL_Support_Role = new SupportRole( $this->config, $this->logging );
+		$TL_Support_Role  = new SupportRole( $this->config, $this->logging );
 		$support_role_key = $TL_Support_Role->get_name();
 		$this->assertTrue( $wp_roles->is_role( $support_role_key ) );
 		$support_role = $wp_roles->get_role( $support_role_key );
@@ -209,54 +207,54 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->assertTrue( in_array( $support_role_key, $support_user->roles, true ) );
 
-		foreach( $support_role->capabilities as $expected_cap => $enabled ) {
-
+		foreach ( $support_role->capabilities as $expected_cap => $enabled ) {
 			$expect = true;
 
 			// manage_links is magical.
 			if ( 'manage_links' === $expected_cap ) {
 				$link_manager_enabled = get_option( 'link_manager_enabled' );
-				$expect = ! empty( $link_manager_enabled );
+				$expect               = ! empty( $link_manager_enabled );
 			}
 
 			/**
 			 * This cap requires `delete_users` for normal admins, or is_super_admin() for MS, which we aren't testing
+			 *
 			 * @see map_meta_cap():393
 			 */
-			if( 'unfiltered_html' === $expected_cap ) {
+			if ( 'unfiltered_html' === $expected_cap ) {
 				$expect = ! is_multisite();
 			}
 
-			if( ! is_numeric( $expected_cap ) ) {
-				$this->assertSame( $expect, $support_user->has_cap( $expected_cap ), 'Did not have ' . $expected_cap .', which was set to ' . var_export( $enabled, true ) );
+			if ( ! is_numeric( $expected_cap ) ) {
+				$this->assertSame( $expect, $support_user->has_cap( $expected_cap ), 'Did not have ' . $expected_cap . ', which was set to ' . var_export( $enabled, true ) );
 			}
 		}
 
 		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
-		$this->assertSame( $this->config->get_setting('vendor/display_name'), $support_user->display_name );
-		$this->assertSame( $this->config->get_setting('vendor/email'), $support_user->user_email );
-		$this->assertSame( $this->config->get_setting('vendor/website'), $support_user->user_url );
+		$this->assertSame( $this->config->get_setting( 'vendor/display_name' ), $support_user->display_name );
+		$this->assertSame( $this->config->get_setting( 'vendor/email' ), $support_user->user_email );
+		$this->assertSame( $this->config->get_setting( 'vendor/website' ), $support_user->user_url );
 		$this->assertSame( sanitize_user( $username ), $support_user->user_login );
 
-		###
-		###
-		### Test error messages
-		###
-		###
+		//
+		//
+		// Test error messages
+		//
+		//
 
 		$this->_reset_roles();
 		$TL_Support_User = new SupportUser( $this->config, $this->logging );
-		$duplicate_user = $TL_Support_User->create();
+		$duplicate_user  = $TL_Support_User->create();
 		$this->assertWPError( $duplicate_user );
 		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
 
 		$this->_reset_roles();
 
-		$config_with_new_title = $this->default_settings;
+		$config_with_new_title                    = $this->default_settings;
 		$config_with_new_title['vendor']['title'] = microtime();
-		$config_with_new_title = new \TrustedLogin\Config( $config_with_new_title );
-		$TL_with_new_title = new SupportUser( $config_with_new_title, $this->logging );
+		$config_with_new_title                    = new \TrustedLogin\Config( $config_with_new_title );
+		$TL_with_new_title                        = new SupportUser( $config_with_new_title, $this->logging );
 
 		$should_be_dupe_email = $TL_with_new_title->create();
 		$this->assertWPError( $should_be_dupe_email );
@@ -264,27 +262,27 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->_reset_roles();
 
-		$config_with_bad_role = $this->default_settings;
-		$config_with_bad_role['vendor']['title'] = microtime();
+		$config_with_bad_role                        = $this->default_settings;
+		$config_with_bad_role['vendor']['title']     = microtime();
 		$config_with_bad_role['vendor']['namespace'] = microtime();
-		$config_with_bad_role['vendor']['email'] = microtime() . '@example.com';
-		$config_with_bad_role['role'] = 'madeuprole';
+		$config_with_bad_role['vendor']['email']     = microtime() . '@example.com';
+		$config_with_bad_role['role']                = 'madeuprole';
 		$this->assertEmpty( get_role( 'gravityview-support' ), 'sanity check - gravityview-support role shouldn\'t exist' );
 		$this->assertEmpty( get_role( $config_with_bad_role['role'] ), 'sanity check - madeuprole role shouldn\'t exist' );
 
-		$config_with_bad_role = new \TrustedLogin\Config( $config_with_bad_role );
+		$config_with_bad_role    = new \TrustedLogin\Config( $config_with_bad_role );
 		$TL_config_with_bad_role = new SupportUser( $config_with_bad_role, $this->logging );
 
 		$should_be_role_does_not_exist = $TL_config_with_bad_role->create();
 		$this->assertWPError( $should_be_role_does_not_exist );
 		$this->assertSame( 'role_does_not_exist', $should_be_role_does_not_exist->get_error_code() );
 
-		$valid_config = $this->default_settings;
-		$valid_config['vendor']['title'] = microtime();
+		$valid_config                        = $this->default_settings;
+		$valid_config['vendor']['title']     = microtime();
 		$valid_config['vendor']['namespace'] = microtime();
-		$valid_config['vendor']['email'] = microtime() . '@example.com';
-		$valid_config = new \TrustedLogin\Config( $valid_config );
-		$TL_valid_config = new TrustedLogin\SupportUser( $valid_config, $this->logging );
+		$valid_config['vendor']['email']     = microtime() . '@example.com';
+		$valid_config                        = new \TrustedLogin\Config( $valid_config );
+		$TL_valid_config                     = new TrustedLogin\SupportUser( $valid_config, $this->logging );
 
 		// Check to see what happens when an error is returned during wp_insert_user()
 		add_filter( 'pre_user_login', '__return_empty_string' );
@@ -309,11 +307,11 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$user = $this->factory->user->create_and_get( array( 'role' => 'administrator' ) );
 
-		$hash = 'asdsdasdasdasdsd';
-		$hash_bin = sodium_crypto_generichash( $hash, '', 16 );
-		$generichash     = sodium_bin2hex( $hash_bin );
-		$expiry = $this->config->get_expiration_timestamp( DAY_IN_SECONDS );
-		$cron = new \TrustedLogin\Cron( $this->config, $this->logging );
+		$hash        = 'asdsdasdasdasdsd';
+		$hash_bin    = sodium_crypto_generichash( $hash, '', 16 );
+		$generichash = sodium_bin2hex( $hash_bin );
+		$expiry      = $this->config->get_expiration_timestamp( DAY_IN_SECONDS );
+		$cron        = new \TrustedLogin\Cron( $this->config, $this->logging );
 
 		$TL_Support_User = new SupportUser( $this->config, $this->logging );
 

@@ -7,6 +7,7 @@
 
 /**
  * Sample test case.
+ *
  * @group ajax
  */
 class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
@@ -36,7 +37,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	private $_real_error_level;
 
-	public function setUp() :void {
+	public function setUp(): void {
 
 		$this->_real_error_level = error_reporting();
 
@@ -46,8 +47,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		parent::setUp();
 
 		$config = array(
-			'role' => 'editor',
-			'caps'     => array(
+			'role'           => 'editor',
+			'caps'           => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
@@ -55,7 +56,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
 			'auth'           => array(
-				'api_key'   => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -81,10 +82,9 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->logging = new \TrustedLogin\Logging( $this->config );
 
 		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
-
 	}
 
-	public function tearDown() : void {
+	public function tearDown(): void {
 
 		parent::tearDown();
 
@@ -95,6 +95,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 	/**
 	 * Set a valid "tl_nonce-{user_id}" $_POST['_nonce'] value
+	 *
 	 * @see GravityView_Ajax::check_ajax_nonce()
 	 */
 	function _set_nonce( $user_id = null ) {
@@ -130,7 +131,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->_delete_all_support_users();
 
-		$this->_setRole('administrator' );
+		$this->_setRole( 'administrator' );
 		$current_user = wp_get_current_user();
 		if ( function_exists( 'grant_super_admin' ) ) {
 			grant_super_admin( $current_user->ID );
@@ -159,7 +160,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_last_response = '';
 		$this->_delete_all_support_users();
 
-		$this->_setRole('subscriber' );
+		$this->_setRole( 'subscriber' );
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
 		$this->assertContains( 'Permissions issue', $this->_last_response, 'User should not have permission to create users.' );
@@ -169,9 +170,10 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		/**
 		 * Create conflicting user name and try to create the user with the same username.
 		 * Just wanting to make sure this step is tested, but:
+		 *
 		 * @see TrustedLoginUsersTest::test_create_support_user for full testing
 		 */
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+		$user_name     = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 		$existing_user = $this->factory->user->create_and_get( array( 'user_login' => $user_name ) );
 		$this->assertTrue( is_a( $existing_user, 'WP_User' ) );
 		$this->_setRole( 'administrator' );
@@ -198,7 +200,6 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		remove_filter( 'get_user_option_tl_gravityview_id', '__return_null' );
 		$this->_delete_all_support_users();
-
 
 		/**
 		 * It doesn't matter if create_access() fails now, since we have properly checked everything else.
@@ -245,14 +246,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$user = get_user_by( 'email', $this->config->get_setting( 'vendor/email' ) );
 
-		if( $user ) {
+		if ( $user ) {
 			wp_delete_user( $user->ID );
 		}
 
 		global $wpdb;
 
-		$wpdb->query( 'DELETE FROM ' . $wpdb->prefix .'usermeta WHERE 1=1' );
-		$wpdb->query( 'DELETE FROM ' . $wpdb->prefix .'users WHERE 1=1' );
+		$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'usermeta WHERE 1=1' );
+		$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'users WHERE 1=1' );
 	}
 
 	/**
@@ -269,7 +270,6 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		try {
 			$this->_handleAjax( $action );
 		} catch ( Exception $e ) {
-
 		}
 	}
 }

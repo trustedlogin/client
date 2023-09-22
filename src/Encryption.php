@@ -8,14 +8,14 @@
  */
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \Sodium;
+use Exception;
+use WP_Error;
+use Sodium;
 
 final class Encryption {
 
@@ -48,8 +48,8 @@ final class Encryption {
 	/**
 	 * Encryption constructor.
 	 *
-	 * @param Config $config
-	 * @param Remote $remote
+	 * @param Config  $config
+	 * @param Remote  $remote
 	 * @param Logging $logging
 	 */
 	public function __construct( Config $config, Remote $remote, Logging $logging ) {
@@ -82,7 +82,7 @@ final class Encryption {
 	 *
 	 * @return bool True: supports encryption. False: does not support encryption.
 	 */
-	static public function meets_requirements() {
+	public static function meets_requirements() {
 
 		$required_functions = array(
 			'random_bytes',
@@ -117,7 +117,7 @@ final class Encryption {
 	 *
 	 * @return string|WP_Error 64-character random hash or a WP_Error object explaining what went wrong. See docblock.
 	 */
-	static public function get_random_hash( $logging ) {
+	public static function get_random_hash( $logging ) {
 
 		$byte_length = 64;
 
@@ -161,7 +161,7 @@ final class Encryption {
 	 *
 	 * @return string|WP_Error
 	 */
-	static public function hash( $string, $length = 16 ) {
+	public static function hash( $string, $length = 16 ) {
 
 		if ( ! function_exists( 'sodium_crypto_generichash' ) ) {
 			return new \WP_Error( 'sodium_crypto_generichash_not_available', 'sodium_crypto_generichash not available' );
@@ -216,7 +216,6 @@ final class Encryption {
 		$remote_key = $this->get_remote_encryption_key();
 
 		if ( is_wp_error( $remote_key ) ) {
-
 			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'error' );
 
 			return $remote_key;
@@ -287,7 +286,7 @@ final class Encryption {
 			'method'      => 'GET',
 			'timeout'     => 45,
 			'httpversion' => '1.1',
-			'headers'     => $headers
+			'headers'     => $headers,
 		);
 
 		$url = $this->get_remote_encryption_key_url();
@@ -297,8 +296,7 @@ final class Encryption {
 		$response_json = $this->remote->handle_response( $response, array( 'publicKey' ) );
 
 		if ( is_wp_error( $response_json ) ) {
-
-			if ( 'not_found' == $response_json->get_error_code() ){
+			if ( 'not_found' == $response_json->get_error_code() ) {
 				return new \WP_Error( 'not_found', __( 'Encryption key could not be fetched, Vendor site returned 404.', 'trustedlogin' ) );
 			}
 
@@ -338,10 +336,8 @@ final class Encryption {
 		}
 
 		try {
-
 			$alice_to_bob_kp = sodium_crypto_box_keypair_from_secretkey_and_publickey( $alice_secret_key, \sodium_hex2bin( $bob_public_key ) );
 			$encrypted       = sodium_crypto_box( $data, $nonce, $alice_to_bob_kp );
-
 		} catch ( \SodiumException $e ) {
 			return new \WP_Error(
 				'encryption_failed_cryptobox',
@@ -410,7 +406,7 @@ final class Encryption {
 
 		$alice_keys = array(
 			'publicKey'  => sodium_crypto_box_publickey( $aliceKeypair ),
-			'privateKey' => sodium_crypto_box_secretkey( $aliceKeypair )
+			'privateKey' => sodium_crypto_box_secretkey( $aliceKeypair ),
 		);
 
 		return (object) $alice_keys;

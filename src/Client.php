@@ -20,13 +20,13 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
+use Exception;
+use WP_Error;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -96,7 +96,7 @@ final class Client {
 	 * @see https://docs.trustedlogin.com/ for more information
 	 *
 	 * @param Config $config
-	 * @param bool $init Whether to initialize everything on instantiation
+	 * @param bool   $init Whether to initialize everything on instantiation
 	 *
 	 * @throws Exception If initializing is prevented via constants or the configuration isn't valid, throws exception.
 	 *
@@ -136,7 +136,6 @@ final class Client {
 		$this->ajax = new Ajax( $this->config, $this->logging );
 
 		$this->remote = new Remote( $this->config, $this->logging );
-
 
 		if ( $init ) {
 			$this->init();
@@ -180,7 +179,6 @@ final class Client {
 
 	/**
 	 * Initialize all the things!
-	 *
 	 */
 	public function init() {
 		$this->admin->init();
@@ -211,7 +209,7 @@ final class Client {
 	 *
 	 * @since 1.5.0 Added $ticket_data parameter.
 	 *
-	 * @param bool $include_debug_data Whether to include debug data in the response.
+	 * @param bool       $include_debug_data Whether to include debug data in the response.
 	 * @param array|null $ticket_data If provided, customer-provided data associated with the access request.
 	 *
 	 * @return array|WP_Error
@@ -236,14 +234,12 @@ final class Client {
 		try {
 			$support_user_id = $this->support_user->create();
 		} catch ( Exception $exception ) {
-
 			$this->logging->log( 'An exception occurred trying to create a support user.', __METHOD__, 'critical', $exception );
 
 			return new \WP_Error( 'support_user_exception', $exception->getMessage(), array( 'error_code' => 500 ) );
 		}
 
 		if ( is_wp_error( $support_user_id ) ) {
-
 			$this->logging->log( sprintf( 'Support user not created: %s (%s)', $support_user_id->get_error_message(), $support_user_id->get_error_code() ), __METHOD__, 'error' );
 
 			$support_user_id->add_data( array( 'error_code' => 409 ) );
@@ -254,7 +250,6 @@ final class Client {
 		$site_identifier_hash = Encryption::get_random_hash( $this->logging );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
-
 			wp_delete_user( $support_user_id );
 
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
@@ -276,7 +271,6 @@ final class Client {
 		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
-
 			wp_delete_user( $support_user_id );
 
 			$did_setup->add_data( array( 'error_code' => 503 ) );
@@ -291,7 +285,6 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
-
 			wp_delete_user( $support_user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
@@ -324,21 +317,24 @@ final class Client {
 		timer_start();
 
 		try {
-
-			add_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
-				$this,
-				'add_meta_to_envelope'
-			) );
+			add_filter(
+				'trustedlogin/' . $this->config->ns() . '/envelope/meta',
+				array(
+					$this,
+					'add_meta_to_envelope',
+				)
+			);
 
 			$created = $this->site_access->sync_secret( $secret_id, $site_identifier_hash, 'create' );
 
-			remove_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
-				$this,
-				'add_meta_to_envelope'
-			) );
-
+			remove_filter(
+				'trustedlogin/' . $this->config->ns() . '/envelope/meta',
+				array(
+					$this,
+					'add_meta_to_envelope',
+				)
+			);
 		} catch ( Exception $e ) {
-
 			$exception_error = new \WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
 
 			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
@@ -410,7 +406,6 @@ final class Client {
 		$site_identifier_hash = $this->support_user->get_site_hash( $user_id );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
-
 			$this->logging->log( sprintf( 'Could not get identifier hash for existing support user account. %s (%s)', $site_identifier_hash->get_error_message(), $site_identifier_hash->get_error_code() ), __METHOD__, 'critical' );
 
 			return $site_identifier_hash;
@@ -425,7 +420,6 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
-
 			wp_delete_user( $user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
@@ -454,21 +448,24 @@ final class Client {
 		timer_start();
 
 		try {
-
-			add_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
-				$this,
-				'add_meta_to_envelope'
-			) );
+			add_filter(
+				'trustedlogin/' . $this->config->ns() . '/envelope/meta',
+				array(
+					$this,
+					'add_meta_to_envelope',
+				)
+			);
 
 			$updated = $this->site_access->sync_secret( $secret_id, $site_identifier_hash, 'extend' );
 
-			remove_filter( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(
-				$this,
-				'add_meta_to_envelope'
-			) );
-
+			remove_filter(
+				'trustedlogin/' . $this->config->ns() . '/envelope/meta',
+				array(
+					$this,
+					'add_meta_to_envelope',
+				)
+			);
 		} catch ( Exception $e ) {
-
 			$exception_error = new \WP_Error( $e->getCode(), $e->getMessage(), array( 'status_code' => 500 ) );
 
 			$this->logging->log( 'There was an error updating TrustedLogin servers.', __METHOD__, 'error', $e );
@@ -479,7 +476,6 @@ final class Client {
 		}
 
 		if ( is_wp_error( $updated ) ) {
-
 			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $updated->get_error_code(), $updated->get_error_message() ), __METHOD__, 'error' );
 
 			$updated->add_data( array( 'status_code' => 503 ) );
@@ -494,13 +490,16 @@ final class Client {
 		/**
 		 * @usedby Remote::maybe_send_webhook()
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array(
-			'url'        => get_site_url(),
-			'ns'         => $this->config->ns(),
-			'action'     => 'extended',
-			'ref'        => self::get_reference_id(),
-			'access_key' => $this->site_access->get_access_key(),
-		) );
+		do_action(
+			'trustedlogin/' . $this->config->ns() . '/access/extended',
+			array(
+				'url'        => get_site_url(),
+				'ns'         => $this->config->ns(),
+				'action'     => 'extended',
+				'ref'        => self::get_reference_id(),
+				'access_key' => $this->site_access->get_access_key(),
+			)
+		);
 
 		return $return_data;
 	}
@@ -515,7 +514,6 @@ final class Client {
 	public function revoke_access( $identifier = '' ) {
 
 		if ( empty( $identifier ) ) {
-
 			$this->logging->log( 'Missing the revoke access identifier.', __METHOD__, 'error' );
 
 			return false;
@@ -570,11 +568,14 @@ final class Client {
 		/**
 		 * Site was removed in SaaS, user was deleted.
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array(
-			'url'    => get_site_url(),
-			'ns'     => $this->config->ns(),
-			'action' => 'revoked',
-		) );
+		do_action(
+			'trustedlogin/' . $this->config->ns() . '/access/revoked',
+			array(
+				'url'    => get_site_url(),
+				'ns'     => $this->config->ns(),
+				'action' => 'revoked',
+			)
+		);
 
 		return $site_revoked;
 	}

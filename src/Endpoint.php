@@ -9,10 +9,10 @@
 
 namespace TrustedLogin;
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 class Endpoint {
 
@@ -86,7 +86,6 @@ class Endpoint {
 			'tl_' . $config->ns() . '_endpoint',
 			$config
 		);
-
 	}
 
 	public function init() {
@@ -262,7 +261,6 @@ class Endpoint {
 	 *
 	 * @since 1.0.0
 	 * @see Endpoint::init() Called via `init` hook
-	 *
 	 */
 	public function add() {
 
@@ -328,8 +326,8 @@ class Endpoint {
 
 		// Return only the expected keys.
 		return array(
-			self::POST_ACTION_KEY => $_sanitized_post_data[ self::POST_ACTION_KEY ],
-			self::POST_ENDPOINT_KEY => $_sanitized_post_data[ self::POST_ENDPOINT_KEY ],
+			self::POST_ACTION_KEY     => $_sanitized_post_data[ self::POST_ACTION_KEY ],
+			self::POST_ENDPOINT_KEY   => $_sanitized_post_data[ self::POST_ENDPOINT_KEY ],
 			self::POST_IDENTIFIER_KEY => $_sanitized_post_data[ self::POST_IDENTIFIER_KEY ],
 		);
 	}
