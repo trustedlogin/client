@@ -227,6 +227,8 @@ class Logger {
 	 * Writes a line to the log without prepending a status or timestamp
 	 *
 	 * @param string $message Line to write to the log
+	 * @throws RuntimeException If the file cannot be written to.
+	 *
 	 * @return void
 	 */
 	public function write( $message ) {

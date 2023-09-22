@@ -17,6 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 use WP_User;
 use WP_Admin_Bar;
 
+/**
+ * Handle all the functionality that is related to the WordPress Dashboard.
+ */
 final class Admin {
 
 	/**
@@ -27,16 +30,22 @@ final class Admin {
 	const ABOUT_LIVE_ACCESS_URL = 'https://www.trustedlogin.com/about/live-access/';
 
 	/**
+	 * Config object.
+	 *
 	 * @var Config
 	 */
 	private $config;
 
 	/**
+	 * SupportUser object.
+	 *
 	 * @var SupportUser $support_user
 	 */
 	private $support_user;
 
 	/**
+	 * Form object.
+	 *
 	 * @var Form $form
 	 */
 	private $form;
@@ -44,7 +53,9 @@ final class Admin {
 	/**
 	 * Admin constructor.
 	 *
-	 * @param Config $config
+	 * @param Config      $config Config object.
+	 * @param Form        $form Form object.
+	 * @param SupportUser $support_user SupportUser object.
 	 */
 	public function __construct( Config $config, Form $form, SupportUser $support_user ) {
 		$this->config       = $config;
@@ -52,6 +63,11 @@ final class Admin {
 		$this->support_user = $support_user;
 	}
 
+	/**
+	 * Sets up all the admin hooks.
+	 *
+	 * @return void
+	 */
 	public function init() {
 		add_action(
 			'trustedlogin/' . $this->config->ns() . '/button',
@@ -147,8 +163,8 @@ final class Admin {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array   $actions
-	 * @param WP_User $user_object
+	 * @param array   $actions     The user row actions links.
+	 * @param WP_User $user_object The user object.
 	 *
 	 * @return array
 	 */
@@ -173,7 +189,7 @@ final class Admin {
 	/**
 	 * Adds a "Revoke TrustedLogin" menu item to the admin toolbar
 	 *
-	 * @param WP_Admin_Bar $admin_bar
+	 * @param WP_Admin_Bar $admin_bar The admin bar object.
 	 *
 	 * @return void
 	 */
@@ -241,7 +257,7 @@ final class Admin {
 
 		$menu_title = $this->config->get_setting( 'menu/title', esc_html__( 'Grant Support Access', 'trustedlogin' ) );
 
-		// If empty (null or empty string), add top-level menu
+		// If empty (null or empty string), add top-level menu.
 		if ( empty( $parent_slug ) ) {
 			add_menu_page(
 				$menu_title,

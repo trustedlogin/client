@@ -529,6 +529,7 @@ final class SupportUser {
 
 		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
 
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		$this->logging->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
 
 		return $reassign_id;
