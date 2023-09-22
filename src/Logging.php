@@ -206,23 +206,27 @@ class Logging {
 	 * @return bool True: File exists or was created; False: file could not be created.
 	 */
 	private function prevent_directory_browsing( $dirpath ) {
+		/** @var \WP_Filesystem_Base $wp_filesystem */
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			$this->log( 'Unable to initialize WP_Filesystem.', __METHOD__, 'error' );
+			return false;
+		}
 
 		// Protect export folder from browsing.
 		$index_pathname = $dirpath . 'index.html';
 
-		if ( file_exists( $index_pathname ) ) {
+		if ( $wp_filesystem->exists( $index_pathname ) ) {
 			return true;
 		}
 
-		$file = fopen( $index_pathname, 'w' );
+		$file_content = '<!-- Silence is golden. TrustedLogin is also pretty great. Learn more: https://www.trustedlogin.com/about/easy-and-safe/ -->';
 
-		if ( false === $file ) {
+		if ( ! $wp_filesystem->put_contents( $index_pathname, $file_content ) ) {
 			$this->log( 'Unable to protect directory from browsing.', __METHOD__, 'error' );
 			return false;
 		}
-
-		fwrite( $file, '<!-- Silence is golden. TrustedLogin is also pretty great. -->' );
-		fclose( $file );
 
 		return true;
 	}
