@@ -230,7 +230,7 @@ class Logging {
 			return false;
 		}
 
-		fwrite( $file, '<!-- Silence is golden. TrustedLogin is also pretty great. -->' );
+		fwrite( $file, '<!-- Silence is golden. TrustedLogin is also pretty great. Learn more: https://www.trustedlogin.com/about/easy-and-safe/ -->' );
 		fclose( $file );
 
 		return true;
