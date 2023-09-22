@@ -22,6 +22,11 @@ class Logging {
 	private $ns;
 
 	/**
+	 * @var Config
+	 */
+	private $config = null;
+
+	/**
 	 * @var bool $logging_enabled
 	 */
 	private $logging_enabled = false;
@@ -36,11 +41,11 @@ class Logging {
 	 */
 	public function __construct( Config $config ) {
 
+		$this->config = $config;
+
 		$this->ns = $config->ns();
 
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
-
-		$this->klogger = $this->setup_klogger( $config );
 	}
 
 	/**
@@ -51,7 +56,6 @@ class Logging {
 	 * @return false|Logger
 	 */
 	private function setup_klogger( $config ) {
-
 
 		$logging_directory = null;
 
@@ -313,7 +317,10 @@ class Logging {
 			return;
 		}
 
-		// The logger class didn't load for some reason
+		// Set up klogger, creating the logging file/directory if it doesn't already exist.
+		$this->klogger = $this->setup_klogger( $this->config );
+
+		// The logger class didn't load. Rely on WordPress logging, if enabled.
 		if ( ! $this->klogger ) {
 
 			$wp_debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
