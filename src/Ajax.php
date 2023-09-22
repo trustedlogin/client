@@ -63,7 +63,6 @@ final class Ajax {
 	 * @return void Sends a JSON success or error message based on what happens
 	 */
 	public function ajax_generate_support() {
-
 		// Remove any fields that are not in the $ajax_fields array.
 		$posted_data = array_intersect_key( $_POST, array_flip( $this->generate_support_fields ) );
 
@@ -113,9 +112,9 @@ final class Ajax {
 		if ( is_wp_error( $response ) ) {
 
 			$error_data = $response->get_error_data();
-			$error_code = isset( $error_data['error_code'] ) ? $error_data['error_code'] : 500;
+			$status_code = isset( $error_data['status_code'] ) ? $error_data['status_code'] : 500;
 
-			wp_send_json_error( array( 'message' => $response->get_error_message() ), $error_code );
+			wp_send_json_error( array( 'message' => $response->get_error_message() ), $status_code );
 		}
 
 		wp_send_json_success( $response, 201 );
