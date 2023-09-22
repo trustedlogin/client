@@ -318,7 +318,7 @@ final class Remote {
 		$response_json = json_decode( $response_body, true );
 
 		if ( empty( $response_json ) ) {
-			return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $response_body );
+			return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
 		}
 
 		if ( isset( $response_json['errors'] ) ) {
