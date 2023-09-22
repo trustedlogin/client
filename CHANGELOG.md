@@ -1,5 +1,12 @@
 # Changelog for TrustedLogin Client
 
+## [WIP]
+
+- Improved error logging:
+  - Added error data to the logging, in addition to the code & message
+  - Now returns the full API response when the response body is invalid
+- Fixed AJAX status code not being properly set when encountering an error
+
 ## 1.6.0 (September 7, 2023)
 
 - Added `clone_role` configuration setting to allow the support user to be created with an existing role, rather than a clone of a role
