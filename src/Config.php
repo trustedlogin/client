@@ -220,7 +220,11 @@ final class Config {
 				}
 			}
 
-			$exception_text  = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			if ( ! empty( $this->settings['vendor']['namespace'] ) ) {
+				$exception_text  = 'Invalid TrustedLogin Configuration for ' . esc_html( $this->settings['vendor']['namespace'] ) .'. Learn more at https://www.trustedlogin.com/configuration/';
+			} else {
+				$exception_text  = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			}
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
 			throw new Exception( $exception_text, 406 );
