@@ -36,21 +36,28 @@ final class Form {
 	const ABOUT_LIVE_ACCESS_URL = 'https://www.trustedlogin.com/about/live-access/';
 
 	/**
-	 * @var Config
+	 * Config object.
+	 *
+	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * SiteAccess object.
+	 *
 	 * @var SiteAccess $site_access
 	 */
 	private $site_access;
 
 	/**
+	 * SupportUser object.
+	 *
 	 * @var SupportUser $support_user
 	 */
 	private $support_user;
 
 	/**
+	 * Logging object.
 	 * @var null|Logging $logging
 	 */
 	private $logging;
@@ -58,10 +65,10 @@ final class Form {
 	/**
 	 * Admin constructor.
 	 *
-	 * @param Config $config Config object.
-	 * @param Logging $logging Logging object.
+	 * @param Config      $config Config object.
+	 * @param Logging     $logging Logging object.
 	 * @param SupportUser $support_user SupportUser object.
-	 * @param SiteAccess $site_access SiteAccess object.
+	 * @param SiteAccess  $site_access SiteAccess object.
 	 */
 	public function __construct( Config $config, Logging $logging, SupportUser $support_user, SiteAccess $site_access ) {
 		$this->config       = $config;
@@ -107,6 +114,7 @@ final class Form {
 		$registered_filtered = array_filter( $registered );
 
 		if ( count( $registered ) !== count( $registered_filtered ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$this->logging->log( 'Not all scripts and styles were registered: ' . print_r( $registered_filtered, true ), __METHOD__, 'error' );
 		}
 	}
@@ -136,10 +144,20 @@ final class Form {
 		$this->print_request_screen();
 	}
 
+	/**
+	 * Print the TrustedLogin override of the WP Login screen.
+	 *
+	 * @return void
+	 */
 	public function print_request_screen() {
 		global $interim_login, $wp_version;
 
-		// Don't output a "← Back to site" link on the login page.
+		/**
+		 * This prevents the `#backtoblog` "← Go to {Site Name}" link from showing up on the login page.
+		 * Since we're overriding the login screen, setting this global using $_REQUEST['interim-login'] isn't possible.
+		 * @see login_footer()
+		 */
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$interim_login = true;
 
 		// The login_headertitle filter was deprecated in WP 5.2.0 for login_headertext.
@@ -160,7 +178,8 @@ final class Form {
 
 		wp_enqueue_style( 'common' );
 
-		wp_add_inline_style( 'common', $this->get_login_inline_css() );
+		$inline_css = $this->get_login_inline_css();
+		wp_add_inline_style( 'common', $inline_css );
 
 		echo $this->get_auth_screen();
 
@@ -231,7 +250,7 @@ final class Form {
 
 		$content = array(
 			'display_name'         => $support_user->display_name,
-			'revoke_access_button' => sprintf( '<a href="%s" class="button button-danger alignright tl-client-revoke-button">%s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			// translators: %s is the display name of the user who granted access.
 			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ), $auth_meta ),
 		);
