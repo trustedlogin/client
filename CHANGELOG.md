@@ -3,6 +3,7 @@
 ## WIP
 
 - Added index.php files to prevent directory listings
+- Check for potential error when revoking support user
 
 ## 1.6.1 (September 22, 2023)
 
