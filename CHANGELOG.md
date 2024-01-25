@@ -2,6 +2,7 @@
 
 ## WIP
 
+- Removed unnecessary request body when revoking site access
 - Added index.php files to prevent directory listings
 - Check for potential error when revoking support user
 
