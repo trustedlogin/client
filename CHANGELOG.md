@@ -1,7 +1,12 @@
 # Changelog for TrustedLogin Client
 
+## WIP
+
+- Added index.php files to prevent directory listings
+
 ## 1.6.1 (September 22, 2023)
 
+- Removed unnecessary payload when revoking site access
 - Improved error logging:
   - Added error data to the logging, in addition to the code & message
   - Now returns the full API response when the response body is invalid
