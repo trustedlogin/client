@@ -103,7 +103,7 @@ class Endpoint {
 	}
 
 	/**
-	 * Check if the endpoint is hit and has a valid identifier before automatically logging in support agent
+	 * Check if the endpoint is hit and has a valid identifier before automatically logging in support agent.
 	 *
 	 * @since 1.0.0
 	 *
@@ -138,9 +138,9 @@ class Endpoint {
 		}
 
 		/**
-		 * Runs before the support user is (maybe) logged-in
+		 * Runs before the support user is (maybe) logged-in, but after the endpoint is verified.
 		 *
-		 * @param string $user_identifier Unique identifier for support user.
+		 * @param string $user_identifier Unique identifier for support user, sanitized using {@see sanitize_text_field}.
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/before', $user_identifier );
 
@@ -152,7 +152,7 @@ class Endpoint {
 		if ( ! $is_verified || is_wp_error( $is_verified ) ) {
 
 			/**
-			 * Runs after the identifier fails security checks
+			 * Runs after the identifier fails security checks.
 			 *
 			 * @param string $user_identifier Unique identifier for support user.
 			 * @param WP_Error $is_verified The error encountered when verifying the identifier.
@@ -178,7 +178,7 @@ class Endpoint {
 		}
 
 		/**
-		 * Runs after the support user is logged-in
+		 * Runs after the support user is logged-in.
 		 *
 		 * @param string $user_identifier Unique Identifier for support user.
 		 */
@@ -235,7 +235,7 @@ class Endpoint {
 		/**
 		 * Trigger action to revoke access based on Support User identifier.
 		 *
-		 * Hooked into by Cron::revoke
+		 * @used-by Cron::revoke
 		 *
 		 * @param string $user_identifier Unique ID for TrustedLogin support user or "all".
 		 */
