@@ -1,10 +1,10 @@
 # Changelog for TrustedLogin Client
 
-## WIP
+## 1.6.2 (January 26, 2024)
 
 - Removed unnecessary request body when revoking site access
 - Added index.php files to prevent directory listings
-- Check for potential error when revoking support user
+- Added check for a potential error when revoking support user
 
 ## 1.6.1 (September 22, 2023)
 
@@ -30,7 +30,7 @@
   - Relabeled the link from "Revoke TrustedLogin" to "Revoke Access"
 - Improved user creation flow to prevent errors when creating a user with an existing email address
 - Fixed error when using PHP in strict mode
-- Fixed error creating the Support User when the `vendor/website` configuration exceeded 100 characters in length
+- Fixed error creating the support user when the `vendor/website` configuration exceeded 100 characters in length
 
 ## 1.5.1 (2023-04-18)
 
