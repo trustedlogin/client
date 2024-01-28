@@ -1,5 +1,10 @@
 # Changelog for TrustedLogin Client
 
+## 1.7-dev WIP
+
+- Added Utils class to handle common utility functions
+- Converted usage of `get_site_transient()` and `set_site_transient()` to using Utils::get_site_transient() and Utils::set_site_transient(). This will prevent issues with object caching plugins that don't support transients, while allowing for auto-expiring data to be stored in the database.
+
 ## 1.6.2 (January 26, 2024)
 
 - Removed unnecessary request body when revoking site access
