@@ -51,6 +51,30 @@ class TrustedLoginUtilsTest extends WP_UnitTestCase {
 		$this->assertSame( $row['value'], $value );
 	}
 
+	public function testSetTransientExpiration() {
+		$transient  = 'transient';
+		$value      = 'value';
+		$expiration = 1;
+		$expiration_time = time() + $expiration;
+
+		$result = Utils::set_transient( $transient, $value, $expiration );
+		$this->assertTrue( $result );
+
+		$row = get_option( $transient );
+
+		$this->assertTrue( is_array( $row ) );
+		$this->assertSame( $row['expiration'], $expiration_time );
+		$this->assertSame( $row['value'], $value );
+
+		$result = Utils::get_transient( $transient );
+		$this->assertSame( $result, $value );
+
+		sleep( 2 );
+
+		$result = Utils::get_transient( $transient );
+		$this->assertFalse( $result );
+	}
+
 	public function testSetTransientObject() {
 		$transient  = 'transient';
 		$value      = new stdClass();
