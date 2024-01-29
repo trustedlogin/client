@@ -211,7 +211,7 @@ final class Encryption {
 	public function get_vendor_public_key() {
 
 		// Already stored as transient
-		$public_key = Utils::get_site_transient( $this->vendor_public_key_option );
+		$public_key = Utils::get_transient( $this->vendor_public_key_option );
 
 		if ( $public_key ) {
 			// Documented below
@@ -229,7 +229,7 @@ final class Encryption {
 		}
 
 		// Store Vendor public key in the DB for ten minutes.
-		$saved = Utils::set_site_transient( $this->vendor_public_key_option, $remote_key, self::VENDOR_PUBLIC_KEY_EXPIRY );
+		$saved = Utils::set_transient( $this->vendor_public_key_option, $remote_key, self::VENDOR_PUBLIC_KEY_EXPIRY );
 
 		if ( ! $saved ) {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'warning' );
