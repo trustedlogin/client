@@ -20,8 +20,12 @@ class Utils {
 	 *
 	 * @return mixed|false Transient value or false if not set.
 	 */
-	public static function get_transient( string $transient ) {
+	public static function get_transient( $transient ) {
 		global $wpdb;
+
+		if ( ! is_string( $transient ) ) {
+			return false;
+		}
 
 		if ( ! is_object( $wpdb ) ) {
 			return false;
@@ -58,8 +62,12 @@ class Utils {
 	 *
 	 * @return bool True if the value was set, false otherwise.
 	 */
-	public static function set_transient( string $transient, $value, int $expiration = 0 ): bool {
+	public static function set_transient( $transient, $value, $expiration = 0 ) {
 		global $wpdb;
+
+		if ( ! is_string( $transient ) ) {
+			return false;
+		}
 
 		if ( ! is_object( $wpdb ) ) {
 			return false;
@@ -208,7 +216,7 @@ class Utils {
 		}
 
 		// If the transient has a non-zero expiration and has expired, delete it and return false.
-		if ( 0 !== ( $transient_data['expiration'] ?? 0 ) && time() > $transient_data['expiration'] ) {
+		if ( 0 !== ( isset( $transient_data['expiration'] ) ? $transient_data['expiration'] : 0 ) && time() > $transient_data['expiration'] ) {
 			delete_option( $transient );
 
 			return false;
@@ -228,10 +236,9 @@ class Utils {
 	 * @return array
 	 */
 	private static function format_transient_data( $value, $expiration = 0 ) {
-		return [
+		return array(
 			'expiration' => 0 === $expiration ? $expiration : time() + $expiration,
 			'value'      => $value,
-		];
 	}
 
 	/**
@@ -245,5 +252,6 @@ class Utils {
 	 */
 	private static function get_transient_key_for_cache( string $transient ) {
 		return ! is_multisite() ? $transient : get_current_network_id() . '-' . $transient;
+		);
 	}
 }
