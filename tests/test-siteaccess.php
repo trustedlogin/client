@@ -17,6 +17,12 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 	 */
 	private $site_access;
 
+	private $default_config;
+
+	private $config;
+
+	private $logging;
+
 	public static $functions_not_exist = array();
 
 	public static $openssl_crypto_strong = true;
@@ -24,7 +30,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 	public function setUp() :void {
 		parent::setUp();
 
-		$config = array(
+		$this->default_config = array(
 			'role' => 'editor',
 			'caps'     => array(
 				'add' => array(
@@ -35,7 +41,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
 				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
-				'license_key' => 'my custom key',
+				/** Not setting 'license_key' on purpose; will be tested in {see @testGetAccessKey} */
 			),
 			'decay'          => WEEK_IN_SECONDS,
 			'vendor'         => array(
@@ -49,9 +55,34 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 			'reassign_posts' => true,
 		);
 
-		$config = new Config( $config );
-		$logging = new Logging( $config );
+		$this->config = new Config( $this->default_config );
+		$this->logging = new Logging( $this->config );
+	}
 
-		$this->site_access = new \TrustedLogin\SiteAccess( $config, $logging );
+	/**
+	 * @covers \TrustedLogin\SiteAccess::get_access_key()
+	 */
+	public function testGetAccessKey() {
+
+		$site_access = new \TrustedLogin\SiteAccess( $this->config, $this->logging );
+		$access_key = $site_access->get_access_key();
+
+		$this->assertNotEmpty( $access_key );
+		$this->assertIsString( $access_key );
+		$this->assertSame( 64, strlen( $access_key ), 'Should be a 64-character key when no license exists' );
+
+
+		$config_array = $this->default_config;
+		$config_array['auth']['license_key'] = 'my custom key';
+		$config = new Config( $config_array );
+		$site_access_with_license = new \TrustedLogin\SiteAccess( $config, $this->logging );
+		$access_key_with_license = $site_access_with_license->get_access_key();
+
+		$this->assertNotEmpty( $access_key_with_license );
+		$this->assertIsString( $access_key_with_license );
+		$this->assertSame( 64, strlen( $access_key_with_license ), 'Should be a 64-character key when no license exists' );
+
+		// Make sure the access keys are different!
+		$this->assertNotSame( $access_key, $access_key_with_license );
 	}
 }

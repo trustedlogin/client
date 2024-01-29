@@ -65,7 +65,11 @@ class TrustedLoginUtilsTest extends WP_UnitTestCase {
 		$this->assertSame( $row['value'], $value );
 	}
 
-	public function testSetTransientExpiration() {
+	/**
+	 * Tests that transients are deleted after expiration.
+	 * Naming this test with ZZZ so it runs last, since it sets an expiration time.
+	 */
+	public function testZZZSetTransientExpiration() {
 		$transient  = 'transient';
 		$value      = 'value';
 		$expiration = 1;
