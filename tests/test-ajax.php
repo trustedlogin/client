@@ -164,7 +164,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_last_response = '';
 		$this->_delete_all_support_users();
 
-
+		// Force fail on SSL check.
 		add_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_false' );
 		$this->_last_response = '';
 		$this->_setRole('administrator' );
@@ -262,6 +262,18 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		try {
 			$this->_handleAjax( $action );
 		} catch ( Exception $e ) {
+		}
+	}
+
+	/**
+	 * Sets the role and also adds super-admin.
+	 * @inheritDoc
+	 */
+	function _setRole( $role ) {
+		parent::_setRole( $role );
+		if ( 'administrator' === $role && function_exists( 'grant_super_admin' ) ) {
+			$current_user = wp_get_current_user();
+			grant_super_admin( $current_user->ID );
 		}
 	}
 }
