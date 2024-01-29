@@ -12,7 +12,7 @@ class Utils {
 
 	/**
 	 * Wrapper around {@see get_transient()}. Transient is stored as an option {@see self::set_transient()} in order to avoid object caching issues.
-	 * Raw SQL query (taken from WP's core) is used in order to avoid object caching issues, such as with the Redis Object Cache plugin.
+	 * Raw SQL query (taken from WordPress core) is used in order to avoid object caching issues, such as with the Redis Object Cache plugin.
 	 *
 	 * @since 1.7.0
 	 *
@@ -52,7 +52,7 @@ class Utils {
 
 	/**
 	 * Wrapper around {@see set_transient()}. Transient is stored as an option in order to avoid object caching issues.
-	 * Raw SQL query (taken from WP's core) is used in order to avoid object caching issues, such as with the Redis Object Cache plugin.
+	 * Raw SQL query (taken from WordPress core) is used in order to avoid object caching issues, such as with the Redis Object Cache plugin.
 	 *
 	 * @since 1.7.0
 	 *
