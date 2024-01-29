@@ -55,7 +55,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.trustedlogin.com/webhook-example/',
 			'auth'           => array(
-				'api_key'   => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'   => '3b3dc46c0714cc8e', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -63,16 +63,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 				'namespace'   => 'gravityview',
 				'title'       => 'GravityView',
 				'email'       => 'support@gravityview.co',
-				'website'     => 'https://gravityview.co',
-				'support_url' => 'https://gravityview.co/support/', // Backup to redirect users if TL is down/etc
+				'website'     => 'https://www.gravitykit.com',
+				'support_url' => 'https://www.gravitykit.com/support/', // Backup to redirect users if TL is down/etc
 				'logo_url'    => '', // Displayed in the authentication modal
 			),
 			'reassign_posts' => true,
 		);
 
 		$this->config = new TrustedLogin\Config( $config );
-
-		$this->option_keys = new \TrustedLogin\OptionKeys( $this->config );
 
 		$this->TrustedLogin = new \TrustedLogin\Client( $this->config );
 
@@ -138,23 +136,23 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		unset( $_POST['vendor'] );
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Vendor not defined', $this->_last_response );
+		$this->assertMatchesRegularExpression( '/Vendor not defined/', $this->_last_response );
 		$this->_last_response = '';
 
 		$_POST['vendor'] = 'asdasd';
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Vendor does not match.', $this->_last_response, 'Vendor does not match config vendor.' );
+		$this->assertMatchesRegularExpression( '/Vendor does not match\./', $this->_last_response, 'Vendor does not match config vendor.' );
 		$this->_last_response = '';
 
 		$_POST['vendor'] = $this->config->ns();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Nonce not sent', $this->_last_response );
+		$this->assertMatchesRegularExpression( '/Nonce not sent/', $this->_last_response );
 		$this->_last_response = '';
 
 		$_POST['vendor'] = $this->config->ns();
 		$this->_set_nonce( 0 );
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Verification issue', $this->_last_response, 'Nonce set to 0; should not validate.' );
+		$this->assertMatchesRegularExpression( '/Verification issue/', $this->_last_response, 'Nonce set to 0; should not validate.' );
 		$this->_set_nonce();
 		$this->_last_response = '';
 		$this->_delete_all_support_users();
@@ -162,29 +160,23 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_setRole('subscriber' );
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Permissions issue', $this->_last_response, 'User should not have permission to create users.' );
+		$this->assertMatchesRegularExpression( '/You do not have the ability to create users\./', $this->_last_response, 'User should not have permission to create users.' );
 		$this->_last_response = '';
 		$this->_delete_all_support_users();
 
-		/**
-		 * Create conflicting user name and try to create the user with the same username.
-		 * Just wanting to make sure this step is tested, but:
-		 * @see TrustedLoginUsersTest::test_create_support_user for full testing
-		 */
-		$user_name = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
-		$existing_user = $this->factory->user->create_and_get( array( 'user_login' => $user_name ) );
-		$this->assertTrue( is_a( $existing_user, 'WP_User' ) );
-		$this->_setRole( 'administrator' );
-		$current_user = wp_get_current_user();
-		if ( function_exists( 'grant_super_admin' ) ) {
-			grant_super_admin( $current_user->ID );
-		}
+		// Force fail on SSL check.
+		add_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_false' );
+		$this->_last_response = '';
+		$this->_setRole('administrator' );
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'already exists', $this->_last_response, sprintf( 'User %d should already have been created', $existing_user->ID ) );
-		$this->_last_response = '';
-		$this->assertTrue( wp_delete_user( $existing_user->ID ) ); // Cleanup
+		$this->assertMatchesRegularExpression( '/TrustedLogin requires a secure connection using HTTPS\./', $this->_last_response, 'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true ) );
 		$this->_delete_all_support_users();
+		remove_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_false' );
+
+
+		// Force no check check for SSL.
+		add_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_true' );
 
 		$this->_last_response = '';
 
@@ -193,7 +185,7 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertContains( 'Error updating user', $this->_last_response, 'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true ) );
+		$this->assertMatchesRegularExpression( '/Error updating user/', $this->_last_response, 'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true ) );
 		$this->_last_response = '';
 
 		remove_filter( 'get_user_option_tl_gravityview_id', '__return_null' );
@@ -227,7 +219,8 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->assertArrayHasKey( 'identifier', $data );
 		$this->assertArrayHasKey( 'user_id', $data );
 		$this->assertArrayHasKey( 'expiry', $data );
-		$this->assertArrayHasKey( 'is_ssl', $data );
+		$this->assertArrayHasKey( 'reference_id', $data );
+		$this->assertArrayHasKey( 'timing', $data );
 		$this->assertEquals( is_ssl(), $data['is_ssl'] );
 
 		$this->_delete_all_support_users();
@@ -269,7 +262,18 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		try {
 			$this->_handleAjax( $action );
 		} catch ( Exception $e ) {
+		}
+	}
 
+	/**
+	 * Sets the role and also adds super-admin.
+	 * @inheritDoc
+	 */
+	function _setRole( $role ) {
+		parent::_setRole( $role );
+		if ( 'administrator' === $role && function_exists( 'grant_super_admin' ) ) {
+			$current_user = wp_get_current_user();
+			grant_super_admin( $current_user->ID );
 		}
 	}
 }

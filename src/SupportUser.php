@@ -99,7 +99,6 @@ final class SupportUser {
 			case 'expires_meta_key':
 			case 'created_by_meta_key':
 				return $this->{$name};
-				break;
 		}
 
 		return null;

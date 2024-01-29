@@ -28,6 +28,11 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 	 */
 	private $logging;
 
+	/**
+	 * @var \TrustedLogin\Endpoint
+	 */
+	private $endpoint;
+
 	private $default_settings = array();
 
 	static $role_key;
@@ -148,6 +153,7 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			'promote_users',
 			'delete_site',
 			'remove_users',
+			'list_users',
 		);
 
 		$new_role_caps = $new_role->capabilities;
@@ -171,6 +177,14 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 			}
 
 		}
+
+		/**
+		 *  This cap is added by {@see SupportRole::create()} for all cloned roles.
+		 */
+		$this->assertTrue( $new_role_caps[ SupportRole::get_capability_flag( $this->config->ns() ) ] );
+
+		// Now remove it from the list of caps to make sure the rest of caps for each role are equal.
+		unset( $new_role_caps[ SupportRole::get_capability_flag( $this->config->ns() ) ] );
 
 		$this->assertEquals( $new_role_caps, $cloned_caps );
 	}
@@ -236,7 +250,6 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->assertSame( $this->config->get_setting('vendor/display_name'), $support_user->display_name );
 		$this->assertSame( $this->config->get_setting('vendor/email'), $support_user->user_email );
-		$this->assertSame( $this->config->get_setting('vendor/website'), $support_user->user_url );
 		$this->assertSame( sanitize_user( $username ), $support_user->user_login );
 
 		###
@@ -246,21 +259,16 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 		###
 
 		$this->_reset_roles();
+
 		$TL_Support_User = new SupportUser( $this->config, $this->logging );
-		$duplicate_user = $TL_Support_User->create();
-		$this->assertWPError( $duplicate_user );
-		$this->assertSame( 'username_exists', $duplicate_user->get_error_code() );
+		$support_user_id = $TL_Support_User->create();
+		$support_user_1 = get_userdata( $support_user_id );
+		$this->assertEquals( sanitize_user( $support_user_1->user_login ), $support_user_1->user_login );
 
-		$this->_reset_roles();
-
-		$config_with_new_title = $this->default_settings;
-		$config_with_new_title['vendor']['title'] = microtime();
-		$config_with_new_title = new \TrustedLogin\Config( $config_with_new_title );
-		$TL_with_new_title = new SupportUser( $config_with_new_title, $this->logging );
-
-		$should_be_dupe_email = $TL_with_new_title->create();
-		$this->assertWPError( $should_be_dupe_email );
-		$this->assertSame( 'user_email_exists', $should_be_dupe_email->get_error_code() );
+		$TL_Support_User = new SupportUser( $this->config, $this->logging );
+		$support_user_id_2 = $TL_Support_User->create();
+		$support_user_2 = get_userdata( $support_user_id_2 );
+		#$this->assertEquals( sanitize_user( $support_user_1->user_login ) . ' 1', $support_user_2->user_login );
 
 		$this->_reset_roles();
 

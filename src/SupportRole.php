@@ -173,7 +173,7 @@ final class SupportRole {
 	 *
 	 * @return string
 	 */
-	static private function get_capability_flag( $ns ) {
+	static public function get_capability_flag( $ns ) {
 		return str_replace( '{ns}', $ns, self::CAPABILITY_FLAG );
 	}
 

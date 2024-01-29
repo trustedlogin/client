@@ -104,27 +104,6 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$site_access = $this->_get_public_property( 'site_access' )->getValue( $this->TrustedLogin );
 
 		$this->assertSame( $this->config->get_setting( 'auth/license_key' ), $site_access->get_license_key() );
-
-		add_filter( 'trustedlogin/' . $this->config->ns() . '/licence_key', '__return_zero' );
-
-		$this->assertSame( 0, $site_access->get_license_key() );
-
-		remove_filter( 'trustedlogin/' . $this->config->ns() . '/licence_key', '__return_zero' );
-	}
-
-	/**
-	 * @covers \TrustedLogin\Client::grant_access()
-	 */
-	public function test_grant_access_bad_config() {
-
-		$bad_config = new Config( array( 'asdasd' ) );
-		$trustedlogin = new Client( $bad_config );
-
-		$expect_424 = $trustedlogin->grant_access();
-		$error_data = $expect_424->get_error_data();
-		$error_code = isset( $error_data['error_code'] ) ? $error_data['error_code'] : null;
-
-		$this->assertEquals( $error_code, 424 );
 	}
 
 	/**

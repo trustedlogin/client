@@ -54,6 +54,11 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 	 */
 	private $encryption;
 
+	/**
+	 * @var Remote
+	 */
+	private $remote;
+
 	public static $functions_not_exist = array();
 
 	public function setUp() :void {
@@ -69,7 +74,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
-				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -91,7 +96,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 		$this->TrustedLoginReflection = new \ReflectionClass( '\TrustedLogin\Client' );
 
 		$this->logging = new Logging( $this->config );
-		$this->remote = new Remote( $this->config, $this->logging );
+		$this->remote  = new Remote( $this->config, $this->logging );
 
 		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
 	}

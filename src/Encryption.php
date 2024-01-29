@@ -46,6 +46,12 @@ final class Encryption {
 	private $vendor_public_key_endpoint = '/trustedlogin/v1/public_key';
 
 	/**
+	 * @var int How long to store the Vendor public key in the database.
+	 * @since 1.7.0
+	 */
+	const VENDOR_PUBLIC_KEY_EXPIRY = 60 * 10; // 10 minutes.
+
+	/**
 	 * Encryption constructor.
 	 *
 	 * @param Config $config
@@ -205,7 +211,7 @@ final class Encryption {
 	public function get_vendor_public_key() {
 
 		// Already stored as transient
-		$public_key = get_site_transient( $this->vendor_public_key_option );
+		$public_key = Utils::get_transient( $this->vendor_public_key_option );
 
 		if ( $public_key ) {
 			// Documented below
@@ -222,8 +228,8 @@ final class Encryption {
 			return $remote_key;
 		}
 
-		// Attempt to store Vendor public key in the DB for ten minutes (may be overridden by caching plugins)
-		$saved = set_site_transient( $this->vendor_public_key_option, $remote_key, 60 * 10 );
+		// Store Vendor public key in the DB for ten minutes.
+		$saved = Utils::set_transient( $this->vendor_public_key_option, $remote_key, self::VENDOR_PUBLIC_KEY_EXPIRY );
 
 		if ( ! $saved ) {
 			$this->logging->log( 'Public key not saved after being fetched remotely.', __METHOD__, 'warning' );
