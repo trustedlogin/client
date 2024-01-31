@@ -198,22 +198,20 @@ class Logging {
 
 		$log_dir = trailingslashit( $upload_dir['basedir'] ) . self::DIRECTORY_PATH;
 
-		// Directory exists; return early
+		// Directory exists; return early.
 		if( file_exists( $log_dir ) ) {
 			return $log_dir;
 		}
 
-		// Create the folder using wp_mkdir_p() instead of relying on KLogger
+		// Create the folder using wp_mkdir_p() instead of relying on KLogger.
 		$folder_created = wp_mkdir_p( $log_dir );
 
-		// Something went wrong mapping the directory
+		// Something went wrong mapping the directory.
 		if( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
 
-
-		// Make sure the new log directory can be written to
 		return $log_dir;
 	}
 
@@ -222,7 +220,7 @@ class Logging {
 	 *
 	 * Code inspired by @see wp_privacy_generate_personal_data_export_file()
 	 *
-	 * @param string $dirpath Path to directory to protect (in this case, logging)
+	 * @param string $dirpath Path to directory to protect (in this case, logging).
 	 *
 	 * @return bool True: File exists or was created; False: file could not be created.
 	 */
@@ -273,8 +271,8 @@ class Logging {
 	 * @see https://github.com/php-fig/log/blob/master/Psr/Log/LogLevel.php for log levels
 	 *
 	 * @param string|\WP_Error $message Message or error to log. If a WP_Error is passed, $data is ignored.
-	 * @param string $method Method where the log was called
-	 * @param string $level PSR-3 log level
+	 * @param string $method Method where the log was called.
+	 * @param string $level PSR-3 log level.
 	 * @param \WP_Error|\Exception|mixed $data Optional. Error data. Ignored if $message is WP_Error.
 	 *
 	 */
@@ -290,7 +288,7 @@ class Logging {
 
 			$this->log( sprintf( 'Invalid level passed by %s method: %s', $method, $level ), __METHOD__, 'error' );
 
-			$level = 'debug'; // Continue processing original log
+			$level = 'debug'; // Continue processing original log.
 		}
 
 		$log_message = $message;
@@ -312,7 +310,7 @@ class Logging {
 			$log_message .= sprintf( '[%s] %s', $data->getCode(), $data->getMessage() );
 		}
 
-		// Keep PSR-4 compatible
+		// Keep PSR-4 compatible.
 		if ( $data && ! is_array( $data ) ) {
 			$data = array( $data );
 		}
@@ -320,7 +318,7 @@ class Logging {
 		do_action( 'trustedlogin/' . $this->ns . '/logging/log', $message, $method, $level, $data );
 		do_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level, $message, $method, $data );
 
-		// If logging is in place, don't use the error_log
+		// If logging is in place, don't use the error_log.
 		if ( has_action( 'trustedlogin/' . $this->ns . '/logging/log' ) || has_action( 'trustedlogin/' . $this->ns . '/logging/log_' . $level ) ) {
 			return;
 		}
