@@ -1,5 +1,9 @@
 # Changelog for TrustedLogin Client
 
+## develop
+
+- Moved logging directory creation into own private method: `Logging::setup_logging_directory()`
+
 ## 1.7.0 (January 29, 2024)
 
 - Added Utils class to handle common utility functions

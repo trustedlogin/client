@@ -57,30 +57,10 @@ class Logging {
 	 */
 	private function setup_klogger( $config ) {
 
-		$logging_directory = null;
-
-		$configured_logging_dir = $config->get_setting( 'logging/directory', '' );
-
-		if( ! empty( $configured_logging_dir ) ) {
-
-			$logging_directory = $this->check_directory( $configured_logging_dir );
-
-			if ( ! $logging_directory ) {
-				return false;
-			}
-		}
-
-		if ( ! $logging_directory ) {
-			$logging_directory = $this->maybe_make_logging_directory();
-		}
+		$logging_directory = $this->setup_logging_directory( $config );
 
 		// Directory cannot be found or created. Cannot log.
-		if( ! $logging_directory ) {
-			return false;
-		}
-
-		// Directory cannot be written to
-		if( ! $this->check_directory( $logging_directory ) ) {
+		if ( ! $logging_directory ) {
 			return false;
 		}
 
@@ -124,6 +104,39 @@ class Logging {
 		}
 
 		return $klogger;
+	}
+
+	/**
+	 * Returns the directory to use for logging. Creates one if it doesn't exist.
+	 *
+	 * @param \TrustedLogin\Config $config Configuration object.
+	 *
+	 * @since TODO
+	 *
+	 * @return bool|string Directory path to logging. False if logging directory cannot be found, created, or written to.
+	 */
+	private function setup_logging_directory( $config ) {
+
+		$logging_directory = $config->get_setting( 'logging/directory', '' );
+
+		if( empty( $logging_directory ) ) {
+			$logging_directory = $this->maybe_make_logging_directory();
+		}
+
+		// Directory cannot be found or created. Cannot log.
+		if( ! $logging_directory ) {
+			return false;
+		}
+
+		// Directory cannot be written to. Cannot log.
+		if( ! $this->check_directory( $logging_directory ) ) {
+			return false;
+		}
+
+		// Protect directory from being browsed by adding index.html
+		$this->prevent_directory_browsing( $logging_directory );
+
+		return $logging_directory;
 	}
 
 	/**
@@ -187,9 +200,6 @@ class Logging {
 
 		// Directory exists; return early
 		if( file_exists( $log_dir ) ) {
-
-			$this->prevent_directory_browsing( $log_dir );
-
 			return $log_dir;
 		}
 
@@ -202,8 +212,6 @@ class Logging {
 			return false;
 		}
 
-		// Protect directory from being browsed by adding index.html
-		$this->prevent_directory_browsing( $log_dir );
 
 		// Make sure the new log directory can be written to
 		return $log_dir;
