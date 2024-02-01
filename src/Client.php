@@ -129,7 +129,7 @@ final class Client {
 		$should_initialize = $this->should_init( $config );
 
 		if ( is_wp_error( $should_initialize ) ) {
-			throw new \Exception( $should_initialize->get_error_message(), 403 );
+			throw new \Exception( esc_html( $should_initialize->get_error_message() ), 403 );
 		}
 
 		try {
