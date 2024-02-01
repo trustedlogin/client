@@ -246,8 +246,10 @@ final class Client {
 			return new \WP_Error( 'no_cap_create_users', 'Permissions issue: You do not have the ability to create users.', array( 'error_code' => 403 ) );
 		}
 
-		// If the user exists already, extend access
-		if ( $user_id = $this->support_user->exists() ) {
+		$user_id = $this->support_user->exists();
+
+		// If the user exists already, extend access.
+		if ( $user_id ) {
 			return $this->extend_access( $user_id );
 		}
 
