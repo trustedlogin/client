@@ -34,57 +34,79 @@ use WP_Error;
 final class Client {
 
 	/**
+	 * The current SDK version.
+	 *
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
 	const VERSION = '1.7.0';
 
 	/**
+	 * Instance of Config
+	 *
 	 * @var Config
 	 */
 	private $config;
 
 	/**
-	 * @var bool
+	 * Whether the configuration is valid.
+	 *
+	 * @var bool True if the configuration is valid; false if not.
 	 */
 	static $valid_config;
 
 	/**
+	 * Instance of Logging
+	 *
 	 * @var null|Logging $logging
 	 */
 	private $logging;
 
 	/**
+	 * Instance of SupportUser
+	 *
 	 * @var SupportUser $support_user
 	 */
 	private $support_user;
 
 	/**
+	 * Instance of Remote
+	 *
 	 * @var Remote $remote
 	 */
 	private $remote;
 
 	/**
+	 * Instance of Cron
+	 *
 	 * @var Cron $cron
 	 */
 	private $cron;
 
 	/**
+	 * Instance of Endpoint
+	 *
 	 * @var Endpoint $endpoint
 	 */
 	private $endpoint;
 
 	/**
+	 * Instance of Admin
+	 *
 	 * @var Admin $admin
 	 */
 	private $admin;
 
 	/**
+	 * Instance of Ajax
+	 *
 	 * @var Ajax
 	 */
 	private $ajax;
 
 	/**
+	 * Instance of SiteAccess
+	 *
 	 * @var SiteAccess $site_access
 	 */
 	private $site_access;
@@ -93,12 +115,12 @@ final class Client {
 	/**
 	 * TrustedLogin constructor.
 	 *
-	 * @see https://docs.trustedlogin.com/ for more information
+	 * @see https://docs.trustedlogin.com/ for more information.
 	 *
-	 * @param Config $config
-	 * @param bool   $init Whether to initialize everything on instantiation
+	 * @param Config $config The configuration object.
+	 * @param bool   $init Whether to initialize everything on instantiation.
 	 *
-	 * @throws Exception If initializing is prevented via constants or the configuration isn't valid, throws exception.
+	 * @throws \Exception If initializing is prevented via constants or the configuration isn't valid, throws exception.
 	 *
 	 * @returns void If no errors, returns void. Otherwise, throws exceptions.
 	 */
@@ -145,7 +167,7 @@ final class Client {
 	/**
 	 * Should the Client fully initialize?
 	 *
-	 * @param Config $config
+	 * @param Config $config The configuration object.
 	 *
 	 * @return true|WP_Error
 	 */
@@ -158,7 +180,7 @@ final class Client {
 
 		$ns = $config->ns();
 
-		// Namespace isn't set; allow Config
+		// Namespace isn't set; allow Config.
 		if ( empty( $ns ) ) {
 			return true;
 		}
@@ -267,7 +289,7 @@ final class Client {
 
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
 
-		// Add user meta, configure decay
+		// Add user meta, configure decay.
 		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
@@ -306,7 +328,7 @@ final class Client {
 			'reference_id' => $reference_id,
 			'timing'       => array(
 				'local'  => $timing_local,
-				'remote' => null, // Updated later
+				'remote' => null, // Updated later.
 			),
 		);
 
@@ -346,7 +368,7 @@ final class Client {
 
 		if ( is_wp_error( $created ) ) {
 
-			// get_all_error_data() is only available in WP 5.6+
+			// get_all_error_data() is only available in WP 5.6+. Fallback to get_error_data().
 			$error_data = is_callable( array( $created, 'get_all_error_data' ) ) ? $created->get_all_error_data() : $created->get_error_data();
 
 			$this->logging->log( sprintf( 'There was an issue creating access (%s): %s', $created->get_error_code(), $created->get_error_message() ), __METHOD__, 'error', $error_data );
@@ -379,6 +401,10 @@ final class Client {
 		}
 
 		/**
+		 * Action performed when access is created.
+		 *
+		 * @param array $action_data{url:string,ns:string,action:string,ref:string,access_key:string} Array of data about the action.
+		 *
 		 * @usedby Remote::maybe_send_webhook()
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/created', $action_data );
@@ -393,7 +419,7 @@ final class Client {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param int $user_id The existing Support User ID
+	 * @param int $user_id The existing Support User ID.
 	 *
 	 * @return array|WP_Error
 	 */
@@ -437,7 +463,7 @@ final class Client {
 			'expiry'     => $expiration_timestamp,
 			'timing'     => array(
 				'local'  => $timing_local,
-				'remote' => null, // Updated later
+				'remote' => null, // Updated later.
 			),
 		);
 
@@ -488,7 +514,9 @@ final class Client {
 		$return_data['timing']['remote'] = timer_stop( 0, 5 );
 
 		/**
-		 * @usedby Remote::maybe_send_webhook()
+		 * Action performed when access is extended.
+		 *
+		 * @used-by Remote::maybe_send_webhook()
 		 */
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/access/extended',
@@ -507,7 +535,7 @@ final class Client {
 	/**
 	 * Revoke access to a site
 	 *
-	 * @param string $identifier Unique ID or "all"
+	 * @param string $identifier Unique ID or "all".
 	 *
 	 * @return bool|WP_Error True: Synced to SaaS and user(s) deleted. False: empty identifier. WP_Error: failed to revoke site in SaaS or failed to delete user.
 	 */
@@ -546,13 +574,12 @@ final class Client {
 		$endpoint_hash        = $this->endpoint->get_hash( $site_identifier_hash );
 		$secret_id            = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
-		// Revoke site in SaaS
+		// Revoke site in SaaS.
 		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
 
+		// Couldn't sync to SaaS.
 		if ( is_wp_error( $site_revoked ) ) {
-
-			// Couldn't sync to SaaS, this should/could be extended to add a cron-task to delayed update of SaaS DB
-			// TODO: extend to add a cron-task to delayed update of SaaS DB
+			// TODO: Add a cron-task to try syncing revocation again later.
 			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
 		}
 
@@ -592,7 +619,7 @@ final class Client {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array $metadata
+	 * @param array $metadata Array of metadata that will be sent UNENCRYPTED, PLAIN TEXT with the Envelope.
 	 *
 	 * @return array Array of metadata that will be sent with the Envelope.
 	 */
@@ -616,6 +643,8 @@ final class Client {
 	 */
 	public static function get_reference_id() {
 
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+
 		if ( isset( $_REQUEST['reference_id'] ) ) {
 			return esc_html( $_REQUEST['reference_id'] );
 		}
@@ -623,6 +652,8 @@ final class Client {
 		if ( isset( $_REQUEST['ref'] ) ) {
 			return esc_html( $_REQUEST['ref'] );
 		}
+
+		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 		return null;
 	}

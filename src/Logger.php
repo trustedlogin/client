@@ -1,16 +1,26 @@
 <?php
+/**
+ * Class Logger
+ *
+ * @since   July 26, 2008
+ * @author  Kenny Katzgrau <katzgrau@gmail.com> (originally) and Katz Web Services, Inc.
+ * @package TrustedLogin\Client
+ *
+ * @link    https://github.com/katzgrau/KLogger
+ */
+
 namespace TrustedLogin;
 
 use DateTime;
 use RuntimeException;
 
 /**
- * Copied from https://github.com/katzgrau/KLogger/blob/3c19e350232e5fee0c3e96e3eff1e7be5f37d617/src/Logger.php
+ * Originally copied from https://github.com/katzgrau/KLogger/blob/3c19e350232e5fee0c3e96e3eff1e7be5f37d617/src/Logger.php
  * See: https://github.com/trustedlogin/client/issues/105
  *
  * A light, permissions-checking logging class.
  *
- * Originally written for use with wpSearch
+ * Originally written for use with wpSearch.
  *
  * Usage:
  * $log = new Katzgrau\KLogger\Logger('/var/log/', Psr\Log\LogLevel::INFO);
@@ -18,10 +28,15 @@ use RuntimeException;
  * $log->error('Oh dear.'); //Prints to the log file
  * $log->debug('x = 5'); //Prints nothing due to current severity threshhold
  *
+ * We are disabling phpcs for this file because it was a copy of another library. We may refactor it in the future.
+ * phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+ * phpcs:disable WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
+ * phpcs:disable WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
+ * phpcs:disable WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+ *
  * @author  Kenny Katzgrau <katzgrau@gmail.com>
  * @since   July 26, 2008
  * @link    https://github.com/katzgrau/KLogger
- * @version 1.0.0
  */
 class Logger {
 
@@ -122,13 +137,16 @@ class Logger {
 	/**
 	 * Class constructor
 	 *
-	 * @param string $logDirectory      File path to the logging directory
-	 * @param string $logLevelThreshold The LogLevel Threshold
-	 * @param array  $options
+	 * @param string $logDirectory      File path to the logging directory.
+	 * @param string $logLevelThreshold The LogLevel Threshold.
+	 * @param array  $options        Associative array of Klogger options (see the $options class property).
 	 *
 	 * @internal param string $logFilePrefix The prefix for the log file name
 	 * @internal param string $logFileExt The extension for the log file
 	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
+	 *
+	 * @throws RuntimeException If the file cannot be written to.
+	 * @return void
 	 */
 	public function __construct( $logDirectory, $logLevelThreshold = self::DEBUG, array $options = array() ) {
 		$this->logLevelThreshold = $logLevelThreshold;
@@ -136,6 +154,7 @@ class Logger {
 
 		$logDirectory = rtrim( $logDirectory, DIRECTORY_SEPARATOR );
 		if ( ! file_exists( $logDirectory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
 			mkdir( $logDirectory, $this->defaultPermissions, true );
 		}
 
@@ -144,6 +163,7 @@ class Logger {
 			$this->setFileHandle( 'w+' );
 		} else {
 			$this->setLogFilePath( $logDirectory );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
 			if ( file_exists( $this->logFilePath ) && ! is_writable( $this->logFilePath ) ) {
 				throw new RuntimeException( 'The file could not be written to. Check that appropriate permissions have been set.' );
 			}
@@ -156,14 +176,18 @@ class Logger {
 	}
 
 	/**
-	 * @param string $stdOutPath
+	 * Directly sets the log file path.
+	 *
+	 * @param string $stdOutPath The path to the standard out.
 	 */
 	public function setLogToStdOut( $stdOutPath ) {
 		$this->logFilePath = $stdOutPath;
 	}
 
 	/**
-	 * @param string $logDirectory
+	 * Sets the log file path.
+	 *
+	 * @param string $logDirectory The log file path.
 	 */
 	public function setLogFilePath( $logDirectory ) {
 		if ( $this->options['filename'] ) {
@@ -178,11 +202,14 @@ class Logger {
 	}
 
 	/**
-	 * @param $writeMode
+	 * Sets the file handle for the resource.
+	 *
+	 * @param string $writeMode The mode to use when opening the file handle using fopen().
 	 *
 	 * @internal param resource $fileHandle
 	 */
 	public function setFileHandle( $writeMode ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
 		$this->fileHandle = fopen( $this->logFilePath, $writeMode );
 	}
 
@@ -192,6 +219,7 @@ class Logger {
 	 */
 	public function __destruct() {
 		if ( $this->fileHandle ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 			fclose( $this->fileHandle );
 		}
 	}
@@ -199,7 +227,7 @@ class Logger {
 	/**
 	 * Sets the date format used by all instances of KLogger
 	 *
-	 * @param string $dateFormat Valid format string for date()
+	 * @param string $dateFormat Valid format string for date().
 	 */
 	public function setDateFormat( $dateFormat ) {
 		$this->options['dateFormat'] = $dateFormat;
@@ -208,7 +236,7 @@ class Logger {
 	/**
 	 * Sets the Log Level Threshold
 	 *
-	 * @param string $logLevelThreshold The log level threshold
+	 * @param string $logLevelThreshold The log level threshold.
 	 */
 	public function setLogLevelThreshold( $logLevelThreshold ) {
 		$this->logLevelThreshold = $logLevelThreshold;
@@ -217,9 +245,9 @@ class Logger {
 	/**
 	 * Logs with an arbitrary level.
 	 *
-	 * @param mixed  $level
-	 * @param string $message
-	 * @param array  $context
+	 * @param mixed  $level  PSR-3 log level.
+	 * @param string $message The message to log.
+	 * @param array  $context Additional information for the log.
 	 * @return null
 	 */
 	public function log( $level, $message, array $context = array() ) {
@@ -233,13 +261,14 @@ class Logger {
 	/**
 	 * Writes a line to the log without prepending a status or timestamp
 	 *
-	 * @param string $message Line to write to the log
+	 * @param string $message Line to write to the log.
 	 * @throws RuntimeException If the file cannot be written to.
 	 *
 	 * @return void
 	 */
 	public function write( $message ) {
 		if ( null !== $this->fileHandle ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 			if ( fwrite( $this->fileHandle, $message ) === false ) {
 				throw new RuntimeException( 'The file could not be written to. Check that appropriate permissions have been set.' );
 			} else {
@@ -263,7 +292,7 @@ class Logger {
 	}
 
 	/**
-	 * Get the last line logged to the log file
+	 * Get the last line logged to the log file.
 	 *
 	 * @return string
 	 */
@@ -274,9 +303,9 @@ class Logger {
 	/**
 	 * Formats the message for logging.
 	 *
-	 * @param  string $level   The Log Level of the message
-	 * @param  string $message The message to log
-	 * @param  array  $context The context
+	 * @param  string $level   The Log Level of the message.
+	 * @param  string $message The message to log.
+	 * @param  array  $context The context.
 	 * @return string
 	 */
 	protected function formatMessage( $level, $message, $context ) {
@@ -342,7 +371,7 @@ class Logger {
 					'array()',
 					'    ',
 				),
-				str_replace( 'array (', 'array(', var_export( $value, true ) )
+				str_replace( 'array (', 'array(', var_export( $value, true ) ) // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 			);
 			$export .= PHP_EOL;
 		}
@@ -352,7 +381,7 @@ class Logger {
 	/**
 	 * Indents the given string with the given indent.
 	 *
-	 * @param  string $content The string to indent
+	 * @param  string $content The string to indent.
 	 * @param  string $indent What to use as the indent.
 	 * @return string
 	 */

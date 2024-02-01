@@ -141,7 +141,7 @@ class Logging {
 			return false;
 		}
 
-		// Protect directory from being browsed by adding index.html
+		// Protect directory from being browsed by adding index.html.
 		$this->prevent_directory_browsing( $logging_directory );
 
 		return $logging_directory;
