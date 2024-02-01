@@ -316,7 +316,7 @@ class Logger {
 				'level-padding' => str_repeat( ' ', 9 - strlen( $level ) ),
 				'priority'      => $this->logLevels[ $level ],
 				'message'       => $message,
-				'context'       => json_encode( $context ),
+				'context'       => wp_json_encode( $context ),
 			);
 			$message = $this->options['logFormat'];
 			foreach ( $parts as $part => $value ) {
