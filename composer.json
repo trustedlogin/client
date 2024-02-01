@@ -1,38 +1,19 @@
 {
-    "name": "trustedlogin/client",
-    "type": "library",
-    "description": "Easily and securely log in to your customers sites when providing support.",
-    "keywords": [
-        "login",
-        "security",
-        "support"
-    ],
-    "homepage": "https://www.trustedlogin.com",
-    "license": "GPL-2.0-or-later",
-    "authors": [
-        {
-            "name": "TrustedLogin",
-            "email": "support@trustedlogin.com",
-            "homepage": "https://www.trustedlogin.com"
-        }
-    ],
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "bin": ["bin/build-sass"],
-    "autoload": {
-        "psr-4": {
-            "TrustedLogin\\": "src/"
-        }
-    },
-    "require-dev": {
-      "php": ">=5.3.0",
-      "ext-curl": "*",
-      "ext-json": "*",
-      "yoast/phpunit-polyfills": "^1.1.0",
-      "spatie/phpunit-watcher": "^1.23"
-    },
-    "scripts": {
-        "test": "phpunit"
+  "name": "trustedlogin/client",
+  "type": "library",
+  "description": "Easily and securely log in to your customers sites when providing support.",
+  "keywords": [
+    "login",
+    "security",
+    "support"
+  ],
+  "homepage": "https://www.trustedlogin.com",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "TrustedLogin",
+      "email": "support@trustedlogin.com",
+      "homepage": "https://www.trustedlogin.com"
     }
   ],
   "minimum-stability": "dev",
@@ -55,7 +36,9 @@
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
     "phpstan/phpstan": "^1.10",
     "szepeviktor/phpstan-wordpress": "^1.3",
-    "phpstan/extension-installer": "^1.3"
+    "phpstan/extension-installer": "^1.3",
+    "yoast/phpunit-polyfills": "^1.1.0",
+    "spatie/phpunit-watcher": "^1.23"
   },
   "scripts": {
     "format": "vendor/bin/phpcbf --standard=.phpcs.xml.dist --report-summary --report-source",
