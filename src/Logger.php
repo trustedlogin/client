@@ -197,7 +197,7 @@ class Logger {
 				$this->logFilePath = $logDirectory . DIRECTORY_SEPARATOR . $this->options['filename'] . '.' . $this->options['extension'];
 			}
 		} else {
-			$this->logFilePath = $logDirectory . DIRECTORY_SEPARATOR . $this->options['prefix'] . date( 'Y-m-d' ) . '.' . $this->options['extension'];
+			$this->logFilePath = $logDirectory . DIRECTORY_SEPARATOR . $this->options['prefix'] . gmdate( 'Y-m-d' ) . '.' . $this->options['extension'];
 		}
 	}
 
@@ -345,7 +345,7 @@ class Logger {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		$originalTime = microtime( true );
 		$micro        = sprintf( '%06d', ( $originalTime - floor( $originalTime ) ) * 1000000 );
-		$date         = new DateTime( date( 'Y-m-d H:i:s.' . $micro, (int) $originalTime ) );
+		$date         = new DateTime( gmdate( 'Y-m-d H:i:s.' . $micro, (int) $originalTime ) );
 
 		return $date->format( $this->options['dateFormat'] );
 	}
