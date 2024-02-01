@@ -58,6 +58,7 @@ final class Form {
 
 	/**
 	 * Logging object.
+	 *
 	 * @var null|Logging $logging
 	 */
 	private $logging;
@@ -155,6 +156,7 @@ final class Form {
 		/**
 		 * This prevents the `#backtoblog` "← Go to {Site Name}" link from showing up on the login page.
 		 * Since we're overriding the login screen, setting this global using $_REQUEST['interim-login'] isn't possible.
+		 *
 		 * @see login_footer()
 		 */
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -167,12 +169,7 @@ final class Form {
 			add_filter( 'login_headertext', '__return_empty_string' );
 		}
 
-		add_filter(
-			'login_headerurl',
-			function () {
-				return $this->config->get_setting( 'vendor/website' );
-			}
-		);
+		add_filter( 'login_headerurl', array( $this, 'callback_return_vendor_website' ) );
 
 		login_header();
 
@@ -181,11 +178,25 @@ final class Form {
 		$inline_css = $this->get_login_inline_css();
 		wp_add_inline_style( 'common', $inline_css );
 
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 
 		login_footer();
 
 		die();
+	}
+
+	/**
+	 * Returns the vendor website setting.
+	 * This needs to be a separate method because it's used as a callback, and PHP 5.3 doesn't support $this in
+	 * anonymous functions.
+	 *
+	 * @since TODO
+	 * @internal
+	 * @return array|false|int|string|null
+	 */
+	public function callback_return_vendor_website() {
+		return (string) $this->config->get_setting( 'vendor/website' );
 	}
 
 	/**
@@ -221,9 +232,15 @@ final class Form {
 	 * @return void
 	 */
 	public function print_auth_screen() {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 	}
 
+	/**
+	 * Returns the HTML for the auth header, which shows whether support user has access, and the Revoke Access button.
+	 *
+	 * @return string
+	 */
 	public function get_auth_header_html() {
 		$support_users = $this->support_user->get_all();
 
@@ -325,6 +342,13 @@ final class Form {
 		return $output;
 	}
 
+	/**
+	 * Returns the HTML for the header of the Auth screen, which includes the vendor logo.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @return string
+	 */
 	private function get_header_html() {
 
 		if ( $this->is_login_screen() ) {
@@ -430,6 +454,13 @@ final class Form {
 		return $this->prepare_output( $template, $content );
 	}
 
+	/**
+	 * Returns the HTML for the intro section of the Auth screen (e.g. "Grant Acme Widgets access to this site.")
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return string
+	 */
 	private function get_intro() {
 
 		$has_access = $this->support_user->get_all();
@@ -480,6 +511,13 @@ final class Form {
 		return $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data', false );
 	}
 
+	/**
+	 * Returns the HTML for the details section, which includes the roles, capabilities, and expiration details.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return string
+	 */
 	private function get_details_html() {
 
 		$has_access = $this->support_user->get_all();
@@ -647,11 +685,11 @@ final class Form {
 	}
 
 	/**
-	 * Generate additional/removed capabilities sections
+	 * Generate additional/removed capabilities sections.
 	 *
-	 * @param array  $caps_array Associative array of cap => reason why cap is set
-	 * @param string $heading Text to show for the heading of the caps section
-	 * @param string $dashicon CSS class for the specific dashicon
+	 * @param array  $caps_array Associative array of cap => reason why cap is set.
+	 * @param string $heading Text to show for the heading of the caps section.
+	 * @param string $dashicon CSS class for the specific dashicon.
 	 *
 	 * @return string
 	 */
@@ -717,6 +755,8 @@ final class Form {
 	}
 
 	/**
+	 * Returns the logo HTML shown at the top of the Auth form.
+	 *
 	 * @return string
 	 */
 	private function get_logo_html() {
@@ -748,7 +788,9 @@ final class Form {
 
 		$support_url = $this->config->get_setting( 'vendor/support_url' );
 
-		if ( $reference_id = Client::get_reference_id() ) {
+		$reference_id = Client::get_reference_id();
+
+		if ( $reference_id ) {
 			$support_args = array(
 				'tl'  => Client::VERSION,
 				'ref' => $reference_id,
@@ -803,6 +845,7 @@ final class Form {
 	 */
 	private function get_admin_debug_html() {
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! isset( $_GET['debug'] ) ) {
 			return '';
 		}
@@ -844,11 +887,20 @@ final class Form {
 				'debugging_label' => esc_html__( 'Debugging Info', 'trustedlogin' ),
 				'debugging_info'  => $debugging_info,
 				'tl_config_label' => esc_html__( 'TrustedLogin Config', 'trustedlogin' ),
-				'tl_config'       => '<pre>' . print_r( $this->config->get_settings(), true ) . '</pre>',
+				'tl_config'       => '<pre>' . print_r( $this->config->get_settings(), true ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			)
 		);
 	}
 
+	/**
+	 * Replace placeholders in a template with content.
+	 *
+	 * @param string $template The template to use for the output.
+	 * @param array  $content  The content to replace in the template.
+	 * @param bool   $wp_kses Whether to run the output through wp_kses.
+	 *
+	 * @return string
+	 */
 	private function prepare_output( $template, $content, $wp_kses = true ) {
 
 		$output_html = $template;
@@ -1025,12 +1077,12 @@ final class Form {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array $atts {@see get_button()} for configuration array
-	 * @param bool  $print Should results be printed and returned (true) or only returned (false)
+	 * @param array $atts {@see get_button()} for configuration array.
+	 * @param bool  $print_and_return Should results be printed and returned (true) or only returned (false).
 	 *
 	 * @return string the HTML output
 	 */
-	public function generate_button( $atts = array(), $print = true ) {
+	public function generate_button( $atts = array(), $print_and_return = true ) {
 
 		if ( ! current_user_can( 'create_users' ) ) {
 			return '';
@@ -1072,7 +1124,8 @@ final class Form {
 
 		$return = $this->get_button( $atts );
 
-		if ( $print ) {
+		if ( $print_and_return ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo $return;
 		}
 
@@ -1083,7 +1136,7 @@ final class Form {
 	 * Generates HTML for a TrustedLogin Grant Access button
 	 *
 	 * @param array $atts {
-	 *
+	 * Settings for the button.
 	 * @type string $text Button text to grant access. Sanitized using esc_html(). Default: "Grant %s Access"
 	 *                      (%s replaced with vendor/title setting)
 	 * @type string $exists_text Button text when vendor already has a support account. Sanitized using esc_html().
@@ -1107,7 +1160,7 @@ final class Form {
 			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
-			'tag'         => 'a', // "a", "button", "span".
+			'tag'         => 'a', // Inline tags only.
 			'powered_by'  => false,
 			'support_url' => $this->config->get_setting( 'vendor/support_url' ),
 		);
@@ -1124,7 +1177,7 @@ final class Form {
 				$css_class = 'button';
 				break;
 			default:
-				if ( ! in_array( $atts['size'], $sizes ) ) {
+				if ( ! in_array( $atts['size'], $sizes, true ) ) {
 					$atts['size'] = 'hero';
 				}
 
@@ -1350,23 +1403,19 @@ final class Form {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param bool  $print Whether to print and return (true) or return (false) the results. Default: true
-	 * @param array $atts Settings for the table. {
-	 *
-	 * @type bool $current_url Whether to generate Revoke links based on the current URL. Default: false.
-	 * }
+	 * @param bool $print_and_return Whether to print and return (true) or return (false) the results. Default: true.
 	 *
 	 * @return string HTML table of active support users for vendor. Empty string if current user can't `create_users`
 	 */
-	public function output_support_users( $print = true, $atts = array() ) {
+	public function output_support_users( $print_and_return = true ) {
 
 		if ( ( ! is_admin() && ! $this->is_login_screen() ) || ! current_user_can( 'create_users' ) ) {
 			return '';
 		}
 
 		// The `trustedlogin/{$ns}/button` action passes an empty string.
-		if ( '' === $print ) {
-			$print = true;
+		if ( '' === $print_and_return ) {
+			$print_and_return = true;
 		}
 
 		$support_users = $this->support_user->get_all();
@@ -1374,9 +1423,10 @@ final class Form {
 		if ( empty( $support_users ) ) {
 
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ) . '</h3>';
+			$return = '<h3>' . sprintf( esc_html__( 'No %s users exist.', 'trustedlogin' ), esc_html( $this->config->get_setting( 'vendor/title' ) ) ) . '</h3>';
 
-			if ( $print ) {
+			if ( $print_and_return ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				echo $return;
 			}
 
@@ -1435,15 +1485,16 @@ EOD;
 				'div',
 				/* %7$s */
 				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
+				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				/* %8$s */
-				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), $this->support_user->get_first()->display_name )
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) )
 			);
 		}
 
 		$return .= $access_key_output;
 
-		if ( $print ) {
+		if ( $print_and_return ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo $return;
 		}
 
@@ -1488,6 +1539,7 @@ EOD;
 	 * @return bool
 	 */
 	private function is_login_screen() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();
 	}
 }

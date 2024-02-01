@@ -23,7 +23,6 @@ use RuntimeException;
  * @link    https://github.com/katzgrau/KLogger
  * @version 1.0.0
  */
-
 class Logger {
 
 	const EMERGENCY = 'emergency';
@@ -58,6 +57,7 @@ class Logger {
 	 * Path to the log file
 	 *
 	 * @var string
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $logFilePath;
 
@@ -65,6 +65,7 @@ class Logger {
 	 * Current minimum logging threshold
 	 *
 	 * @var integer
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	protected $logLevelThreshold = self::DEBUG;
 
@@ -72,6 +73,7 @@ class Logger {
 	 * The number of lines logged in this instance's lifetime
 	 *
 	 * @var int
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $logLineCount = 0;
 
@@ -79,6 +81,7 @@ class Logger {
 	 * Log Levels
 	 *
 	 * @var array
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	protected $logLevels = array(
 		self::EMERGENCY => 0,
@@ -95,6 +98,7 @@ class Logger {
 	 * This holds the file handle for this instance's log file
 	 *
 	 * @var resource
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $fileHandle;
 
@@ -103,13 +107,15 @@ class Logger {
 	 *  Used for unit tests
 	 *
 	 * @var string
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $lastLine = '';
 
 	/**
-	 * Octal notation for default permissions of the log file
+	 * Octal notation for default permissions of the log file.
 	 *
 	 * @var integer
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $defaultPermissions = 0777;
 
@@ -122,6 +128,7 @@ class Logger {
 	 *
 	 * @internal param string $logFilePrefix The prefix for the log file name
 	 * @internal param string $logFileExt The extension for the log file
+	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	public function __construct( $logDirectory, $logLevelThreshold = self::DEBUG, array $options = array() ) {
 		$this->logLevelThreshold = $logLevelThreshold;
@@ -306,6 +313,7 @@ class Logger {
 	 * @return string
 	 */
 	private function getTimestamp() {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		$originalTime = microtime( true );
 		$micro        = sprintf( '%06d', ( $originalTime - floor( $originalTime ) ) * 1000000 );
 		$date         = new DateTime( date( 'Y-m-d H:i:s.' . $micro, (int) $originalTime ) );
@@ -316,7 +324,7 @@ class Logger {
 	/**
 	 * Takes the given context and coverts it to a string.
 	 *
-	 * @param  array $context The Context
+	 * @param  array $context The Context.
 	 * @return string
 	 */
 	protected function contextToString( $context ) {
@@ -344,19 +352,19 @@ class Logger {
 	/**
 	 * Indents the given string with the given indent.
 	 *
-	 * @param  string $string The string to indent
+	 * @param  string $content The string to indent
 	 * @param  string $indent What to use as the indent.
 	 * @return string
 	 */
-	protected function indent( $string, $indent = '    ' ) {
-		return $indent . str_replace( "\n", "\n" . $indent, $string );
+	protected function indent( $content, $indent = '    ' ) {
+		return $indent . str_replace( "\n", "\n" . $indent, $content );
 	}
 
 	/**
 	 * System is unusable.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -370,8 +378,8 @@ class Logger {
 	 * Example: Entire website down, database unavailable, etc. This should
 	 * trigger the SMS alerts and wake you up.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -384,8 +392,8 @@ class Logger {
 	 *
 	 * Example: Application component unavailable, unexpected exception.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -397,8 +405,8 @@ class Logger {
 	 * Runtime errors that do not require immediate action but should typically
 	 * be logged and monitored.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -412,8 +420,8 @@ class Logger {
 	 * Example: Use of deprecated APIs, poor use of an API, undesirable things
 	 * that are not necessarily wrong.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -424,8 +432,8 @@ class Logger {
 	/**
 	 * Normal but significant events.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -438,8 +446,8 @@ class Logger {
 	 *
 	 * Example: User logs in, SQL logs.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */
@@ -450,8 +458,8 @@ class Logger {
 	/**
 	 * Detailed debug information.
 	 *
-	 * @param string  $message
-	 * @param mixed[] $context
+	 * @param string  $message The message to log.
+	 * @param mixed[] $context Additional information about the event.
 	 *
 	 * @return void
 	 */

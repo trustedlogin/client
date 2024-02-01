@@ -28,12 +28,14 @@ class Logging {
 
 	/**
 	 * Config object.
+	 *
 	 * @var Config
 	 */
 	private $config = null;
 
 	/**
 	 * Whether logging is enabled. Can be overridden by a filter.
+	 *
 	 * @var bool $logging_enabled
 	 */
 	private $logging_enabled = false;
@@ -125,17 +127,17 @@ class Logging {
 
 		$logging_directory = $config->get_setting( 'logging/directory', '' );
 
-		if( empty( $logging_directory ) ) {
+		if ( empty( $logging_directory ) ) {
 			$logging_directory = $this->maybe_make_logging_directory();
 		}
 
 		// Directory cannot be found or created. Cannot log.
-		if( ! $logging_directory ) {
+		if ( ! $logging_directory ) {
 			return false;
 		}
 
 		// Directory cannot be written to. Cannot log.
-		if( ! $this->check_directory( $logging_directory ) ) {
+		if ( ! $this->check_directory( $logging_directory ) ) {
 			return false;
 		}
 
@@ -206,7 +208,7 @@ class Logging {
 
 		// Directory exists; return early.
 
-		if( file_exists( $log_dir ) ) {
+		if ( file_exists( $log_dir ) ) {
 			return $log_dir;
 		}
 
@@ -214,7 +216,7 @@ class Logging {
 		$folder_created = wp_mkdir_p( $log_dir );
 
 		// Something went wrong mapping the directory.
-		if( ! $folder_created ) {
+		if ( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
