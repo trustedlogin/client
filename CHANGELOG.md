@@ -1,10 +1,32 @@
 # Changelog for TrustedLogin Client
 
-## [WIP]
+## develop
 
+- Moved logging directory creation into own private method: `Logging::setup_logging_directory()`
+
+## 1.7.0 (January 29, 2024)
+
+- Added Utils class to handle common utility functions
+- Converted usage of `get_site_transient()` and `set_site_transient()` to using `Utils::get_transient()` and `Utils::set_transient()`.
+  - Scopes the storage to each blog instead of per-network, preventing potential issues with multisite
+  - Fixes potential issues with object caching plugins that don't support transients, while allowing for auto-expiring data to be stored in the database
+  - Prevents data from being "cleaned up" by site optimization plugins that remove expired transients
+
+## 1.6.2 (January 26, 2024)
+
+- Removed unnecessary request body when revoking site access
+- Added index.php files to prevent directory listings
+- Added check for a potential error when revoking support user
+
+## 1.6.1 (September 22, 2023)
+
+- Removed unnecessary payload when revoking site access
 - Improved error logging:
   - Added error data to the logging, in addition to the code & message
   - Now returns the full API response when the response body is invalid
+  - Switched to just-in-time creation of logging directory and log file
+  - Added "Learn more" link to the logging directory `index.html`
+  - Renamed the log files to `client-{namespace}-{Y-m-d}-{hash}.log` to be easier to distinguish and less verbose
 - Fixed AJAX status code not being properly set when encountering an error
 
 ## 1.6.0 (September 7, 2023)
@@ -20,7 +42,7 @@
   - Relabeled the link from "Revoke TrustedLogin" to "Revoke Access"
 - Improved user creation flow to prevent errors when creating a user with an existing email address
 - Fixed error when using PHP in strict mode
-- Fixed error creating the Support User when the `vendor/website` configuration exceeded 100 characters in length
+- Fixed error creating the support user when the `vendor/website` configuration exceeded 100 characters in length
 
 ## 1.5.1 (2023-04-18)
 

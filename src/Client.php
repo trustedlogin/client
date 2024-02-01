@@ -37,7 +37,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.6.0';
+	const VERSION = '1.7.0';
 
 	/**
 	 * @var Config
@@ -523,7 +523,14 @@ final class Client {
 			$users = $this->support_user->get_all();
 
 			foreach ( $users as $user ) {
-				$this->revoke_access( $this->support_user->get_user_identifier( $user ) );
+				$user_identifier = $this->support_user->get_user_identifier( $user );
+
+				// Errors are already logged in the get_user_identifier() method.
+				if ( is_wp_error( $user_identifier ) ) {
+					continue;
+				}
+
+				$this->revoke_access( $user_identifier );
 			}
 		}
 

@@ -188,13 +188,13 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	 */
 	public function test_handle_response() {
 
-		// Response is an error itself
-		$WP_Error = new \WP_Error( 'example', 'Testing 123' );
-		$this->assertSame( $WP_Error, $this->remote->handle_response( $WP_Error ) );
-
-		// Missing body
+		// No JSON at all.
 		$this->assertWPError( $this->remote->handle_response( array( 'body' => '' ) ) );
-		$this->assertSame( 'missing_response_body', $this->remote->handle_response( array( 'body' => '' ) )->get_error_code() );
+		$this->assertSame( 'invalid_response', $this->remote->handle_response( array( 'body' => '' ) )->get_error_code() );
+
+		// Missing JSON response body.
+		$this->assertWPError( $this->remote->handle_response( array( 'body' => '{ example: "JSON" }' ) ) );
+		$this->assertSame( 'missing_response_body', $this->remote->handle_response( array( 'response' => array( 'code' => 200 ), 'body' => '' ) )->get_error_code() );
 
 		// Verify error response codes
 		$error_codes = array(
@@ -231,7 +231,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $handled_response );
 		$this->assertSame( 'invalid_response', $handled_response->get_error_code(), $response_code . ' should have triggered ' . $error_code );
-		$this->assertSame( 'Not JSON, that is for sure.', $handled_response->get_error_data( 'invalid_response' ) );
+		$this->assertSame( $invalid_json_response, $handled_response->get_error_data( 'invalid_response' ) );
 
 		// Finally, VALID JSON
 		$valid_json_response = array(

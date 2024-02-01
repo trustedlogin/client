@@ -27,8 +27,13 @@ class Logging {
 	private $ns;
 
 	/**
+	 * Config object.
+	 * @var Config
+	 */
+	private $config = null;
+
+	/**
 	 * Whether logging is enabled. Can be overridden by a filter.
-	 *
 	 * @var bool $logging_enabled
 	 */
 	private $logging_enabled = false;
@@ -47,11 +52,11 @@ class Logging {
 	 */
 	public function __construct( Config $config ) {
 
+		$this->config = $config;
+
 		$this->ns = $config->ns();
 
 		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
-
-		$this->klogger = $this->setup_klogger( $config );
 	}
 
 	/**
@@ -63,29 +68,10 @@ class Logging {
 	 */
 	private function setup_klogger( $config ) {
 
-		$logging_directory = null;
-
-		$configured_logging_dir = $config->get_setting( 'logging/directory', '' );
-
-		if ( ! empty( $configured_logging_dir ) ) {
-			$logging_directory = $this->check_directory( $configured_logging_dir );
-
-			if ( ! $logging_directory ) {
-				return false;
-			}
-		}
-
-		if ( ! $logging_directory ) {
-			$logging_directory = $this->maybe_make_logging_directory();
-		}
+		$logging_directory = $this->setup_logging_directory( $config );
 
 		// Directory cannot be found or created. Cannot log.
 		if ( ! $logging_directory ) {
-			return false;
-		}
-
-		// Directory cannot be written to.
-		if ( ! $this->check_directory( $logging_directory ) ) {
 			return false;
 		}
 
@@ -98,7 +84,7 @@ class Logging {
 			$default_options = array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => sprintf( 'trustedlogin-client-debug-%s-%s', $datetime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
+				'filename'       => sprintf( 'client-debug-%s-%s', $datetime->format( 'Y-m-d' ), \hash( 'sha256', $filename_hash_data ) ),
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
@@ -124,6 +110,39 @@ class Logging {
 		}
 
 		return $klogger;
+	}
+
+	/**
+	 * Returns the directory to use for logging. Creates one if it doesn't exist.
+	 *
+	 * @param \TrustedLogin\Config $config Configuration object.
+	 *
+	 * @since TODO
+	 *
+	 * @return bool|string Directory path to logging. False if logging directory cannot be found, created, or written to.
+	 */
+	private function setup_logging_directory( $config ) {
+
+		$logging_directory = $config->get_setting( 'logging/directory', '' );
+
+		if( empty( $logging_directory ) ) {
+			$logging_directory = $this->maybe_make_logging_directory();
+		}
+
+		// Directory cannot be found or created. Cannot log.
+		if( ! $logging_directory ) {
+			return false;
+		}
+
+		// Directory cannot be written to. Cannot log.
+		if( ! $this->check_directory( $logging_directory ) ) {
+			return false;
+		}
+
+		// Protect directory from being browsed by adding index.html
+		$this->prevent_directory_browsing( $logging_directory );
+
+		return $logging_directory;
 	}
 
 	/**
@@ -186,9 +205,8 @@ class Logging {
 		$log_dir = trailingslashit( $upload_dir['basedir'] ) . self::DIRECTORY_PATH;
 
 		// Directory exists; return early.
-		if ( file_exists( $log_dir ) ) {
-			$this->prevent_directory_browsing( $log_dir );
 
+		if( file_exists( $log_dir ) ) {
 			return $log_dir;
 		}
 
@@ -196,15 +214,11 @@ class Logging {
 		$folder_created = wp_mkdir_p( $log_dir );
 
 		// Something went wrong mapping the directory.
-		if ( ! $folder_created ) {
+		if( ! $folder_created ) {
 			$this->log( 'The log directory could not be created: ' . $log_dir, __METHOD__, 'error' );
 			return false;
 		}
 
-		// Protect directory from being browsed by adding index.html.
-		$this->prevent_directory_browsing( $log_dir );
-
-		// Make sure the new log directory can be written to.
 		return $log_dir;
 	}
 
@@ -236,7 +250,9 @@ class Logging {
 
 		$file_content = '<!-- Silence is golden. TrustedLogin is also pretty great. Learn more: https://www.trustedlogin.com/about/easy-and-safe/ -->';
 
-		if ( ! $wp_filesystem->put_contents( $index_pathname, $file_content ) ) {
+		$file_was_saved = $wp_filesystem->put_contents( $index_pathname, $file_content );
+
+		if ( ! $file_was_saved ) {
 			$this->log( 'Unable to protect directory from browsing.', __METHOD__, 'error' );
 			return false;
 		}
@@ -322,7 +338,10 @@ class Logging {
 			return;
 		}
 
-		// The logger class didn't load for some reason.
+		// Set up klogger, creating the logging file/directory if it doesn't already exist.
+		$this->klogger = $this->setup_klogger( $this->config );
+
+		// The logger class didn't load. Rely on WordPress logging, if enabled.
 		if ( ! $this->klogger ) {
 			$wp_debug     = defined( 'WP_DEBUG' ) && WP_DEBUG;
 			$wp_debug_log = defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG;

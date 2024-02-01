@@ -55,6 +55,11 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 	 */
 	private $encryption;
 
+	/**
+	 * @var Remote
+	 */
+	private $remote;
+
 	public static $functions_not_exist = array();
 
 	public function setUp(): void {

@@ -203,11 +203,7 @@ class SiteAccess {
 			return true;
 		}
 
-		$body = array(
-			'publicKey' => $this->config->get_setting( 'auth/api_key' ),
-		);
-
-		$api_response = $remote->send( 'sites/' . $secret_id, $body, 'DELETE' );
+		$api_response = $remote->send( 'sites/' . $secret_id, array(), 'DELETE' );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;

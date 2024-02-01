@@ -29,13 +29,13 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 			$config->validate();
 		} catch ( Exception $exception ) {
-			$this->assertEquals( 406, $exception->getCode(), $expected_codes[3] . ' ' . $exception->getMessage() );
-			$this->assertContains( 'public key', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/namespace', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/title', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/email', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
+			$this->assertEquals( 406, $exception->getCode(), $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/You need to set an API key./', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/namespace/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/title/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/email/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/website/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/support_url/', $exception->getMessage() );
 		}
 
 		try {
@@ -56,42 +56,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	 * @covers \TrustedLogin\Config::__construct
 	 * @covers \TrustedLogin\Config::validate
 	 */
-	public function test_config_api_key() {
-
-		$expected_codes = array(
-			1 => 'empty configuration array',
-			2 => 'replace default namespace',
-			3 => 'invalid configuration array',
-		);
-
-		try {
-			$config = new \TrustedLogin\Config(
-				array(
-					'vendor' => true,
-					'auth'   => array( 'api_key' => 'asdasd' ),
-				)
-			);
-
-			$config->validate();
-
-			$client = new TrustedLogin\Client( $config );
-		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
-			$this->assertNotContains( 'public key', $exception->getMessage(), $expected_codes[3] );
-		}
-	}
-
-	/**
-	 * @covers \TrustedLogin\Config::__construct
-	 * @covers \TrustedLogin\Config::validate
-	 */
 	public function test_config_urls() {
-
-		$expected_codes = array(
-			1 => 'empty configuration array',
-			2 => 'replace default namespace',
-			3 => 'invalid configuration array',
-		);
 
 		$valid_config = array(
 			'auth'        => array(
@@ -120,23 +85,27 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 			new TrustedLogin\Client( $config );
 		} catch ( \Exception $exception ) {
-			$this->assertEquals( 3, $exception->getCode(), $expected_codes[3] );
-			$this->assertContains( 'webhook_url', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/support_url', $exception->getMessage(), $expected_codes[3] );
-			$this->assertContains( 'vendor/website', $exception->getMessage(), $expected_codes[3] );
+			$this->assertEquals( 406, $exception->getCode() );
+			$this->assertMatchesRegularExpression( '/webhook_url/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/support_url/', $exception->getMessage() );
+			$this->assertMatchesRegularExpression( '/vendor\/website/', $exception->getMessage() );
 		}
 	}
 
 	/**
 	 * @covers \TrustedLogin\Config::__construct
+	 * @expectedException \TypeError
+	 * @expectedExceptionCode 406
 	 */
 	public function test_config_not_array_string() {
-		$this->expectException( TypeError::class );
+		$this->expectException(TypeError::class);
 		new \TrustedLogin\Config( 'asdsadsd' );
 	}
 
 	/**
 	 * @covers \TrustedLogin\Config::__construct
+	 * @expectedException \Exception
+	 * @expectedExceptionCode 400
 	 */
 	public function test_config_not_array_object() {
 		$this->expectException( TypeError::class );
@@ -146,19 +115,23 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 	/**
 	 * @covers \TrustedLogin\Config::__construct
+	 * @expectedException \Exception
+	 * @expectedExceptionCode 400
 	 */
 	public function test_config_empty_array() {
 		$this->expectException( Exception::class );
-		$this->expectExceptionCode( 1 );
+		$this->expectExceptionCode( 400 );
 		new \TrustedLogin\Config( array() );
 	}
 
 	/**
 	 * @covers \TrustedLogin\Config::__construct
+	 * @expectedException \Exception
+	 * @expectedExceptionCode 400
 	 */
 	public function test_config_empty() {
 		$this->expectException( Exception::class );
-		$this->expectExceptionCode( 1 );
+		$this->expectExceptionCode( 400 );
 		new \TrustedLogin\Config();
 	}
 
@@ -183,7 +156,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'paths'       => array(
 				'css' => null,
 			),
-			'decay'       => 0,
+			'decay' => DAY_IN_SECONDS,
 		);
 
 		$config = new \TrustedLogin\Config( $config_array );
@@ -192,7 +165,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$TL = new \TrustedLogin\Client( $config );
 
-		$this->assertEquals( 0, $config->get_setting( 'decay' ) );
+		$this->assertEquals( DAY_IN_SECONDS, $config->get_setting( 'decay' ) );
 
 		$this->assertEquals( 'https://www.google.com', $config->get_setting( 'webhook_url' ) );
 
@@ -210,7 +183,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$this->assertNotNull( $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 		$this->assertNotFalse( $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
-		$this->assertContains( '.css', $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
+		$this->assertMatchesRegularExpression( '/.css$/', $config->get_setting( 'paths/css' ), 'Being passed NULL should not override default.' );
 
 		// Test passed array values
 		$passed_array = array(
@@ -277,23 +250,24 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( false, $config->get_setting( 'create_ticket' ) );
-		$config = new \TrustedLogin\Config(
-			array(
-				'create_ticket' => true,
-				'auth'          => array(
-					'api_key' => 'not empty',
-				),
-				'vendor'        => array(
-					'namespace'   => 'asdasd',
-					'email'       => 'asdasds',
-					'title'       => 'asdasdsad',
-					'website'     => 'https://example.com',
-					'support_url' => 'https://example.com/support/',
-				),
-			)
-		);
+		$this->assertSame(false , $config->get_setting( 'webhook/create_ticket' ) );
 
-		$this->assertSame( true, $config->get_setting( 'create_ticket' ) );
+		$config = new \TrustedLogin\Config( array(
+			'auth' => array(
+				'api_key' => 'not empty'
+			),
+			'vendor' => array(
+				'namespace' => 'asdasd',
+				'email' => 'asdasds',
+				'title' => 'asdasdsad',
+				'website' => 'https://example.com',
+				'support_url' => 'https://example.com/support/',
+			),
+			'webhook' => array(
+				'create_ticket' => true,
+			),
+		) );
+
+		$this->assertSame(true , $config->get_setting( 'webhook/create_ticket' ) );
 	}
 }

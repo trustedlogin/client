@@ -1,19 +1,38 @@
 {
-  "name": "trustedlogin/client",
-  "type": "library",
-  "description": "Easily and securely log in to your customers sites when providing support.",
-  "keywords": [
-    "login",
-    "security",
-    "support"
-  ],
-  "homepage": "https://www.trustedlogin.com",
-  "license": "GPL-2.0-or-later",
-  "authors": [
-    {
-      "name": "TrustedLogin",
-      "email": "support@trustedlogin.com",
-      "homepage": "https://www.trustedlogin.com"
+    "name": "trustedlogin/client",
+    "type": "library",
+    "description": "Easily and securely log in to your customers sites when providing support.",
+    "keywords": [
+        "login",
+        "security",
+        "support"
+    ],
+    "homepage": "https://www.trustedlogin.com",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "TrustedLogin",
+            "email": "support@trustedlogin.com",
+            "homepage": "https://www.trustedlogin.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "bin": ["bin/build-sass"],
+    "autoload": {
+        "psr-4": {
+            "TrustedLogin\\": "src/"
+        }
+    },
+    "require-dev": {
+      "php": ">=5.3.0",
+      "ext-curl": "*",
+      "ext-json": "*",
+      "yoast/phpunit-polyfills": "^1.1.0",
+      "spatie/phpunit-watcher": "^1.23"
+    },
+    "scripts": {
+        "test": "phpunit"
     }
   ],
   "minimum-stability": "dev",
