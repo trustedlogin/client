@@ -53,7 +53,7 @@ final class Client {
 	 *
 	 * @var bool True if the configuration is valid; false if not.
 	 */
-	static $valid_config;
+	public static $valid_config;
 
 	/**
 	 * Instance of Logging
