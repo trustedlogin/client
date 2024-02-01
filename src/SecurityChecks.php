@@ -331,13 +331,11 @@ final class SecurityChecks {
 			case 'local':
 			case 'development':
 				return true;
-				break;
 			case 'staging':
 			case 'production':
 			default:
+				return false;
 		}
-
-		return false;
 	}
 
 	/**
