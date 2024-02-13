@@ -197,7 +197,7 @@ final class SecurityChecks {
 		 */
 		$body = array(
 			'timestamp'  => time(),
-			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
+			'user_agent' => Utils::get_user_agent( 255 ),
 			'user_ip'    => Utils::get_ip(),
 			'site_url'   => get_site_url(),
 		);
@@ -236,7 +236,7 @@ final class SecurityChecks {
 		 */
 		$body = array(
 			'timestamp'  => time(),
-			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
+			'user_agent' => Utils::get_user_agent( 255 ),
 			'user_ip'    => Utils::get_ip(),
 			'site_url'   => get_site_url(),
 		);

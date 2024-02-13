@@ -143,6 +143,31 @@ class Utils {
 	}
 
 	/**
+	 * Returns the HTTP user agent, sanitized.
+	 *
+	 * @param int $max_length The maximum length of the returned user agent string.
+	 * @param bool $sanitize Whether to sanitize the user agent string.
+	 *
+	 * @return string The user agent string, sanitized. Truncated at $max_length, if set.
+	 */
+	public static function get_user_agent( $max_length = 0 ) {
+
+		if ( ! isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
+			return '';
+		}
+
+		$user_agent = wp_unslash(  $_SERVER['HTTP_USER_AGENT'] );
+
+		$user_agent = sanitize_text_field( $user_agent );
+
+		if ( ! $max_length ) {
+			return $user_agent;
+		}
+
+		return substr( esc_attr( $user_agent ), 0, (int) $max_length );
+	}
+
+	/**
 	 * Returns the IP address of the requester
 	 *
 	 * @since 1.7.1 Moved from SecurityChecks class to Utils class.
