@@ -141,4 +141,30 @@ class Utils {
 			'value'      => $value,
 		);
 	}
+
+	/**
+	 * Returns the IP address of the requester
+	 *
+	 * @since 1.7.1 Moved from SecurityChecks class to Utils class.
+	 *
+	 * @return null|string Returns null if REMOTE_ADDR isn't set, string IP address otherwise.
+	 */
+	public static function get_ip() {
+
+		if ( ! isset( $_SERVER['REMOTE_ADDR'] ) ) {
+			return null;
+		}
+
+		$ip = wp_unslash( $_SERVER['REMOTE_ADDR'] );
+
+		$ip = trim( $ip );
+
+		$ip = sanitize_text_field( $ip );
+
+		if ( ! defined( 'TL_DOING_TESTS' ) ) {
+			$ip = filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE );
+		}
+
+		return (string) $ip;
+	}
 }

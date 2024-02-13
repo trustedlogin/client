@@ -174,27 +174,7 @@ final class SecurityChecks {
 		return $used_accesskeys;
 	}
 
-	/**
-	 * Returns the IP address of the requester
-	 *
-	 * @return null|string Returns null if REMOTE_ADDR isn't set, string IP address otherwise.
-	 */
-	private function get_ip() {
 
-		if ( ! isset( $_SERVER['REMOTE_ADDR'] ) ) {
-			return null;
-		}
-
-		$ip = wp_unslash( $_SERVER['REMOTE_ADDR'] );
-
-		$ip = trim( $ip );
-
-		if ( ! defined( 'TL_DOING_TESTS' ) ) {
-			$ip = filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE );
-		}
-
-		return (string) $ip;
-	}
 
 	/**
 	 * Makes double-y sure the TrustedLogin Server approves this support-agent login.
@@ -218,7 +198,7 @@ final class SecurityChecks {
 		$body = array(
 			'timestamp'  => time(),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
-			'user_ip'    => $this->get_ip(),
+			'user_ip'    => Utils::get_ip(),
 			'site_url'   => get_site_url(),
 		);
 
@@ -257,7 +237,7 @@ final class SecurityChecks {
 		$body = array(
 			'timestamp'  => time(),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( $_SERVER['HTTP_USER_AGENT'], 0, 255 ) : '',
-			'user_ip'    => $this->get_ip(),
+			'user_ip'    => Utils::get_ip(),
 			'site_url'   => get_site_url(),
 		);
 
