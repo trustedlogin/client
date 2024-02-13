@@ -1,7 +1,9 @@
 <?php
 /**
  * Plugin Name: TrustedLogin Client Test
+ * phpcs:disable
  */
+
 /**
  * Autoloader for the TrustedLogin Client
  *

@@ -145,7 +145,7 @@ class Utils {
 	/**
 	 * Returns the HTTP user agent, sanitized.
 	 *
-	 * @param int $max_length The maximum length of the returned user agent string.
+	 * @param int  $max_length The maximum length of the returned user agent string.
 	 * @param bool $sanitize Whether to sanitize the user agent string.
 	 *
 	 * @return string The user agent string, sanitized. Truncated at $max_length, if set.
@@ -156,7 +156,7 @@ class Utils {
 			return '';
 		}
 
-		$user_agent = wp_unslash(  $_SERVER['HTTP_USER_AGENT'] );
+		$user_agent = wp_unslash( $_SERVER['HTTP_USER_AGENT'] );
 
 		$user_agent = sanitize_text_field( $user_agent );
 

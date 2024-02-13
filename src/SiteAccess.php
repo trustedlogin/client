@@ -11,20 +11,29 @@ namespace TrustedLogin;
 
 use WP_Error;
 
+/**
+ * Class SiteAccess
+ */
 class SiteAccess {
 
 	/**
+	 * Config instance.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var Logging $logging
 	 */
 	private $logging;
 
 	/**
-	 * @var string[] Valid action types to use when syncing to TrustedLogin.
+	 * Valid action types to use when syncing to TrustedLogin.
+	 *
+	 * @var string[]
 	 */
 	private static $sync_actions = array(
 		'create',
@@ -32,7 +41,10 @@ class SiteAccess {
 	);
 
 	/**
+	 * SiteAccess constructor.
 	 *
+	 * @param Config  $config Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -42,8 +54,8 @@ class SiteAccess {
 	/**
 	 * Handles the syncing of newly generated support access to the TrustedLogin servers.
 	 *
-	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}
-	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}
+	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}.
+	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}.
 	 * @param string $action The type of sync this is. Options can be 'create', 'extend'.
 	 *
 	 * @return true|WP_Error True if successfully created secret on TrustedLogin servers; WP_Error if failed.
@@ -130,13 +142,13 @@ class SiteAccess {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param bool $hashed Should the value be hashed using SHA256?
+	 * @param bool $hashed Should the value be hashed using SHA256? Default false.
 	 *
 	 * @return string|null|WP_Error License key (hashed if $hashed is true) or null if not found. Returns WP_Error if error occurs.
 	 */
 	public function get_license_key( $hashed = false ) {
 
-		// If no license key is provided
+		// Get the license key from the settings.
 		$license_key_config = $this->config->get_setting( 'auth/license_key', null );
 
 		/**
@@ -190,10 +202,10 @@ class SiteAccess {
 	/**
 	 * Revoke a site in TrustedLogin
 	 *
-	 * @param string $secret_id ID of site secret identifier to be removed from TrustedLogin
-	 * @param Remote $remote
+	 * @param string $secret_id ID of site secret identifier to be removed from TrustedLogin.
+	 * @param Remote $remote Instance of the Remote class.
 	 *
-	 * @return true|\WP_Error Was the sync to TrustedLogin successful
+	 * @return true|\WP_Error Was the sync to TrustedLogin successful?
 	 */
 	public function revoke( $secret_id, Remote $remote ) {
 

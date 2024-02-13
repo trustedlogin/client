@@ -1,4 +1,11 @@
 <?php
+/**
+ * Build the SCSS file for the plugin based on the plugin slug passed through the environment variable.
+ *
+ * @link https://docs.trustedlogin.com/Client/css-namespacing For usage information.
+ *
+ * phpcs:disable
+ */
 
 $slug      = env( 'TRUSTEDLOGIN_SLUG' );
 $file_name = $slug . '.scss';

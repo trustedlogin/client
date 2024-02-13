@@ -6,57 +6,87 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
 use WP_Error;
 
+/**
+ * Class SecurityChecks
+ *
+ * @package GravityView\TrustedLogin\Client
+ */
 final class SecurityChecks {
 
 	/**
+	 * Logging object.
+	 *
 	 * @var Logging $logging
 	 */
 	private $logging;
 
 	/**
+	 * Config object.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
-	 * @var string The transient slug used for storing used accesskeys.
+	 * The transient slug used for storing used accesskeys.
+	 *
+	 * @var string
 	 */
 	private $used_accesskey_transient;
 
 	/**
-	 * @var string The transient slug used for noting if we're temporarily blocking access.
+	 * The transient slug used for noting if we're temporarily blocking access.
+	 *
+	 * @var string
 	 */
 	private $in_lockdown_transient;
 
 	/**
-	 * @var int The number of incorrect access keys that should trigger an anomaly alert.
+	 * The number of incorrect access keys that should trigger an anomaly alert.
+	 *
+	 * @var int
 	 */
 	const ACCESSKEY_LIMIT_COUNT = 3;
 
 	/**
-	 * @var int The number of seconds we should keep incorrect access keys stored for.
+	 * The number of seconds we should keep incorrect access keys stored for.
+	 *
+	 * @var int
 	 */
 	const ACCESSKEY_LIMIT_EXPIRY = 36000; // 10 * MINUTE_IN_SECONDS;
 
 	/**
-	 * @var int The number of seconds should block trustedlogin auto-logins for.
+	 * The number of seconds should block trustedlogin auto-logins for.
+	 *
+	 * @var int
 	 */
 	const LOCKDOWN_EXPIRY = 72000; // 20 * MINUTE_IN_SECONDS;
 
 	/**
-	 * @var string TrustedLogin endpoint to notify brute-force activity
+	 * TrustedLogin endpoint to notify brute-force activity.
+	 *
+	 * @var string
 	 */
 	const BRUTE_FORCE_ENDPOINT = 'report-brute-force';
 
 	/**
-	 * @var string TrustedLogin endpoint to verify valid support activity
+	 * TrustedLogin endpoint to verify valid support activity.
+	 *
+	 * @var string
 	 */
 	const VERIFY_SUPPORT_AGENT_ENDPOINT = 'verify-identifier';
 
+	/**
+	 * SecurityChecks constructor.
+	 *
+	 * @param Config  $config  The Config object.
+	 * @param Logging $logging The Logging object.
+	 */
 	public function __construct( Config $config, Logging $logging ) {
 
 		$this->logging = $logging;
@@ -71,7 +101,7 @@ final class SecurityChecks {
 	 *
 	 * Multiple security checks are performed, including brute-force and known-attacker-list checks
 	 *
-	 * @param string $passed_user_identifier The identifier provided via {@see SupportUser::maybe_login()}
+	 * @param string $passed_user_identifier The identifier provided via {@see SupportUser::maybe_login()}.
 	 *
 	 * @return true|WP_Error True if identifier passes checks. WP_Error if not.
 	 */
@@ -98,17 +128,17 @@ final class SecurityChecks {
 			return $brute_force;
 		}
 
-		$SupportUser = new SupportUser( $this->config, $this->logging );
+		$support_user = new SupportUser( $this->config, $this->logging );
 
-		$secret_id = $SupportUser->get_secret_id( $user_identifier );
+		$secret_id = $support_user->get_secret_id( $user_identifier );
 
 		$approved = $this->check_approved_identifier( $secret_id );
 
-		// Don't lock-down the site, since there could have been errors related to remote validation
+		// Don't lock-down the site, since there could have been errors related to remote validation.
 		if ( is_wp_error( $approved ) ) {
 			$this->logging->log(
 				sprintf(
-					// translators: %s is the error message
+					// translators: %s is the error message.
 					__( 'There was an issue verifying the user identifier with TrustedLogin, aborting login. (%s)', 'trustedlogin' ),
 					$approved->get_error_message()
 				),
@@ -125,7 +155,7 @@ final class SecurityChecks {
 	/**
 	 * Detects if this identifier indicates that the site's access keys may be under a brute force attack.
 	 *
-	 * @param  string $identifier The identifier provided via {@see Endpoint::maybe_login_support()}
+	 * @param  string $identifier The identifier provided via {@see Endpoint::maybe_login_support()}.
 	 *
 	 * @return true|WP_Error WP_Error if an anomaly was detected and site may be under attack. Else true.
 	 */
@@ -152,23 +182,28 @@ final class SecurityChecks {
 	}
 
 	/**
-	 * @param string $user_identifier
+	 * Adds new access keys to the stored list of used access keys.
 	 *
-	 * @return mixed
+	 * @param string $user_identifier The identifier provided via {@see Endpoint::maybe_login_support()}.
+	 *
+	 * @return array The list of used access keys.
 	 */
 	private function maybe_add_used_accesskey( $user_identifier = '' ) {
 
 		$used_accesskeys = (array) Utils::get_transient( $this->used_accesskey_transient );
 
-		// This is a new access key
-		if ( ! in_array( $user_identifier, $used_accesskeys, true ) ) {
-			$used_accesskeys[] = $user_identifier;
+		// This is an existing access key.
+		if ( in_array( $user_identifier, $used_accesskeys, true ) ) {
+			return $used_accesskeys;
+		}
 
-			$transient_set = Utils::set_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
+		// Add the new access key to the list.
+		$used_accesskeys[] = $user_identifier;
 
-			if ( ! $transient_set ) {
-				$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
-			}
+		$transient_set = Utils::set_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
+
+		if ( ! $transient_set ) {
+			$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
 		}
 
 		return $used_accesskeys;
@@ -177,7 +212,7 @@ final class SecurityChecks {
 
 
 	/**
-	 * Makes double-y sure the TrustedLogin Server approves this support-agent login.
+	 * Makes doubly sure the TrustedLogin Server approves this support-agent login.
 	 *
 	 * This function sends server variables to the TrustedLogin server to help prevent a number of attack vectors.
 	 * It is *only* ever triggered as part of the auto-login sequence.

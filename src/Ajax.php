@@ -1,4 +1,11 @@
 <?php
+/**
+ * Class Ajax
+ *
+ * @package GravityView\TrustedLogin\Client
+ *
+ * @copyright 2024 Katz Web Services, Inc.
+ */
 
 namespace TrustedLogin;
 
@@ -12,20 +19,29 @@ use WP_Error;
 use WP_User;
 use WP_Admin_Bar;
 
+/**
+ * Class Ajax
+ */
 final class Ajax {
 
 	/**
+	 * Config instance.
+	 *
 	 * @var \TrustedLogin\Config
 	 */
 	private $config;
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var null|\TrustedLogin\Logging $logging
 	 */
 	private $logging;
 
 	/**
-	 * @var string[] Fields that may be included in the support data.
+	 * Fields that may be included in the support data.
+	 *
+	 * @var string[]
 	 * @see grantAccess() in trustedlogin.js
 	 */
 	private $generate_support_fields = array(
@@ -40,8 +56,8 @@ final class Ajax {
 	/**
 	 * Cron constructor.
 	 *
-	 * @param Config       $config
-	 * @param Logging|null $logging
+	 * @param Config       $config  Configuration instance.
+	 * @param Logging|null $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -49,7 +65,7 @@ final class Ajax {
 	}
 
 	/**
-	 *
+	 * Add hooks to process the AJAX requests.
 	 */
 	public function init() {
 		add_action( 'wp_ajax_tl_' . $this->config->ns() . '_gen_support', array( $this, 'ajax_generate_support' ) );
@@ -63,8 +79,9 @@ final class Ajax {
 	 * @return void Sends a JSON success or error message based on what happens
 	 */
 	public function ajax_generate_support() {
+
 		// Remove any fields that are not in the $ajax_fields array.
-		$posted_data = array_intersect_key( $_POST, array_flip( $this->generate_support_fields ) );
+		$posted_data = array_intersect_key( $_POST, array_flip( $this->generate_support_fields ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		if ( empty( $posted_data['vendor'] ) ) {
 			$this->logging->log( 'Vendor not defined in TrustedLogin configuration.', __METHOD__, 'critical' );
