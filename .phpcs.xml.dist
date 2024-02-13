@@ -39,6 +39,9 @@
 		<exclude name="Universal.Operators.DisallowShortTernary" />
 		-->
 
+		<!-- Allow short prefixes (tl) — we are namespacing everything. -->
+		<exclude name="WordPress.NamingConventions.PrefixAllGlobals.ShortPrefixPassed" />
+
 		<!-- Enforce short array syntax. https://github.com/WordPress/WordPress-Coding-Standards/issues/1607#issuecomment-1605730869 -->
 		<!--
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
