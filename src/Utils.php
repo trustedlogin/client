@@ -6,8 +6,12 @@
  *
  * @copyright 2024 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
+/**
+ * Class Utils
+ */
 class Utils {
 
 	/**
@@ -31,12 +35,14 @@ class Utils {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		$pre = apply_filters( "pre_transient_{$transient}", false, $transient );
 
 		if ( false !== $pre ) {
 			return $pre;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM `$wpdb->options` WHERE option_name = %s LIMIT 1", $transient ) );
 
 		if ( ! is_object( $row ) ) {
@@ -47,6 +53,7 @@ class Utils {
 
 		$value = self::retrieve_value_and_maybe_expire_transient( $transient, $data );
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		return apply_filters( "transient_{$transient}", $value, $transient );
 	}
 
@@ -77,18 +84,21 @@ class Utils {
 
 		$expiration = (int) $expiration;
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		$value = apply_filters( "pre_set_transient_{$transient}", $value, $expiration, $transient );
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		$expiration = apply_filters( "expiration_of_transient_{$transient}", $expiration, $value, $transient );
 
 		$data = self::format_transient_data( $value, $expiration );
 
 		// Insert or update the option.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `option_name` = VALUES(`option_name`), `option_value` = VALUES(`option_value`), `autoload` = VALUES(`autoload`)", $transient, maybe_serialize( $data ), true ) );
 
 		if ( $result ) {
-			do_action( "set_transient_{$transient}", $data['value'], $data['expiration'], $transient );
-			do_action( 'setted_transient', $transient, $data['value'], $data['expiration'] );
+			do_action( "set_transient_{$transient}", $data['value'], $data['expiration'], $transient ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+			do_action( 'setted_transient', $transient, $data['value'], $data['expiration'] ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		}
 
 		return $result;
@@ -145,8 +155,7 @@ class Utils {
 	/**
 	 * Returns the HTTP user agent, sanitized.
 	 *
-	 * @param int  $max_length The maximum length of the returned user agent string.
-	 * @param bool $sanitize Whether to sanitize the user agent string.
+	 * @param int $max_length The maximum length of the returned user agent string.
 	 *
 	 * @return string The user agent string, sanitized. Truncated at $max_length, if set.
 	 */
@@ -156,7 +165,7 @@ class Utils {
 			return '';
 		}
 
-		$user_agent = wp_unslash( $_SERVER['HTTP_USER_AGENT'] );
+		$user_agent = wp_unslash( $_SERVER['HTTP_USER_AGENT'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$user_agent = sanitize_text_field( $user_agent );
 
@@ -180,7 +189,7 @@ class Utils {
 			return null;
 		}
 
-		$ip = wp_unslash( $_SERVER['REMOTE_ADDR'] );
+		$ip = wp_unslash( $_SERVER['REMOTE_ADDR'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$ip = trim( $ip );
 

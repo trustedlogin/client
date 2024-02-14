@@ -42,6 +42,9 @@
 		<!-- Allow short prefixes (tl) — we are namespacing everything. -->
 		<exclude name="WordPress.NamingConventions.PrefixAllGlobals.ShortPrefixPassed" />
 
+		<!-- Allow // comments in index.php files. -->
+		<exclude name="Squiz.Commenting.FileComment.WrongStyle" />
+
 		<!-- Enforce short array syntax. https://github.com/WordPress/WordPress-Coding-Standards/issues/1607#issuecomment-1605730869 -->
 		<!--
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>

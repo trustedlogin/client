@@ -25,29 +25,43 @@ use WP_Admin_Bar;
 final class Remote {
 
 	/**
-	 * @var string The API url for the TrustedLogin SaaS Platform (with trailing slash)
+	 * The API url for the TrustedLogin SaaS Platform (with trailing slash).
+	 *
+	 * @var string
 	 * @since 1.0.0
 	 */
 	const API_URL = 'https://app.trustedlogin.com/api/v1/';
 
 	/**
+	 * Config object.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * Logging object.
+	 *
 	 * @var Logging $logging
 	 */
 	private $logging;
 
 	/**
 	 * SupportUser constructor.
+	 *
+	 * @param Config  $config Config object.
+	 * @param Logging $logging Logging object.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
 		$this->logging = $logging;
 	}
 
+	/**
+	 * Add hooks for the class to send webhooks when access is created, extended, or revoked, or the user has logged-in.
+	 *
+	 * @since 1.0.0
+	 */
 	public function init() {
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) );
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) );
@@ -63,6 +77,7 @@ final class Remote {
 	 * @since 1.5.0 $data now includes the `$ticket` key.
 	 *
 	 * @param array $data {
+	 *   The data to send to the webhook.
 	 *   @type string $url The site URL as returned by get_site_url().
 	 *   @type string $ns Namespace of the plugin.
 	 *   @type string $action "created", "extended", "logged_in", or "revoked".
@@ -119,10 +134,10 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $path - the path for the REST API request (no initial or trailing slash needed)
-	 * @param array  $data Data passed as JSON-encoded body for
-	 * @param string $method
-	 * @param array  $additional_headers - any additional headers required for auth/etc
+	 * @param string $path Path for the REST API request (no initial or trailing slash needed).
+	 * @param array  $data Data sent with POST, PUT, or DELETE requests as JSON-encoded body.
+	 * @param string $method HTTP method to use for the request.
+	 * @param array  $additional_headers Any additional headers to be set with the request. Merged with default headers.
 	 *
 	 * @return array|WP_Error wp_remote_request() response or WP_Error if something went wrong
 	 */
@@ -137,13 +152,14 @@ final class Remote {
 				'PUT',
 				'GET',
 				'HEAD',
-				'PUSH',
 				'DELETE',
 			),
 			true
 		) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$this->logging->log( sprintf( 'Error: Method not in allowed array list (%s)', print_r( $method, true ) ), __METHOD__, 'critical' );
 
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			return new \WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s" is not in the list of allowed methods', print_r( $method, true ) ) );
 		}
 
@@ -171,6 +187,7 @@ final class Remote {
 		try {
 			$api_url = $this->build_api_url( $path );
 
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$this->logging->log( sprintf( 'Sending to %s: %s', $api_url, print_r( $request_options, true ) ), __METHOD__, 'debug' );
 
 			$response = wp_remote_request( $api_url, $request_options );
@@ -182,6 +199,7 @@ final class Remote {
 			return $error;
 		}
 
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 		$this->logging->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
 
 		return $response;
@@ -192,7 +210,7 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $endpoint Endpoint to hit on the API; example "sites" or "sites/{$site_identifier}"
+	 * @param string $endpoint Endpoint to hit on the API; example "sites" or "sites/{$site_identifier}".
 	 *
 	 * @return string
 	 */
@@ -219,7 +237,7 @@ final class Remote {
 	/**
 	 * Translates response codes to more nuanced error descriptions specific to TrustedLogin.
 	 *
-	 * @param array|WP_Error $api_response Response from HTTP API
+	 * @param array|WP_Error $api_response Response from HTTP API.
 	 *
 	 * @return int|WP_Error|null If valid response, the response code ID or null. If error, a WP_Error with a message description.
 	 */
@@ -250,7 +268,7 @@ final class Remote {
 			case 403:
 				return new \WP_Error( 'invalid_token', esc_html__( 'Invalid tokens.', 'trustedlogin' ), $api_response );
 
-			// the KV store was not found, possible issue with endpoint
+			// the KV store was not found, possible issue with endpoint.
 			case 404:
 				return new \WP_Error( 'not_found', esc_html__( 'The TrustedLogin vendor was not found.', 'trustedlogin' ), $api_response );
 
@@ -258,19 +276,19 @@ final class Remote {
 			case 418:
 				return new \WP_Error( 'teapot', '🫖', $api_response );
 
-			// Server offline
+			// Server offline.
 			case 500:
 			case 503:
 			case 'http_request_failed':
 				return new \WP_Error( 'unavailable', esc_html__( 'The TrustedLogin site is not currently online.', 'trustedlogin' ), $api_response );
 
-			// Server error
+			// Server error.
 			case 501:
 			case 502:
 			case 522:
 				return new \WP_Error( 'server_error', esc_html__( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
 
-			// wp_remote_retrieve_response_code() couldn't parse the $api_response
+			// wp_remote_retrieve_response_code() couldn't parse the $api_response.
 			case '':
 				return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
 
@@ -284,8 +302,8 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array|WP_Error $api_response - the response from HTTP API
-	 * @param array          $required_keys If the response JSON must have specific keys in it, pass them here
+	 * @param array|WP_Error $api_response The response from HTTP API.
+	 * @param array          $required_keys If the response JSON must have specific keys in it, pass them here.
 	 *
 	 * @return array|WP_Error|null If successful response, returns array of JSON data. If failed, returns WP_Error. If
 	 */
@@ -299,6 +317,7 @@ final class Remote {
 		}
 
 		if ( is_wp_error( $response_code ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$this->logging->log( 'Response code check failed: ' . print_r( $response_code, true ), __METHOD__, 'error' );
 
 			return $response_code;
@@ -307,6 +326,7 @@ final class Remote {
 		$response_body = wp_remote_retrieve_body( $api_response );
 
 		if ( empty( $response_body ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			$this->logging->log( 'Response body not set: ' . print_r( $response_body, true ), __METHOD__, 'error' );
 
 			return new \WP_Error( 'missing_response_body', esc_html__( 'The response was invalid.', 'trustedlogin' ), $api_response );
@@ -332,7 +352,7 @@ final class Remote {
 
 		foreach ( (array) $required_keys as $required_key ) {
 			if ( ! isset( $response_json[ $required_key ] ) ) {
-				// translators: %s is the name of the missing data from the server
+				// translators: %s is the name of the missing data from the server.
 				return new \WP_Error( 'missing_required_key', sprintf( esc_html__( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
 			}
 		}
