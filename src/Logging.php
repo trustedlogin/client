@@ -58,7 +58,7 @@ class Logging {
 
 		$this->ns = $config->ns();
 
-		$this->logging_enabled = $config->get_setting( 'logging/enabled', false );
+		$this->logging_enabled = (bool) $config->get_setting( 'logging/enabled', false );
 	}
 
 	/**

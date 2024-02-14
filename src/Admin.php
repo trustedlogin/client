@@ -249,6 +249,7 @@ final class Admin {
 	 */
 	public function admin_menu_auth_link_page() {
 
+		/** @var string|false $parent_slug */
 		$parent_slug = $this->config->get_setting( 'menu/slug', null );
 
 		// When false, there will be no menus added.

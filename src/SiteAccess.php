@@ -179,7 +179,7 @@ class SiteAccess {
 			return new \WP_Error( 'invalid_license_key', 'License key was not a string.' );
 		}
 
-		if ( $hashed && $license_key ) {
+		if ( $hashed ) {
 			return hash( 'sha256', $license_key );
 		}
 

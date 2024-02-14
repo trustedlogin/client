@@ -56,8 +56,8 @@ final class Ajax {
 	/**
 	 * Cron constructor.
 	 *
-	 * @param Config       $config  Configuration instance.
-	 * @param Logging|null $logging Logging instance.
+	 * @param Config $config Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -95,8 +95,6 @@ final class Ajax {
 			$this->logging->log( 'Vendor does not match TrustedLogin configuration.', __METHOD__, 'critical' );
 
 			wp_send_json_error( array( 'message' => 'Vendor does not match.' ) );
-
-			return;
 		}
 
 		if ( empty( $posted_data['_nonce'] ) ) {

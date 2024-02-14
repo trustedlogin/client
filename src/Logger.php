@@ -248,7 +248,7 @@ class Logger {
 	 * @param mixed  $level  PSR-3 log level.
 	 * @param string $message The message to log.
 	 * @param array  $context Additional information for the log.
-	 * @return null
+	 * @return void
 	 */
 	public function log( $level, $message, array $context = array() ) {
 		if ( $this->logLevels[ $this->logLevelThreshold ] < $this->logLevels[ $level ] ) {

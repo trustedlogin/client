@@ -184,7 +184,7 @@ class Endpoint {
 		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged.
 		$is_verified = $security_checks->verify( $user_identifier );
 
-		if ( ! $is_verified || is_wp_error( $is_verified ) ) {
+		if ( is_wp_error( $is_verified ) ) {
 
 			/**
 			 * Runs after the identifier fails security checks.

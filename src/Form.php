@@ -250,7 +250,7 @@ final class Form {
 
 		$support_user = $support_users[0];
 
-		$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID );
+		$_user_creator_id = get_user_option( $this->support_user->created_by_meta_key, $support_user->ID ); // @phpstan-ignore-line
 		$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
 
 		// translators: %s is the ID of the user who created the support session. The user can't be found; only the User ID is known.
@@ -527,7 +527,7 @@ final class Form {
 			$output_template  = '';
 			$output_template .= '{{users_table}}';
 			$content          = array(
-				'users_table' => $this->output_support_users( false, array( 'current_url' => true ) ),
+				'users_table' => $this->output_support_users( false ),
 			);
 
 			return $this->prepare_output( $output_template, $content, false );
@@ -1157,7 +1157,7 @@ final class Form {
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
 			'text'        => sprintf( esc_html__( 'Grant %s Access', 'trustedlogin' ), $this->config->get_display_name() ),
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ) ),
+			'exists_text' => sprintf( esc_html__( 'Extend %s Access', 'trustedlogin' ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // Inline tags only.
@@ -1322,7 +1322,7 @@ final class Form {
 				),
 				'extending'          => array(
 					// translators: %1$s is the vendor title and %2$s is the human-readable expiration time (for example, "1 week").
-					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ), $vendor_title, human_time_diff( time(), time() + $this->config->get_setting( 'decay' ) ) ),
+					'content' => sprintf( __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ), $vendor_title, human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing'            => array(
 					// translators: %1$s is the vendor title.

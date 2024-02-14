@@ -73,7 +73,7 @@ final class SupportUser {
 	/**
 	 * The namespaced setting name for storing the timestamp the user expires.
 	 *
-	 * @var int $expires_meta_key
+	 * @var string $expires_meta_key
 	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_expires
 	 */
@@ -82,7 +82,7 @@ final class SupportUser {
 	/**
 	 * The ID of the user who created the TrustedLogin access.
 	 *
-	 * @var int $created_by_meta_key
+	 * @var string $created_by_meta_key
 	 * @since 1.0.0
 	 */
 	private $created_by_meta_key;
@@ -91,7 +91,7 @@ final class SupportUser {
 	 * SupportUser constructor.
 	 *
 	 * @param Config       $config Config instance.
-	 * @param Logging|null $logging Logging instance.
+	 * @param Logging      $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -115,7 +115,7 @@ final class SupportUser {
 
 		// Allow accessing limited private variables.
 		switch ( $name ) {
-			case 'identifier_meta_key':
+			case 'user_identifier_meta_key':
 			case 'expires_meta_key':
 			case 'created_by_meta_key':
 				return $this->{$name};
@@ -159,7 +159,7 @@ final class SupportUser {
 
 		$current_user = is_a( $passed_user, '\WP_User' ) ? $passed_user : wp_get_current_user();
 
-		if ( ! $current_user || ! $current_user->exists() ) {
+		if ( ! $current_user->exists() ) {
 			return false;
 		}
 
@@ -602,7 +602,7 @@ final class SupportUser {
 	 * @param int       $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
 	 * @param Cron|null $cron Optional. The Cron object for handling scheduling. Defaults to null.
 	 *
-	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
+	 * @return true|WP_Error True if worked, WP_Error if not.
 	 */
 	public function extend( $user_id, $site_identifier_hash, $expiration_timestamp = null, $cron = null ) {
 
@@ -618,7 +618,11 @@ final class SupportUser {
 		$rescheduled = $cron->reschedule( $expiration_timestamp, $site_identifier_hash );
 
 		if ( $rescheduled ) {
-			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+			$updated_expiration = update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+
+			if ( ! $updated_expiration ) {
+				$this->logging->log( 'Error updating expiration timestamp user option for user ID ' . $user_id, __METHOD__, 'error' );
+			}
 
 			return true;
 		}
