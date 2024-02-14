@@ -17,7 +17,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 	 */
 	private $config_array;
 
-	public function setUp() :void {
+	public function setUp(): void {
 		parent::setUp();
 
 		$config = array(
@@ -30,7 +30,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
-				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -70,7 +70,7 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 
 		$this->assertFalse( $logging_disabled->is_enabled() );
 
-		$enabled = $default;
+		$enabled                       = $default;
 		$enabled['logging']['enabled'] = true;
 
 		$config_enabled = new Config( $enabled );
@@ -87,9 +87,12 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $logging_enabled->is_enabled() );
 
-		add_filter( 'trustedlogin/' . $config->ns() . '/logging/enabled', function() {
-			return new \WP_Error( 'asdasdsad', 'not boolean' );
-		});
+		add_filter(
+			'trustedlogin/' . $config->ns() . '/logging/enabled',
+			function () {
+				return new \WP_Error( 'asdasdsad', 'not boolean' );
+			}
+		);
 
 		$this->assertTrue( $logging_enabled->is_enabled(), 'The WP_Error should be seen as true when cast as boolean' );
 
@@ -98,15 +101,13 @@ class TrustedLoginLoggingTest extends WP_UnitTestCase {
 		$weird_settings = $default;
 
 		$weird_settings['logging']['enabled'] = array( 'asdasddasd' );
-		$weird_config = new Config( $weird_settings );
-		$logging_enabled = new Logging( $weird_config );
+		$weird_config                         = new Config( $weird_settings );
+		$logging_enabled                      = new Logging( $weird_config );
 		$this->assertTrue( $logging_enabled->is_enabled(), 'array had content; !empty() should have returned true' );
 
 		$weird_settings['logging']['enabled'] = array();
-		$weird_config = new Config( $weird_settings );
-		$logging_enabled = new Logging( $weird_config );
+		$weird_config                         = new Config( $weird_settings );
+		$logging_enabled                      = new Logging( $weird_config );
 		$this->assertFalse( $logging_enabled->is_enabled(), 'empty array should have been seen as empty' );
-
 	}
-
 }

@@ -6,57 +6,75 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \Sodium;
+use Exception;
+use WP_Error;
+use Sodium;
 
+/**
+ * Class Encryption
+ */
 final class Encryption {
 
 	/**
+	 * Config instance.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * Remote instance.
+	 *
 	 * @var Remote $remote
 	 */
 	private $remote;
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var Logging
 	 */
 	private $logging;
 
 	/**
-	 * @var string $vendor_public_key_option Where the plugin should store the public key for encrypting data
+	 * Where the plugin should store the public key for encrypting data
+	 *
 	 * @since 1.0.0
+	 *
+	 * @var string
 	 */
 	private $vendor_public_key_option;
 
 	/**
-	 * @var string Endpoint path to Vendor public key.
+	 * Endpoint path to Vendor public key.
+	 *
+	 * @var string
 	 */
 	private $vendor_public_key_endpoint = '/trustedlogin/v1/public_key';
 
 	/**
-	 * @var int How long to store the Vendor public key in the database.
+	 * How long to store the Vendor public key in the database.
+	 *
 	 * @since 1.7.0
+	 *
+	 * @var int
 	 */
-	const VENDOR_PUBLIC_KEY_EXPIRY = 60 * 10; // 10 minutes.
+	const VENDOR_PUBLIC_KEY_EXPIRY = 600; // 10 minutes.
 
 	/**
 	 * Encryption constructor.
 	 *
-	 * @param Config $config
-	 * @param Remote $remote
-	 * @param Logging $logging
+	 * @param Config  $config Config instance.
+	 * @param Remote  $remote Remote instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Remote $remote, Logging $logging ) {
 
@@ -88,7 +106,7 @@ final class Encryption {
 	 *
 	 * @return bool True: supports encryption. False: does not support encryption.
 	 */
-	static public function meets_requirements() {
+	public static function meets_requirements() {
 
 		$required_functions = array(
 			'random_bytes',
@@ -119,11 +137,11 @@ final class Encryption {
 	 * @uses random_bytes
 	 * @uses openssl_random_pseudo_bytes Only used if random_bytes() does not exist.
 	 *
-	 * @param Logging The logging object to use
+	 * @param Logging $logging The logging object.
 	 *
 	 * @return string|WP_Error 64-character random hash or a WP_Error object explaining what went wrong. See docblock.
 	 */
-	static public function get_random_hash( $logging ) {
+	public static function get_random_hash( $logging ) {
 
 		$byte_length = 64;
 
@@ -163,18 +181,24 @@ final class Encryption {
 	}
 
 	/**
-	 * @param $string
+	 * Creates a hash of a string using the Sodium library.
+	 *
+	 * @uses sodium_bin2hex
+	 * @uses sodium_crypto_generichash
+	 *
+	 * @param string $string_to_hash The string to hash.
+	 * @param int    $length The length of the hash to return.
 	 *
 	 * @return string|WP_Error
 	 */
-	static public function hash( $string, $length = 16 ) {
+	public static function hash( $string_to_hash, $length = 16 ) {
 
 		if ( ! function_exists( 'sodium_crypto_generichash' ) ) {
 			return new \WP_Error( 'sodium_crypto_generichash_not_available', 'sodium_crypto_generichash not available' );
 		}
 
 		try {
-			$hash_bin = sodium_crypto_generichash( $string, '', (int) $length );
+			$hash_bin = sodium_crypto_generichash( $string_to_hash, '', (int) $length );
 			$hash     = sodium_bin2hex( $hash_bin );
 		} catch ( \TypeError $e ) {
 			return new \WP_Error(
@@ -210,19 +234,18 @@ final class Encryption {
 	 */
 	public function get_vendor_public_key() {
 
-		// Already stored as transient
+		// Already stored as transient.
 		$public_key = Utils::get_transient( $this->vendor_public_key_option );
 
 		if ( $public_key ) {
-			// Documented below
+			// Documented below.
 			return apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor_public_key', $public_key, $this->config );
 		}
 
-		// Fetch a key from Vendor site
+		// Fetch a key from Vendor site.
 		$remote_key = $this->get_remote_encryption_key();
 
 		if ( is_wp_error( $remote_key ) ) {
-
 			$this->logging->log( sprintf( '(%s) %s', $remote_key->get_error_code(), $remote_key->get_error_message() ), __METHOD__, 'error' );
 
 			return $remote_key;
@@ -240,8 +263,10 @@ final class Encryption {
 		 *
 		 * @since 1.0.0
 		 *
-		 * @param string $vendor_public_key
-		 * @param Config $config
+		 * @param string $remote_key The public key fetched from the vendor's site.
+		 * @param Config $config          The TrustedLogin configuration object.
+		 *
+		 * @return string
 		 */
 		return apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor_public_key', $remote_key, $this->config );
 	}
@@ -258,14 +283,21 @@ final class Encryption {
 		$vendor_website = $this->config->get_setting( 'vendor/website', '' );
 
 		/**
+		 * Override the path to TrustedLogin's WordPress REST API website URL.
+		 *
 		 * @see https://docs.trustedlogin.com/Client/hooks#trustedloginnamespacevendorpublic_keywebsite
+		 *
 		 * @since 1.3.2
+		 *
 		 * @param string $public_key_website Root URL of the website from where the vendor's public key is fetched. May be different than the vendor/website configuration setting.
 		 */
 		$public_key_website = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/website', $vendor_website );
 
 		/**
+		 * Override the path to TrustedLogin's WordPress REST API endpoint.
+		 *
 		 * @see https://docs.trustedlogin.com/Client/hooks#trustedloginnamespacevendorpublic_keyendpoint
+		 *
 		 * @param string $key_endpoint Endpoint path on vendor (software vendor's) site.
 		 */
 		$key_endpoint = apply_filters( 'trustedlogin/' . $this->config->ns() . '/vendor/public_key/endpoint', $this->vendor_public_key_endpoint );
@@ -293,7 +325,7 @@ final class Encryption {
 			'method'      => 'GET',
 			'timeout'     => 45,
 			'httpversion' => '1.1',
-			'headers'     => $headers
+			'headers'     => $headers,
 		);
 
 		$url = $this->get_remote_encryption_key_url();
@@ -303,8 +335,7 @@ final class Encryption {
 		$response_json = $this->remote->handle_response( $response, array( 'publicKey' ) );
 
 		if ( is_wp_error( $response_json ) ) {
-
-			if ( 'not_found' == $response_json->get_error_code() ){
+			if ( 'not_found' === $response_json->get_error_code() ) {
 				return new \WP_Error( 'not_found', __( 'Encryption key could not be fetched, Vendor site returned 404.', 'trustedlogin' ) );
 			}
 
@@ -315,7 +346,7 @@ final class Encryption {
 	}
 
 	/**
-	 * Encrypts a string using the Public Key provided by the plugin/theme developers' server.
+	 * Encrypts a string using the public bey provided by the plugin/theme developers' server.
 	 *
 	 * @since 1.0.0
 	 * @uses \sodium_crypto_box_keypair_from_secretkey_and_publickey() to generate key.
@@ -325,7 +356,7 @@ final class Encryption {
 	 * @param string $nonce The nonce generated for this encryption.
 	 * @param string $alice_secret_key The key to use when generating the encryption key.
 	 *
-	 * @return string|WP_Error  Encrypted envelope or WP_Error on failure.
+	 * @return string|WP_Error  Encrypted envelope, base64-encoded, or WP_Error on failure.
 	 */
 	public function encrypt( $data, $nonce, $alice_secret_key ) {
 
@@ -344,10 +375,8 @@ final class Encryption {
 		}
 
 		try {
-
 			$alice_to_bob_kp = sodium_crypto_box_keypair_from_secretkey_and_publickey( $alice_secret_key, \sodium_hex2bin( $bob_public_key ) );
 			$encrypted       = sodium_crypto_box( $data, $nonce, $alice_to_bob_kp );
-
 		} catch ( \SodiumException $e ) {
 			return new \WP_Error(
 				'encryption_failed_cryptobox',
@@ -365,6 +394,7 @@ final class Encryption {
 			);
 		}
 
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return base64_encode( $encrypted );
 	}
 
@@ -401,8 +431,8 @@ final class Encryption {
 	 *
 	 * @return object|WP_Error $alice_keys or WP_Error if there's any issues.
 	 *   $alice_keys = [
-	 *      'publicKey'  =>  (string)  The public key.
-	 *      'privateKey' =>  (string)  The private key.
+	 *      'public_key'  =>  (string)  The public key.
+	 *      'private_key' =>  (string)  The private key.
 	 *   ]
 	 */
 	public function generate_keys() {
@@ -412,11 +442,11 @@ final class Encryption {
 		}
 
 		// In our build Alice = Client & Bob = Vendor.
-		$aliceKeypair = sodium_crypto_box_keypair();
+		$alice_keypair = sodium_crypto_box_keypair();
 
 		$alice_keys = array(
-			'publicKey'  => sodium_crypto_box_publickey( $aliceKeypair ),
-			'privateKey' => sodium_crypto_box_secretkey( $aliceKeypair )
+			'public_key'  => sodium_crypto_box_publickey( $alice_keypair ),
+			'private_key' => sodium_crypto_box_secretkey( $alice_keypair ),
 		);
 
 		return (object) $alice_keys;

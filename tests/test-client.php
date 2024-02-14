@@ -32,13 +32,13 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 	 */
 	private $logging;
 
-	public function setUp() :void {
+	public function setUp(): void {
 
 		parent::setUp();
 
 		$config = array(
-			'role' => 'editor',
-			'caps'     => array(
+			'role'           => 'editor',
+			'caps'           => array(
 				'add' => array(
 					'manage_options' => 'we need this to make things work real gud',
 					'edit_posts'     => 'Access the posts that you created',
@@ -46,7 +46,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 			),
 			'webhook_url'    => 'https://www.example.com/endpoint/',
 			'auth'           => array(
-				'api_key'  => '9946ca31be6aa948', // Public key for encrypting the securedKey
+				'api_key'     => '9946ca31be6aa948', // Public key for encrypting the securedKey
 				'license_key' => 'my custom key',
 			),
 			'decay'          => WEEK_IN_SECONDS,
@@ -70,7 +70,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$this->logging = $this->_get_public_property( 'logging' )->getValue( $this->TrustedLogin );
 	}
 
-	public function tearDown() : void {
+	public function tearDown(): void {
 		parent::tearDown();
 	}
 
@@ -104,6 +104,7 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$site_access = $this->_get_public_property( 'site_access' )->getValue( $this->TrustedLogin );
 
 		$this->assertSame( $this->config->get_setting( 'auth/license_key' ), $site_access->get_license_key() );
+
 	}
 
 	/**
@@ -113,13 +114,12 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 		$current = $this->factory->user->create_and_get( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $current->ID );
 		$trustedlogin = new Client( $this->config );
-		$expect_403 = $trustedlogin->grant_access();
-		$error_data = $expect_403->get_error_data();
-		$error_code = isset( $error_data['error_code'] ) ? $error_data['error_code'] : null;
+		$expect_403   = $trustedlogin->grant_access();
+		$error_data   = $expect_403->get_error_data();
+		$error_code   = isset( $error_data['error_code'] ) ? $error_data['error_code'] : null;
 
 		$this->assertEquals( $error_code, 403 );
 
 		wp_set_current_user( 0 );
 	}
-
 }

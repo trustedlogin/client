@@ -6,17 +6,18 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -24,54 +25,73 @@ use \WP_Admin_Bar;
 final class SupportUser {
 
 	/**
-	 * @var string The query parameter used to pass the unique user ID
+	 * The query parameter used to pass the unique user ID.
+	 *
+	 * @var string
 	 */
 	const ID_QUERY_PARAM = 'tlid';
 
 	/**
+	 * Config instance.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var Logging $logging
 	 */
 	private $logging;
 
 	/**
+	 * SupportRole instance.
+	 *
 	 * @var SupportRole $role
 	 */
 	public $role;
 
 	/**
-	 * @var string $user_identifier_meta_key The namespaced setting name for storing the unique identifier hash in user meta
+	 * The namespaced setting name for storing the unique identifier hash in user meta.
+	 *
+	 * @var string $user_identifier_meta_key
 	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_id
 	 */
 	private $user_identifier_meta_key;
 
 	/**
-	 * @var string $site_hash_meta_key The namespaced setting name for storing the site identifier hash in user meta
+	 * The namespaced setting name for storing the site identifier hash in user meta.
+	 *
+	 * @var string $site_hash_meta_key
 	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_site_hash
 	 */
 	private $site_hash_meta_key;
 
 	/**
-	 * @var int $expires_meta_key The namespaced setting name for storing the timestamp the user expires
+	 * The namespaced setting name for storing the timestamp the user expires.
+	 *
+	 * @var string $expires_meta_key
 	 * @since 1.0.0
 	 * @example tl_{vendor/namespace}_expires
 	 */
 	private $expires_meta_key;
 
 	/**
-	 * @var int $created_by_meta_key The ID of the user who created the TrustedLogin access
+	 * The ID of the user who created the TrustedLogin access.
+	 *
+	 * @var string $created_by_meta_key
 	 * @since 1.0.0
 	 */
 	private $created_by_meta_key;
 
 	/**
 	 * SupportUser constructor.
+	 *
+	 * @param Config  $config Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -87,15 +107,15 @@ final class SupportUser {
 	/**
 	 * Allow accessing limited private properties with a magic method.
 	 *
-	 * @param string $name Name of property
+	 * @param string $name Name of property.
 	 *
 	 * @return string|null Value of property, if defined. Otherwise, null.
 	 */
 	public function __get( $name ) {
 
-		// Allow accessing limited private variables
+		// Allow accessing limited private variables.
 		switch ( $name ) {
-			case 'identifier_meta_key':
+			case 'user_identifier_meta_key':
 			case 'expires_meta_key':
 			case 'created_by_meta_key':
 				return $this->{$name};
@@ -115,8 +135,8 @@ final class SupportUser {
 
 		$args = array(
 			'number'       => 1,
-			'meta_key'     => $this->user_identifier_meta_key,
-			'meta_value'   => '',
+			'meta_key'     => $this->user_identifier_meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_value'   => '', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			'meta_compare' => 'EXISTS',
 			'fields'       => 'ID',
 		);
@@ -131,13 +151,15 @@ final class SupportUser {
 	 *
 	 * @since 1.0.2
 	 *
+	 * @param WP_User|null $passed_user The user to check. Default: null (current user).
+	 *
 	 * @return bool True: Support user exists and has an expiration time in the future. False: Any of those things aren't true.
 	 */
 	public function is_active( $passed_user = null ) {
 
 		$current_user = is_a( $passed_user, '\WP_User' ) ? $passed_user : wp_get_current_user();
 
-		if ( ! $current_user || ! $current_user->exists() ) {
+		if ( ! $current_user->exists() ) {
 			return false;
 		}
 
@@ -180,12 +202,12 @@ final class SupportUser {
 			return $role;
 		}
 
-		$user_email = $this->config->get_setting( 'vendor/email' );
+		$user_email                = $this->config->get_setting( 'vendor/email' );
 		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
 		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
-			$user_email = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
+			$user_email                = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
 			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
 		}
 
@@ -210,7 +232,7 @@ final class SupportUser {
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
 			'role'            => $role->name,
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
-			'user_registered' => date( 'Y-m-d H:i:s', time() ),
+			'user_registered' => gmdate( 'Y-m-d H:i:s' ),
 		);
 
 		$new_user_id = wp_insert_user( $user_data );
@@ -233,7 +255,7 @@ final class SupportUser {
 	 */
 	private function generate_unique_username() {
 
-		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets")
+		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
 		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( ! username_exists( $username ) ) {
@@ -252,7 +274,7 @@ final class SupportUser {
 	/**
 	 * Returns the site secret ID connected to the support user.
 	 *
-	 * @param string $user_identifier
+	 * @param string $user_identifier The hash to identify the user.
 	 *
 	 * @return string|WP_Error|null Returns the secret ID. WP_Error if there was a problem generating any hashes. Null: No users were found using that user identifier.
 	 */
@@ -270,9 +292,9 @@ final class SupportUser {
 			return $site_identifier_hash;
 		}
 
-		$Endpoint = new Endpoint( $this->config, $this->logging );
+		$endpoint = new Endpoint( $this->config, $this->logging );
 
-		return $Endpoint->generate_secret_id( $site_identifier_hash );
+		return $endpoint->generate_secret_id( $site_identifier_hash );
 	}
 
 	/**
@@ -289,7 +311,6 @@ final class SupportUser {
 		$support_user = $this->get( $user_identifier );
 
 		if ( empty( $support_user ) ) {
-
 			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $user_identifier ), __METHOD__, 'notice' );
 
 			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
@@ -299,7 +320,6 @@ final class SupportUser {
 
 		// This user has expired, but the cron didn't run...
 		if ( ! $is_active ) {
-
 			$expires = $this->get_expiration( $support_user, false, true );
 
 			$this->logging->log( 'The user was supposed to expire on ' . $expires . '; revoking now.', __METHOD__, 'warning' );
@@ -317,12 +337,11 @@ final class SupportUser {
 	/**
 	 * Processes login (with extra logging) and triggers the 'trustedlogin/{ns}/login' hook
 	 *
-	 * @param \WP_User $support_user
+	 * @param \WP_User $support_user The support user to log in.
 	 */
 	private function login( \WP_User $support_user ) {
 
 		if ( ! $support_user->exists() ) {
-
 			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'error' );
 
 			return;
@@ -331,6 +350,8 @@ final class SupportUser {
 		wp_set_current_user( $support_user->ID, $support_user->user_login );
 		wp_set_auth_cookie( $support_user->ID );
 
+		/** Run the hook that fires after a user logs in to trigger any necessary actions. From {@see wp_signon()}. */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		do_action( 'wp_login', $support_user->user_login, $support_user );
 
 		$this->logging->log( sprintf( 'Support User #%d logged in', $support_user->ID ), __METHOD__, 'notice' );
@@ -338,10 +359,13 @@ final class SupportUser {
 		/**
 		 * Action run when TrustedLogin has logged-in
 		 */
-		do_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array(
-			'url'    => get_site_url(),
-			'action' => 'logged_in',
-		) );
+		do_action(
+			'trustedlogin/' . $this->config->ns() . '/logged_in',
+			array(
+				'url'    => get_site_url(),
+				'action' => 'logged_in',
+			)
+		);
 	}
 
 	/**
@@ -349,9 +373,9 @@ final class SupportUser {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $user_identifier_or_hash
+	 * @param string $user_identifier_or_hash Unique identifier for support user before being hashed or the hash itself.
 	 *
-	 * @return \WP_User|null WP_User if found; null if not
+	 * @return \WP_User|null WP_User if found; null if not.
 	 */
 	public function get( $user_identifier_or_hash = '' ) {
 
@@ -368,8 +392,8 @@ final class SupportUser {
 
 		$args = array(
 			'number'     => 1,
-			'meta_key'   => $this->user_identifier_meta_key,
-			'meta_value' => $user_identifier_hash,
+			'meta_key'   => $this->user_identifier_meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_value' => $user_identifier_hash, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		);
 
 		$user = get_users( $args );
@@ -380,9 +404,9 @@ final class SupportUser {
 	/**
 	 * Returns the expiration for user access as either a human-readable string or timestamp.
 	 *
-	 * @param \WP_User $user
-	 * @param bool $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
-	 * @param bool $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
+	 * @param \WP_User $user The user we're checking.
+	 * @param bool     $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
+	 * @param bool     $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
 	 *
 	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
@@ -394,6 +418,7 @@ final class SupportUser {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 		return $human_readable ? human_time_diff( current_time( 'timestamp', $gmt ), $expiration ) : $expiration;
 	}
 
@@ -408,16 +433,16 @@ final class SupportUser {
 
 		static $support_users = null;
 
-		// Only fetch once per process
+		// Only fetch once per process.
 		if ( ! is_null( $support_users ) ) {
 			return $support_users;
 		}
 
 		$args = array(
-			'number'     => - 1,
-			'meta_key'   => $this->user_identifier_meta_key,
+			'number'       => - 1,
+			'meta_key'     => $this->user_identifier_meta_key,  // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			'meta_compare' => 'EXISTS',
-			'meta_value' => '',
+			'meta_value'   => '', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		);
 
 		$support_users = get_users( $args );
@@ -450,14 +475,15 @@ final class SupportUser {
 	 * @used-by Client::revoke_access()
 	 *
 	 * @param string $user_identifier Unique identifier of the user to delete.
-	 * @param bool $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
-	 * @param bool $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
+	 * @param bool   $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
+	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
 	 *
 	 * @return bool|WP_Error True: Successfully removed user and role; false: There are no support users matching $user_identifier; WP_Error: something went wrong.
 	 */
 	public function delete( $user_identifier = '', $delete_role = true, $delete_endpoint = true ) {
 
-		require_once ABSPATH . 'wp-admin/includes/user.php'; // Needed for wp_delete_user()
+		// Needed to ensure wp_delete_user() exists.
+		require_once ABSPATH . 'wp-admin/includes/user.php';
 
 		$user = $this->get( $user_identifier );
 
@@ -469,13 +495,13 @@ final class SupportUser {
 
 		$this->logging->log( 'Processing user ID ' . $user->ID, __METHOD__, 'debug' );
 
-		// Remove auto-cleanup hook
+		// Remove auto-cleanup hook.
 		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
-		// Delete first using wp_delete_user() to allow for reassignment of posts
+		// Delete first using wp_delete_user() to allow for reassignment of posts.
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
-		// Also delete the user from the all sites on the WP Multisite network
+		// Also delete the user from the all sites on the WP Multisite network.
 		$wpmu_deleted = \function_exists( 'wpmu_delete_user' ) ? wpmu_delete_user( $user->ID ) : false;
 
 		if ( $deleted ) {
@@ -495,11 +521,11 @@ final class SupportUser {
 		}
 
 		if ( $delete_endpoint ) {
-			$Endpoint = new Endpoint( $this->config, $this->logging );
-			$Endpoint->delete();
+			$endpoint = new Endpoint( $this->config, $this->logging );
+			$endpoint->delete();
 		}
 
-		// Re-run to make sure there were no race conditions
+		// Re-run to make sure there were no race conditions.
 		return $this->delete( $user_identifier );
 	}
 
@@ -516,16 +542,19 @@ final class SupportUser {
 			return null;
 		}
 
-		// TODO: Add a filter to modify who gets auto-reassigned
-		$admins = get_users( array(
-			'role'    => 'administrator',
-			'orderby' => 'registered',
-			'order'   => 'DESC',
-			'number'  => 1,
-		) );
+		// TODO: Add a filter to modify who gets auto-reassigned.
+		$admins = get_users(
+			array(
+				'role'    => 'administrator',
+				'orderby' => 'registered',
+				'order'   => 'DESC',
+				'number'  => 1,
+			)
+		);
 
 		$reassign_id = empty( $admins ) ? null : $admins[0]->ID;
 
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		$this->logging->log( 'Reassign user ID: ' . var_export( $reassign_id, true ), __METHOD__, 'info' );
 
 		return $reassign_id;
@@ -534,16 +563,16 @@ final class SupportUser {
 	/**
 	 * Schedules cron job to auto-revoke, adds user meta with unique ids
 	 *
-	 * @param int $user_id ID of generated support user
-	 * @param string $site_identifier_hash
-	 * @param int $decay_timestamp Timestamp when user will be removed
+	 * @param int       $user_id ID of generated support user.
+	 * @param string    $site_identifier_hash The unique identifier for the WP_User {@see Encryption::get_random_hash()}.
+	 * @param int|false $expiration_timestamp Timestamp when user will be removed. False if no expiration.
+	 * @param Cron      $cron The Cron object for handling scheduling.
 	 *
 	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
 	 */
-	public function setup( $user_id, $site_identifier_hash, $expiration_timestamp = null, Cron $cron = null ) {
+	public function setup( $user_id, $site_identifier_hash, $expiration_timestamp, Cron $cron ) {
 
-		if ( $expiration_timestamp ) {
-
+		if ( $expiration_timestamp && is_int( $expiration_timestamp ) ) {
 			$scheduled = $cron->schedule( $expiration_timestamp, $site_identifier_hash );
 
 			if ( $scheduled ) {
@@ -568,12 +597,12 @@ final class SupportUser {
 	/**
 	 * Updates the scheduled cron job to auto-revoke and updates the Support User's meta.
 	 *
-	 * @param int $user_id ID of generated support user.
-	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}
-	 * @param int $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
+	 * @param int       $user_id ID of generated support user.
+	 * @param string    $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}.
+	 * @param int       $expiration_timestamp Timestamp when user will be removed. Throws error if null/empty.
 	 * @param Cron|null $cron Optional. The Cron object for handling scheduling. Defaults to null.
 	 *
-	 * @return string|WP_Error Value of $identifier_meta_key if worked; empty string or WP_Error if not.
+	 * @return true|WP_Error True if worked, WP_Error if not.
 	 */
 	public function extend( $user_id, $site_identifier_hash, $expiration_timestamp = null, $cron = null ) {
 
@@ -589,17 +618,22 @@ final class SupportUser {
 		$rescheduled = $cron->reschedule( $expiration_timestamp, $site_identifier_hash );
 
 		if ( $rescheduled ) {
-			update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+			$updated_expiration = update_user_option( $user_id, $this->expires_meta_key, $expiration_timestamp );
+
+			if ( ! $updated_expiration ) {
+				$this->logging->log( 'Error updating expiration timestamp user option for user ID ' . $user_id, __METHOD__, 'error' );
+			}
 
 			return true;
 		}
 
 		return new \WP_Error( 'extend_failed', 'Error rescheduling cron task' );
-
 	}
 
 	/**
-	 * @param \WP_User|int $user_id_or_object User ID or User object
+	 * Returns the unique identifier for a user, stored in user meta.
+	 *
+	 * @param \WP_User|int $user_id_or_object User ID or User object.
 	 *
 	 * @return string|WP_Error User unique identifier if success; WP_Error if $user is not int or WP_User.
 	 */
@@ -616,7 +650,7 @@ final class SupportUser {
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
 		} else {
-
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
 
 			return new \WP_Error( 'invalid_type', '$user must be int or WP_User' );
@@ -626,7 +660,9 @@ final class SupportUser {
 	}
 
 	/**
-	 * @param WP_User|int $user_id_or_object User ID or User object
+	 * Returns the site identifier hash for a user.
+	 *
+	 * @param WP_User|int $user_id_or_object User ID or User object.
 	 *
 	 * @return string|WP_Error User unique identifier if success; WP_Error if $user is not int or WP_User.
 	 */
@@ -643,7 +679,7 @@ final class SupportUser {
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
 		} else {
-
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 			$this->logging->log( 'The $user_id_or_object value must be int or WP_User: ' . var_export( $user_id_or_object, true ), __METHOD__, 'error' );
 
 			return new \WP_Error( 'invalid_type', '$user must be int or WP_User' );
@@ -676,11 +712,14 @@ final class SupportUser {
 			return false;
 		}
 
-		$revoke_url = add_query_arg( array(
-			Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
-			self::ID_QUERY_PARAM                 => $user_identifier,
-			'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
-		), admin_url() );
+		$revoke_url = add_query_arg(
+			array(
+				Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
+				self::ID_QUERY_PARAM                 => $user_identifier,
+				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
+			),
+			admin_url()
+		);
 
 		$this->logging->log( "revoke_url: $revoke_url", __METHOD__, 'debug' );
 

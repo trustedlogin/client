@@ -12,6 +12,7 @@ use WP_Error;
 
 /**
  * Override default function_exists() behavior
+ *
  * @see https://stackoverflow.com/a/34386422/480856
  *
  * @param $function
@@ -61,7 +62,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 	public static $functions_not_exist = array();
 
-	public function setUp() :void {
+	public function setUp(): void {
 		parent::setUp();
 
 		$config = array(
@@ -101,7 +102,7 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 		$this->encryption = new Encryption( $this->config, $this->remote, $this->logging );
 	}
 
-	public function tearDown() :void {
+	public function tearDown(): void {
 		parent::tearDown();
 	}
 
@@ -146,11 +147,11 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 		$this->assertNotWPError( $keys );
 		$this->assertTrue( is_object( $keys ) );
-		$this->assertTrue( isset( $keys->publicKey ) );
-		$this->assertEquals( 32, strlen( $keys->publicKey ) );
+		$this->assertTrue( isset( $keys->public_key ) );
+		$this->assertEquals( 32, strlen( $keys->public_key ) );
 
-		$this->assertTrue( isset( $keys->privateKey ) );
-		$this->assertEquals( 32, strlen( $keys->privateKey ) );
+		$this->assertTrue( isset( $keys->private_key ) );
+		$this->assertEquals( 32, strlen( $keys->private_key ) );
 	}
 
 	/**
