@@ -14,33 +14,56 @@ use WP_Error;
 use WP_User;
 use WP_Admin_Bar;
 
+/**
+ * Class Endpoint
+ */
 class Endpoint {
 
 	/**
-	 * @var string The query string parameter used to revoke users
+	 * The query string parameter used to revoke users.
+	 *
+	 * @var string
 	 */
 	const REVOKE_SUPPORT_QUERY_PARAM = 'revoke-tl';
 
 	/**
-	 * @var string Site option used to track whether permalinks have been flushed.
+	 * Site option used to track whether permalinks have been flushed.
+	 *
+	 * @var string
 	 */
 	const PERMALINK_FLUSH_OPTION_NAME = 'tl_permalinks_flushed';
 
 	/**
-	 * @var string Expected value of $_POST['action'] before adding the endpoint and starting a login flow.
+	 * Expected value of $_POST['action'] before adding the endpoint and starting a login flow.
+	 *
+	 * @var string
 	 */
 	const POST_ACTION_VALUE = 'trustedlogin';
 
-	/** @var string The $_POST key in the TrustedLogin request related to the action being performed. */
+	/**
+	 * The $_POST key in the TrustedLogin request related to the action being performed.
+	 *
+	 * @var string
+	 */
 	const POST_ACTION_KEY = 'action';
 
-	/** @var string The $_POST key in the TrustedLogin request that contains the value of the expected endpoint. */
+	/**
+	 * The $_POST key in the TrustedLogin request that contains the value of the expected endpoint.
+	 *
+	 * @var string
+	 */
 	const POST_ENDPOINT_KEY = 'endpoint';
 
-	/** @var string The $_POST key in the TrustedLogin request related to the action being performed. */
+	/**
+	 * The $_POST key in the TrustedLogin request related to the action being performed.
+	 *
+	 * @var string
+	 */
 	const POST_IDENTIFIER_KEY = 'identifier';
 
 	/**
+	 * Config instance.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
@@ -48,24 +71,34 @@ class Endpoint {
 	/**
 	 * The namespaced setting name for storing part of the auto-login endpoint
 	 *
-	 * @var string $option_name Example: `tl_{vendor/namespace}_endpoint`
+	 * @example `tl_{vendor/namespace}_endpoint`.
+	 *
+	 * @var string $option_name
 	 */
 	private $option_name;
 
 	/**
+	 * SupportUser instance.
+	 *
+	 * @todo Decouple using hooks that SupportUser can listen to.
+	 *
 	 * @var SupportUser
-	 * @todo decouple
 	 */
 	private $support_user;
 
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var Logging $logging
 	 */
 	private $logging;
 
 	/**
-	 * Logger constructor.
+	 * Endpoint constructor.
+	 *
+	 * @param Config  $config  Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 
@@ -88,6 +121,9 @@ class Endpoint {
 		);
 	}
 
+	/**
+	 * Add hooks to initialize the endpoint.
+	 */
 	public function init() {
 
 		if ( did_action( 'init' ) ) {
@@ -145,7 +181,7 @@ class Endpoint {
 
 		$security_checks = new SecurityChecks( $this->config, $this->logging );
 
-		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged
+		// Before logging-in support, let's make sure the site isn't locked-down or that this request is flagged.
 		$is_verified = $security_checks->verify( $user_identifier );
 
 		if ( ! $is_verified || is_wp_error( $is_verified ) ) {
@@ -209,7 +245,9 @@ class Endpoint {
 			return;
 		}
 
-		$verify_nonce = wp_verify_nonce( $_REQUEST['_wpnonce'], self::REVOKE_SUPPORT_QUERY_PARAM );
+		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+
+		$verify_nonce = wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM );
 
 		if ( ! $verify_nonce ) {
 			$this->logging->log( 'Removing user failed: Nonce expired (Nonce value: ' . $verify_nonce . ')', __METHOD__, 'error' );
@@ -217,10 +255,10 @@ class Endpoint {
 			return;
 		}
 
-		// Allow namespaced support team to revoke their own users
+		// Allow namespaced support team to revoke their own users.
 		$support_team = current_user_can( $this->support_user->role->get_name() );
 
-		// As well as existing users who can delete other users
+		// As well as existing users who can delete other users.
 		$can_delete_users = current_user_can( 'delete_users' );
 
 		if ( ! $support_team && ! $can_delete_users ) {
@@ -229,7 +267,8 @@ class Endpoint {
 			return;
 		}
 
-		$user_identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? esc_attr( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) : 'all';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$user_identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? sanitize_text_field( wp_unslash( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ) : 'all';
 
 		/**
 		 * Trigger action to revoke access based on Support User identifier.
@@ -314,14 +353,17 @@ class Endpoint {
 	 */
 	private function get_trustedlogin_request() {
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! isset( $_POST[ self::POST_ACTION_KEY ], $_POST[ self::POST_ENDPOINT_KEY ], $_POST[ self::POST_IDENTIFIER_KEY ] ) ) {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( self::POST_ACTION_VALUE !== $_POST[ self::POST_ACTION_KEY ] ) {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$_sanitized_post_data = array_map( 'sanitize_text_field', $_POST );
 
 		// Return only the expected keys.
@@ -333,10 +375,10 @@ class Endpoint {
 	}
 
 	/**
-	 * Generate the secret_id parameter as a hash of the endpoint with the identifier
+	 * Generate the secret_id parameter as a hash of the endpoint with the identifier.
 	 *
-	 * @param string $site_identifier_hash
-	 * @param string $endpoint_hash
+	 * @param string $site_identifier_hash The site identifier hash.
+	 * @param string $endpoint_hash Optional. The hash of the endpoint. If not provided, it will be generated.
 	 *
 	 * @return string|WP_Error This hash will be used as an identifier in TrustedLogin SaaS. Or something went wrong.
 	 */
@@ -354,11 +396,11 @@ class Endpoint {
 	}
 
 	/**
-	 * Generate the endpoint parameter as a hash of the site URL with the identifier
+	 * Generate the endpoint parameter as a hash of the site URL along with the identifier.
 	 *
-	 * @param $site_identifier_hash
+	 * @param string $site_identifier_hash The site identifier hash, used to generate the endpoint hash.
 	 *
-	 * @return string This hash will be used as the first part of the URL and also a part of $secret_id
+	 * @return string This hash will be used as the first part of the URL and also a part of $secret_id.
 	 */
 	public function get_hash( $site_identifier_hash ) {
 		return Encryption::hash( get_site_url() . $site_identifier_hash );
@@ -367,7 +409,7 @@ class Endpoint {
 	/**
 	 * Updates the site's endpoint to listen for logins. Flushes rewrite rules after updating.
 	 *
-	 * @param string $endpoint
+	 * @param string $endpoint The endpoint to add to the site.
 	 *
 	 * @return bool True: updated; False: didn't change, or didn't update
 	 */
@@ -381,6 +423,7 @@ class Endpoint {
 	}
 
 	/**
+	 * Deletes the site's endpoint and soft-flushes rewrite rules.
 	 *
 	 * @return void
 	 */
