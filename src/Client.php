@@ -573,8 +573,28 @@ final class Client {
 		}
 
 		$site_identifier_hash = $this->support_user->get_site_hash( $user );
-		$endpoint_hash        = $this->endpoint->get_hash( $site_identifier_hash );
-		$secret_id            = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
+
+		if ( is_wp_error( $site_identifier_hash ) ) {
+			$this->logging->log( 'Could not get identifier hash for existing support user account.', __METHOD__, 'error' );
+
+			return $site_identifier_hash;
+		}
+
+		$endpoint_hash = $this->endpoint->get_hash( $site_identifier_hash );
+
+		if ( is_wp_error( $endpoint_hash ) ) {
+			$this->logging->log( 'Could not get endpoint hash for existing support user account.', __METHOD__, 'error' );
+
+			return $endpoint_hash;
+		}
+
+		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
+
+		if ( is_wp_error( $secret_id ) ) {
+			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
+
+			return $secret_id;
+		}
 
 		// Revoke site in SaaS.
 		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
