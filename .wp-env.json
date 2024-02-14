@@ -1,6 +1,6 @@
 {
   "core": null,
-  "plugins": ["./wp-content/plugins/trustedlogin-client"],
+  "plugins": ["."],
   "port": 8888,
   "testsPort": 8889,
   "config": {
