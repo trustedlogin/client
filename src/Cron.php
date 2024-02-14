@@ -80,7 +80,11 @@ final class Cron {
 
 		$args = array( $hash );
 
-		/** @var false|\WP_Error $scheduled_expiration */
+		/**
+		 * Whether the event was scheduled.
+		 *
+		 * @var false|\WP_Error $scheduled_expiration
+		 */
 		$scheduled_expiration = wp_schedule_single_event( $expiration_timestamp, $this->hook_name, $args );
 
 		if ( is_wp_error( $scheduled_expiration ) ) {
