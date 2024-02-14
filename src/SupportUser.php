@@ -90,8 +90,8 @@ final class SupportUser {
 	/**
 	 * SupportUser constructor.
 	 *
-	 * @param Config       $config Config instance.
-	 * @param Logging      $logging Logging instance.
+	 * @param Config  $config Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
