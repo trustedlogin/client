@@ -87,7 +87,7 @@ final class Envelope {
 			return $nonce;
 		}
 
-		$encrypted_identifier = $this->encryption->encrypt( $site_identifier_hash, $nonce, $e_keys->privateKey );
+		$encrypted_identifier = $this->encryption->encrypt( $site_identifier_hash, $nonce, $e_keys->private_key );
 
 		if ( is_wp_error( $encrypted_identifier ) ) {
 			return $encrypted_identifier;
@@ -115,7 +115,7 @@ final class Envelope {
 			'expiresAt'       => $this->config->get_expiration_timestamp( null, true ),
 			'version'         => Client::VERSION,
 			'nonce'           => \sodium_bin2hex( $nonce ),
-			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
+			'clientPublicKey' => \sodium_bin2hex( $e_keys->public_key ),
 			'metaData'        => $metadata,
 		);
 	}

@@ -147,11 +147,11 @@ class TrustedLoginEncryptionTest extends WP_UnitTestCase {
 
 		$this->assertNotWPError( $keys );
 		$this->assertTrue( is_object( $keys ) );
-		$this->assertTrue( isset( $keys->publicKey ) );
-		$this->assertEquals( 32, strlen( $keys->publicKey ) );
+		$this->assertTrue( isset( $keys->public_key ) );
+		$this->assertEquals( 32, strlen( $keys->public_key ) );
 
-		$this->assertTrue( isset( $keys->privateKey ) );
-		$this->assertEquals( 32, strlen( $keys->privateKey ) );
+		$this->assertTrue( isset( $keys->private_key ) );
+		$this->assertEquals( 32, strlen( $keys->private_key ) );
 	}
 
 	/**

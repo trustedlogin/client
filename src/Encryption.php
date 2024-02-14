@@ -397,8 +397,8 @@ final class Encryption {
 	 *
 	 * @return object|WP_Error $alice_keys or WP_Error if there's any issues.
 	 *   $alice_keys = [
-	 *      'publicKey'  =>  (string)  The public key.
-	 *      'privateKey' =>  (string)  The private key.
+	 *      'public_key'  =>  (string)  The public key.
+	 *      'private_key' =>  (string)  The private key.
 	 *   ]
 	 */
 	public function generate_keys() {
@@ -408,11 +408,11 @@ final class Encryption {
 		}
 
 		// In our build Alice = Client & Bob = Vendor.
-		$aliceKeypair = sodium_crypto_box_keypair();
+		$alice_keypair = sodium_crypto_box_keypair();
 
 		$alice_keys = array(
-			'publicKey'  => sodium_crypto_box_publickey( $aliceKeypair ),
-			'privateKey' => sodium_crypto_box_secretkey( $aliceKeypair ),
+			'public_key'  => sodium_crypto_box_publickey( $alice_keypair ),
+			'private_key' => sodium_crypto_box_secretkey( $alice_keypair ),
 		);
 
 		return (object) $alice_keys;
