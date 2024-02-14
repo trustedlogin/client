@@ -236,9 +236,7 @@ final class Config {
 		if ( $errors ) {
 			$error_text = array();
 			foreach ( $errors as $error ) {
-				if ( is_wp_error( $error ) ) {
-					$error_text[] = $error->get_error_message();
-				}
+				$error_text[] = $error->get_error_message();
 			}
 
 			if ( ! empty( $this->settings['vendor']['namespace'] ) ) {

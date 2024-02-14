@@ -400,7 +400,7 @@ class Endpoint {
 	 *
 	 * @param string $site_identifier_hash The site identifier hash, used to generate the endpoint hash.
 	 *
-	 * @return string This hash will be used as the first part of the URL and also a part of $secret_id.
+	 * @return string|WP_Error This hash will be used as the first part of the URL and also a part of $secret_id.
 	 */
 	public function get_hash( $site_identifier_hash ) {
 		return Encryption::hash( get_site_url() . $site_identifier_hash );

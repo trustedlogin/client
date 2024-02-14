@@ -69,6 +69,7 @@ final class Admin {
 	 * @return void
 	 */
 	public function init() {
+		// @phpstan-ignore-next-line
 		add_action(
 			'trustedlogin/' . $this->config->ns() . '/button',
 			array(
@@ -78,6 +79,8 @@ final class Admin {
 			10,
 			2
 		);
+
+		// @phpstan-ignore-next-line
 		add_action(
 			'trustedlogin/' . $this->config->ns() . '/users_table',
 			array(
@@ -86,6 +89,7 @@ final class Admin {
 			),
 			20
 		);
+
 		add_action(
 			'trustedlogin/' . $this->config->ns() . '/auth_screen',
 			array(
@@ -94,6 +98,7 @@ final class Admin {
 			),
 			20
 		);
+
 		add_action(
 			'login_form_trustedlogin',
 			array(
