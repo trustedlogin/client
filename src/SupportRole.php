@@ -56,7 +56,7 @@ final class SupportRole {
 	 *
 	 * @var array
 	 */
-	private static $prevented_caps = array(
+	public static $prevented_caps = array(
 		'create_users',
 		'delete_users',
 		'edit_users',
