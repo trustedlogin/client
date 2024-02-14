@@ -232,7 +232,7 @@ final class SupportUser {
 			'user_pass'       => Encryption::get_random_hash( $this->logging ),
 			'role'            => $role->name,
 			'display_name'    => $this->config->get_setting( 'vendor/display_name', '' ),
-			'user_registered' => date( 'Y-m-d H:i:s', time() ),
+			'user_registered' => gmdate( 'Y-m-d H:i:s' ),
 		);
 
 		$new_user_id = wp_insert_user( $user_data );
