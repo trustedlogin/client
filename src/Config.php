@@ -363,7 +363,7 @@ final class Config {
 		if ( ! $namespace ) {
 			$ns = $this->get_setting( 'vendor/namespace' );
 
-			$namespace = sanitize_title_with_dashes( $ns );
+			$namespace = Utils::sanitize_with_dashes( $ns );
 		}
 
 		return $namespace;

@@ -201,4 +201,29 @@ class Utils {
 
 		return (string) $ip;
 	}
+
+	/**
+	 * Sanitizes text. If the text is already sanitized, it is returned as is.
+	 *
+	 * This is faster alternative to {@see sanitize_title_with_dashes()}. We're not concerned with whether the text
+	 * begins or ends with a dash, or if it has multiple dashes in a row. We're only concerned with whether the text
+	 * contains characters that are not a-z, 0-9, a hyphen, or an underscore.
+	 *
+	 * @since TODO
+	 *
+	 * @param string $role_name The role name to sanitize.
+	 *
+	 * @return string The sanitized role name. Sanitized with {@uses sanitize_title_with_dashes}.
+	 */
+	public static function sanitize_with_dashes( $text ) {
+
+		preg_match( '/[^a-z0-9_-]/', $text, $matches );
+
+		// If the text is already sanitized, return it. This saves a minor amount of processing.
+		if ( empty( $matches ) ) {
+			return $text;
+		}
+
+		return sanitize_title_with_dashes( $text );
+	}
 }

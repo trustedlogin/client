@@ -130,9 +130,9 @@ final class SupportRole {
 	}
 
 	/**
-	 * Set the name of the role that should be created for the TL support role.
+	 * Sets the name of the role that should be created for the TL support role.
 	 *
-	 * @return string Sanitized with {@uses sanitize_title_with_dashes}.
+	 * @return string Sanitized with {@uses Utils::sanitize_with_dashes()}.
 	 */
 	private function set_name() {
 
@@ -140,7 +140,7 @@ final class SupportRole {
 		if ( ! $this->config->get_setting( 'clone_role' ) ) {
 			$role_name = (string) $this->config->get_setting( 'role' );
 
-			return sanitize_title_with_dashes( $role_name );
+			return Utils::sanitize_with_dashes( $role_name );
 		}
 
 		$default = $this->config->ns() . '-support';
@@ -155,7 +155,7 @@ final class SupportRole {
 			$role_name = $default;
 		}
 
-		return sanitize_title_with_dashes( $role_name );
+		return Utils::sanitize_with_dashes( $role_name );
 	}
 
 	/**
