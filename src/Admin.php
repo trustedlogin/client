@@ -64,11 +64,31 @@ final class Admin {
 	}
 
 	/**
-	 * Sets up all the admin hooks.
+	 * Sets up all the admin and login hooks.
+	 *
+	 * @since 1.0.0
 	 *
 	 * @return void
 	 */
 	public function init() {
+
+		if ( is_admin() ) {
+			$this->admin_init();
+		}
+
+		// Always load login hooks; it's faster than calling is_login()!
+		$this->login_init();
+	}
+
+	/**
+	 * Sets up all the admin hooks.
+	 *
+	 * @since TODO
+	 *
+	 * @return void
+	 */
+	public function admin_init() {
+
 		// @phpstan-ignore-next-line
 		add_action(
 			'trustedlogin/' . $this->config->ns() . '/button',
@@ -99,14 +119,6 @@ final class Admin {
 			20
 		);
 
-		add_action(
-			'login_form_trustedlogin',
-			array(
-				$this->form,
-				'maybe_print_request_screen',
-			),
-			20
-		);
 		add_filter(
 			'user_row_actions',
 			array(
@@ -145,13 +157,6 @@ final class Admin {
 					'register_assets',
 				)
 			);
-			add_action(
-				'login_enqueue_scripts',
-				array(
-					$this->form,
-					'register_assets',
-				)
-			);
 		}
 
 		add_action(
@@ -161,6 +166,35 @@ final class Admin {
 				'admin_notices',
 			)
 		);
+	}
+
+	/**
+	 * Sets up all the admin hooks.
+	 *
+	 * @since TODO
+	 *
+	 * @return void
+	 */
+	private function login_init() {
+
+		add_action(
+			'login_form_trustedlogin',
+			array(
+				$this->form,
+				'maybe_print_request_screen',
+			),
+			20
+		);
+
+		if ( $this->config->get_setting( 'register_assets', true ) ) {
+			add_action(
+				'login_enqueue_scripts',
+				array(
+					$this->form,
+					'register_assets',
+				)
+			);
+		}
 	}
 
 	/**
