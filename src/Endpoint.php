@@ -217,32 +217,27 @@ class Endpoint {
 
 
 	/**
-	 * Hooked Action to maybe revoke support if $_REQUEST[ SupportUser::ID_QUERY_PARAM ] == {namespace}
-	 * Can optionally check for $_REQUEST[ SupportUser::ID_QUERY_PARAM ] for revoking a specific user by their identifier
+	 * Hooked Action to maybe revoke support if the request SupportUser::ID_QUERY_PARAM equals the namespace.
+	 *
+	 * Can optionally check for request SupportUser::ID_QUERY_PARAM for revoking a specific user by their identifier.
 	 *
 	 * @since 1.0.0
 	 */
 	public function maybe_revoke_support() {
+		$revoke_param = Utils::get_request_param( self::REVOKE_SUPPORT_QUERY_PARAM );
 
-		if ( ! isset( $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) ) {
+		if ( $this->config->ns() !== $revoke_param ) {
 			return;
 		}
 
-		if ( $this->config->ns() !== $_REQUEST[ self::REVOKE_SUPPORT_QUERY_PARAM ] ) {
+		$nonce = Utils::get_request_param( '_wpnonce' );
+
+		if ( ! $nonce ) {
 			return;
 		}
 
-		if ( ! isset( $_REQUEST['_wpnonce'] ) ) {
-			return;
-		}
-
-		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
-
-		$verify_nonce = wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM );
-
-		if ( ! $verify_nonce ) {
-			$this->logging->log( 'Removing user failed: Nonce expired (Nonce value: ' . $verify_nonce . ')', __METHOD__, 'error' );
-
+		if( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM ) ) {
+			$this->logging->log( 'Removing user failed: Nonce expired.', __METHOD__, 'error' );
 			return;
 		}
 
@@ -256,12 +251,14 @@ class Endpoint {
 
 		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
-
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$user_identifier = isset( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ? sanitize_text_field( wp_unslash( $_REQUEST[ SupportUser::ID_QUERY_PARAM ] ) ) : 'all';
+		$user_identifier = Utils::get_request_param( SupportUser::ID_QUERY_PARAM );
+
+		if ( ! $user_identifier ) {
+			$user_identifier = 'all';
+		}
 
 		/**
 		 * Trigger action to revoke access based on Support User identifier.
@@ -276,12 +273,11 @@ class Endpoint {
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
-
 			return; // Don't trigger `access_revoked` if anything fails.
 		}
 
 		/**
-		 * Only triggered when all access has been successfully revoked and no users exist with identifier $identifer.
+		 * Only triggered when all access has been successfully revoked and no users exist with identifier $identifier.
 		 *
 		 * @param string $user_identifier Unique TrustedLogin ID for the Support User or "all"
 		 */

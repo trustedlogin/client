@@ -657,7 +657,7 @@ final class Client {
 	}
 
 	/**
-	 * Gets the reference ID passed to the $_REQUEST using `reference_id` or `ref` keys.
+	 * Gets the reference ID passed to the request via POST or GET using `reference_id` or `ref` keys.
 	 *
 	 * @since 1.0.0
 	 *
@@ -666,13 +666,16 @@ final class Client {
 	public static function get_reference_id() {
 
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$reference_id = Utils::get_request_param( 'reference_id' );
 
-		if ( isset( $_REQUEST['reference_id'] ) ) {
-			return esc_html( $_REQUEST['reference_id'] );
+		if ( $reference_id ) {
+			return esc_html( $reference_id );
 		}
 
-		if ( isset( $_REQUEST['ref'] ) ) {
-			return esc_html( $_REQUEST['ref'] );
+		$ref = Utils::get_request_param( 'ref' );
+
+		if ( $ref ) {
+			return esc_html( $ref );
 		}
 
 		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash

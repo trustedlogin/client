@@ -226,4 +226,37 @@ class Utils {
 
 		return sanitize_title_with_dashes( $text );
 	}
+
+	/**
+	 * Retrieves and optionally sanitizes a parameter from $_POST or $_GET.
+	 *
+	 * Use this instead of $_REQUEST to avoid potential security issues related to $_REQUEST including $_COOKIE data.
+	 *
+	 * @since TODO
+	 *
+	 * @param string $param The parameter to retrieve.
+	 * @param bool   $sanitize Whether to sanitize the parameter using {@see sanitize_text_field}. Default: true.
+	 *
+	 * @return string|array|null The parameter value or null if not found.
+	 */
+	public static function get_request_param( $param, $sanitize = true ) {
+		$value = null;
+
+		if ( isset( $_POST[ $param ] ) ) {
+			$value = wp_unslash( $_POST[ $param ] );
+		} elseif ( isset( $_GET[ $param ] ) ) {
+			$value = wp_unslash( $_GET[ $param ] );
+		}
+
+		if ( ! $sanitize || null === $value ) {
+			return $value;
+		}
+
+		if ( is_string( $value ) ) {
+			return sanitize_text_field( $value );
+		}
+
+		// Handle arrays.
+		return map_deep( $value, 'sanitize_text_field' );
+	}
 }
