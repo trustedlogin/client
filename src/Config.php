@@ -113,6 +113,14 @@ final class Config {
 	private $settings = array();
 
 	/**
+	 * Holds cached settings after calculation.
+	 *
+	 * @var array $settings_cache Configuration array cache.
+	 * @since TODO
+	 */
+	private $_settings_cache = array();
+
+	/**
 	 * Config constructor.
 	 *
 	 * @param array $settings Configuration array.
@@ -365,6 +373,7 @@ final class Config {
 	 * Helper Function: Get a specific setting or return a default value.
 	 *
 	 * @since 1.0.0
+	 * @since TODO Added caching to reduce overhead when fetching the same setting multiple times.
 	 *
 	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name']).
 	 * @param mixed  $default_value - if no setting found or settings not init, return this value.
@@ -373,6 +382,10 @@ final class Config {
 	 * @return string|array
 	 */
 	public function get_setting( $key, $default_value = null, $settings = array() ) {
+
+		if ( isset( $this->_settings_cache[ $key ] ) ) {
+			return $this->_settings_cache[ $key ];
+		}
 
 		if ( empty( $settings ) ) {
 			$settings = $this->settings;
@@ -383,10 +396,13 @@ final class Config {
 		}
 
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
+			$this->_settings_cache[ $key ] = $default_value;
 			return $default_value;
 		}
 
-		return $this->get_multi_array_value( $settings, $key, $default_value );
+		$this->_settings_cache[ $key ] = $this->get_multi_array_value( $settings, $key, $default_value );
+
+		return $this->_settings_cache[ $key ];
 	}
 
 	/**
