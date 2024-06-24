@@ -58,7 +58,7 @@ final class Envelope {
 	}
 
 	/**
-	 * Retrieves the envelope for the TrustedLogin server.
+	 * Retrieves the envelope to be sent to the TrustedLogin server.
 	 *
 	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}.
 	 * @param string $site_identifier_hash The unique identifier for the WP_User.

@@ -397,6 +397,7 @@ final class Config {
 
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
 			$this->_settings_cache[ $key ] = $default_value;
+
 			return $default_value;
 		}
 
