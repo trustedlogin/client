@@ -335,8 +335,10 @@ final class Config {
 
 		$default_settings = $this->default_settings;
 
-		$default_settings['paths']['css'] = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.css';
-		$default_settings['paths']['js']  = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.js';
+		$plugin_dir_url = plugin_dir_url( __FILE__ );
+
+		$default_settings['paths']['css'] = $plugin_dir_url . 'assets/trustedlogin.css';
+		$default_settings['paths']['js']  = $plugin_dir_url . 'assets/trustedlogin.js';
 
 		return $default_settings;
 	}
