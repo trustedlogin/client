@@ -63,6 +63,12 @@ final class Remote {
 	 * @since 1.0.0
 	 */
 	public function init() {
+
+		// If the webhook URL is not set, don't add the actions to speed up initialization.
+		if ( ! $this->config->get_setting( 'webhook/url' ) && ! $this->config->get_setting( 'webhook_url' ) ) {
+			return;
+		}
+
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
