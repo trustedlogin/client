@@ -46,11 +46,11 @@ final class SupportUser {
 	private $logging;
 
 	/**
-	 * SupportRole instance.
+	 * The SupportRole object for the user. Called just-in-time via __get().
 	 *
 	 * @var SupportRole $role
 	 */
-	public $role;
+	protected $role;
 
 	/**
 	 * The namespaced setting name for storing the unique identifier hash in user meta.
@@ -105,7 +105,7 @@ final class SupportUser {
 	}
 
 	/**
-	 * Allow accessing limited private properties with a magic method.
+	 * Allow accessing limited private or protected properties with a magic method.
 	 *
 	 * @param string $name Name of property.
 	 *
@@ -119,6 +119,12 @@ final class SupportUser {
 			case 'expires_meta_key':
 			case 'created_by_meta_key':
 				return $this->{$name};
+			case 'role':
+				if ( ! $this->role instanceof SupportRole ) {
+					$this->role = new SupportRole( $this->config, $this->logging );
+				}
+
+				return $this->role;
 		}
 
 		return null;
