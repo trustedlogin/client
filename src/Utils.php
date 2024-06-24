@@ -211,7 +211,7 @@ class Utils {
 	 *
 	 * @since TODO
 	 *
-	 * @param string $role_name The role name to sanitize.
+	 * @param string $text The text to sanitize.
 	 *
 	 * @return string The sanitized role name. Sanitized with {@uses sanitize_title_with_dashes}.
 	 */
@@ -242,11 +242,13 @@ class Utils {
 	public static function get_request_param( $param, $sanitize = true ) {
 		$value = null;
 
+		//phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		if ( isset( $_POST[ $param ] ) ) {
 			$value = wp_unslash( $_POST[ $param ] );
 		} elseif ( isset( $_GET[ $param ] ) ) {
 			$value = wp_unslash( $_GET[ $param ] );
 		}
+		//phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		if ( ! $sanitize || null === $value ) {
 			return $value;

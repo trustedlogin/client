@@ -118,7 +118,7 @@ final class Config {
 	 * @var array $settings_cache Configuration array cache.
 	 * @since TODO
 	 */
-	private $_settings_cache = array();
+	private $settings_cache = array();
 
 	/**
 	 * Config constructor.
@@ -383,8 +383,8 @@ final class Config {
 	 */
 	public function get_setting( $key, $default_value = null, $settings = array() ) {
 
-		if ( isset( $this->_settings_cache[ $key ] ) ) {
-			return $this->_settings_cache[ $key ];
+		if ( isset( $this->settings_cache[ $key ] ) ) {
+			return $this->settings_cache[ $key ];
 		}
 
 		if ( empty( $settings ) ) {
@@ -396,14 +396,14 @@ final class Config {
 		}
 
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			$this->_settings_cache[ $key ] = $default_value;
+			$this->settings_cache[ $key ] = $default_value;
 
 			return $default_value;
 		}
 
-		$this->_settings_cache[ $key ] = $this->get_multi_array_value( $settings, $key, $default_value );
+		$this->settings_cache[ $key ] = $this->get_multi_array_value( $settings, $key, $default_value );
 
-		return $this->_settings_cache[ $key ];
+		return $this->settings_cache[ $key ];
 	}
 
 	/**

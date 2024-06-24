@@ -12,6 +12,7 @@
 - Security enhancements
   - Escaped all error messages
   - Removed usage of `$_REQUEST` in favor of `$_POST` and `$_GET`
+- Implemented PHPCS and PHPStan checks (thanks, [Daniel](https://code-atlantic.com))
 
 ## 1.7.0 (January 29, 2024)
 

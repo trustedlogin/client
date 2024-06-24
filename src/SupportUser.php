@@ -21,6 +21,7 @@ use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
+ * @property SupportRole $role The SupportRole object for the user. Called just-in-time via __get().
  */
 final class SupportUser {
 

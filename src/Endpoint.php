@@ -92,8 +92,8 @@ class Endpoint {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 
-		$this->config       = $config;
-		$this->logging      = $logging;
+		$this->config  = $config;
+		$this->logging = $logging;
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -236,7 +236,7 @@ class Endpoint {
 			return;
 		}
 
-		if( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM ) ) {
+		if ( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM ) ) {
 			$this->logging->log( 'Removing user failed: Nonce expired.', __METHOD__, 'error' );
 			return;
 		}
