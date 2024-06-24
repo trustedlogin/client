@@ -78,16 +78,6 @@ class Endpoint {
 	private $option_name;
 
 	/**
-	 * SupportUser instance.
-	 *
-	 * @todo Decouple using hooks that SupportUser can listen to.
-	 *
-	 * @var SupportUser
-	 */
-	private $support_user;
-
-
-	/**
 	 * Logging instance.
 	 *
 	 * @var Logging $logging
@@ -104,7 +94,6 @@ class Endpoint {
 
 		$this->config       = $config;
 		$this->logging      = $logging;
-		$this->support_user = new SupportUser( $config, $logging );
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -197,7 +186,9 @@ class Endpoint {
 			return;
 		}
 
-		$is_logged_in = $this->support_user->maybe_login( $user_identifier );
+		$support_user = new SupportUser( $this->config, $this->logging );
+
+		$is_logged_in = $support_user->maybe_login( $user_identifier );
 
 		if ( is_wp_error( $is_logged_in ) ) {
 
@@ -255,8 +246,10 @@ class Endpoint {
 			return;
 		}
 
+		$support_user = new SupportUser( $this->config, $this->logging );
+
 		// Allow namespaced support team to revoke their own users.
-		$support_team = current_user_can( $this->support_user->role->get_name() );
+		$support_team = current_user_can( $support_user->role->get_name() );
 
 		// As well as existing users who can delete other users.
 		$can_delete_users = current_user_can( 'delete_users' );
@@ -279,7 +272,7 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/access/revoke', $user_identifier );
 
-		$should_be_deleted = $this->support_user->get( $user_identifier );
+		$should_be_deleted = $support_user->get( $user_identifier );
 
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
