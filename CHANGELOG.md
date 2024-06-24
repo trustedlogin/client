@@ -2,7 +2,16 @@
 
 ## develop
 
+- Implemented many speed enhancements
 - Moved logging directory creation into own private method: `Logging::setup_logging_directory()`
+- Now compliant with WordPress PHPCS
+- Use `gmdate()` instead of `date()` for log files and for users registration dates
+- Moved `SecurityChecks::get_ip()` to `Utils::get_ip()`
+- Added `Utils::get_user_agent()` to generate a user agent string
+- Improved handling of potential errors
+- Security enhancements
+  - Escaped all error messages
+  - Removed usage of `$_REQUEST` in favor of `$_POST` and `$_GET`
 
 ## 1.7.0 (January 29, 2024)
 
