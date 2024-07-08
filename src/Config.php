@@ -116,7 +116,7 @@ final class Config {
 	 * Holds cached settings after calculation.
 	 *
 	 * @var array $settings_cache Configuration array cache.
-	 * @since TODO
+	 * @since 1.8.0
 	 */
 	private $settings_cache = array();
 
@@ -373,7 +373,7 @@ final class Config {
 	 * Helper Function: Get a specific setting or return a default value.
 	 *
 	 * @since 1.0.0
-	 * @since TODO Added caching to reduce overhead when fetching the same setting multiple times.
+	 * @since 1.8.0 Added caching to reduce overhead when fetching the same setting multiple times.
 	 *
 	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name']).
 	 * @param mixed  $default_value - if no setting found or settings not init, return this value.

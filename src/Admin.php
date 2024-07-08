@@ -83,7 +83,7 @@ final class Admin {
 	/**
 	 * Sets up all the admin hooks.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 *
 	 * @return void
 	 */
@@ -171,7 +171,7 @@ final class Admin {
 	/**
 	 * Sets up all the admin hooks.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 *
 	 * @return void
 	 */

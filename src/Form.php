@@ -191,7 +191,7 @@ final class Form {
 	 * This needs to be a separate method because it's used as a callback, and PHP 5.3 doesn't support $this in
 	 * anonymous functions.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 * @internal
 	 * @return array|false|int|string|null
 	 */

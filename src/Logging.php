@@ -119,7 +119,7 @@ class Logging {
 	 *
 	 * @param \TrustedLogin\Config $config Configuration object.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 *
 	 * @return bool|string Directory path to logging. False if logging directory cannot be found, created, or written to.
 	 */

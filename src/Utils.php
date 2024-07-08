@@ -209,7 +209,7 @@ class Utils {
 	 * begins or ends with a dash, or if it has multiple dashes in a row. We're only concerned with whether the text
 	 * contains characters that are not a-z, 0-9, a hyphen, or an underscore.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 *
 	 * @param string $text The text to sanitize.
 	 *
@@ -232,7 +232,7 @@ class Utils {
 	 *
 	 * Use this instead of $_REQUEST to avoid potential security issues related to $_REQUEST including $_COOKIE data.
 	 *
-	 * @since TODO
+	 * @since 1.8.0
 	 *
 	 * @param string $param The parameter to retrieve.
 	 * @param bool   $sanitize Whether to sanitize the parameter using {@see sanitize_text_field}. Default: true.
