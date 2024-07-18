@@ -7,8 +7,8 @@
 
 namespace TrustedLogin;
 
-use \WP_UnitTestCase;
-use \WP_Error;
+use WP_UnitTestCase;
+use WP_Error;
 
 class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 
@@ -27,7 +27,7 @@ class TrustedLoginSiteAccessTest extends WP_UnitTestCase {
 
 	public static $openssl_crypto_strong = true;
 
-	public function setUp() :void {
+	public function setUp(): void {
 		parent::setUp();
 
 		$this->default_config = array(

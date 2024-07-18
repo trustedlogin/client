@@ -1,30 +1,39 @@
 <?php
+/**
+ * Class Cron
+ *
+ * @package TrustedLogin\Client
+ */
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
-
+/**
+ * Class Cron
+ */
 final class Cron {
 
 	/**
+	 * Config instance.
+	 *
 	 * @var \TrustedLogin\Config
 	 */
 	private $config;
 
 	/**
+	 * The hook name for the cron job.
+	 *
 	 * @var string
 	 */
 	private $hook_name;
 
 	/**
+	 * Logging instance.
+	 *
 	 * @var null|\TrustedLogin\Logging $logging
 	 */
 	private $logging;
@@ -32,8 +41,8 @@ final class Cron {
 	/**
 	 * Cron constructor.
 	 *
-	 * @param Config $config
-	 * @param Logging|null $logging
+	 * @param Config  $config Config instance.
+	 * @param Logging $logging Logging instance.
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
@@ -43,17 +52,21 @@ final class Cron {
 	}
 
 	/**
+	 * Add hooks to revoke access using cron.
 	 *
+	 * The cron job is scheduled by {@see schedule()} and revoked by {@see revoke()}.
 	 */
 	public function init() {
 		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
 	}
 
 	/**
-	 * @param int $expiration_timestamp
-	 * @param string $identifier_hash
+	 * Schedule a cron job to revoke access for a specific support user.
 	 *
-	 * @return bool
+	 * @param int    $expiration_timestamp The timestamp when the cron job should run.
+	 * @param string $identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}.
+	 *
+	 * @return bool True if the cron job was scheduled, false if not.
 	 */
 	public function schedule( $expiration_timestamp, $identifier_hash ) {
 
@@ -67,16 +80,29 @@ final class Cron {
 
 		$args = array( $hash );
 
+		/**
+		 * Whether the event was scheduled.
+		 *
+		 * @var false|\WP_Error $scheduled_expiration
+		 */
 		$scheduled_expiration = wp_schedule_single_event( $expiration_timestamp, $this->hook_name, $args );
 
-		$this->logging->log( 'Scheduled Expiration: ' . var_export( $scheduled_expiration, true ) . '; identifier: ' . $identifier_hash, __METHOD__, 'info' );
+		if ( is_wp_error( $scheduled_expiration ) ) {
+			$this->logging->log( 'Scheduling expiration failed: ' . sanitize_text_field( $scheduled_expiration->get_error_message() ), __METHOD__, 'error' );
+
+			return false;
+		}
+
+		$this->logging->log( 'Scheduled Expiration succeeded for identifier ' . $identifier_hash, __METHOD__, 'info' );
 
 		return $scheduled_expiration;
 	}
 
 	/**
-	 * @param int $expiration_timestamp
-	 * @param string $site_identifier_hash
+	 * Reschedule a cron job to revoke access for a specific support user.
+	 *
+	 * @param int    $expiration_timestamp The timestamp when the cron job should run.
+	 * @param string $site_identifier_hash The unique identifier for the WP_User created {@see Encryption::get_random_hash()}.
 	 *
 	 * @return bool
 	 */
@@ -92,7 +118,7 @@ final class Cron {
 
 		$unschedule_expiration = wp_clear_scheduled_hook( $this->hook_name, array( $hash ) );
 
-		switch( $unschedule_expiration ) {
+		switch ( $unschedule_expiration ) {
 			case false:
 				$this->logging->log( sprintf( 'Could not clear scheduled hook for %s', $this->hook_name ), __METHOD__, 'error' );
 				return false;
@@ -109,16 +135,16 @@ final class Cron {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $identifier_hash Identifier hash for the user associated with the cron job
-	 * @todo
+	 * @param string $identifier_hash Identifier hash for the user associated with the cron job.
+	 *
 	 * @return void
 	 */
 	public function revoke( $identifier_hash ) {
 
 		$this->logging->log( 'Running cron job to disable user. ID: ' . $identifier_hash, __METHOD__, 'notice' );
 
-		$Client = new Client( $this->config, false );
+		$client = new Client( $this->config, false );
 
-		$Client->revoke_access( $identifier_hash );
+		$client->revoke_access( $identifier_hash );
 	}
 }

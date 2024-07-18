@@ -8,7 +8,7 @@ on:
       - '*'
 jobs:
   tests:
-    name: Install And Test
+    name: Run PHP unit tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -20,9 +20,6 @@ jobs:
           cache: 'npm'
           node-version-file: '.nvmrc'
 
-      - name: Node version
-        run: node -v
-
       - name: Setup PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
@@ -32,20 +29,14 @@ jobs:
       - name: Install wp-env
         run: npm -g i @wordpress/env
 
-      - name: Start the wp-env testing environment
+      - name: Start wp-env
         run: wp-env start
 
       - name: Install Composer dependencies
         run: composer install
 
-      - name: ls vendor
-        run: ls vendor
-
-      - name: Install NPM dependencies
+      - name: Install Node dependencies
         run: npm install
 
-      - name: Ensure uploads dir exists first
-        run: mkdir -p wordpress/wp-content/uploads
-
-      - name: Test
+      - name: Run PHP unit tests
         run: npm run test:php

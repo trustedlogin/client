@@ -14,8 +14,7 @@
   },
   "scripts": {
     "build": "grunt",
-    "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpunit",
-    "test:php:watch": "wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpunit-watcher watch"
+    "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpunit"
   },
   "browserslist": [
     "cover 99.7%"

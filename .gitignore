@@ -10,3 +10,4 @@ site/
 *.tar.gz
 *.zip
 .phpunit.result.cache
+vendor/

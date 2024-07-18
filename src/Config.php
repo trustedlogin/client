@@ -9,69 +9,85 @@
 
 namespace TrustedLogin;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 use ArrayAccess;
-use \Exception;
-use \WP_Error;
+use Exception;
+use WP_Error;
 
+/**
+ * Config class, which validates and stores the configuration settings for the TrustedLogin Client.
+ */
 final class Config {
 
 	/**
+	 * These namespaces cannot be used, lest they result in confusion.
+	 *
 	 * @var string[] These namespaces cannot be used, lest they result in confusion.
 	 */
-	private static $reserved_namespaces = array( 'trustedlogin', 'client', 'vendor', 'admin', 'wordpress' );
+	private static $reserved_namespaces = array(
+		'trustedlogin',
+		'trusted-login',
+		'client',
+		'vendor',
+		'admin',
+		'administrator',
+		'wordpress',
+		'support',
+	);
 
 	/**
+	 * Default settings for the TrustedLogin Client. This array represents all possible settings.
+	 *
 	 * @var array Default settings values
 	 * @since 1.0.0
 	 * @link https://www.trustedlogin.com/configuration/ Read the configuration settings documentation
 	 */
 	private $default_settings = array(
-		'auth'           => array(
+		'auth'             => array(
 			'api_key'     => null,
 			'license_key' => null,
 		),
-		'caps'           => array(
+		'caps'             => array(
 			'add'    => array(),
 			'remove' => array(),
 		),
-		'decay'          => WEEK_IN_SECONDS,
-		'logging'        => array(
+		'decay'            => WEEK_IN_SECONDS,
+		'logging'          => array(
 			'enabled'   => false,
 			'directory' => null,
 			'threshold' => 'notice',
 			'options'   => array(
 				'extension'      => 'log',
 				'dateFormat'     => 'Y-m-d G:i:s.u',
-				'filename'       => null, // Overridden in Logging.php
+				'filename'       => null,
 				'flushFrequency' => false,
 				'logFormat'      => false,
 				'appendContext'  => true,
 			),
 		),
-		'menu'           => array(
+		'menu'             => array(
 			'slug'     => null,
 			'title'    => null,
 			'priority' => null,
 			'icon_url' => '',
 			'position' => null,
 		),
-		'paths'          => array(
+		'paths'            => array(
 			'css' => null,
-			'js'  => null, // Default is defined in get_default_settings()
+			'js'  => null,
 		),
-		'reassign_posts' => true,
-		'require_ssl'    => true,
-		'role'           => 'editor',
-		'clone_role'     => true,
+		'reassign_posts'   => true,
+		'require_ssl'      => true,
+		'role'             => 'editor',
+		'clone_role'       => true,
 		'terms_of_service' => array(
 			'url' => null,
 		),
-		'vendor'         => array(
+		'vendor'           => array(
 			'namespace'             => null,
 			'title'                 => null,
 			'email'                 => null,
@@ -81,7 +97,7 @@ final class Config {
 			'logo_url'              => null,
 			'about_live_access_url' => null,
 		),
-		'webhook'        => array(
+		'webhook'          => array(
 			'url'           => null,
 			'debug_data'    => false,
 			'create_ticket' => false,
@@ -89,17 +105,27 @@ final class Config {
 	);
 
 	/**
-	 * @var array $settings Configuration array after parsed and validated
+	 * Holds the configuration array. These settings are not validated until {@see valididate()} is called.
+	 *
+	 * @var array $settings Configuration array.
 	 * @since 1.0.0
 	 */
 	private $settings = array();
 
 	/**
+	 * Holds cached settings after calculation.
+	 *
+	 * @var array $settings_cache Configuration array cache.
+	 * @since 1.8.0
+	 */
+	private $settings_cache = array();
+
+	/**
 	 * Config constructor.
 	 *
-	 * @param array $settings
+	 * @param array $settings Configuration array.
 	 *
-	 * @throws \Exception
+	 * @throws \Exception If the configuration array is empty.
 	 */
 	public function __construct( array $settings = array() ) {
 
@@ -112,16 +138,21 @@ final class Config {
 
 
 	/**
-	 * @return true|\WP_Error[]
-	 * @throws \Exception
+	 * Validates the configuration settings.
 	 *
+	 * @return true|\WP_Error[]
+	 * @throws \Exception If the configuration is invalid.
 	 */
 	public function validate() {
 
-		if ( in_array( __NAMESPACE__, array(
+		if ( in_array(
+			__NAMESPACE__,
+			array(
 				'ReplaceMe',
 				'ReplaceMe\GravityView\TrustedLogin',
-			) ) && ! defined( 'TL_DOING_TESTS' ) ) {
+			),
+			true
+		) && ! defined( 'TL_DOING_TESTS' ) ) {
 			throw new Exception( 'Developer: make sure to change the namespace for the TrustedLogin class. See https://trustedlogin.com/configuration/ for more information.', 501 );
 		}
 
@@ -181,9 +212,10 @@ final class Config {
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 				$errors[] = new \WP_Error(
 					'invalid_configuration',
-					sprintf( 'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
+					sprintf(
+						'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
 						$settings_key,
-						print_r( $this->get_setting( $settings_key, null, $this->settings ), true )
+						print_r( $this->get_setting( $settings_key, null, $this->settings ), true ) // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 					)
 				);
 			}
@@ -198,10 +230,10 @@ final class Config {
 				}
 			}
 		} else {
-			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+			$added_caps   = $this->get_setting( 'caps/add', array(), $this->settings );
 			$removed_caps = $this->get_setting( 'caps/remove', array(), $this->settings );
 
-			$added_caps = array_filter( $added_caps );
+			$added_caps   = array_filter( $added_caps );
 			$removed_caps = array_filter( $removed_caps );
 
 			if ( ! empty( $added_caps ) || ! empty( $removed_caps ) ) {
@@ -212,15 +244,17 @@ final class Config {
 		if ( $errors ) {
 			$error_text = array();
 			foreach ( $errors as $error ) {
-				if ( is_wp_error( $error ) ) {
-					$error_text[] = $error->get_error_message();
-				}
+				$error_text[] = $error->get_error_message();
 			}
 
-			$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			if ( ! empty( $this->settings['vendor']['namespace'] ) ) {
+				$exception_text = 'Invalid TrustedLogin Configuration for ' . esc_html( $this->settings['vendor']['namespace'] ) . '. Learn more at https://www.trustedlogin.com/configuration/';
+			} else {
+				$exception_text = 'Invalid TrustedLogin Configuration. Learn more at https://www.trustedlogin.com/configuration/';
+			}
 			$exception_text .= "\n- " . implode( "\n- ", $error_text );
 
-			throw new Exception( $exception_text, 406 );
+			throw new Exception( esc_html( $exception_text ), 406 );
 		}
 
 		return true;
@@ -229,9 +263,9 @@ final class Config {
 	/**
 	 * Returns a timestamp that is the current time + decay time setting
 	 *
-	 * Note: This is a server timestamp, not a WordPress timestamp
+	 * Note: This is a server timestamp, not a WordPress timestamp.
 	 *
-	 * @param int $decay_time If passed, override the `decay` setting
+	 * @param int  $decay_time If passed, override the `decay` setting.
 	 * @param bool $gmt Whether to use server time (false) or GMT time (true). Default: false.
 	 *
 	 * @return int|false Timestamp in seconds. Default is WEEK_IN_SECONDS from creation (`time()` + 604800). False if no expiration.
@@ -246,6 +280,7 @@ final class Config {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 		$time = current_time( 'timestamp', $gmt );
 
 		return $time + (int) $decay_time;
@@ -263,7 +298,7 @@ final class Config {
 	/**
 	 * Validate and initialize settings array passed to the Client contructor
 	 *
-	 * @param array|string $config Configuration array or JSON-encoded configuration array
+	 * @param array|string $config Configuration array or JSON-encoded configuration array.
 	 *
 	 * @return bool|WP_Error[] true: Initialization succeeded; array of WP_Error objects if there are any issues.
 	 */
@@ -308,13 +343,17 @@ final class Config {
 
 		$default_settings = $this->default_settings;
 
-		$default_settings['paths']['css'] = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.css';
-		$default_settings['paths']['js']  = plugin_dir_url( __FILE__ ) . 'assets/trustedlogin.js';
+		$plugin_dir_url = plugin_dir_url( __FILE__ );
+
+		$default_settings['paths']['css'] = $plugin_dir_url . 'assets/trustedlogin.css';
+		$default_settings['paths']['js']  = $plugin_dir_url . 'assets/trustedlogin.js';
 
 		return $default_settings;
 	}
 
 	/**
+	 * Returns the Vendor namespace, sanitized with dashes.
+	 *
 	 * @return string Vendor namespace, sanitized with dashes
 	 */
 	public function ns() {
@@ -324,7 +363,7 @@ final class Config {
 		if ( ! $namespace ) {
 			$ns = $this->get_setting( 'vendor/namespace' );
 
-			$namespace = sanitize_title_with_dashes( $ns );
+			$namespace = Utils::sanitize_with_dashes( $ns );
 		}
 
 		return $namespace;
@@ -334,28 +373,37 @@ final class Config {
 	 * Helper Function: Get a specific setting or return a default value.
 	 *
 	 * @since 1.0.0
+	 * @since 1.8.0 Added caching to reduce overhead when fetching the same setting multiple times.
 	 *
-	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name'])
-	 * @param mixed $default - if no setting found or settings not init, return this value.
-	 * @param array $settings Pass an array to fetch value for instead of using the default settings array
+	 * @param string $key The setting to fetch, nested results are delimited with forward slashes (eg vendor/name => settings['vendor']['name']).
+	 * @param mixed  $default_value - if no setting found or settings not init, return this value.
+	 * @param array  $settings Pass an array to fetch value for instead of using the default settings array.
 	 *
 	 * @return string|array
 	 */
-	public function get_setting( $key, $default = null, $settings = array() ) {
+	public function get_setting( $key, $default_value = null, $settings = array() ) {
+
+		if ( isset( $this->settings_cache[ $key ] ) ) {
+			return $this->settings_cache[ $key ];
+		}
 
 		if ( empty( $settings ) ) {
 			$settings = $this->settings;
 		}
 
-		if ( is_null( $default ) ) {
-			$default = $this->get_multi_array_value( $this->get_default_settings(), $key );
+		if ( is_null( $default_value ) ) {
+			$default_value = $this->get_multi_array_value( $this->get_default_settings(), $key );
 		}
 
 		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			return $default;
+			$this->settings_cache[ $key ] = $default_value;
+
+			return $default_value;
 		}
 
-		return $this->get_multi_array_value( $settings, $key, $default );
+		$this->settings_cache[ $key ] = $this->get_multi_array_value( $settings, $key, $default_value );
+
+		return $this->settings_cache[ $key ];
 	}
 
 	/**
@@ -372,22 +420,22 @@ final class Config {
 	/**
 	 * Gets a specific property value within a multidimensional array.
 	 *
-	 * @param array $array The array to search in.
+	 * @param array  $source_array The array to search in.
 	 * @param string $name The name of the property to find.
-	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
+	 * @param string $default_value Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
 	 */
-	private function get_multi_array_value( $array, $name, $default = null ) {
+	private function get_multi_array_value( $source_array, $name, $default_value = null ) {
 
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
-			return $default;
+		if ( ! is_array( $source_array ) && ! ( is_object( $source_array ) && $source_array instanceof ArrayAccess ) ) {
+			return $default_value;
 		}
 
 		$names = explode( '/', $name );
-		$val   = $array;
+		$val   = $source_array;
 		foreach ( $names as $current_name ) {
-			$val = $this->get_array_value( $val, $current_name, $default );
+			$val = $this->get_array_value( $val, $current_name, $default_value );
 		}
 
 		return $val;
@@ -398,19 +446,19 @@ final class Config {
 	 *
 	 * Provide a default value if you want to return a specific value if the property is not set.
 	 *
-	 * @param array $array Array from which the property's value should be retrieved.
+	 * @param array  $source_array Array from which the property's value should be retrieved.
 	 * @param string $prop Name of the property to be retrieved.
-	 * @param string $default Optional. Value that should be returned if the property is not set or empty. Defaults to null.
+	 * @param string $default_value Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
 	 * @return null|string|mixed The value
 	 */
-	private function get_array_value( $array, $prop, $default = null ) {
-		if ( ! is_array( $array ) && ! ( is_object( $array ) && $array instanceof ArrayAccess ) ) {
-			return $default;
+	private function get_array_value( $source_array, $prop, $default_value = null ) {
+		if ( ! is_array( $source_array ) && ! ( is_object( $source_array ) && $source_array instanceof ArrayAccess ) ) {
+			return $default_value;
 		}
 
 		// Directly fetch the value if it exists, otherwise use the default.
-		$value = isset( $array[ $prop ] ) ? $array[ $prop ] : $default;
+		$value = isset( $source_array[ $prop ] ) ? $source_array[ $prop ] : $default_value;
 
 		// Special handling for zero and false.
 		if ( 0 === $value || false === $value ) {
@@ -418,8 +466,8 @@ final class Config {
 		}
 
 		// If the value is empty and a default is provided, use the default.
-		if ( empty( $value ) && null !== $default ) {
-			return $default;
+		if ( empty( $value ) && null !== $default_value ) {
+			return $default_value;
 		}
 
 		return $value;
@@ -441,12 +489,11 @@ final class Config {
 		}
 
 		/**
-		 * @internal Do not rely on this!!!!
-		 * @todo Remove this
+		 * This is for internal use only.
 		 *
+		 * @internal Do not rely on this!!!! This is for internal use only.
 		 * @param bool $return Does this site meet the SSL requirement?
 		 */
 		return apply_filters( 'trustedlogin/' . $this->ns() . '/meets_ssl_requirement', $return );
 	}
-
 }

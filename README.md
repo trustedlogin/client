@@ -23,10 +23,14 @@ Make sure to install [wp-env](https://developer.wordpress.org/block-editor/refer
 	- `wp-env start`
 - Stop local dev
 	- `wp-env stop`
-- If you want to run tests locally, you must install composer dev first
-	- `npm run composer`
 - Run the PHP tests in container
 	- `npm run test:php`
+
+### Running linting and tests
+
+- `composer lint` Checks for any linting errors
+- `composer format` Fixes any code that is able to be automatically fixed
+- `composer test` Runs PHPUnit tests
 
 #### WordPress 4.1+ support
 

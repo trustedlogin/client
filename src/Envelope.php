@@ -6,68 +6,94 @@
  *
  * @copyright 2021 Katz Web Services, Inc.
  */
+
 namespace TrustedLogin;
 
-// Exit if accessed directly
-if ( ! defined('ABSPATH') ) {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \Exception;
-use \WP_Error;
-use \WP_User;
-use \WP_Admin_Bar;
+use Exception;
+use WP_Error;
+use WP_User;
+use WP_Admin_Bar;
 
 /**
- * The TrustedLogin all-in-one drop-in class.
+ * Class Envelope
  */
 final class Envelope {
 
 	/**
+	 * Config instance.
+	 *
 	 * @var Config $config
 	 */
 	private $config;
 
 	/**
+	 * Encryption instance.
+	 *
 	 * @var Encryption
 	 */
 	private $encryption;
 
 	/**
-	 * @var string API key set in software.
+	 * API key set in software.
+	 *
+	 * @var string
 	 */
 	private $api_key;
 
 	/**
 	 * Envelope constructor.
 	 *
-	 * @param Config $config
-	 * @param Encryption $encryption
+	 * @param Config     $config Config instance.
+	 * @param Encryption $encryption Encryption instance.
 	 */
 	public function __construct( Config $config, Encryption $encryption ) {
 		$this->config     = $config;
-		$this->api_key = $this->config->get_setting( 'auth/api_key' );
+		$this->api_key    = $this->config->get_setting( 'auth/api_key' );
 		$this->encryption = $encryption;
 	}
 
 	/**
-	 * @param string $secret_id
-	 * @param string $site_identifier_hash
-	 * @param string $access_key
+	 * Retrieves the envelope to be sent to the TrustedLogin server.
 	 *
-	 * @return array|WP_Error
+	 * @param string $secret_id The unique identifier for this TrustedLogin authorization. {@see Endpoint::generate_secret_id}.
+	 * @param string $site_identifier_hash The unique identifier for the WP_User.
+	 * @param string $access_key Shareable access key. {@see SiteAccess::get_access_key()}.
+	 *
+	 * @return array|WP_Error {
+	 *   The envelope for the TrustedLogin server.
+	 *
+	 *   @type string $secretId The unique identifier for this TrustedLogin authorization.
+	 *   @type string $identifier The encrypted identifier of support user.
+	 *   @type string $siteUrl The site URL.
+	 *   @type string $publicKey The API key for the site.
+	 *   @type string $accessKey Shareable access key.
+	 *   @type int $wpUserId The WordPress User ID.
+	 *   @type int $expiresAt The expiration timestamp (GMT).
+	 *   @type string $version The version of the TrustedLogin client.
+	 *   @type string $nonce The nonce for the envelope.
+	 *   @type string $clientPublicKey The {@see sodium_crypto_box_publickey} public key.
+	 *   @type array $metaData Custom metadata to be synced via TrustedLogin.
+	 * }
 	 */
 	public function get( $secret_id, $site_identifier_hash, $access_key = '' ) {
 
 		if ( ! is_string( $secret_id ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			return new \WP_Error( 'secret_not_string', 'The secret ID must be a string:' . print_r( $secret_id, true ) );
 		}
 
 		if ( ! is_string( $site_identifier_hash ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			return new \WP_Error( 'site_identifier_not_string', 'The site identifier must be a string:' . print_r( $site_identifier_hash, true ) );
 		}
 
 		if ( ! is_string( $access_key ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			return new \WP_Error( 'access_key_not_string', 'The access key must be a string: ' . print_r( $access_key, true ) );
 		}
 
@@ -77,17 +103,17 @@ final class Envelope {
 
 		$e_keys = $this->encryption->generate_keys();
 
-		if ( is_wp_error( $e_keys ) ){
+		if ( is_wp_error( $e_keys ) ) {
 			return $e_keys;
 		}
 
 		$nonce = $this->encryption->get_nonce();
 
-		if ( is_wp_error( $nonce ) ){
+		if ( is_wp_error( $nonce ) ) {
 			return $nonce;
 		}
 
-		$encrypted_identifier = $this->encryption->encrypt( $site_identifier_hash, $nonce, $e_keys->privateKey );
+		$encrypted_identifier = $this->encryption->encrypt( $site_identifier_hash, $nonce, $e_keys->private_key );
 
 		if ( is_wp_error( $encrypted_identifier ) ) {
 			return $encrypted_identifier;
@@ -106,18 +132,17 @@ final class Envelope {
 		$metadata = apply_filters( 'trustedlogin/' . $this->config->ns() . '/envelope/meta', array(), $this->config );
 
 		return array(
-			'secretId'   	  => $secret_id,
-			'identifier' 	  => $encrypted_identifier,
-			'siteUrl'    	  => get_site_url(),
-			'publicKey'  	  => $this->api_key,
-			'accessKey'  	  => $access_key,
-			'wpUserId'   	  => get_current_user_id(),
+			'secretId'        => $secret_id,
+			'identifier'      => $encrypted_identifier,
+			'siteUrl'         => get_site_url(),
+			'publicKey'       => $this->api_key,
+			'accessKey'       => $access_key,
+			'wpUserId'        => get_current_user_id(),
 			'expiresAt'       => $this->config->get_expiration_timestamp( null, true ),
-			'version'    	  => Client::VERSION,
-			'nonce'		 	  => \sodium_bin2hex( $nonce ),
-			'clientPublicKey' => \sodium_bin2hex( $e_keys->publicKey ),
-			'metaData'		  => $metadata,
+			'version'         => Client::VERSION,
+			'nonce'           => \sodium_bin2hex( $nonce ),
+			'clientPublicKey' => \sodium_bin2hex( $e_keys->public_key ),
+			'metaData'        => $metadata,
 		);
 	}
-
 }
