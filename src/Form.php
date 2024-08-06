@@ -176,6 +176,9 @@ final class Form {
 		$inline_css = $this->get_login_inline_css();
 		wp_add_inline_style( 'common', $inline_css );
 
+		// Print the styles before the HTML to prevent FOUC.
+		wp_print_styles('trustedlogin-' . $this->config->ns() );
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 
@@ -230,6 +233,10 @@ final class Form {
 	 * @return void
 	 */
 	public function print_auth_screen() {
+
+		// Print the styles before the HTML to prevent FOUC.
+		wp_print_styles('trustedlogin-' . $this->config->ns() );
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 	}
@@ -282,6 +289,7 @@ final class Form {
 	 */
 	public function get_auth_screen() {
 
+		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$content = array(
@@ -1094,6 +1102,7 @@ final class Form {
 			$this->logging->log( 'Style is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
+		// Still enqueue the style, since the button may be generated separately from the auth page.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$button_settings = array(

@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## develop
+
+- Prevent a flash of un-styled content thanks to earlier CSS output
+- Cleaned up use of PHP imports
+- Addressed potential error when the `WP_Filesystem` class is not found
+
 ## 1.8.0 (July 18, 2024)
 
 - Implemented many speed enhancements
