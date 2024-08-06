@@ -14,10 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Exception;
 use WP_Error;
 use WP_User;
-use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -345,9 +343,9 @@ final class SupportUser {
 	/**
 	 * Processes login (with extra logging) and triggers the 'trustedlogin/{ns}/login' hook
 	 *
-	 * @param \WP_User $support_user The support user to log in.
+	 * @param WP_User $support_user The support user to log in.
 	 */
-	private function login( \WP_User $support_user ) {
+	private function login( WP_User $support_user ) {
 
 		if ( ! $support_user->exists() ) {
 			$this->logging->log( sprintf( 'Login failed: Support User #%d does not exist.', $support_user->ID ), __METHOD__, 'error' );
@@ -383,7 +381,7 @@ final class SupportUser {
 	 *
 	 * @param string $user_identifier_or_hash Unique identifier for support user before being hashed or the hash itself.
 	 *
-	 * @return \WP_User|null WP_User if found; null if not.
+	 * @return WP_User|null WP_User if found; null if not.
 	 */
 	public function get( $user_identifier_or_hash = '' ) {
 
@@ -412,13 +410,13 @@ final class SupportUser {
 	/**
 	 * Returns the expiration for user access as either a human-readable string or timestamp.
 	 *
-	 * @param \WP_User $user The user we're checking.
+	 * @param WP_User $user The user we're checking.
 	 * @param bool     $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
 	 * @param bool     $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
 	 *
 	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
-	public function get_expiration( \WP_User $user, $human_readable = false, $gmt = false ) {
+	public function get_expiration( WP_User $user, $human_readable = false, $gmt = false ) {
 
 		$expiration = get_user_option( $this->expires_meta_key, $user->ID );
 
@@ -435,7 +433,7 @@ final class SupportUser {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return \WP_User[]
+	 * @return WP_User[]
 	 */
 	public function get_all() {
 
@@ -464,7 +462,7 @@ final class SupportUser {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return \WP_User|null
+	 * @return WP_User|null
 	 */
 	public function get_first() {
 		$support_users = $this->get_all();
@@ -641,7 +639,7 @@ final class SupportUser {
 	/**
 	 * Returns the unique identifier for a user, stored in user meta.
 	 *
-	 * @param \WP_User|int $user_id_or_object User ID or User object.
+	 * @param WP_User|int $user_id_or_object User ID or User object.
 	 *
 	 * @return string|WP_Error User unique identifier if success; WP_Error if $user is not int or WP_User.
 	 */
@@ -653,7 +651,7 @@ final class SupportUser {
 			return new \WP_Error( 'missing_meta_key', 'The SupportUser object has not been properly instantiated.' );
 		}
 
-		if ( $user_id_or_object instanceof \WP_User ) {
+		if ( $user_id_or_object instanceof WP_User ) {
 			$user_id = $user_id_or_object->ID;
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
@@ -682,7 +680,7 @@ final class SupportUser {
 			return new \WP_Error( 'missing_meta_key', 'The SupportUser object has not been properly instantiated.' );
 		}
 
-		if ( $user_id_or_object instanceof \WP_User ) {
+		if ( $user_id_or_object instanceof WP_User ) {
 			$user_id = $user_id_or_object->ID;
 		} elseif ( is_int( $user_id_or_object ) ) {
 			$user_id = $user_id_or_object;
@@ -703,7 +701,7 @@ final class SupportUser {
 	 *
 	 * @since 1.1 Removed second parameter $current_url.
 	 *
-	 * @param \WP_User|int|string $user User object, user ID, or "all". If "all", will revoke all users.
+	 * @param WP_User|int|string $user User object, user ID, or "all". If "all", will revoke all users.
 	 *
 	 * @return string|false Unsanitized nonce URL to revoke support user. If not able to retrieve user identifier, returns false.
 	 */

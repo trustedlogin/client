@@ -9,6 +9,9 @@
 
 namespace TrustedLogin;
 
+use WP_Filesystem_Base;
+use WP_Filesystem;
+
 /**
  * Handles all logging for the client.
  */
@@ -235,10 +238,10 @@ class Logging {
 	 */
 	private function prevent_directory_browsing( $dirpath ) {
 		// phpcs:disable Generic.Commenting.DocComment.MissingShort
-		/** @global \WP_Filesystem_Base $wp_filesystem */
+		/** @global WP_Filesystem_Base $wp_filesystem */
 		global $wp_filesystem;
 
-		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+		if ( ! $wp_filesystem instanceof WP_Filesystem_Base ) {
 			$this->log( 'Unable to initialize WP_Filesystem.', __METHOD__, 'error' );
 			return false;
 		}

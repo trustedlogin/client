@@ -14,8 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use WP_User;
-
 /**
  * Creates the TrustedLogin support user form.
  *  - Makes the HTML
