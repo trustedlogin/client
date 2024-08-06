@@ -177,7 +177,7 @@ final class Form {
 		wp_add_inline_style( 'common', $inline_css );
 
 		// Print the styles before the HTML to prevent FOUC.
-		wp_print_styles('trustedlogin-' . $this->config->ns() );
+		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
@@ -235,7 +235,7 @@ final class Form {
 	public function print_auth_screen() {
 
 		// Print the styles before the HTML to prevent FOUC.
-		wp_print_styles('trustedlogin-' . $this->config->ns() );
+		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();

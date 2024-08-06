@@ -411,8 +411,8 @@ final class SupportUser {
 	 * Returns the expiration for user access as either a human-readable string or timestamp.
 	 *
 	 * @param WP_User $user The user we're checking.
-	 * @param bool     $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
-	 * @param bool     $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
+	 * @param bool    $human_readable Whether to show expiration as a human_time_diff()-formatted string. Default: false.
+	 * @param bool    $gmt Whether to use GMT timestamp in the human-readable result. Not used if $human_readable is false. Default: false.
 	 *
 	 * @return int|string|false False if no expiration is set. Expiration timestamp if $human_readable is false. Time diff if $human_readable is true.
 	 */
