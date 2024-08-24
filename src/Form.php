@@ -1410,7 +1410,7 @@ final class Form {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param bool $print_and_return Whether to print and return (true) or return (false) the results. Default: true.
+	 * @param bool|string $print_and_return Whether to print & return (true) or return (false) results. Default: true.
 	 *
 	 * @return string HTML table of active support users for vendor. Empty string if current user can't `create_users`
 	 */

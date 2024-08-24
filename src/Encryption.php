@@ -198,11 +198,13 @@ final class Encryption {
 		try {
 			$hash_bin = sodium_crypto_generichash( $string_to_hash, '', (int) $length );
 			$hash     = sodium_bin2hex( $hash_bin );
+			// @phpstan-ignore-next-line
 		} catch ( \TypeError $e ) {
 			return new WP_Error(
 				'encryption_failed_generichash_typeerror',
 				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
+			// @phpstan-ignore-next-line
 		} catch ( \Error $e ) {
 			return new WP_Error(
 				'encryption_failed_generichash_error',
@@ -213,6 +215,7 @@ final class Encryption {
 				'encryption_failed_generichash_sodium',
 				sprintf( 'Error while generating hash: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
+			// @phpstan-ignore-next-line
 		} catch ( \Exception $e ) {
 			return new WP_Error(
 				'encryption_failed_generichash',
@@ -380,11 +383,7 @@ final class Encryption {
 				'encryption_failed_cryptobox',
 				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() )
 			);
-		} catch ( \RangeException $e ) {
-			return new WP_Error(
-				'encryption_failed_cryptobox_rangeexception',
-				sprintf( 'Error while encrypting the envelope: %s (%s)', $e->getMessage(), $e->getCode() )
-			);
+			// @phpstan-ignore-next-line
 		} catch ( \TypeError $e ) {
 			return new WP_Error(
 				'encryption_failed_cryptobox_typeerror',

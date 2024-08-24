@@ -109,7 +109,7 @@ final class SupportUser {
 	 *
 	 * @param string $name Name of property.
 	 *
-	 * @return string|null Value of property, if defined. Otherwise, null.
+	 * @return string|null|SupportRole Value of property, if defined. If "role", returns SupportRole. Otherwise, null.
 	 */
 	public function __get( $name ) {
 

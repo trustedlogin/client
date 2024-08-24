@@ -710,8 +710,6 @@ final class Client {
 			$info = \WP_Debug_Data::debug_data();
 		} catch ( \ImagickException $exception ) {
 			return null;
-		} catch ( Exception $exception ) {
-			return null;
 		}
 
 		$debug_data = \WP_Debug_Data::format( $info, 'info' );

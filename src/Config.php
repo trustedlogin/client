@@ -145,6 +145,7 @@ final class Config {
 	 */
 	public function validate() {
 
+		// @phpstan-ignore-next-line
 		if ( in_array(
 			__NAMESPACE__,
 			array(
