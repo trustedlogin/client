@@ -149,9 +149,25 @@ final class Remote {
 	 */
 	public function send( $path, $data, $method = 'POST', $additional_headers = array() ) {
 
-		$method = is_string( $method ) ? strtoupper( $method ) : $method;
+		if ( ! is_string( $path ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			$this->logging->log( sprintf( 'Error: Path not a string (%s)', print_r( $path, true ) ), __METHOD__, 'critical' );
 
-		if ( ! is_string( $method ) || ! in_array(
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			return new \WP_Error( 'invalid_path', sprintf( 'Error: Path "%s" is not a string', print_r( $path, true ) ) );
+		}
+
+		if ( ! is_string( $method ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			$this->logging->log( sprintf( 'Error: Method not a string (%s)', print_r( $method, true ) ), __METHOD__, 'critical' );
+
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			return new \WP_Error( 'invalid_method', sprintf( 'Error: HTTP method "%s" is not a string', print_r( $method, true ) ) );
+		}
+
+		$method = strtoupper( $method );
+
+		if ( ! in_array(
 			$method,
 			array(
 				'POST',
@@ -231,13 +247,7 @@ final class Remote {
 		 */
 		$base_url = apply_filters( 'trustedlogin/' . $this->config->ns() . '/api_url', self::API_URL );
 
-		if ( is_string( $endpoint ) ) {
-			$url = trailingslashit( $base_url ) . $endpoint;
-		} else {
-			$url = trailingslashit( $base_url );
-		}
-
-		return $url;
+		return trailingslashit( $base_url ) . $endpoint;
 	}
 
 	/**
