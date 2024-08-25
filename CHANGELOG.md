@@ -2,9 +2,15 @@
 
 ## develop
 
-- Prevent a flash of un-styled content thanks to earlier CSS output
-- Cleaned up use of PHP imports
+- Added a minimum `vendor/namespace` length of five characters to help prevent collisions with other instances
+- Fixed a flash of un-styled content on the Grant Access screens by outputting CSS earlier
 - Addressed potential error when the `WP_Filesystem` class is not found
+- Moved TrustedLogin images to inline CSS to simplify the build process
+  - Removed need for `--relative_images_dir` flag in `build-sass` script
+  - Removed `src/assets/loading.svg`
+  - Removed `src/assets/lock.svg`
+- Cleaned up use of PHP imports
+- Improved coding standards and documentation
 
 ## 1.8.0 (July 18, 2024)
 
