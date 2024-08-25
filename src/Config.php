@@ -26,11 +26,27 @@ final class Config {
 	/**
 	 * Minimum length for a namespace.
 	 *
+	 * Setting a minimum length for a namespace helps prevent collisions with other instances.
+	 *
 	 * @since 1.9.0
 	 *
 	 * @const int Minimum length for a namespace.
 	 */
 	const NAMESPACE_MIN_LENGTH = 5;
+
+	/**
+	 * Maximum length for a namespace.
+	 *
+	 * It seems reasonable to limit the namespace to 96 characters, as that is the maximum safe
+	 * length for a transient key.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+	 *
+	 * @since 1.9.0
+	 *
+	 * @const int Maximum length for a namespace.
+	 */
+	const NAMESPACE_MAX_LENGTH = 96;
 
 	/**
 	 * These namespaces cannot be used, lest they result in confusion.
@@ -196,20 +212,12 @@ final class Config {
 
 		if ( isset( $this->settings['vendor']['namespace'] ) ) {
 
-			/**
-			 * Require a namespace to be at least 5 characters long to avoid collisions.
-			 */
 			if ( strlen( $this->settings['vendor']['namespace'] ) < self::NAMESPACE_MIN_LENGTH ) {
 				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be longer than ' . self::NAMESPACE_MIN_LENGTH . ' characters.' );
 			}
 
-			/**
-			 * This seems like a reasonable max limit on the ns length.
-			 *
-			 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
-			 */
-			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
-				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+			if ( strlen( $this->settings['vendor']['namespace'] ) > self::NAMESPACE_MAX_LENGTH ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than ' . self::NAMESPACE_MAX_LENGTH . ' characters.' );
 			}
 
 			if ( in_array( strtolower( $this->settings['vendor']['namespace'] ), self::$reserved_namespaces, true ) ) {

@@ -129,6 +129,20 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			$this->assertEquals( 406, $exception->getCode() );
 			$this->assertMatchesRegularExpression( '/Namespace length must be longer than/', $exception->getMessage() );
 		}
+
+		try {
+			$invalid_config = $valid_config;
+			$invalid_config['vendor']['namespace'] = str_repeat( 'a', Config::NAMESPACE_MAX_LENGTH + 1 );
+
+			$config = new Config( $invalid_config );
+
+			$config->validate();
+
+			new TrustedLogin\Client( $config );
+		} catch ( \Exception $exception ) {
+			$this->assertEquals( 406, $exception->getCode() );
+			$this->assertMatchesRegularExpression( '/Namespace length must be shorter than/', $exception->getMessage() );
+		}
 	}
 
 	/**
