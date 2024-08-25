@@ -24,6 +24,15 @@ use WP_Error;
 final class Config {
 
 	/**
+	 * Minimum length for a namespace.
+	 *
+	 * @since 1.9.0
+	 *
+	 * @const int Minimum length for a namespace.
+	 */
+	const NAMESPACE_MIN_LENGTH = 5;
+
+	/**
 	 * These namespaces cannot be used, lest they result in confusion.
 	 *
 	 * @var string[] These namespaces cannot be used, lest they result in confusion.
@@ -186,6 +195,13 @@ final class Config {
 		}
 
 		if ( isset( $this->settings['vendor']['namespace'] ) ) {
+
+			/**
+			 * Require a namespace to be at least 5 characters long to avoid collisions.
+			 */
+			if ( strlen( $this->settings['vendor']['namespace'] ) < self::NAMESPACE_MIN_LENGTH ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be longer than ' . self::NAMESPACE_MIN_LENGTH . ' characters.' );
+			}
 
 			/**
 			 * This seems like a reasonable max limit on the ns length.

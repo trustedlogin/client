@@ -1,4 +1,7 @@
 <?php
+
+use TrustedLogin\Config;
+
 /**
  * Class TrustedLoginConfigTest
  *
@@ -89,6 +92,42 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			$this->assertMatchesRegularExpression( '/webhook_url/', $exception->getMessage() );
 			$this->assertMatchesRegularExpression( '/vendor\/support_url/', $exception->getMessage() );
 			$this->assertMatchesRegularExpression( '/vendor\/website/', $exception->getMessage() );
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Config::__construct
+	 * @covers \TrustedLogin\Config::validate
+	 */
+	public function test_config_namespace_length() {
+
+		$valid_config = array(
+			'auth'        => array(
+				'api_key' => 'not empty',
+			),
+			'webhook_url' => 'https://www.google.com',
+			'vendor'      => array(
+				'namespace'    => 'jonesbeach',
+				'title'        => 'Jones Beach Party',
+				'display_name' => null,
+				'email'        => 'beach@example.com',
+				'website'      => 'https://example.com',
+				'support_url'  => 'https://example.com',
+			),
+		);
+
+		try {
+			$invalid_config = $valid_config;
+			$invalid_config['vendor']['namespace'] = str_repeat( 'a', Config::NAMESPACE_MIN_LENGTH - 1 );
+
+			$config = new Config( $invalid_config );
+
+			$config->validate();
+
+			new TrustedLogin\Client( $config );
+		} catch ( \Exception $exception ) {
+			$this->assertEquals( 406, $exception->getCode() );
+			$this->assertMatchesRegularExpression( '/Namespace length must be longer than/', $exception->getMessage() );
 		}
 	}
 
