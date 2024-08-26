@@ -211,7 +211,6 @@ final class Config {
 		}
 
 		if ( isset( $this->settings['vendor']['namespace'] ) ) {
-
 			if ( strlen( $this->settings['vendor']['namespace'] ) < self::NAMESPACE_MIN_LENGTH ) {
 				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be longer than ' . self::NAMESPACE_MIN_LENGTH . ' characters.' );
 			}

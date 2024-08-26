@@ -1084,7 +1084,7 @@ final class Form {
 	 * @since 1.0.0
 	 *
 	 * @param array|string $atts {@see get_button()} for configuration array.
-	 * @param bool  $print_and_return Should results be printed and returned (true) or only returned (false).
+	 * @param bool         $print_and_return Should results be printed and returned (true) or only returned (false).
 	 *
 	 * @return string the HTML output
 	 */
