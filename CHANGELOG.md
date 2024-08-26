@@ -1,6 +1,6 @@
 # Changelog for TrustedLogin Client
 
-## develop
+## 1.9.0 (August 25, 2024)
 
 - Added a minimum `vendor/namespace` length of five characters to help prevent collisions with other instances
 - Fixed a flash of un-styled content on the Grant Access screens by outputting CSS earlier
@@ -9,7 +9,6 @@
   - Removed need for `--relative_images_dir` flag in `build-sass` script
   - Removed `src/assets/loading.svg`
   - Removed `src/assets/lock.svg`
-- Cleaned up use of PHP imports
 - Improved coding standards and documentation
 
 ## 1.8.0 (July 18, 2024)

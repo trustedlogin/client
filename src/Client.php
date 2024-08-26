@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.8.0';
+	const VERSION = '1.9.0';
 
 	/**
 	 * Instance of Config
