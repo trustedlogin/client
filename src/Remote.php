@@ -231,12 +231,20 @@ final class Remote {
 	 * Builds URL to API endpoints
 	 *
 	 * @since 1.0.0
+	 * @since 1.9.0 Throws an exception if the endpoint is not a string.
 	 *
 	 * @param string $endpoint Endpoint to hit on the API; example "sites" or "sites/{$site_identifier}".
+	 *
+	 * @throws Exception If the endpoint is not a string.
 	 *
 	 * @return string
 	 */
 	private function build_api_url( $endpoint = '' ) {
+
+		if ( ! is_string( $endpoint ) ) {
+			// Code for endpoint not being a string.
+			throw new Exception( 'Endpoint must be a string.', 400 );
+		}
 
 		/**
 		 * Modifies the endpoint URL for the TrustedLogin service.
