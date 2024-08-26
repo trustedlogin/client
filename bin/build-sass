@@ -8,9 +8,9 @@ call_user_func( function ( $version ) use ( $argv ) {
 	} elseif ( is_file( $autoload = getcwd() . '/../../autoload.php' ) ) {
 		require $autoload;
 	} elseif ( is_file( $autoload = __DIR__ . '/../../autoload.php' ) ) {
-		include __DIR__ . '/../../vendor/autoload.php';
+		require __DIR__ . '/../../vendor/autoload.php';
 	} elseif ( is_file( $autoload = __DIR__ . '/../autoload.php' ) ) {
-		include __DIR__ . '/../vendor/autoload.php';
+		require __DIR__ . '/../vendor/autoload.php';
 	} else {
 		fwrite( STDERR,
 			'You must set up the project dependencies, run the following commands:' . PHP_EOL .
@@ -49,7 +49,7 @@ call_user_func( function ( $version ) use ( $argv ) {
 
 	if ( $missing_args ) {
 		echo 'Missing required argument(s): `--' . implode( ', --', $missing_args ) . '`' . PHP_EOL;
-		exit;
+		exit( 1 );
 	}
 
 	$plugin_dirname = dirname( __FILE__, 5 );
@@ -70,7 +70,7 @@ call_user_func( function ( $version ) use ( $argv ) {
 
 	if ( ! file_exists( $assets_dir ) ) {
 		echo 'Assets directory does not exist: ' . $assets_dir . PHP_EOL;
-		exit;
+		exit( 1 );
 	}
 
 	$export_dir = $options['export_dir'] ?? $namespaced_dirname . '/src/assets/';
@@ -82,24 +82,12 @@ call_user_func( function ( $version ) use ( $argv ) {
 
 	if ( ! file_exists( $export_dir ) ) {
 		echo 'Export directory does not exist: ' . $export_dir . PHP_EOL;
-		exit;
-	}
-
-	$relative_images_dir_path = './';
-	if ( isset( $options['relative_images_dir'] ) ) {
-
-		$relative_images_dir_path = $options['relative_images_dir'];
-
-		// Add trailing slash if missing
-		if ( substr( $relative_images_dir_path, - 1 ) !== '/' ) {
-			$relative_images_dir_path .= '/';
-		}
+		exit( 1 );
 	}
 
 	$scss_namespace = strtolower( $options['namespace'] );
 	$scss_prefix    = '/*! TrustedLogin CSS dynamically compiled by ' . $argv[0] . '. See https://docs.trustedlogin.com  */';
 	$scss_prefix    .= '$namespace: "' . $scss_namespace . '" !default;' . PHP_EOL;
-	$scss_prefix .= '$path: "' . $relative_images_dir_path . '" !default;' . PHP_EOL;
 	$inputFile  = $assets_dir . 'src/trustedlogin.scss';
 	$outputFile = $export_dir . 'trustedlogin.css';
 
@@ -119,6 +107,7 @@ call_user_func( function ( $version ) use ( $argv ) {
 		}
 	} catch ( ScssPhp\ScssPhp\Exception\SassException $e ) {
 		echo $e->getMessage();
+		exit( 1 );
 	}
 
 }, '0.2' );

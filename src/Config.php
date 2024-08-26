@@ -24,6 +24,31 @@ use WP_Error;
 final class Config {
 
 	/**
+	 * Minimum length for a namespace.
+	 *
+	 * Setting a minimum length for a namespace helps prevent collisions with other instances.
+	 *
+	 * @since 1.9.0
+	 *
+	 * @const int Minimum length for a namespace.
+	 */
+	const NAMESPACE_MIN_LENGTH = 5;
+
+	/**
+	 * Maximum length for a namespace.
+	 *
+	 * It seems reasonable to limit the namespace to 96 characters, as that is the maximum safe
+	 * length for a transient key.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
+	 *
+	 * @since 1.9.0
+	 *
+	 * @const int Maximum length for a namespace.
+	 */
+	const NAMESPACE_MAX_LENGTH = 96;
+
+	/**
 	 * These namespaces cannot be used, lest they result in confusion.
 	 *
 	 * @var string[] These namespaces cannot be used, lest they result in confusion.
@@ -125,7 +150,7 @@ final class Config {
 	 *
 	 * @param array $settings Configuration array.
 	 *
-	 * @throws \Exception If the configuration array is empty.
+	 * @throws Exception If the configuration array is empty.
 	 */
 	public function __construct( array $settings = array() ) {
 
@@ -140,11 +165,12 @@ final class Config {
 	/**
 	 * Validates the configuration settings.
 	 *
-	 * @return true|\WP_Error[]
-	 * @throws \Exception If the configuration is invalid.
+	 * @return true|WP_Error[]
+	 * @throws Exception If the configuration is invalid.
 	 */
 	public function validate() {
 
+		// @phpstan-ignore-next-line
 		if ( in_array(
 			__NAMESPACE__,
 			array(
@@ -159,49 +185,47 @@ final class Config {
 		$errors = array();
 
 		if ( ! isset( $this->settings['auth']['api_key'] ) ) {
-			$errors[] = new \WP_Error( 'missing_configuration', 'You need to set an API key. Get yours at https://app.trustedlogin.com' );
+			$errors[] = new WP_Error( 'missing_configuration', 'You need to set an API key. Get yours at https://app.trustedlogin.com' );
 		}
 
 		if ( isset( $this->settings['vendor']['website'] ) ) {
 			if ( 'https://www.example.com' === $this->settings['vendor']['website'] && ! defined( 'TL_DOING_TESTS' ) ) {
-				$errors[] = new \WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
+				$errors[] = new WP_Error( 'missing_configuration', 'You need to configure the "website" URL to point to the URL where the Vendor plugin is installed.' );
 			}
 		}
 
 		foreach ( array( 'namespace', 'title', 'website', 'support_url', 'email' ) as $required_vendor_field ) {
 			if ( ! isset( $this->settings['vendor'][ $required_vendor_field ] ) ) {
-				$errors[] = new \WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
+				$errors[] = new WP_Error( 'missing_configuration', sprintf( 'Missing required configuration: `vendor/%s`', $required_vendor_field ) );
 			}
 		}
 
 		if ( isset( $this->settings['decay'] ) ) {
 			if ( ! is_int( $this->settings['decay'] ) ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be an integer (number of seconds).' );
 			} elseif ( $this->settings['decay'] > MONTH_IN_SECONDS ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'Decay must be less than or equal to 30 days.' );
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be less than or equal to 30 days.' );
 			} elseif ( $this->settings['decay'] < DAY_IN_SECONDS ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'Decay must be greater than 1 day.' );
+				$errors[] = new WP_Error( 'invalid_configuration', 'Decay must be greater than 1 day.' );
 			}
 		}
 
 		if ( isset( $this->settings['vendor']['namespace'] ) ) {
+			if ( strlen( $this->settings['vendor']['namespace'] ) < self::NAMESPACE_MIN_LENGTH ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be longer than ' . self::NAMESPACE_MIN_LENGTH . ' characters.' );
+			}
 
-			/**
-			 * This seems like a reasonable max limit on the ns length.
-			 *
-			 * @see https://developer.wordpress.org/reference/functions/set_transient/#more-information
-			 */
-			if ( strlen( $this->settings['vendor']['namespace'] ) > 96 ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'Namespace length must be shorter than 96 characters.' );
+			if ( strlen( $this->settings['vendor']['namespace'] ) > self::NAMESPACE_MAX_LENGTH ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Namespace length must be shorter than ' . self::NAMESPACE_MAX_LENGTH . ' characters.' );
 			}
 
 			if ( in_array( strtolower( $this->settings['vendor']['namespace'] ), self::$reserved_namespaces, true ) ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'The defined namespace is reserved.' );
+				$errors[] = new WP_Error( 'invalid_configuration', 'The defined namespace is reserved.' );
 			}
 		}
 
 		if ( isset( $this->settings['vendor']['email'] ) && ! filter_var( $this->settings['vendor']['email'], FILTER_VALIDATE_EMAIL ) ) {
-			$errors[] = new \WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
+			$errors[] = new WP_Error( 'invalid_configuration', 'An invalid `vendor/email` setting was passed to the TrustedLogin Client.' );
 		}
 
 		// TODO: Add ns collision check?
@@ -210,7 +234,7 @@ final class Config {
 			$value = $this->get_setting( $settings_key, '', $this->settings );
 			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
 			if ( $value && ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
-				$errors[] = new \WP_Error(
+				$errors[] = new WP_Error(
 					'invalid_configuration',
 					sprintf(
 						'An invalid `%s` setting was passed to the TrustedLogin Client: %s',
@@ -226,7 +250,7 @@ final class Config {
 
 			foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
 				if ( array_key_exists( $invalid_cap, $added_caps ) ) {
-					$errors[] = new \WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
+					$errors[] = new WP_Error( 'invalid_configuration', 'TrustedLogin users cannot be allowed to: ' . $invalid_cap );
 				}
 			}
 		} else {
@@ -237,7 +261,7 @@ final class Config {
 			$removed_caps = array_filter( $removed_caps );
 
 			if ( ! empty( $added_caps ) || ! empty( $removed_caps ) ) {
-				$errors[] = new \WP_Error( 'invalid_configuration', 'When `clone_role` is disabled, TrustedLogin cannot add or remove capabilities.' );
+				$errors[] = new WP_Error( 'invalid_configuration', 'When `clone_role` is disabled, TrustedLogin cannot add or remove capabilities.' );
 			}
 		}
 
@@ -309,7 +333,7 @@ final class Config {
 		}
 
 		if ( ! is_array( $config ) || empty( $config ) ) {
-			return array( new \WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
+			return array( new WP_Error( 'empty_configuration', 'Configuration array cannot be empty. See https://www.trustedlogin.com/configuration/ for more information.' ) );
 		}
 
 		$defaults = $this->get_default_settings();
@@ -379,7 +403,7 @@ final class Config {
 	 * @param mixed  $default_value - if no setting found or settings not init, return this value.
 	 * @param array  $settings Pass an array to fetch value for instead of using the default settings array.
 	 *
-	 * @return string|array
+	 * @return mixed The setting value.
 	 */
 	public function get_setting( $key, $default_value = null, $settings = array() ) {
 
@@ -424,7 +448,7 @@ final class Config {
 	 * @param string $name The name of the property to find.
 	 * @param string $default_value Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
-	 * @return null|string|mixed The value
+	 * @return mixed The value.
 	 */
 	private function get_multi_array_value( $source_array, $name, $default_value = null ) {
 

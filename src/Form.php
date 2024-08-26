@@ -14,8 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use WP_User;
-
 /**
  * Creates the TrustedLogin support user form.
  *  - Makes the HTML
@@ -178,6 +176,9 @@ final class Form {
 		$inline_css = $this->get_login_inline_css();
 		wp_add_inline_style( 'common', $inline_css );
 
+		// Print the styles before the HTML to prevent FOUC.
+		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 
@@ -232,6 +233,10 @@ final class Form {
 	 * @return void
 	 */
 	public function print_auth_screen() {
+
+		// Print the styles before the HTML to prevent FOUC.
+		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 	}
@@ -284,6 +289,7 @@ final class Form {
 	 */
 	public function get_auth_screen() {
 
+		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$content = array(
@@ -1077,8 +1083,8 @@ final class Form {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array $atts {@see get_button()} for configuration array.
-	 * @param bool  $print_and_return Should results be printed and returned (true) or only returned (false).
+	 * @param array|string $atts {@see get_button()} for configuration array.
+	 * @param bool         $print_and_return Should results be printed and returned (true) or only returned (false).
 	 *
 	 * @return string the HTML output
 	 */
@@ -1096,6 +1102,7 @@ final class Form {
 			$this->logging->log( 'Style is not registered. Make sure `trustedlogin` handle is added to "no-conflict" plugin settings.', __METHOD__, 'error' );
 		}
 
+		// Still enqueue the style, since the button may be generated separately from the auth page.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		$button_settings = array(
@@ -1403,7 +1410,7 @@ final class Form {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param bool $print_and_return Whether to print and return (true) or return (false) the results. Default: true.
+	 * @param bool|string $print_and_return Whether to print & return (true) or return (false) results. Default: true.
 	 *
 	 * @return string HTML table of active support users for vendor. Empty string if current user can't `create_users`
 	 */

@@ -1,11 +1,12 @@
 <?php
+
+use TrustedLogin\Config;
+
 /**
  * Class TrustedLoginConfigTest
  *
  * @package TrustedLogin\Client
  */
-
-
 class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 	/**
@@ -21,7 +22,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		);
 
 		try {
-			$config = new \TrustedLogin\Config(
+			$config = new Config(
 				array(
 					'vendor' => true,
 				)
@@ -39,7 +40,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 		}
 
 		try {
-			$config = new \TrustedLogin\Config(
+			$config = new Config(
 				array(
 					'vendor' => true,
 				)
@@ -79,7 +80,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			$invalid_website_url['vendor']['support_url'] = 'asdasdsd';
 			$invalid_website_url['vendor']['website']     = 'asdasdsd';
 
-			$config = new \TrustedLogin\Config( $invalid_website_url );
+			$config = new Config( $invalid_website_url );
 
 			$config->validate();
 
@@ -94,12 +95,62 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 	/**
 	 * @covers \TrustedLogin\Config::__construct
+	 * @covers \TrustedLogin\Config::validate
+	 */
+	public function test_config_namespace_length() {
+
+		$valid_config = array(
+			'auth'        => array(
+				'api_key' => 'not empty',
+			),
+			'webhook_url' => 'https://www.google.com',
+			'vendor'      => array(
+				'namespace'    => 'jonesbeach',
+				'title'        => 'Jones Beach Party',
+				'display_name' => null,
+				'email'        => 'beach@example.com',
+				'website'      => 'https://example.com',
+				'support_url'  => 'https://example.com',
+			),
+		);
+
+		try {
+			$invalid_config = $valid_config;
+			$invalid_config['vendor']['namespace'] = str_repeat( 'a', Config::NAMESPACE_MIN_LENGTH - 1 );
+
+			$config = new Config( $invalid_config );
+
+			$config->validate();
+
+			new TrustedLogin\Client( $config );
+		} catch ( \Exception $exception ) {
+			$this->assertEquals( 406, $exception->getCode() );
+			$this->assertMatchesRegularExpression( '/Namespace length must be longer than/', $exception->getMessage() );
+		}
+
+		try {
+			$invalid_config = $valid_config;
+			$invalid_config['vendor']['namespace'] = str_repeat( 'a', Config::NAMESPACE_MAX_LENGTH + 1 );
+
+			$config = new Config( $invalid_config );
+
+			$config->validate();
+
+			new TrustedLogin\Client( $config );
+		} catch ( \Exception $exception ) {
+			$this->assertEquals( 406, $exception->getCode() );
+			$this->assertMatchesRegularExpression( '/Namespace length must be shorter than/', $exception->getMessage() );
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Config::__construct
 	 * @expectedException \TypeError
 	 * @expectedExceptionCode 406
 	 */
 	public function test_config_not_array_string() {
 		$this->expectException(TypeError::class);
-		new \TrustedLogin\Config( 'asdsadsd' );
+		new Config( 'asdsadsd' );
 	}
 
 	/**
@@ -110,7 +161,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	public function test_config_not_array_object() {
 		$this->expectException( TypeError::class );
 		$object = new ArrayObject();
-		new \TrustedLogin\Config( $object );
+		new Config( $object );
 	}
 
 	/**
@@ -121,7 +172,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	public function test_config_empty_array() {
 		$this->expectException( Exception::class );
 		$this->expectExceptionCode( 400 );
-		new \TrustedLogin\Config( array() );
+		new Config( array() );
 	}
 
 	/**
@@ -132,7 +183,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	public function test_config_empty() {
 		$this->expectException( Exception::class );
 		$this->expectExceptionCode( 400 );
-		new \TrustedLogin\Config();
+		new Config();
 	}
 
 	/**
@@ -159,7 +210,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			'decay' => DAY_IN_SECONDS,
 		);
 
-		$config = new \TrustedLogin\Config( $config_array );
+		$config = new Config( $config_array );
 
 		$config->validate();
 
@@ -215,18 +266,18 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 			),
 		);
 
-		$config = new \TrustedLogin\Config( $valid_config );
+		$config = new Config( $valid_config );
 		$this->assertSame( ( time() + WEEK_IN_SECONDS ), $config->get_expiration_timestamp(), 'The method should have "WEEK_IN_SECONDS" set as default.' );
 		$this->assertSame( time() + DAY_IN_SECONDS, $config->get_expiration_timestamp( DAY_IN_SECONDS ) );
 		$this->assertSame( time() + WEEK_IN_SECONDS, $config->get_expiration_timestamp( WEEK_IN_SECONDS ) );
 		$this->assertSame( false, $config->get_expiration_timestamp( 0 ) );
 
 		$valid_config['decay'] = 12345;
-		$config_with_decay     = new \TrustedLogin\Config( $valid_config );
+		$config_with_decay     = new Config( $valid_config );
 		$this->assertSame( time() + 12345, $config_with_decay->get_expiration_timestamp() );
 
 		$valid_config['decay'] = 0;
-		$config_no_decay       = new \TrustedLogin\Config( $valid_config );
+		$config_no_decay       = new Config( $valid_config );
 		$this->assertSame( false, $config_no_decay->get_expiration_timestamp() );
 	}
 
@@ -235,7 +286,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 	 * Test the "create_ticket" setting.
 	 */
 	function test_get_setting_create_ticket() {
-		$config = new \TrustedLogin\Config(
+		$config = new Config(
 			array(
 				'auth'   => array(
 					'api_key' => 'not empty',
@@ -252,7 +303,7 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$this->assertSame(false , $config->get_setting( 'webhook/create_ticket' ) );
 
-		$config = new \TrustedLogin\Config( array(
+		$config = new Config( array(
 			'auth' => array(
 				'api_key' => 'not empty'
 			),

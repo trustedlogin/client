@@ -14,10 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Exception;
 use WP_Error;
-use WP_User;
-use WP_Admin_Bar;
 
 /**
  * Class Envelope
@@ -84,21 +81,21 @@ final class Envelope {
 
 		if ( ! is_string( $secret_id ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			return new \WP_Error( 'secret_not_string', 'The secret ID must be a string:' . print_r( $secret_id, true ) );
+			return new WP_Error( 'secret_not_string', 'The secret ID must be a string:' . print_r( $secret_id, true ) );
 		}
 
 		if ( ! is_string( $site_identifier_hash ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			return new \WP_Error( 'site_identifier_not_string', 'The site identifier must be a string:' . print_r( $site_identifier_hash, true ) );
+			return new WP_Error( 'site_identifier_not_string', 'The site identifier must be a string:' . print_r( $site_identifier_hash, true ) );
 		}
 
 		if ( ! is_string( $access_key ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			return new \WP_Error( 'access_key_not_string', 'The access key must be a string: ' . print_r( $access_key, true ) );
+			return new WP_Error( 'access_key_not_string', 'The access key must be a string: ' . print_r( $access_key, true ) );
 		}
 
 		if ( ! function_exists( 'sodium_bin2hex' ) ) {
-			return new \WP_Error( 'sodium_bin2hex_not_available', 'The sodium_bin2hex function is not available.' );
+			return new WP_Error( 'sodium_bin2hex_not_available', 'The sodium_bin2hex function is not available.' );
 		}
 
 		$e_keys = $this->encryption->generate_keys();

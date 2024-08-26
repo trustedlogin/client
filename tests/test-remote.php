@@ -13,11 +13,6 @@ use WP_Error;
 class TrustedLoginRemoteTest extends WP_UnitTestCase {
 
 	/**
-	 * @var TrustedLogin
-	 */
-	private $TrustedLogin;
-
-	/**
 	 * @var array
 	 */
 	private $config;
@@ -64,8 +59,8 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	 * @param string $name Method to set to accessible
 	 * @param string $reflection_class Class to reflect
 	 *
-	 * @return ReflectionMethod
-	 * @throws ReflectionException
+	 * @return \ReflectionMethod
+	 * @throws \ReflectionException
 	 */
 	private function _get_public_method( $name, $reflection_class = '\TrustedLogin\Remote' ) {
 
@@ -93,7 +88,7 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers TrustedLogin\Client::api_send()
+	 * @covers \TrustedLogin\Remote::send()
 	 */
 	public function test_api_send() {
 
@@ -147,16 +142,14 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @throws ReflectionException
-	 * @covers TrustedLogin\Client::build_api_url
+	 * @throws \ReflectionException
+	 * @covers \TrustedLogin\Remote::build_api_url
 	 */
 	public function test_build_api_url() {
 
 		$method = $this->_get_public_method( 'build_api_url' );
 
 		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote ) );
-
-		$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote, array( 'not-a-string' ) ) );
 
 		$this->assertEquals( \TrustedLogin\Remote::API_URL . 'pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
@@ -181,10 +174,17 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		$this->assertEquals( 'https://www.google.com/pathy-path', $method->invoke( $this->remote, 'pathy-path' ) );
 
 		remove_all_filters( 'trustedlogin/gravityview/api_url' );
+
+		try {
+			$this->assertEquals( \TrustedLogin\Remote::API_URL, $method->invoke( $this->remote, array( 'not-a-string' ) ) );
+		} catch ( \Exception $e ) {
+			$this->assertEquals( 'Endpoint must be a string.', $e->getMessage() );
+			$this->assertEquals( 400, $e->getCode() );
+		}
 	}
 
 	/**
-	 * @covers TrustedLogin::handle_response
+	 * @covers \TrustedLogin\Remote::handle_response()
 	 */
 	public function test_handle_response() {
 

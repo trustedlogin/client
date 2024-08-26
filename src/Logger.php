@@ -79,7 +79,7 @@ class Logger {
 	/**
 	 * Current minimum logging threshold
 	 *
-	 * @var integer
+	 * @var string
 	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	protected $logLevelThreshold = self::DEBUG;
@@ -112,7 +112,7 @@ class Logger {
 	/**
 	 * This holds the file handle for this instance's log file
 	 *
-	 * @var resource
+	 * @var resource|false
 	 * @phpcs suppress WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 	 */
 	private $fileHandle;
