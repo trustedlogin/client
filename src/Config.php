@@ -404,7 +404,7 @@ final class Config {
 	 * @param mixed  $default_value - if no setting found or settings not init, return this value.
 	 * @param array  $settings Pass an array to fetch value for instead of using the default settings array.
 	 *
-	 * @return string|array
+	 * @return mixed The setting value.
 	 */
 	public function get_setting( $key, $default_value = null, $settings = array() ) {
 
@@ -449,7 +449,7 @@ final class Config {
 	 * @param string $name The name of the property to find.
 	 * @param string $default_value Optional. Value that should be returned if the property is not set or empty. Defaults to null.
 	 *
-	 * @return null|string|mixed The value
+	 * @return mixed The value.
 	 */
 	private function get_multi_array_value( $source_array, $name, $default_value = null ) {
 
