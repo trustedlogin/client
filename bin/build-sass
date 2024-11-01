@@ -54,11 +54,20 @@ call_user_func( function ( $version ) use ( $argv ) {
 
 	$plugin_dirname = dirname( __FILE__, 5 );
 
-	if ( file_exists(  $plugin_dirname . '/vendor-namespaced/trustedlogin/client' ) ) {
-		$namespaced_dirname = $plugin_dirname . '/vendor-namespaced/trustedlogin/client';
-	} elseif ( file_exists(  $plugin_dirname . '/vendor-prefixed/trustedlogin/client' ) ) {
-		$namespaced_dirname = $plugin_dirname . '/vendor-prefixed/trustedlogin/client';
-	} else {
+	$possible_dirs = [
+		'/vendor-namespaced/trustedlogin/client',
+		'/vendor-prefixed/trustedlogin/client',
+		'/vendor_prefixed/trustedlogin/client',
+	];
+
+	foreach ( $possible_dirs as $dir ) {
+		if ( is_readable( $plugin_dirname . $dir ) ) {
+			$namespaced_dirname = $plugin_dirname . $dir;
+			break;
+		}
+	}
+
+	if ( empty( $namespaced_dirname ) ) {
 		$dirname = dirname( __FILE__, 2 );
 		$namespaced_dirname = str_replace( 'trustedlogin/client', $options['namespace'] . '/trustedlogin/client', $dirname );
 	}
