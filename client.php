@@ -54,6 +54,10 @@ $config     = array(
 		'create_ticket' => true,
 		'debug_data'    => true,
 	),
+	'record_sessions' => array(
+		'service' => 'posthog',
+		'key'     => 'phc_my_example_key',
+	),
 );
 $config     = new \TrustedLogin\Config( $config );
 try {

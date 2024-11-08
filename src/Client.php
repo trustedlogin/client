@@ -159,6 +159,8 @@ final class Client {
 
 		$this->remote = new Remote( $this->config, $this->logging );
 
+		$this->session_recording = new SessionRecording( $this->config, $this->logging, $this->support_user );
+
 		if ( $init ) {
 			$this->init();
 		}
@@ -208,6 +210,7 @@ final class Client {
 		$this->remote->init();
 		$this->cron->init();
 		$this->ajax->init();
+		$this->session_recording->init();
 	}
 
 	/**

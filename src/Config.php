@@ -127,6 +127,10 @@ final class Config {
 			'debug_data'    => false,
 			'create_ticket' => false,
 		),
+		'record_sessions' => array(
+			'service' => null,
+			'key' => null,
+		),
 	);
 
 	/**
@@ -229,7 +233,6 @@ final class Config {
 		}
 
 		// TODO: Add ns collision check?
-
 		foreach ( array( 'webhook/url', 'webhook_url', 'vendor/support_url', 'vendor/website' ) as $settings_key ) {
 			$value = $this->get_setting( $settings_key, '', $this->settings );
 			$url   = wp_kses_bad_protocol( $value, array( 'http', 'https' ) );
@@ -242,6 +245,18 @@ final class Config {
 						print_r( $this->get_setting( $settings_key, null, $this->settings ), true ) // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 					)
 				);
+			}
+		}
+
+		// Check if recording service is valid
+		$record_sessions_setting = $this->get_setting( 'record_sessions', false, $this->settings );
+		if ( ! empty( $record_sessions_setting ) ) {
+			$recording_service = $this->get_setting( 'record_sessions/service', null, $this->settings );
+			if ( empty( $recording_service ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Recording service is not set.' );
+			}
+			if ( ! array_key_exists( $recording_service, SessionRecording::$services ) ) {
+				$errors[] = new WP_Error( 'invalid_configuration', 'Recording service is not one of the supported services.' );
 			}
 		}
 
