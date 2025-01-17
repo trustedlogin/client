@@ -322,6 +322,7 @@ final class Client {
 
 		$return_data = array(
 			'type'         => 'new',
+			'key'          => $this->site_access->get_access_key(),
 			'site_url'     => get_site_url(),
 			'endpoint'     => $endpoint_hash,
 			'identifier'   => $site_identifier_hash,

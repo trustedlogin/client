@@ -5,7 +5,25 @@
 
 	var $body = $( 'body' ), namespace = tl_obj.vendor.namespace,
 		$tl_container = $( '.tl-' + namespace + '-auth' ), copy_button_timer = null,
-		second_status = null;
+		second_status = null, key = $( '#tl-' + namespace + '-access-key', $tl_container ).val(),
+		urlParams = new URLSearchParams( window.location.search );
+
+	if ( window.opener && key && ! urlParams.has( 'revoking' ) ) {
+		window.opener.postMessage( { key: key, type: 'granted' }, '*' );
+	}
+
+	function hideWindow() {
+		window.resizeTo( 1, 1 );
+		window.moveTo( screen.width + 500, screen.height + 500 );
+		window.opener.focus();
+	}
+
+	$body.on( 'click', '.tl-client-revoke-button', function ( e ) {
+		if ( window.opener ) {
+			window.opener.postMessage( { type: 'revoking' }, '*' );
+			hideWindow();
+		}
+	} );
 
 	$body.on( 'click', tl_obj.selector, function ( e ) {
 
@@ -27,6 +45,10 @@
 	} );
 
 	function grantAccess( $button ) {
+		if ( window.opener ) {
+			window.opener.postMessage( { type: 'granting' }, '*' );
+			hideWindow();
+		}
 
 		$button.addClass( 'disabled' );
 
@@ -104,6 +126,10 @@
 			success: remote_success,
 			error: remote_error
 		} ).always( function ( response ) {
+			if ( window.opener ) {
+				var key = response && response.data && response.data.key ? response.data.key : '';
+				window.opener.postMessage( { key: key, type: 'granted' }, '*' );
+			}
 
 			if ( !tl_obj.debug ) {
 				return;
