@@ -3,9 +3,12 @@
 
 	'use strict';
 
-	var $body = $( 'body' ), namespace = tl_obj.vendor.namespace,
-		$tl_container = $( '.tl-' + namespace + '-auth' ), copy_button_timer = null,
-		second_status = null, key = $( '#tl-' + namespace + '-access-key', $tl_container ).val(),
+	var $body = $( 'body' ), 
+		namespace = tl_obj.vendor.namespace,
+		$tl_container = $( '.tl-' + namespace + '-auth' ), 
+		copy_button_timer = null,
+		second_status = null, 
+		key = $( '#tl-' + namespace + '-access-key', $tl_container ).val(),
 		urlParams = new URLSearchParams( window.location.search );
 
 	if ( window.opener && key && ! urlParams.has( 'revoking' ) ) {
