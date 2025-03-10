@@ -1472,6 +1472,7 @@ EOD;
 
 		<div class="tl-%1\$s-auth__accesskey_wrapper">
 			<input id="tl-%1\$s-access-key" type="text" value="%4\$s" size="64" class="tl-%1\$s-auth__accesskey_field code" aria-label="%3\$s">
+			<input id="tl-%1\$s-access-expiration" type="hidden" value="%9\$s">
 			<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button" aria-live="off" title="%7\$s"><span class="screen-reader-text">%5\$s</span></button>
 		</div>
 	</%6\$s>
@@ -1494,7 +1495,9 @@ EOD;
 				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
 				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) )
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'gk-gravitycalendar' ), esc_html( $this->support_user->get_first()->display_name ) ),
+				/* %9$s */
+				esc_attr( $this->support_user->get_expiration( $this->support_user->get_first() ) )
 			);
 		}
 

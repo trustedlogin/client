@@ -9,10 +9,15 @@
 		copy_button_timer = null,
 		second_status = null, 
 		key = $( '#tl-' + namespace + '-access-key', $tl_container ).val(),
+		expiration = $( '#tl-' + namespace + '-access-expiration', $tl_container ).val(),
 		urlParams = new URLSearchParams( window.location.search );
 
 	if ( window.opener && key && ! urlParams.has( 'revoking' ) ) {
-		window.opener.postMessage( { key: key, type: 'granted' }, '*' );
+		window.opener.postMessage( {
+			key: key,
+			expiration: expiration,
+			type: 'granted'
+		}, '*' );
 	}
 
 	function hideWindow() {
@@ -131,7 +136,12 @@
 		} ).always( function ( response ) {
 			if ( window.opener ) {
 				var key = response && response.data && response.data.key ? response.data.key : '';
-				window.opener.postMessage( { key: key, type: 'granted' }, '*' );
+				var expiry = response && response.data && response.data.expiry ? response.data.expiry : '';
+				window.opener.postMessage( {
+					key: key,
+					expiration: expiry,
+					type: 'granted'
+				}, '*' );
 			}
 
 			if ( !tl_obj.debug ) {

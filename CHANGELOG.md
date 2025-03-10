@@ -1,5 +1,11 @@
 # Changelog for TrustedLogin Client
 
+## 1.10 (March 10, 2025)
+
+- Added postMessage response to the opener when access is granted or revoked
+- Added hidden input to store the expiration date of the support user
+- Added expiration to the message sent to the opener when access is granted
+
 ## 1.9.0 (August 25, 2024)
 
 - Added a minimum `vendor/namespace` length of five characters to help prevent collisions with other instances
