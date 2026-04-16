@@ -11,7 +11,7 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
 
 type VendorState = {
     form_id:       string;
@@ -25,7 +25,6 @@ const VENDOR_STATE: VendorState = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
 );
 
-const E2E_DIR = path.resolve( __dirname, '..' );
 
 async function loginClientAdmin( ctx: BrowserContext ) {
     const p = await ctx.newPage();
@@ -40,35 +39,10 @@ async function loginClientAdmin( ctx: BrowserContext ) {
     await p.close();
 }
 
-/**
- * Reset the client site to a clean baseline: no support users, no lockdown,
- * no used-accesskey cache, no stale endpoint, no stale feedback transient.
- *
- * Utils::set_transient in trustedlogin-client writes to OPTIONS (not WP core's
- * transient API), so delete_transient() is insufficient — we delete the
- * underlying site_option rows directly.
- */
-function resetClientState() {
-    try {
-        execSync(
-            `docker compose run --rm -T wp-cli-client wp eval '`
-            + `require_once ABSPATH . "wp-admin/includes/user.php";`
-            + `foreach ( get_users( array( "meta_key" => "tl_pro-block-builder_id" ) ) as $u ) { wp_delete_user( $u->ID ); }`
-            + `delete_site_option( "tl-pro-block-builder-in_lockdown" );`
-            + `delete_site_option( "tl-pro-block-builder-used_accesskeys" );`
-            + `delete_site_option( "tl_pro-block-builder_endpoint" );`
-            + `delete_site_option( "trustedlogin_pro-block-builder_login_error" );`
-            + `echo "ok";`
-            + `'`,
-            { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 20000 }
-        );
-    } catch ( e ) { /* best effort */ }
-
-    // Also wipe fake-saas state so old envelopes don't match new grants.
-    try {
-        execSync( `curl -sS -X POST http://localhost:8003/__reset >/dev/null`, { timeout: 5000 } );
-    } catch ( e ) { /* best effort */ }
-}
+// Reset the client site + fake-saas from the shared helper. No more
+// silent-catch best-effort cleanup: a failed reset aborts the test so
+// we don't build on stale state.
+const resetClientState = resetClientStateShared;
 
 /**
  * Drive a full grant flow against the GF form page so the client site has
@@ -110,31 +84,29 @@ async function grantAndCaptureSecrets( ctx: BrowserContext ): Promise<{
     // Use AccessKeyLogin::handle() on the VENDOR side to decrypt the
     // envelope the same way the production flow does. That gives us the
     // unhashed identifier + endpoint the client expects on its POST.
-    const raw = execSync(
-        `docker compose run --rm -T wp-cli-vendor wp eval '`
+    const out = wpCli(
+        'wp-cli-vendor',
         // handle() enforces role-based authorization (must be a team-approved
         // role). wp-cli runs without an authenticated user by default, so we
         // spin up the admin explicitly. Matches how a support agent would be
         // running the flow through wp-admin.
-        + `wp_set_current_user( get_user_by( "login", "admin" )->ID );`
+        `wp_set_current_user( get_user_by( "login", "admin" )->ID );`
         + `$parts = ( new \\TrustedLogin\\Vendor\\AccessKeyLogin() )->handle( array(`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCOUNT_ID_INPUT_NAME => "999",`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCESS_KEY_INPUT_NAME => ${ JSON.stringify( key ) },`
         + `) );`
         + `if ( is_wp_error( $parts ) ) { echo "ERR:" . $parts->get_error_code() . ":" . $parts->get_error_message(); exit; }`
         + `$first = reset( $parts );`
-        + `echo $first["endpoint"] . "|" . $first["identifier"];`
-        + `'`,
-        { cwd: E2E_DIR, encoding: 'utf8', timeout: 20000 }
+        + `echo $first["endpoint"] . "|" . $first["identifier"];`,
+        'grantAndCaptureSecrets:handle',
     );
-    const lines = raw.split( '\n' ).filter( l => l && ! /^\s/.test( l ) && ! /^Container/.test( l ) );
-    const last  = lines[ lines.length - 1 ];
-    if ( last.startsWith( 'ERR:' ) ) {
-        throw new Error( 'handle() failed: ' + last );
+
+    if ( out.startsWith( 'ERR:' ) ) {
+        throw new Error( 'AccessKeyLogin::handle() failed: ' + out );
     }
-    const [ endpoint, identifier ] = last.split( '|' );
+    const [ endpoint, identifier ] = out.split( '|' );
     if ( ! endpoint || ! identifier ) {
-        throw new Error( 'Failed to parse handle() output: ' + raw );
+        throw new Error( 'Failed to parse handle() output: ' + out );
     }
 
     return { key, endpoint, identifier };
@@ -212,23 +184,26 @@ test( 'already-logged-in agent → info notice explains skipped login', async ( 
 // ---------------------------------------------------------------------------
 
 test( 'unknown identifier with correct endpoint → security_check_failed feedback', async ( { browser } ) => {
-    // Submitting a correctly-shaped (128-char hex) identifier that maps to
-    // no support user drives SecurityChecks::verify() → get_secret_id()
-    // returns null → check_approved_identifier() hits the SaaS with an
-    // empty secret_id and 404s → verify returns WP_Error →
+    // Submitting a correctly-shaped identifier that maps to no support
+    // user drives SecurityChecks::verify() → get_secret_id() returns
+    // null → check_approved_identifier() hits the SaaS with an empty
+    // secret_id and 404s → verify returns WP_Error →
     // fail_login('security_check_failed') fires.
     //
-    // Scope: this test only covers the `security_check_failed` code path
-    // (the common case). The `login_failed` path fires after verify()
-    // passes but before login completes; hand-crafting a valid-to-verify
-    // identifier that subsequently fails login requires privileged state
-    // manipulation the e2e stack can't reliably do, so it's left for
-    // integration-level testing.
+    // The identifier is generated by the CLIENT's own randomness helper
+    // (same entropy + hex encoding a real grant would produce), not a
+    // lazy 'a'.repeat() — so if someone later adds entropy validation
+    // to verify(), this test still exercises a realistic shape.
     const ctx = await browser.newContext();
     const { endpoint } = await grantAndCaptureSecrets( ctx );
     await ctx.close();
 
-    const unknownIdentifier = 'a'.repeat( 128 );
+    const unknownIdentifier = wpCli(
+        'wp-cli-client',
+        `echo bin2hex( random_bytes( 64 ) );`,
+        'generate 128-char random identifier',
+    );
+    expect( unknownIdentifier ).toMatch( /^[a-f0-9]{128}$/ );
 
     const agentCtx = await browser.newContext();
     const p = await agentCtx.newPage();
@@ -273,13 +248,13 @@ test( 'expired support user → login_failed feedback path', async ( { browser }
     await ctx.close();
 
     // Age out the support user by 24h in the past.
-    execSync(
-        `docker compose run --rm -T wp-cli-client wp eval '`
-        + `$u = get_users( array( "meta_key" => "tl_pro-block-builder_id", "number" => 1 ) );`
-        + `if ( $u ) { update_user_option( $u[0]->ID, "wp_tl_pro-block-builder_expires", time() - 86400, true ); echo "aged"; }`
-        + `'`,
-        { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 15000 }
+    const aged = wpCli(
+        'wp-cli-client',
+        `$u = get_users( array( "meta_key" => "tl_pro-block-builder_id", "number" => 1 ) );`
+        + `if ( $u ) { update_user_option( $u[0]->ID, "wp_tl_pro-block-builder_expires", time() - 86400, true ); echo "aged"; } else { echo "nouser"; }`,
+        'expire support user',
     );
+    expect( aged, 'expected to find the newly-granted support user' ).toBe( 'aged' );
 
     const agentCtx = await browser.newContext();
     const p = await agentCtx.newPage();
@@ -381,7 +356,12 @@ test( 'failure message is one-hop: consumed after first render', async ( { brows
     const { endpoint } = await grantAndCaptureSecrets( grantCtx );
     await grantCtx.close();
 
-    const bogusIdentifier = 'a'.repeat( 128 );
+    const bogusIdentifier = wpCli(
+        'wp-cli-client',
+        `echo bin2hex( random_bytes( 64 ) );`,
+        'generate random identifier for one-hop test',
+    );
+    expect( bogusIdentifier ).toMatch( /^[a-f0-9]{128}$/ );
 
     const agentCtx = await browser.newContext();
     const p = await agentCtx.newPage();

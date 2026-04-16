@@ -14,7 +14,7 @@
 import { test, expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { wpCli, flushCaches } from './_helpers';
 
 type VendorState = {
     form_id:       string;
@@ -26,23 +26,55 @@ const VENDOR_STATE: VendorState = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
 );
 
-const E2E_DIR = path.resolve( __dirname, '..' );
-
 /**
  * Mutate the TL field on form {form_id} via wp-cli eval. `updates` is merged
  * into field[0] (the TrustedLogin field). Example: {labelPlacement: "left_label"}.
+ *
+ * Failures now surface as test errors (loud) rather than silently
+ * continuing with stale form data — that silent-continue behaviour was
+ * the root cause of the "custom field label" flake: when wp-cli would
+ * exit non-zero (e.g. PHP warning converted to error, container race),
+ * the next page.goto read the pre-update form and asserted against it.
+ *
+ * We also flush the vendor's WP object cache + opcache after every
+ * update so the next HTTP request reads the fresh form, not a cached
+ * snapshot from the previous run.
  */
-function updateTLField( updates: Record<string, string> ) {
+function updateTLField( updates: Record<string, any> ) {
     const formId = VENDOR_STATE.form_id;
+
+    // Find the TrustedLogin field by TYPE, not by index. Forms can
+    // accumulate extra fields across bootstraps or manual edits — the
+    // index-0 shortcut once masked a real bug where updates were
+    // applied to a sibling website field while the TL field stayed
+    // unchanged, and the test failed at render-time with a stale
+    // label. Locating by `$f->type === "trustedlogin"` is stable.
     const phpUpdates = Object.entries( updates )
-        .map( ( [ key, value ] ) => `$form["fields"][0]->${ key } = ${ JSON.stringify( value ) };` )
+        .map( ( [ key, value ] ) => `$f->${ key } = ${ JSON.stringify( value ) };` )
         .join( ' ' );
-    const cmd = `docker compose run --rm -T wp-cli-vendor wp eval '`
-        + `$form = GFAPI::get_form( ${ formId } ); `
+
+    const out = wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ formId } ); `
+        + `if ( ! $form ) { echo "ERR: form ${ formId } not found"; exit; } `
+        + `$idx = null; foreach ( $form["fields"] as $i => $f ) { if ( $f->type === "trustedlogin" ) { $idx = $i; break; } } `
+        + `if ( $idx === null ) { echo "ERR: no trustedlogin field in form ${ formId }"; exit; } `
+        + `$f = $form["fields"][ $idx ]; `
         + phpUpdates + ' '
-        + `GFAPI::update_form( $form ); echo "ok";`
-        + `'`;
-    execSync( cmd, { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 30_000 } );
+        + `$form["fields"][ $idx ] = $f; `
+        + `$res = GFAPI::update_form( $form ); `
+        + `if ( is_wp_error( $res ) ) { echo "ERR: " . $res->get_error_code(); exit; } `
+        + `echo "ok:idx=" . $idx . ":label=" . $f->label;`,
+        'updateTLField:' + Object.keys( updates ).join( ',' ),
+    );
+
+    if ( ! out.startsWith( 'ok:' ) ) {
+        throw new Error( `updateTLField did not return ok. Got: ${ out }` );
+    }
+
+    // GF's cache and PHP opcache can both hold the pre-update form.
+    // Flush both so the next HTTP request renders the new field state.
+    flushCaches( 'wp-cli-vendor' );
 }
 
 async function fieldClassList( page: Page ): Promise<string> {
@@ -54,16 +86,20 @@ test.describe.configure( { mode: 'serial' } );
 // Restore default state (top_label + default field label + default heading)
 // after this spec so other spec files don't inherit a mutated field.
 test.afterAll( async () => {
-    execSync(
-        `docker compose run --rm -T wp-cli-vendor wp eval '`
-        + `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
-        + `$form["fields"][0]->label = "Site URL"; `
-        + `$form["fields"][0]->labelPlacement = ""; `
-        + `unset( $form["fields"][0]->tlHeadingText ); `
-        + `GFAPI::update_form( $form ); echo "ok";`
-        + `'`,
-        { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 30_000 }
+    wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
+        + `foreach ( $form["fields"] as $i => $f ) { `
+        + `  if ( $f->type === "trustedlogin" ) { `
+        + `    $form["fields"][ $i ]->label = "Site URL"; `
+        + `    $form["fields"][ $i ]->labelPlacement = ""; `
+        + `    unset( $form["fields"][ $i ]->tlHeadingText ); `
+        + `  } `
+        + `} `
+        + `GFAPI::update_form( $form ); echo "ok";`,
+        'gf-labels.afterAll',
     );
+    flushCaches( 'wp-cli-vendor' );
 } );
 
 test( 'default — label is "Site URL" and class is tl-label-above', async ( { page } ) => {
@@ -80,7 +116,23 @@ test( 'default — label is "Site URL" and class is tl-label-above', async ( { p
 test( 'custom field label renders through from GF form editor', async ( { page } ) => {
     updateTLField( { label: 'Where should we log in?', labelPlacement: '' } );
 
-    await page.goto( VENDOR_STATE.form_page_url, { waitUntil: 'domcontentloaded' } );
+    // Sanity check the DB actually carries the updated label before we
+    // rely on the page rendering to reflect it — previous flakes came
+    // from silently-swallowed wp-cli errors leaving the form unchanged.
+    const dbLabel = wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
+        + `foreach ( $form["fields"] as $f ) { if ( $f->type === "trustedlogin" ) { echo $f->label; break; } }`,
+        'read label post-update',
+    );
+    expect( dbLabel, 'label must be persisted in the DB before asserting page render' )
+        .toBe( 'Where should we log in?' );
+
+    // Bust any HTTP caches with a cache-buster query param so repeated
+    // test runs don't get served a stale response by Apache or an
+    // upstream opcache-backed output cache.
+    const url = VENDOR_STATE.form_page_url + '?_cb=' + Date.now();
+    await page.goto( url, { waitUntil: 'domcontentloaded' } );
     await page.locator( '.tl-grant-access' ).waitFor( { state: 'visible' } );
 
     await expect( page.locator( '.tl-field .tl-field-label' ) ).toHaveText( 'Where should we log in?' );
@@ -149,15 +201,18 @@ test( 'labelPlacement "hidden_label" sets tl-label-hidden and hides the label vi
 } );
 
 test( 'heading text — default "Grant Access with TrustedLogin" renders', async ( { page } ) => {
-    // Reset tlHeadingText to null via a direct property unset.
-    execSync(
-        `docker compose run --rm -T wp-cli-vendor wp eval '`
-        + `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
-        + `unset( $form["fields"][0]->tlHeadingText ); `
-        + `GFAPI::update_form( $form ); echo "ok";`
-        + `'`,
-        { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 30_000 }
+    // Reset tlHeadingText on the TL field (found by type, not index)
+    // so an added sibling field can't shift the target.
+    wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
+        + `foreach ( $form["fields"] as $i => $f ) { `
+        + `  if ( $f->type === "trustedlogin" ) { unset( $form["fields"][ $i ]->tlHeadingText ); } `
+        + `} `
+        + `GFAPI::update_form( $form ); echo "ok";`,
+        'unset tlHeadingText',
     );
+    flushCaches( 'wp-cli-vendor' );
 
     await page.goto( VENDOR_STATE.form_page_url, { waitUntil: 'domcontentloaded' } );
     await page.locator( '.tl-grant-access' ).waitFor( { state: 'visible' } );
@@ -191,14 +246,14 @@ test( 'heading text — empty string suppresses the header entirely', async ( { 
 test( 'form-level labelPlacement flows through when field has no override', async ( { page } ) => {
     // Clear the field-level override, set form-level only.
     updateTLField( { labelPlacement: '' } );
-    execSync(
-        `docker compose run --rm -T wp-cli-vendor wp eval '`
-        + `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
+    wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
         + `$form["labelPlacement"] = "hidden_label"; `
-        + `GFAPI::update_form( $form ); echo "ok";`
-        + `'`,
-        { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 30_000 }
+        + `GFAPI::update_form( $form ); echo "ok";`,
+        'set form-level labelPlacement',
     );
+    flushCaches( 'wp-cli-vendor' );
 
     await page.goto( VENDOR_STATE.form_page_url, { waitUntil: 'domcontentloaded' } );
     await page.locator( '.tl-grant-access' ).waitFor( { state: 'visible' } );
@@ -206,12 +261,12 @@ test( 'form-level labelPlacement flows through when field has no override', asyn
     expect( await fieldClassList( page ) ).toContain( 'tl-label-hidden' );
 
     // Reset form-level labelPlacement.
-    execSync(
-        `docker compose run --rm -T wp-cli-vendor wp eval '`
-        + `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
+    wpCli(
+        'wp-cli-vendor',
+        `$form = GFAPI::get_form( ${ VENDOR_STATE.form_id } ); `
         + `$form["labelPlacement"] = "top_label"; `
-        + `GFAPI::update_form( $form ); echo "ok";`
-        + `'`,
-        { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 30_000 }
+        + `GFAPI::update_form( $form ); echo "ok";`,
+        'reset form-level labelPlacement',
     );
+    flushCaches( 'wp-cli-vendor' );
 } );

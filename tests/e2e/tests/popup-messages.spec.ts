@@ -99,40 +99,28 @@ async function readFakeSaaSState( page: Page ): Promise<any> {
     return await res.json();
 }
 
+import { wpCli } from './_helpers';
+
 /**
  * Nuke any existing trustedlogin support users on the client site via
  * wp-cli (exec'd inside the wp-cli-client docker container). Each test
  * starts fresh so load-time `granted` messages don't fire before we're
- * ready. Uses child_process.execSync for simplicity — this path is not
- * in Playwright's evented world.
+ * ready.
  */
-import { execSync } from 'child_process';
-
-// tests/e2e/ is the docker-compose root. __dirname is tests/e2e/tests/, so
-// the compose file lives one level up regardless of where the suite is run.
-const E2E_DIR = path.resolve( __dirname, '..' );
-
 async function revokeIfGranted( _context: BrowserContext ) {
     // Delete any user carrying trustedlogin metadata for the pro-block-builder
     // namespace — this matches users regardless of their WP role, which is
-    // important since a user may have been re-roled by a prior test.
-    try {
-        execSync(
-            `docker compose run --rm -T wp-cli-client wp eval '` +
-            `require_once ABSPATH . "wp-admin/includes/user.php";` +
-            `$users = get_users( array( "meta_key" => "tl_pro-block-builder_id" ) );` +
-            `foreach ( $users as $u ) { wp_delete_user( $u->ID ); }` +
-            `echo count( $users );` +
-            `'`,
-            {
-                cwd:     E2E_DIR,
-                stdio:   [ 'ignore', 'ignore', 'ignore' ],
-                timeout: 15000,
-            }
-        );
-    } catch ( e ) {
-        // Don't fail test setup on cleanup error; the test itself will surface issues.
-    }
+    // important since a user may have been re-roled by a prior test. If
+    // wp-cli fails (container death / schema change), the error surfaces
+    // rather than leaving the next test to run on stale state.
+    wpCli(
+        'wp-cli-client',
+        `require_once ABSPATH . "wp-admin/includes/user.php"; `
+        + `$users = get_users( array( "meta_key" => "tl_pro-block-builder_id" ) ); `
+        + `foreach ( $users as $u ) { wp_delete_user( $u->ID ); } `
+        + `echo count( $users );`,
+        'revokeIfGranted',
+    );
 }
 
 /**

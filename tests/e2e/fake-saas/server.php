@@ -85,6 +85,14 @@ $endpoint = substr( $path, strlen( '/api/v1/' ) );
 
 $state = load_state();
 
+// Drop expired envelopes from the working state so the lookup endpoints
+// below can't return something the real SaaS would have purged. We
+// don't persist the pruned state — an expired envelope stays findable
+// in /__state for test debugging until a mutating request evicts it.
+function is_expired( array $entry ): bool {
+	return isset( $entry['expires_at'] ) && (int) $entry['expires_at'] <= time();
+}
+
 // 1. POST sites/ — client posts a sealed envelope.
 //
 // The client envelope (see ReplaceMe\TrustedLogin\Envelope::get) contains:
@@ -108,6 +116,13 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 	if ( ! $access_key ) {
 		reply( 400, array( 'error' => 'Missing accessKey in body' ) );
 	}
+	// Envelope TTL (seconds) — defaults to 1 hour, overridable per request
+	// via the `expiresIn` field the client already sends.
+	// The real SaaS expires envelopes; replaying a consumed / aged key
+	// must fail. Tests that need to exercise expiry can POST with a short
+	// expiresIn (e.g. 1) and then wait.
+	$ttl = isset( $body['expiresIn'] ) ? max( 1, (int) $body['expiresIn'] ) : 3600;
+
 	// Key the stored envelope on the client-submitted `secretId`.
 	//
 	// The real TrustedLogin SaaS MUST record whatever secret_id the client
@@ -124,6 +139,7 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 	// Fallback to a random ID is kept so the fake-saas stays robust if a
 	// test ever posts a malformed envelope without secretId.
 	$secret_id                          = ! empty( $body['secretId'] ) ? (string) $body['secretId'] : bin2hex( random_bytes( 16 ) );
+	$now                                = time();
 	$state['envelopes'][ $access_key ] = array(
 		'secret_id'          => $secret_id,
 		'envelope_for_vendor' => array(
@@ -135,7 +151,8 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 			'nonce'      => $body['nonce'] ?? '',
 			'metaData'   => $body['metaData'] ?? array(),
 		),
-		'created_at'         => time(),
+		'created_at'         => $now,
+		'expires_at'         => $now + $ttl,
 	);
 	save_state( $state );
 	reply( 201, array( 'success' => true, 'siteId' => $secret_id ) );
@@ -160,9 +177,13 @@ if ( $method === 'POST' && preg_match( '#^accounts/(\d+)/sites/?$#', $endpoint, 
 	$keys  = $body['searchKeys'] ?? array();
 	$found = array();
 	foreach ( $keys as $key ) {
-		if ( isset( $state['envelopes'][ $key ] ) ) {
-			$found[ $key ] = array( $state['envelopes'][ $key ]['secret_id'] );
+		if ( ! isset( $state['envelopes'][ $key ] ) ) {
+			continue;
 		}
+		if ( is_expired( $state['envelopes'][ $key ] ) ) {
+			continue;
+		}
+		$found[ $key ] = array( $state['envelopes'][ $key ]['secret_id'] );
 	}
 	if ( empty( $found ) ) {
 		// 204 No Content — the connector treats this as "no sites found".
@@ -176,23 +197,31 @@ if ( $method === 'POST' && preg_match( '#^accounts/(\d+)/sites/?$#', $endpoint, 
 if ( $method === 'POST' && preg_match( '#^sites/(\d+)/([a-f0-9]+)/get-envelope$#', $endpoint, $m ) ) {
 	$secret_id = $m[2];
 	foreach ( $state['envelopes'] as $entry ) {
-		if ( $entry['secret_id'] === $secret_id ) {
-			reply( 200, $entry['envelope_for_vendor'] );
+		if ( $entry['secret_id'] !== $secret_id ) {
+			continue;
 		}
+		if ( is_expired( $entry ) ) {
+			reply( 410, array( 'error' => 'Envelope expired.' ) );
+		}
+		reply( 200, $entry['envelope_for_vendor'] );
 	}
 	reply( 404, array( 'error' => 'Envelope not found for secret_id ' . $secret_id ) );
 }
 
 // 4b. POST sites/{secret_id}/verify-identifier — client-side SecurityChecks
 //     pings this to confirm the identifier hasn't been flagged by the SaaS
-//     as suspicious. We accept any known secret_id. Unknown → 404 so the
-//     client flags it as a failed verification.
+//     as suspicious. Expired envelopes are treated as unknown so replays
+//     past the TTL fail exactly like they would against the real SaaS.
 if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/verify-identifier$#', $endpoint, $m ) ) {
 	$secret_id = $m[1];
 	foreach ( $state['envelopes'] as $entry ) {
-		if ( $entry['secret_id'] === $secret_id ) {
-			reply( 200, array( 'verified' => true ) );
+		if ( $entry['secret_id'] !== $secret_id ) {
+			continue;
 		}
+		if ( is_expired( $entry ) ) {
+			reply( 410, array( 'error' => 'Envelope expired.' ) );
+		}
+		reply( 200, array( 'verified' => true ) );
 	}
 	reply( 404, array( 'error' => 'Unknown secret_id for verify-identifier.' ) );
 }

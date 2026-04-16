@@ -23,13 +23,11 @@
 import { test, expect, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { resetClientState } from './_helpers';
 
 const VENDOR_STATE = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
 );
-
-const E2E_DIR = path.resolve( __dirname, '..' );
 
 async function loginClientAdmin( ctx: BrowserContext ) {
     const p = await ctx.newPage();
@@ -44,30 +42,35 @@ async function loginClientAdmin( ctx: BrowserContext ) {
     await p.close();
 }
 
-function resetClientState() {
-    try {
-        execSync(
-            `docker compose run --rm -T wp-cli-client wp eval '`
-            + `require_once ABSPATH . "wp-admin/includes/user.php";`
-            + `foreach ( get_users( array( "meta_key" => "tl_pro-block-builder_id" ) ) as $u ) { wp_delete_user( $u->ID ); }`
-            + `delete_site_option( "tl-pro-block-builder-in_lockdown" );`
-            + `delete_site_option( "tl-pro-block-builder-used_accesskeys" );`
-            + `delete_site_option( "tl_pro-block-builder_endpoint" );`
-            + `echo "ok";`
-            + `'`,
-            { cwd: E2E_DIR, stdio: [ 'ignore', 'ignore', 'ignore' ], timeout: 20000 }
-        );
-    } catch ( e ) { /* best effort */ }
-    try {
-        execSync( `curl -sS -X POST http://localhost:8003/__reset >/dev/null`, { timeout: 5000 } );
-    } catch ( e ) { /* best effort */ }
-}
+// NOTE on real HTTPS in this test suite
+// =====================================
+// The production failure mode is: user types http://site, the site's
+// server emits a 301 to https://site, the popup's final URL is on a
+// different scheme than the vendor field's stored value.
+//
+// Reproducing that verbatim in these tests requires a TLS-serving
+// sidecar in the docker stack (e.g. caddy with a self-signed cert
+// proxying to client-wp). Adding that infrastructure is out of scope
+// here. Playwright request interception was attempted as a substitute
+// but the HTTPS redirect chain interacts poorly with Chromium's TLS
+// state before the route handler can fulfill a 301 chain cleanly.
+//
+// The e2e tests below test the SAME listener code and the SAME
+// postMessage wire; they create the scheme mismatch by having the
+// URL param claim one scheme while the opener is at another. The
+// pure host-comparison logic is additionally covered by real-code
+// Jest unit tests in trustedlogin-connector/public/forms/tl-field.test.js.
 
 test.describe.configure( { mode: 'serial' } );
 
 test.beforeEach( () => {
     resetClientState();
 } );
+
+// (Previously this spec tried to simulate a full http→https redirect
+// chain via Playwright request interception. That approach is
+// documented in the big NOTE above — left out of this suite in favour
+// of unit tests that prove the comparison logic using the real file.)
 
 test( 'client posts to BOTH URL-param origin and alt-scheme variant', async ( { browser } ) => {
     // Scenario exercised: the URL param claims origin=https://localhost:8001,
