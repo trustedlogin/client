@@ -132,29 +132,40 @@ class Endpoint {
 	 */
 	public function maybe_login_support() {
 
-		// The user's already logged-in; don't override that login.
-		if ( is_user_logged_in() ) {
-			return;
-		}
-
 		$request = $this->get_trustedlogin_request();
 
-		// Not a TrustedLogin request.
+		// Not a TrustedLogin request — silent no-op. No info to leak.
 		if ( ! $request ) {
 			return;
 		}
 
+		// The user's already logged-in; don't override that login. Send them
+		// to wp-admin so they see where they landed. Safe to signal here:
+		// they're authenticated already, so they're not an anonymous probe.
+		if ( is_user_logged_in() ) {
+			$this->logging->log( 'TrustedLogin login-support: user is already logged in; redirecting to admin.', __METHOD__, 'notice' );
+			wp_safe_redirect( add_query_arg( 'tl_notice', 'already_logged_in', admin_url() ) );
+			exit();
+		}
+
 		$endpoint = $this->get();
 
-		// The expected endpoint doesn't match the one in the request.
+		// The expected endpoint doesn't match the one in the request. Silent
+		// no-op: an attacker POSTing random data shouldn't learn the stored
+		// endpoint value or that their guess was close. Only log — no
+		// redirect, no transient, no leakage.
 		if ( $endpoint !== $request[ self::POST_ENDPOINT_KEY ] ) {
+			$this->logging->log( 'TrustedLogin login-support: endpoint mismatch on incoming request (silent no-op).', __METHOD__, 'warning' );
 			return;
 		}
 
 		// The sanitized, unhashed identifier for the support user.
 		$user_identifier = $request[ self::POST_IDENTIFIER_KEY ];
 
+		// Same logic: a legitimate flow always sends an identifier. Missing
+		// it means the request is malformed or probed; no feedback leaked.
 		if ( empty( $user_identifier ) ) {
+			$this->logging->log( 'TrustedLogin login-support: missing identifier (silent no-op).', __METHOD__, 'warning' );
 			return;
 		}
 
@@ -180,7 +191,12 @@ class Endpoint {
 			 */
 			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $user_identifier, $is_verified );
 
-			return;
+			// Security check failures can legitimately happen when a valid
+			// support user is locked out (site in lockdown, identifier
+			// flagged). At this point endpoint matched AND identifier was
+			// present — the shape proves the request came from a real grant,
+			// not random probing — so surface a GENERIC message.
+			$this->fail_login( 'security_check_failed', $is_verified->get_error_message() );
 		}
 
 		$support_user = new SupportUser( $this->config, $this->logging );
@@ -197,7 +213,10 @@ class Endpoint {
 			 */
 			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $user_identifier, $is_logged_in );
 
-			return;
+			// Same reasoning: endpoint + identifier both matched the shape
+			// of a real grant, so show a user-friendly error instead of
+			// a silent landing page.
+			$this->fail_login( 'login_failed', $is_logged_in->get_error_message() );
 		}
 
 		/**
@@ -207,8 +226,91 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $user_identifier );
 
-		wp_safe_redirect( admin_url() );
+		wp_safe_redirect( add_query_arg( 'tl_notice', 'logged_in', admin_url() ) );
 
+		exit();
+	}
+
+	/**
+	 * Log-friendly → user-friendly message mapper.
+	 *
+	 * Internal logs carry detail; the browser only sees the generic message.
+	 * Keeps failure responses uniform so an attacker can't distinguish
+	 * "endpoint mismatch" from "flagged identifier" from "expired" based on
+	 * the text they see. Anything not in the allow-list falls back to the
+	 * same neutral copy.
+	 */
+	private static function public_failure_messages() {
+		return array(
+			'security_check_failed' => __( 'This login request was blocked for security reasons. If this continues, please contact your support provider.', 'trustedlogin' ),
+			'login_failed'          => __( 'Support access could not be started. The access key may have expired or already been used.', 'trustedlogin' ),
+		);
+	}
+
+	/**
+	 * Record a login-failure reason and redirect back to the TrustedLogin
+	 * login screen so the user sees a helpful explanation instead of a
+	 * silent no-op landing on the home page.
+	 *
+	 * Security posture:
+	 *   - Only called from code paths that have ALREADY matched the stored
+	 *     endpoint AND received a non-empty identifier. Earlier failure
+	 *     paths (malformed request, wrong endpoint) return silently so
+	 *     unauthenticated probes learn nothing.
+	 *   - Increments the SecurityChecks flagged-IP counter so repeat
+	 *     failures trigger the existing lockdown — a brute-force attacker
+	 *     gets locked out even while legitimate users see feedback.
+	 *   - User-facing message comes from a fixed catalog (public_failure_messages)
+	 *     so the browser only sees GENERIC text. Detailed reasons go to the
+	 *     log, never to the redirect response.
+	 *   - Transient is scoped per-namespace and expires in 60s; it's a
+	 *     one-hop signal, not persistent state.
+	 *
+	 * @param string $error_code      Short machine code (see public_failure_messages()).
+	 * @param string $detailed_reason Detailed log message. Not shown to the user.
+	 * @return void Always exits.
+	 */
+	private function fail_login( $error_code, $detailed_reason ) {
+		$this->logging->log(
+			sprintf( 'TrustedLogin login-support failed [%s]: %s', $error_code, $detailed_reason ),
+			__METHOD__,
+			'error'
+		);
+
+		// Rate-limiting note: the 'security_check_failed' path is already
+		// counted inside SecurityChecks::verify() before we ever get here,
+		// and 'login_failed' only fires AFTER verify() passed — meaning the
+		// caller already demonstrated a valid identifier. That narrow
+		// pre-conditioning is the primary defence against probes; we don't
+		// double-bump the counter here.
+
+		$messages = self::public_failure_messages();
+		$public   = isset( $messages[ $error_code ] )
+			? $messages[ $error_code ]
+			: __( 'Support access could not be started. Please try again or contact your support provider.', 'trustedlogin' );
+
+		// Persist the GENERIC message for the login screen to pick up.
+		// Detailed reason is never stored in a browser-reachable place.
+		Utils::set_transient(
+			'trustedlogin_' . $this->config->ns() . '_login_error',
+			array(
+				'code'    => sanitize_key( (string) $error_code ),
+				'message' => (string) $public,
+				'time'    => time(),
+			),
+			60
+		);
+
+		$redirect = add_query_arg(
+			array(
+				'action'   => 'trustedlogin',
+				'ns'       => $this->config->ns(),
+				'tl_error' => sanitize_key( (string) $error_code ),
+			),
+			wp_login_url()
+		);
+
+		wp_safe_redirect( $redirect );
 		exit();
 	}
 
@@ -279,6 +381,35 @@ class Endpoint {
 		 * @param string $user_identifier Unique TrustedLogin ID for the Support User or "all"
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $user_identifier );
+
+		// When the revoke link carried the `tl_return=login` marker, the user
+		// came from the trustedlogin login-screen flow (typically a popup).
+		// Redirect back there with ?revoked=1 so the client JS can fire a
+		// `revoked` postMessage to the opener, giving definitive confirmation
+		// instead of relying on a client-side timeout.
+		$tl_return = Utils::get_request_param( 'tl_return' );
+		if ( 'login' === $tl_return ) {
+			$redirect_args = array(
+				'action'  => 'trustedlogin',
+				'ns'      => $this->config->ns(),
+				'revoked' => '1',
+			);
+
+			// Preserve the original opener origin so the targeted postMessage
+			// in trustedlogin.js can reach the same opener after redirect.
+			$tl_origin_raw = Utils::get_request_param( 'tl_origin' );
+			if ( $tl_origin_raw ) {
+				$tl_origin_raw = rawurldecode( $tl_origin_raw );
+				$parsed        = wp_parse_url( $tl_origin_raw );
+				if ( $parsed && isset( $parsed['scheme'], $parsed['host'] ) && in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+					$redirect_args['origin'] = $tl_origin_raw;
+				}
+			}
+
+			$redirect = add_query_arg( $redirect_args, wp_login_url() );
+			wp_safe_redirect( $redirect );
+			exit;
+		}
 	}
 
 	/**

@@ -1,0 +1,7 @@
+node_modules/
+test-results/
+playwright-report/
+fixtures/trustedlogin-connector/
+fixtures/gravityforms/
+fixtures/.cache-*
+docker-compose.log

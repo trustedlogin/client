@@ -179,6 +179,12 @@ final class Form {
 		// Print the styles before the HTML to prevent FOUC.
 		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
 
+		// Surface any login-failure feedback stored by Endpoint::fail_login()
+		// BEFORE the auth screen so the user sees WHY they landed here rather
+		// than on the client admin.
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->get_login_feedback_html();
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
 
@@ -222,6 +228,20 @@ final class Form {
 		background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ) . '")!important;
 		background-size: contain!important;
 	}
+	.tl-login-feedback {
+		margin: 0 auto 16px;
+		max-width: 420px;
+		padding: 12px 16px;
+		border-radius: 4px;
+		font-size: 14px;
+		line-height: 1.5;
+	}
+	.tl-login-feedback--error {
+		color: #9b2c2c;
+		background: #fff5f5;
+		border: 1px solid #fed7d7;
+		border-left: 4px solid #c02b0a;
+	}
 	';
 	}
 
@@ -264,6 +284,24 @@ final class Form {
 		$auth_meta = ( $_user_creator && $_user_creator->exists() ) ? esc_html( $_user_creator->display_name ) : $unknown_user_text;
 
 		$revoke_url = $this->support_user->get_revoke_url( $support_user );
+
+		// When rendered on the login screen (popup flow), tell the revoke
+		// handler to redirect back here so the opener gets a definitive
+		// `revoked` postMessage instead of waiting for a timeout. Carry the
+		// original `origin` param through so the postMessage can be targeted
+		// at the correct opener origin after the redirect.
+		if ( $this->is_login_screen() ) {
+			$extra = array( 'tl_return' => 'login' );
+			$req_origin = Utils::get_request_param( 'origin' );
+			if ( $req_origin ) {
+				// Validate: must be an absolute http(s) URL we can parse.
+				$parsed = wp_parse_url( $req_origin );
+				if ( $parsed && isset( $parsed['scheme'], $parsed['host'] ) && in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+					$extra['tl_origin'] = rawurlencode( $req_origin );
+				}
+			}
+			$revoke_url = add_query_arg( $extra, $revoke_url );
+		}
 
 		$template = '
 			{{revoke_access_button}}
@@ -1365,6 +1403,9 @@ final class Form {
 				'failed_permissions' => array(
 					'content' => esc_html__( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ),
 				),
+				'timeout'            => array(
+					'content' => esc_html__( 'The request took too long to complete. Please try again.', 'trustedlogin' ),
+				),
 				'accesskey'          => array(
 					'title'       => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
 					'content'     => sprintf(
@@ -1495,7 +1536,7 @@ EOD;
 				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
 				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'gk-gravitycalendar' ), esc_html( $this->support_user->get_first()->display_name ) ),
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) ),
 				/* %9$s */
 				esc_attr( $this->support_user->get_expiration( $this->support_user->get_first() ) )
 			);
@@ -1511,6 +1552,81 @@ EOD;
 		return $return;
 	}
 
+
+	/**
+	 * Notice shown after a support-login attempt completes.
+	 *
+	 * Triggered by `?tl_notice=logged_in` (successful support login) or
+	 * `?tl_notice=already_logged_in` (user was already authenticated and
+	 * the support-login was skipped). Both cases redirect here from
+	 * {@see Endpoint::maybe_login_support()} so the agent gets clear
+	 * feedback instead of landing on wp-admin with no context.
+	 *
+	 * @return void
+	 */
+	public function admin_notice_login_outcome() {
+		if ( empty( $_GET['tl_notice'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+
+		$notice = sanitize_key( wp_unslash( (string) $_GET['tl_notice'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		// Only show a notice when the current user actually holds the
+		// namespaced support role — otherwise an attacker sending a logged-in
+		// admin to `?tl_notice=logged_in` could confuse them. Same check
+		// as get_field_input(): only users with the support role see it.
+		$current_user    = wp_get_current_user();
+		$support_role    = (string) $this->config->get_setting( 'role' );
+		$support_user_ns = $this->support_user->role->get_name();
+		$has_support     = $current_user
+			&& ( in_array( $support_user_ns, (array) $current_user->roles, true )
+				|| in_array( $support_role, (array) $current_user->roles, true ) );
+
+		if ( 'logged_in' === $notice && $has_support ) {
+			$vendor_title = (string) $this->config->get_setting( 'vendor/title' );
+			$expiration   = '';
+			$support      = $this->support_user->get_first();
+			if ( $support ) {
+				$expires_ts = $this->support_user->get_expiration( $support );
+				if ( $expires_ts ) {
+					$expiration = human_time_diff( time(), (int) $expires_ts );
+				}
+			}
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong><?php echo esc_html( sprintf(
+						// translators: %s vendor title (e.g. Acme Widgets).
+						__( 'You are logged in as a %s support user.', 'trustedlogin' ),
+						$vendor_title
+					) ); ?></strong>
+					<?php if ( $expiration ) : ?>
+						<br>
+						<?php echo esc_html( sprintf(
+							// translators: %s human-readable duration like "1 week".
+							__( 'Access expires in %s.', 'trustedlogin' ),
+							$expiration
+						) ); ?>
+					<?php endif; ?>
+				</p>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( 'already_logged_in' === $notice ) {
+			// Only surface this to users who actually triggered the flow:
+			// they can land here while authenticated as themselves. Show a
+			// calm informational notice explaining what happened.
+			?>
+			<div class="notice notice-info is-dismissible">
+				<p>
+					<?php echo esc_html__( 'You were already signed in, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+	}
 
 	/**
 	 * Notice: Shown when a support user is manually revoked by admin;
@@ -1548,6 +1664,55 @@ EOD;
 	 *
 	 * @return bool
 	 */
+	/**
+	 * Build the feedback banner HTML rendered above the auth screen when a
+	 * prior login attempt failed. Reads the short-lived transient set by
+	 * {@see Endpoint::fail_login()} and discards it after read so the user
+	 * doesn't see the same message on a subsequent visit.
+	 *
+	 * Only renders when:
+	 *   - the current request is the TrustedLogin login screen; AND
+	 *   - the URL carries a `tl_error` query param matching a known code.
+	 *
+	 * The transient itself stores the GENERIC user-facing message — detailed
+	 * reasons live in the log, never in a browser-reachable place.
+	 *
+	 * @return string Empty string when no feedback is queued.
+	 */
+	private function get_login_feedback_html() {
+		if ( empty( $_GET['tl_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return '';
+		}
+
+		$error_code = sanitize_key( wp_unslash( (string) $_GET['tl_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( '' === $error_code ) {
+			return '';
+		}
+
+		$key   = 'trustedlogin_' . $this->config->ns() . '_login_error';
+		$value = Utils::get_transient( $key );
+
+		if ( ! is_array( $value ) || empty( $value['message'] ) ) {
+			return '';
+		}
+
+		// One-hop: discard once read so refreshing the page doesn't keep
+		// showing the same error.
+		Utils::set_transient( $key, '', 1 );
+
+		// The URL `tl_error` code must match the transient's stored code —
+		// otherwise an attacker linking a victim to a crafted URL can't
+		// surface a fake message, since they can't write to the transient.
+		if ( ! isset( $value['code'] ) || $error_code !== $value['code'] ) {
+			return '';
+		}
+
+		return sprintf(
+			'<div id="login_error" role="alert" class="tl-login-feedback tl-login-feedback--error">%s</div>',
+			wp_kses( (string) $value['message'], array( 'strong' => array(), 'em' => array(), 'br' => array() ) )
+		);
+	}
+
 	private function is_login_screen() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();

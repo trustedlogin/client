@@ -166,6 +166,12 @@ final class Admin {
 				'admin_notices',
 			)
 		);
+
+		// The login-outcome notice ("You're now logged in as a support user"
+		// / "You were already logged in") runs on every admin page view so
+		// the support agent gets feedback after landing on wp-admin from
+		// the login flow — not only after a revoke action.
+		add_action( 'admin_notices', array( $this->form, 'admin_notice_login_outcome' ) );
 	}
 
 	/**

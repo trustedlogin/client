@@ -1,0 +1,73 @@
+name: E2E
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Playwright (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout client repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright dependencies
+        working-directory: tests/e2e
+        run: |
+          npm ci || npm install
+          npx playwright install --with-deps chromium
+
+      - name: Start docker stack
+        working-directory: tests/e2e
+        run: docker compose up -d --wait
+
+      - name: Bootstrap vendor (clones connector PR #184 + Gravity Forms)
+        working-directory: tests/e2e
+        env:
+          # GITHUB_TOKEN from the workflow has repo: read on same-org private
+          # repos if the trustedlogin org gives the workflow runner that access.
+          # If not, override with a PAT in repo secrets as E2E_GITHUB_TOKEN.
+          GITHUB_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+        run: ./fixtures/bootstrap-vendor.sh
+
+      - name: Bootstrap client
+        working-directory: tests/e2e
+        run: ./fixtures/bootstrap-client.sh
+
+      - name: Run Playwright tests
+        working-directory: tests/e2e
+        run: npm test
+
+      - name: Dump fake-saas state on failure
+        if: failure()
+        working-directory: tests/e2e
+        run: |
+          curl -s http://localhost:8003/__state || true
+          docker compose logs --no-color > docker-compose.log || true
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: |
+            tests/e2e/test-results
+            tests/e2e/playwright-report
+            tests/e2e/docker-compose.log
+          retention-days: 14
+
+      - name: Tear down
+        if: always()
+        working-directory: tests/e2e
+        run: docker compose down -v || true

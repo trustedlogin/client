@@ -1,0 +1,144 @@
+# Local e2e stack for trustedlogin/client (PR #138 — postMessage popup).
+#
+# Brings up:
+#   - mariadb       (one instance, two databases)
+#   - vendor-wp     (trustedlogin-connector PR #184 + Gravity Forms), http://localhost:8001
+#   - client-wp     (THIS client repo, activated as a WP plugin via client.php), http://localhost:8002
+#   - fake-saas     (mock app.trustedlogin.com), http://localhost:8003
+#
+# The client library is loaded directly from the repo root (the client.php file
+# at the repo root is a runnable WP plugin with a test configuration). No
+# mozart/composer rebuild needed — PR #138's src/ files are used live.
+
+services:
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: vendor_wp
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./fixtures/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  fake-saas:
+    build: ./fake-saas
+    ports:
+      - "127.0.0.1:8003:8003"
+    volumes:
+      - fake-saas-state:/var/lib/fake-saas
+      - ./fake-saas/server.php:/app/server.php:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8003/__state"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  vendor-wp:
+    image: wordpress:6.7-php8.2-apache
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      fake-saas:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8001:80"
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: vendor_wp
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_HOME', 'http://localhost:8001' );
+        define( 'WP_SITEURL', 'http://localhost:8001' );
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        define( 'TRUSTEDLOGIN_DEBUG', true );
+    volumes:
+      - vendor-wp-data:/var/www/html
+      # Connector PR #184 branch — cloned/built by bootstrap-vendor.sh into fixtures/.
+      - ./fixtures/trustedlogin-connector:/var/www/html/wp-content/plugins/trustedlogin-connector
+      # Gravity Forms — cloned by bootstrap-vendor.sh into fixtures/.
+      - ./fixtures/gravityforms:/var/www/html/wp-content/plugins/gravityforms
+      - ./mu-plugins/vendor-fake-saas.php:/var/www/html/wp-content/mu-plugins/vendor-fake-saas.php
+
+  client-wp:
+    image: wordpress:6.7-php8.2-apache
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      fake-saas:
+        condition: service_started
+      vendor-wp:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8002:80"
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: client_wp
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_HOME', 'http://localhost:8002' );
+        define( 'WP_SITEURL', 'http://localhost:8002' );
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+    volumes:
+      - client-wp-data:/var/www/html
+      # Bind-mount THIS client repo as a WordPress plugin. client.php is the
+      # plugin entry point and loads the library directly from src/ — so PR #138's
+      # changes are exercised without any build step.
+      - ../..:/var/www/html/wp-content/plugins/trustedlogin-client:ro
+      - ./mu-plugins/client-fake-saas.php:/var/www/html/wp-content/mu-plugins/client-fake-saas.php
+
+  wp-cli-vendor:
+    image: wordpress:cli-php8.2
+    profiles: ["cli"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: vendor_wp
+    volumes:
+      - vendor-wp-data:/var/www/html
+      - ./fixtures/trustedlogin-connector:/var/www/html/wp-content/plugins/trustedlogin-connector
+      - ./fixtures/gravityforms:/var/www/html/wp-content/plugins/gravityforms
+      - ./mu-plugins/vendor-fake-saas.php:/var/www/html/wp-content/mu-plugins/vendor-fake-saas.php
+    working_dir: /var/www/html
+    user: "33:33"
+
+  wp-cli-client:
+    image: wordpress:cli-php8.2
+    profiles: ["cli"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: client_wp
+    volumes:
+      - client-wp-data:/var/www/html
+      - ../..:/var/www/html/wp-content/plugins/trustedlogin-client:ro
+      - ./mu-plugins/client-fake-saas.php:/var/www/html/wp-content/mu-plugins/client-fake-saas.php
+    working_dir: /var/www/html
+    user: "33:33"
+
+volumes:
+  mariadb-data:
+  vendor-wp-data:
+  client-wp-data:
+  fake-saas-state:
