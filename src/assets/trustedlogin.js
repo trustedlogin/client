@@ -62,15 +62,32 @@
 			}
 			return false;
 		}
+		// Post to the URL-param-supplied origin first. If the opener's
+		// actual scheme differs (site redirects http→https or vice
+		// versa), the first call is silently dropped by the browser.
+		// We also post to the alternate scheme of the SAME host so
+		// protocol mismatches never leave the opener hanging. Still
+		// scoped to the exact host the URL param named — never '*'.
 		try {
 			window.opener.postMessage( data, openerOrigin );
-			return true;
 		} catch ( e ) {
 			if ( tl_obj && tl_obj.debug ) {
-				console.warn( '[trustedlogin] postMessage failed:', e );
+				console.warn( '[trustedlogin] postMessage (primary) failed:', e );
 			}
-			return false;
 		}
+		try {
+			var alt = /^https:\/\//i.test( openerOrigin )
+				? openerOrigin.replace( /^https:/i, 'http:' )
+				: openerOrigin.replace( /^http:/i, 'https:' );
+			if ( alt !== openerOrigin ) {
+				window.opener.postMessage( data, alt );
+			}
+		} catch ( e ) {
+			if ( tl_obj && tl_obj.debug ) {
+				console.warn( '[trustedlogin] postMessage (alt scheme) failed:', e );
+			}
+		}
+		return true;
 	}
 
 	/**

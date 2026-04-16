@@ -129,6 +129,15 @@ final class Form {
 			return;
 		}
 
+		// Surface a login-attempt failure even for anonymous visitors. If an
+		// unauthenticated user just bounced here from a failed support login,
+		// they'll otherwise see the plain WP login form with no context on
+		// why — the whole point of fail_login() is to explain what happened.
+		if ( ! empty( $_GET['tl_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$this->print_login_error_screen();
+			return;
+		}
+
 		// Once logged-in, take user back to auth request screen.
 		if ( ! is_user_logged_in() ) {
 			$_REQUEST['redirect_to'] = site_url( add_query_arg( array() ) );
@@ -141,6 +150,45 @@ final class Form {
 		}
 
 		$this->print_request_screen();
+	}
+
+	/**
+	 * Render the WP login screen with only a TrustedLogin error banner
+	 * inserted above the normal login form.
+	 *
+	 * Used when a failed support login redirected here and the visitor
+	 * is anonymous — we need them to see WHY the flow didn't complete,
+	 * without bypassing WP's normal login UI below the banner.
+	 *
+	 * @return void
+	 */
+	public function print_login_error_screen() {
+		global $wp_version;
+
+		$banner = $this->get_login_feedback_html();
+		if ( '' === $banner ) {
+			// No matching transient / code mismatch — don't leak a fake
+			// banner for a crafted URL.
+			return;
+		}
+
+		if ( version_compare( $wp_version, '5.2.0', '<' ) ) {
+			add_filter( 'login_headertitle', '__return_empty_string' );
+		} else {
+			add_filter( 'login_headertext', '__return_empty_string' );
+		}
+		add_filter( 'login_headerurl', array( $this, 'callback_return_vendor_website' ) );
+
+		login_header();
+
+		wp_enqueue_style( 'common' );
+		wp_add_inline_style( 'common', $this->get_login_inline_css() );
+
+		echo $banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		login_footer();
+
+		die();
 	}
 
 	/**
@@ -1692,24 +1740,56 @@ EOD;
 		$key   = 'trustedlogin_' . $this->config->ns() . '_login_error';
 		$value = Utils::get_transient( $key );
 
-		if ( ! is_array( $value ) || empty( $value['message'] ) ) {
-			return '';
-		}
-
-		// One-hop: discard once read so refreshing the page doesn't keep
-		// showing the same error.
-		Utils::set_transient( $key, '', 1 );
-
 		// The URL `tl_error` code must match the transient's stored code —
 		// otherwise an attacker linking a victim to a crafted URL can't
 		// surface a fake message, since they can't write to the transient.
-		if ( ! isset( $value['code'] ) || $error_code !== $value['code'] ) {
+		if ( ! is_array( $value )
+			|| empty( $value['message'] )
+			|| ! isset( $value['code'] )
+			|| $error_code !== $value['code']
+		) {
 			return '';
 		}
 
+		// One-hop consumption: expire the transient immediately so a page
+		// refresh can't replay the banner. Utils is the TrustedLogin-owned
+		// transient API (not WP's own) — stick with it to keep reads and
+		// writes consistent with how fail_login() produced the value.
+		Utils::set_transient( $key, '', 1 );
+
+		// Build the retry/help footer — shown below the generic message
+		// so the user isn't stuck on wp-login.php with nowhere to go.
+		$actions = array();
+
+		// If the referer points at a page on this or any allowed host,
+		// offer a "back" link to it (helps when the user came via a
+		// vendor-generated deep-link). wp_get_referer() validates.
+		$referer = wp_get_referer();
+		if ( $referer ) {
+			$actions[] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( $referer ),
+				esc_html__( '← Go back', 'trustedlogin' )
+			);
+		}
+
+		if ( ! empty( $value['support_url'] ) ) {
+			$actions[] = sprintf(
+				'<a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span></a>',
+				esc_url( (string) $value['support_url'] ),
+				esc_html__( 'Contact support', 'trustedlogin' ),
+				esc_html__( '(opens in a new tab)', 'trustedlogin' )
+			);
+		}
+
+		$footer = $actions
+			? sprintf( '<div class="tl-login-feedback__actions">%s</div>', implode( ' &middot; ', $actions ) )
+			: '';
+
 		return sprintf(
-			'<div id="login_error" role="alert" class="tl-login-feedback tl-login-feedback--error">%s</div>',
-			wp_kses( (string) $value['message'], array( 'strong' => array(), 'em' => array(), 'br' => array() ) )
+			'<div id="login_error" role="alert" class="tl-login-feedback tl-login-feedback--error">%s%s</div>',
+			wp_kses( (string) $value['message'], array( 'strong' => array(), 'em' => array(), 'br' => array() ) ),
+			$footer
 		);
 	}
 

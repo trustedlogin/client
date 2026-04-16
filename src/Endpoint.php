@@ -289,14 +289,19 @@ class Endpoint {
 			? $messages[ $error_code ]
 			: __( 'Support access could not be started. Please try again or contact your support provider.', 'trustedlogin' );
 
+		// Preserve the vendor's support URL so the login screen can offer
+		// a help link that matches the integrating plugin's config.
+		$support_url = (string) $this->config->get_setting( 'vendor/support_url' );
+
 		// Persist the GENERIC message for the login screen to pick up.
 		// Detailed reason is never stored in a browser-reachable place.
 		Utils::set_transient(
 			'trustedlogin_' . $this->config->ns() . '_login_error',
 			array(
-				'code'    => sanitize_key( (string) $error_code ),
-				'message' => (string) $public,
-				'time'    => time(),
+				'code'        => sanitize_key( (string) $error_code ),
+				'message'     => (string) $public,
+				'support_url' => esc_url_raw( $support_url ),
+				'time'        => time(),
 			),
 			60
 		);

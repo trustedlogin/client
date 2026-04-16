@@ -108,7 +108,22 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 	if ( ! $access_key ) {
 		reply( 400, array( 'error' => 'Missing accessKey in body' ) );
 	}
-	$secret_id                          = bin2hex( random_bytes( 16 ) );
+	// Key the stored envelope on the client-submitted `secretId`.
+	//
+	// The real TrustedLogin SaaS MUST record whatever secret_id the client
+	// sent, because the same value gets recomputed client-side on every
+	// later verify-identifier call:
+	//   - Client::grant_access() generates
+	//     secret_id = endpoint->generate_secret_id(site_identifier_hash, endpoint_hash)
+	//   - Client posts envelope { ..., secretId: $secret_id, ... } to SaaS
+	//   - Later SecurityChecks::check_approved_identifier() computes the
+	//     SAME secret_id via SupportUser::get_secret_id(identifier) and
+	//     POSTs sites/{secret_id}/verify-identifier. If the SaaS had used
+	//     a different key, verify would always 404.
+	//
+	// Fallback to a random ID is kept so the fake-saas stays robust if a
+	// test ever posts a malformed envelope without secretId.
+	$secret_id                          = ! empty( $body['secretId'] ) ? (string) $body['secretId'] : bin2hex( random_bytes( 16 ) );
 	$state['envelopes'][ $access_key ] = array(
 		'secret_id'          => $secret_id,
 		'envelope_for_vendor' => array(
@@ -166,6 +181,20 @@ if ( $method === 'POST' && preg_match( '#^sites/(\d+)/([a-f0-9]+)/get-envelope$#
 		}
 	}
 	reply( 404, array( 'error' => 'Envelope not found for secret_id ' . $secret_id ) );
+}
+
+// 4b. POST sites/{secret_id}/verify-identifier — client-side SecurityChecks
+//     pings this to confirm the identifier hasn't been flagged by the SaaS
+//     as suspicious. We accept any known secret_id. Unknown → 404 so the
+//     client flags it as a failed verification.
+if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/verify-identifier$#', $endpoint, $m ) ) {
+	$secret_id = $m[1];
+	foreach ( $state['envelopes'] as $entry ) {
+		if ( $entry['secret_id'] === $secret_id ) {
+			reply( 200, array( 'verified' => true ) );
+		}
+	}
+	reply( 404, array( 'error' => 'Unknown secret_id for verify-identifier.' ) );
 }
 
 // 5. POST accounts/{id}/messages — client SDK posts an encrypted message.
