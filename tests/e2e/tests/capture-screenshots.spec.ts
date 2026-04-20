@@ -16,6 +16,7 @@
  */
 
 import { test, BrowserContext, Page } from '@playwright/test';
+import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
@@ -37,6 +38,35 @@ if ( ! fs.existsSync( path.dirname( OUT_DIR ) ) ) {
 
 fs.mkdirSync( OUT_DIR, { recursive: true } );
 
+/**
+ * The build-sass script compiles SCSS with a `$namespace` variable
+ * baked into every selector (`.tl-${ns}-auth`, `.button-trustedlogin-${ns}`).
+ * If the compiled CSS doesn't carry the namespace the integrating plugin
+ * uses, nothing matches and the screens render unstyled — turning
+ * every screenshot into a PR-quality disaster without the spec failing.
+ *
+ * The `client.php` shipped with this repo uses `pro-block-builder`, so
+ * we grep the compiled CSS for that selector and rebuild if missing.
+ */
+function ensureCssMatchesNamespace( namespace: string ): void {
+    const repoRoot = path.resolve( __dirname, '..', '..', '..' );
+    const cssPath  = path.join( repoRoot, 'src', 'assets', 'trustedlogin.css' );
+    const marker   = `tl-${ namespace }-auth`;
+
+    let compiled = '';
+    try { compiled = fs.readFileSync( cssPath, 'utf-8' ); } catch {}
+
+    if ( compiled.includes( marker ) ) {
+        return;
+    }
+
+    console.log( `[capture] CSS missing '${ marker }' — rebuilding for namespace '${ namespace }'` );
+    execSync(
+        `docker run --rm -v ${ JSON.stringify( repoRoot ) }:/app -w /app php:8.2-cli php bin/build-sass --namespace=${ namespace }`,
+        { stdio: [ 'ignore', 'pipe', 'pipe' ], timeout: 60_000 },
+    );
+}
+
 type VendorState = {
     form_id:       string;
     form_page_url: string;
@@ -47,6 +77,13 @@ type VendorState = {
 const VENDOR_STATE: VendorState = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
 );
+
+// Rebuild trustedlogin.css for the integrating plugin's namespace if the
+// current compiled CSS doesn't already carry it. Cheap when cache is
+// fresh (~30ms grep), transparent when it isn't (runs the build in
+// Docker). Without this, a stale CSS from a different namespace silently
+// turns every capture into an unstyled WP-admin screenshot.
+ensureCssMatchesNamespace( VENDOR_STATE.namespace );
 
 async function shot( p: Page, name: string ) {
     await p.screenshot( { path: path.join( OUT_DIR, name ), fullPage: false } );
@@ -295,4 +332,109 @@ test( 'capture: no Referer → Go-back is absent, Contact support remains', asyn
     await p.locator( '.tl-login-feedback--error' ).waitFor( { state: 'visible' } );
     await shot( p, '10-goback-no-referer.png' );
     await agentCtx.close();
+} );
+
+// ---------------------------------------------------------------------------
+// Pre-flight fallback screen: shown on the Grant Access admin page when
+// the Client can't reach the plugin's support team's site (firewall
+// intercept, misconfigured Connector, unreachable host). These shots
+// demonstrate the screen that replaces the usual Grant Access form —
+// what 150+ stuck customers would have seen instead of a dead-end form.
+// ---------------------------------------------------------------------------
+
+const NS = 'pro-block-builder';
+
+/**
+ * Tell the injector mu-plugin which scripted pubkey response to return
+ * on the next fetch, and wipe the 10-minute cache so the screen actually
+ * hits it. Used by the pre-flight screenshot tests below.
+ */
+function injectPubkey( mode: string ): void {
+    wpCli(
+        'wp-cli-client',
+        `update_option( "tl_inject_pubkey_response", array( "mode" => ${ JSON.stringify( mode ) } ), false );`
+        + `delete_option( "tl_${ NS }_vendor_public_key" );`
+        + `wp_cache_delete( "tl_${ NS }_vendor_public_key", "options" );`
+        + `echo "ok";`,
+        'inject ' + mode,
+    );
+}
+
+function clearPubkeyInjection(): void {
+    wpCli(
+        'wp-cli-client',
+        `delete_option( "tl_inject_pubkey_response" );`
+        + `delete_option( "tl_${ NS }_vendor_public_key" );`
+        + `wp_cache_delete( "tl_${ NS }_vendor_public_key", "options" );`
+        + `echo "ok";`,
+        'clear pubkey injection',
+    );
+}
+
+async function openGrantAccessPage( ctx: BrowserContext ): Promise<Page> {
+    const p = await ctx.newPage();
+    // Log in first — the Grant Support Access menu requires manage_options.
+    await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
+    if ( p.url().includes( 'wp-login.php' ) ) {
+        await p.locator( '#user_login' ).fill( 'admin' );
+        await p.locator( '#user_pass' ).fill( 'admin' );
+        await p.locator( '#wp-submit' ).click( { noWaitAfter: true } );
+        await p.waitForURL( /\/wp-admin\//, { timeout: 30_000, waitUntil: 'commit' } );
+    }
+    await p.goto(
+        `${ VENDOR_STATE.client_url }/wp-admin/admin.php?page=grant-${ NS }-access`,
+        { waitUntil: 'domcontentloaded' },
+    );
+    return p;
+}
+
+test( 'capture: pre-flight fallback — firewall intercept (Cloudflare 415)', async ( { browser } ) => {
+    resetClientStateShared();
+    injectPubkey( 'html_cloudflare_415' );
+
+    const ctx = await browser.newContext();
+    const p = await openGrantAccessPage( ctx );
+    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await shot( p, '11-preflight-firewall.png' );
+    await ctx.close();
+
+    clearPubkeyInjection();
+} );
+
+test( 'capture: pre-flight fallback — Connector not configured (501)', async ( { browser } ) => {
+    resetClientStateShared();
+    injectPubkey( 'http_501' );
+
+    const ctx = await browser.newContext();
+    const p = await openGrantAccessPage( ctx );
+    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await shot( p, '12-preflight-not-configured.png' );
+    await ctx.close();
+
+    clearPubkeyInjection();
+} );
+
+test( 'capture: pre-flight fallback — support site unreachable (DNS/timeout)', async ( { browser } ) => {
+    resetClientStateShared();
+    injectPubkey( 'request_failed' );
+
+    const ctx = await browser.newContext();
+    const p = await openGrantAccessPage( ctx );
+    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await shot( p, '13-preflight-unreachable.png' );
+    await ctx.close();
+
+    clearPubkeyInjection();
+} );
+
+test( 'capture: healthy Grant Access screen (pre-flight passes)', async ( { browser } ) => {
+    resetClientStateShared();
+    clearPubkeyInjection();
+
+    const ctx = await browser.newContext();
+    const p = await openGrantAccessPage( ctx );
+    // Usual form — NOT the fallback screen.
+    await p.locator( `.tl-${ NS }-auth__actions .tl-client-grant-button` ).waitFor( { state: 'visible' } );
+    await shot( p, '14-grant-access-healthy.png' );
+    await ctx.close();
 } );
