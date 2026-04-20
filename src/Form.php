@@ -493,9 +493,7 @@ final class Form {
 				'tl_' . $this->config->ns() . '_vendor_public_key',
 				$this->config
 			);
-			// Utils::set_transient stores the entry as a regular option;
-			// delete_option is the cache-busting counterpart.
-			delete_option( $option_name );
+			Utils::delete_transient( $option_name );
 		}
 
 		// Pre-flight check: make sure the plugin's support team's site is

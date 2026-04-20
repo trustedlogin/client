@@ -110,6 +110,28 @@ class Utils {
 	}
 
 	/**
+	 * Counterpart to {@see self::set_transient()} — deletes a TrustedLogin
+	 * transient by name. Because {@see self::set_transient()} stores the
+	 * entry as a regular option (not the core transient API), plain
+	 * `delete_option()` is the correct cache-busting primitive. This
+	 * wrapper exists so callers don't need to know about the internal
+	 * representation.
+	 *
+	 * @since {next}
+	 *
+	 * @param string $transient Transient name.
+	 *
+	 * @return bool True on successful delete, false on failure.
+	 */
+	public static function delete_transient( $transient ) {
+		if ( ! is_string( $transient ) || '' === $transient ) {
+			return false;
+		}
+
+		return delete_option( $transient );
+	}
+
+	/**
 	 * Retrieves a value from the transient data and conditionally deletes transient if expired.
 	 *
 	 * @since 1.7.0
