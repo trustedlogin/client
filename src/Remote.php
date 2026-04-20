@@ -117,7 +117,58 @@ final class Remote {
 		}
 
 		try {
-			$posted = wp_remote_post( $webhook_url, array( 'body' => $data ) );
+			// JSON-encode the webhook payload. A form-encoded body made up of
+			// `debug_data=<wp-core debug dump>` trips Wordfence's XSS rule
+			// because the dump contains `###` headings and %0A newlines that
+			// match the rule's signature. JSON with an explicit Content-Type
+			// avoids the false positive and is cleaner for any downstream
+			// receiver to parse. Both form-encoded and JSON requests are
+			// accepted by the Connector's REST endpoint (and by WordPress
+			// core REST endpoints in general), so this is drop-in compatible
+			// with the shipped Connector plugin.
+			//
+			// Integrators whose custom webhook receiver requires form
+			// encoding can revert to the legacy shape from the filter below:
+			//
+			//   add_filter( 'trustedlogin/{ns}/webhook/request_args',
+			//       function ( $args, $url, $data ) {
+			//           return array( 'body' => $data );
+			//       }, 10, 3 );
+			$encoded = wp_json_encode( $data );
+			if ( false === $encoded ) {
+				// Falls through to form encoding only when JSON encoding
+				// can't represent the payload (e.g. non-UTF-8 bytes in
+				// $data). Preserves pre-1.9.1 behavior for those edge cases.
+				$args = array( 'body' => $data );
+			} else {
+				$args = array(
+					'body'    => $encoded,
+					'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+				);
+			}
+
+			/**
+			 * Filter: request arguments passed to `wp_remote_post()` when
+			 * sending a webhook.
+			 *
+			 * Lets integrators adjust headers, swap the body format, attach
+			 * bearer tokens, etc. — without forking the Client SDK.
+			 *
+			 * @since 1.9.1
+			 *
+			 * @param array  $args        Request args. Default body = JSON-encoded $data
+			 *                            with `Content-Type: application/json`.
+			 * @param string $webhook_url The URL being posted to.
+			 * @param array  $data        The original body payload.
+			 */
+			$args = apply_filters(
+				'trustedlogin/' . $this->config->ns() . '/webhook/request_args',
+				$args,
+				$webhook_url,
+				$data
+			);
+
+			$posted = wp_remote_post( $webhook_url, $args );
 
 			if ( is_wp_error( $posted ) ) {
 				$this->logging->log( 'An error encountered while sending a webhook to ' . esc_attr( $webhook_url ), __METHOD__, 'error', $posted );
@@ -209,8 +260,14 @@ final class Remote {
 		try {
 			$api_url = $this->build_api_url( $path );
 
+			// Deep-copy $request_options and scrub secrets before logging.
+			// The Authorization header carries the vendor Bearer token; any
+			// write of its raw value to a log file is a credential-leak
+			// risk (debug logs can be web-reachable in some deployments).
+			$loggable = self::scrub_sensitive_headers( $request_options );
+
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			$this->logging->log( sprintf( 'Sending to %s: %s', $api_url, print_r( $request_options, true ) ), __METHOD__, 'debug' );
+			$this->logging->log( sprintf( 'Sending to %s: %s', $api_url, print_r( $loggable, true ) ), __METHOD__, 'debug' );
 
 			$response = wp_remote_request( $api_url, $request_options );
 		} catch ( Exception $exception ) {
@@ -225,6 +282,37 @@ final class Remote {
 		$this->logging->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
 
 		return $response;
+	}
+
+	/**
+	 * Deep-copy a wp_remote_request options array and redact sensitive
+	 * header/body values so it's safe to emit to a log file.
+	 *
+	 * Scrub list: Authorization, auth, api_key (case-insensitive) wherever
+	 * they appear at the top level or inside a `headers` array.
+	 *
+	 * @param array $request_options The raw options about to go to wp_remote_request().
+	 *
+	 * @return array Deep-copied options with sensitive fields replaced by '[redacted]'.
+	 */
+	private static function scrub_sensitive_headers( $request_options ) {
+		$sensitive = array( 'authorization', 'auth', 'api_key' );
+
+		// Deep copy via recursive walk — arrays in PHP are copy-on-write for
+		// the top level, but headers is a nested array we'll mutate.
+		$copy = is_array( $request_options ) ? $request_options : array();
+
+		foreach ( $copy as $key => $value ) {
+			if ( is_string( $key ) && in_array( strtolower( $key ), $sensitive, true ) ) {
+				$copy[ $key ] = '[redacted]';
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$copy[ $key ] = self::scrub_sensitive_headers( $value );
+			}
+		}
+
+		return $copy;
 	}
 
 	/**
