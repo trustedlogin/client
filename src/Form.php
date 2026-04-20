@@ -390,92 +390,81 @@ final class Form {
 	}
 
 	/**
-	 * Renders the fallback screen that replaces the Grant Access form
-	 * when the pre-flight check fails. Gives the customer the
-	 * specific error message (already customer-friendly by the time
-	 * it reaches here) plus a prominent email-support affordance and
-	 * a "Try again" link that clears the cached failure.
+	 * Builds the contents that populate the normal auth template's
+	 * `.tl-{ns}-auth__response` container when pre-flight fails.
+	 *
+	 * Rather than diverging into a separate fallback template, we reuse
+	 * the existing error-response surface (same peach-bordered styling
+	 * used for a failed AJAX grant submission). Also builds:
+	 *   - A "Contact <vendor> support" primary CTA that replaces the
+	 *     greyed-out Grant Access button.
+	 *   - A muted "Try reconnecting" link underneath, which clears the
+	 *     10-minute pubkey transient and reloads.
 	 *
 	 * @since {next}
 	 *
 	 * @param \WP_Error $error The pre-flight failure.
 	 *
-	 * @return string HTML.
+	 * @return array {
+	 *     @type string $response_html    HTML to inject into `.tl-{ns}-auth__response`.
+	 *     @type string $actions_html     HTML replacement for `.tl-{ns}-auth__actions`
+	 *                                    (contact CTA + retry link, no grant button).
+	 * }
 	 */
-	private function get_preflight_fallback_html( $error ) {
-		$ns            = $this->config->ns();
-		$vendor_title  = (string) $this->config->get_setting( 'vendor/title' );
-		$vendor_email  = (string) $this->config->get_setting( 'vendor/email' );
-		$support_url   = (string) $this->config->get_setting( 'vendor/support_url' );
+	private function get_preflight_action_html( $error ) {
+		$ns           = $this->config->ns();
+		$vendor_title = (string) $this->config->get_setting( 'vendor/title' );
+		$vendor_email = (string) $this->config->get_setting( 'vendor/email' );
+		$support_url  = (string) $this->config->get_setting( 'vendor/support_url' );
 
-		// Prefer the support URL (which is often a full support portal /
-		// ticket form). Fall back to a mailto: on the vendor/email —
-		// every integrator configures one, so we always have a surface.
+		// Prefer the support URL (usually a portal / ticket form); fall
+		// back to a mailto: on vendor/email — every integrator configures
+		// one, so we always have a surface.
 		$support_href = '' !== $support_url ? esc_url( $support_url ) : 'mailto:' . rawurlencode( $vendor_email );
 		$support_text = '' !== $support_url
-			? sprintf( /* translators: %s: the plugin's name */
-				esc_html__( 'Contact %s support', 'trustedlogin' ),
-				esc_html( $vendor_title )
-			)
-			: sprintf( /* translators: %s: the support email address */
-				esc_html__( 'Email %s', 'trustedlogin' ),
-				esc_html( $vendor_email )
-			);
+			? sprintf( /* translators: %s: the plugin's name */ esc_html__( 'Contact %s support', 'trustedlogin' ), esc_html( $vendor_title ) )
+			: sprintf( /* translators: %s: the support email address */ esc_html__( 'Email %s', 'trustedlogin' ), esc_html( $vendor_email ) );
 
-		// The "Try again" link clears the 10-minute cache and reloads.
-		// Useful for transient firewall hiccups: if the vendor's team
-		// tells the customer "we fixed it", they can refresh without
-		// waiting for the cache to expire.
 		$retry_url = add_query_arg(
-			array( 'tl-preflight-retry' => $ns ),
+			array(
+				'tl-preflight-retry' => $ns,
+				'_wpnonce'           => wp_create_nonce( 'tl-preflight-retry-' . $ns ),
+			),
 			remove_query_arg( 'tl-preflight-retry' )
 		);
-		$retry_nonce = wp_create_nonce( 'tl-preflight-retry-' . $ns );
-		$retry_url   = add_query_arg( '_wpnonce', $retry_nonce, $retry_url );
 
 		$message = $error->get_error_message();
 		if ( '' === $message ) {
 			$message = esc_html__( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' );
 		}
 
-		ob_start();
-		?>
-		<div class="tl-<?php echo esc_attr( $ns ); ?>-auth tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback" data-preflight-error="<?php echo esc_attr( $error->get_error_code() ); ?>">
-			<section class="tl-<?php echo esc_attr( $ns ); ?>-auth__body">
-				<h2 class="tl-<?php echo esc_attr( $ns ); ?>-auth__intro">
-					<?php
-					printf(
-						/* translators: %s: the plugin's name */
-						esc_html__( 'Support access with %s is temporarily unavailable.', 'trustedlogin' ),
-						esc_html( $vendor_title )
-					);
-					?>
-				</h2>
-				<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__content tl-<?php echo esc_attr( $ns ); ?>-auth__content--error">
-					<p class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__message">
-						<?php echo esc_html( $message ); ?>
-					</p>
-					<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__actions tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__actions">
-						<?php if ( '' !== $support_href && 'mailto:' !== $support_href ) : ?>
-							<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__contact button button-primary button-hero"
-							   href="<?php echo $support_href; // Already escaped above. ?>"
-							   target="_blank" rel="noopener noreferrer">
-								<?php echo esc_html( $support_text ); ?>
-							</a>
-						<?php endif; ?>
-						<p class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry-wrap">
-							<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry"
-							   href="<?php echo esc_url( $retry_url ); ?>">
-								<span class="dashicons dashicons-update" aria-hidden="true"></span>
-								<?php esc_html_e( 'Try reconnecting', 'trustedlogin' ); ?>
-							</a>
-						</p>
-					</div>
-				</div>
-			</section>
-		</div>
-		<?php
-		return (string) ob_get_clean();
+		$response_html = sprintf(
+			'<div class="tl-%1$s-auth__response tl-%1$s-auth__response_error" role="alert" data-preflight-error="%2$s" aria-live="assertive">%3$s</div>',
+			esc_attr( $ns ),
+			esc_attr( $error->get_error_code() ),
+			esc_html( $message )
+		);
+
+		$contact_html = '' !== $support_href
+			? sprintf(
+				'<a class="tl-%1$s-auth__contact button button-primary button-hero" href="%2$s" target="_blank" rel="noopener noreferrer">%3$s</a>',
+				esc_attr( $ns ),
+				$support_href, // esc_url() already applied.
+				esc_html( $support_text )
+			)
+			: '';
+
+		$retry_html = sprintf(
+			'<p class="tl-%1$s-auth__retry-wrap"><a class="tl-%1$s-auth__retry" href="%2$s"><span class="dashicons dashicons-update" aria-hidden="true"></span> %3$s</a></p>',
+			esc_attr( $ns ),
+			esc_url( $retry_url ),
+			esc_html__( 'Try reconnecting', 'trustedlogin' )
+		);
+
+		return array(
+			'response_html' => $response_html,
+			'actions_html'  => $contact_html . $retry_html,
+		);
 	}
 
 	/**
@@ -521,11 +510,27 @@ final class Form {
 		// when the failure is NOT already in the cache — no support
 		// team's fault should prevent a customer from revoking existing
 		// access they've already granted.
+		// Pre-flight outcome. Only checked for not-yet-granted users —
+		// existing access needs to be revokable even if the support
+		// team's site is unreachable. On failure we stay inside the
+		// normal auth template but populate the existing error-response
+		// container and swap the grant button for a greyed-out version
+		// plus a Contact + Retry pair. Visual consistency with a failed
+		// AJAX grant submission; no separate template fork.
+		$preflight_error = null;
 		if ( ! $this->support_user->get_all() ) {
-			$preflight = $this->get_preflight_error();
-			if ( is_wp_error( $preflight ) ) {
-				return $this->get_preflight_fallback_html( $preflight );
-			}
+			$preflight_error = $this->get_preflight_error();
+		}
+
+		if ( is_wp_error( $preflight_error ) ) {
+			$preflight       = $this->get_preflight_action_html( $preflight_error );
+			$response_html   = $preflight['response_html'];
+			$actions_html    = $preflight['actions_html'];
+			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions tl-' . esc_attr( $this->config->ns() ) . '-auth__actions--unavailable';
+		} else {
+			$response_html   = '<div class="tl-' . esc_attr( $this->config->ns() ) . '-auth__response" aria-live="assertive"></div>';
+			$actions_html    = $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false );
+			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions';
 		}
 
 		$content = array(
@@ -536,7 +541,9 @@ final class Form {
 			'intro'                   => $this->get_intro(),
 			'auth_header'             => $this->get_auth_header_html(),
 			'details'                 => $this->get_details_html(),
-			'button'                  => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
+			'response'                => $response_html,
+			'actions'                 => $actions_html,
+			'actions_container_class' => $grant_container,
 			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
@@ -556,10 +563,10 @@ final class Form {
 						<div class="tl-{{ns}}-auth__details">
 							{{details}}
 						</div>
-						<div class="tl-{{ns}}-auth__response" aria-live="assertive"></div>
+						{{response}}
 						{{notices}}
-						<div class="tl-{{ns}}-auth__actions">
-							{{button}}
+						<div class="{{actions_container_class}}">
+							{{actions}}
 						</div>
 						{{terms_of_service}}
 					</div>
@@ -1253,10 +1260,12 @@ final class Form {
 						'id'    => array(),
 					),
 					'div'      => array(
-						'class'     => array(),
-						'id'        => array(),
-						'aria-live' => array(),
-						'style'     => array(),
+						'class'                 => array(),
+						'id'                    => array(),
+						'role'                  => array(),
+						'aria-live'             => array(),
+						'data-preflight-error'  => array(),
+						'style'                 => array(),
 					),
 					'small'    => array(
 						'class'       => array(),

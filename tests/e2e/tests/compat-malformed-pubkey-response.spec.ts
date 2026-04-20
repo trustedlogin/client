@@ -255,23 +255,26 @@ test( 'pre-flight: Grant Access form is replaced by fallback when pubkey fetch f
     // Navigate to the Grant Support Access admin page.
     await p.goto( `http://localhost:8002/wp-admin/admin.php?page=grant-${ NS }-access`, { waitUntil: 'domcontentloaded' } );
 
-    // Fallback container renders; form does NOT.
-    await expect( p.locator( `.tl-${ NS }-preflight-fallback` ) ).toBeVisible();
-    await expect( p.locator( `.tl-${ NS }-auth__actions .tl-client-grant-button` ) ).toHaveCount( 0 );
+    // Error-response container renders with the preflight marker; the
+    // grant button is NOT rendered (it's replaced by the contact CTA +
+    // retry link).
+    await expect( p.locator( `.tl-${ NS }-auth__response_error` ) ).toBeVisible();
+    await expect( p.locator( `.tl-${ NS }-auth__response_error[data-preflight-error]` ) ).toBeVisible();
+    await expect( p.locator( '.tl-client-grant-button' ) ).toHaveCount( 0 );
 
     // Error message surfaced to the customer mentions the cause.
-    const fallbackText = await p.locator( `.tl-${ NS }-preflight-fallback` ).innerText();
-    expect( fallbackText.toLowerCase() ).toMatch( /firewall/ );
-    expect( fallbackText ).toContain( '415' );
+    const errorText = await p.locator( `.tl-${ NS }-auth__response_error` ).innerText();
+    expect( errorText.toLowerCase() ).toMatch( /firewall/ );
+    expect( errorText ).toContain( '415' );
     // Customer never sees internal jargon.
-    expect( fallbackText.toLowerCase() ).not.toMatch( /trustedlogin|publickey|\bendpoint\b/ );
+    expect( errorText.toLowerCase() ).not.toMatch( /trustedlogin|publickey|\bendpoint\b/ );
 
     // Contact-support CTA links to the configured vendor/support_url.
-    const contactHref = await p.locator( `.tl-${ NS }-preflight-fallback__contact` ).getAttribute( 'href' );
+    const contactHref = await p.locator( `.tl-${ NS }-auth__contact` ).getAttribute( 'href' );
     expect( contactHref ).toContain( 'support' );
 
-    // Try again link is present and carries the retry query + nonce.
-    const retryHref = await p.locator( `.tl-${ NS }-preflight-fallback__retry` ).getAttribute( 'href' );
+    // Try reconnecting link carries the retry query + nonce.
+    const retryHref = await p.locator( `.tl-${ NS }-auth__retry` ).getAttribute( 'href' );
     expect( retryHref ).toContain( 'tl-preflight-retry=' + NS );
     expect( retryHref ).toMatch( /_wpnonce=/ );
 
@@ -296,8 +299,8 @@ test( 'pre-flight: healthy pubkey fetch shows the normal form', async ( { browse
 
     await p.goto( `http://localhost:8002/wp-admin/admin.php?page=grant-${ NS }-access`, { waitUntil: 'domcontentloaded' } );
 
-    // Form renders; fallback does NOT.
-    await expect( p.locator( `.tl-${ NS }-preflight-fallback` ) ).toHaveCount( 0 );
+    // Form renders with the grant button; preflight marker is absent.
+    await expect( p.locator( `.tl-${ NS }-auth__response_error[data-preflight-error]` ) ).toHaveCount( 0 );
     await expect( p.locator( `.tl-${ NS }-auth__actions .tl-client-grant-button` ) ).toBeVisible();
 
     await ctx.close();

@@ -394,7 +394,7 @@ test( 'capture: pre-flight fallback — firewall intercept (Cloudflare 415)', as
 
     const ctx = await browser.newContext();
     const p = await openGrantAccessPage( ctx );
-    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await p.locator( `.tl-${ NS }-auth__response_error[data-preflight-error]` ).waitFor( { state: 'visible' } );
     await shot( p, '11-preflight-firewall.png' );
     await ctx.close();
 
@@ -407,7 +407,7 @@ test( 'capture: pre-flight fallback — Connector not configured (501)', async (
 
     const ctx = await browser.newContext();
     const p = await openGrantAccessPage( ctx );
-    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await p.locator( `.tl-${ NS }-auth__response_error[data-preflight-error]` ).waitFor( { state: 'visible' } );
     await shot( p, '12-preflight-not-configured.png' );
     await ctx.close();
 
@@ -420,7 +420,7 @@ test( 'capture: pre-flight fallback — support site unreachable (DNS/timeout)',
 
     const ctx = await browser.newContext();
     const p = await openGrantAccessPage( ctx );
-    await p.locator( `.tl-${ NS }-preflight-fallback` ).waitFor( { state: 'visible' } );
+    await p.locator( `.tl-${ NS }-auth__response_error[data-preflight-error]` ).waitFor( { state: 'visible' } );
     await shot( p, '13-preflight-unreachable.png' );
     await ctx.close();
 
