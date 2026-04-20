@@ -560,7 +560,7 @@ final class Form {
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week").
-				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . $this->config->get_setting( 'vendor/title' ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $this->config->get_setting( 'vendor/title' ) ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
 			}
 
 			return $intro;
@@ -568,10 +568,10 @@ final class Form {
 
 		if ( $this->is_login_screen() ) {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html__( '%1$s would like support access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
+			$intro = sprintf( esc_html__( '%1$s would like support access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		} else {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html__( 'Grant %1$s access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
+			$intro = sprintf( esc_html__( 'Grant %1$s access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		}
 
 		return $intro;
@@ -1669,7 +1669,13 @@ EOD;
 			?>
 			<div class="notice notice-info is-dismissible">
 				<p>
-					<?php echo esc_html__( 'You were already signed in, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ); ?>
+					<?php
+					printf(
+						/* translators: %s: the currently signed-in user's display name */
+						esc_html__( 'You were already signed in as %s, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ),
+						esc_html( wp_get_current_user()->display_name )
+					);
+					?>
 				</p>
 			</div>
 			<?php
@@ -1761,14 +1767,17 @@ EOD;
 		// so the user isn't stuck on wp-login.php with nowhere to go.
 		$actions = array();
 
-		// If the referer points at a page on this or any allowed host,
-		// offer a "back" link to it (helps when the user came via a
-		// vendor-generated deep-link). wp_get_referer() validates.
-		$referer = wp_get_referer();
+		// Use the referer captured at POST time (stored in the transient by
+		// fail_login()). wp_get_referer() on the wp-login.php GET only sees
+		// the intermediate redirect hop — by that point the original vendor
+		// URL is gone. esc_url() below gates the scheme list to http(s)
+		// and scrubs javascript:/data:/etc. Cross-origin is fine here: we're
+		// rendering an <a href>, not calling wp_safe_redirect().
+		$referer = isset( $value['referer'] ) ? (string) $value['referer'] : '';
 		if ( $referer ) {
 			$actions[] = sprintf(
 				'<a href="%s">%s</a>',
-				esc_url( $referer ),
+				esc_url( $referer, array( 'http', 'https' ) ),
 				esc_html__( '← Go back', 'trustedlogin' )
 			);
 		}

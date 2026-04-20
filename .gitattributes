@@ -1,2 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Exclude from published package (composer dist, GitHub source archives).
+# Source maps are a dev-only artifact; shipping them to consumer plugins
+# leaks the internal source tree and adds asset weight.
+*.css.map         export-ignore
+.gitattributes    export-ignore
+.gitignore        export-ignore
+.phpcs.xml.dist   export-ignore
+.distignore       export-ignore
+tests/            export-ignore
+

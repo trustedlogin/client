@@ -11,3 +11,4 @@ site/
 *.zip
 .phpunit.result.cache
 vendor/
+*.css.map

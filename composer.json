@@ -26,10 +26,15 @@
       "TrustedLogin\\": "src/"
     }
   },
-  "require-dev": {
+  "require": {
     "php": ">=5.3.0",
     "ext-curl": "*",
-    "ext-json": "*",
+    "ext-json": "*"
+  },
+  "suggest": {
+    "paragonie/sodium_compat": "Required on PHP < 7.2 to polyfill libsodium for the encrypted credential exchange."
+  },
+  "require-dev": {
     "wp-coding-standards/wpcs": "^3.0",
     "phpcompatibility/phpcompatibility-wp": "^2.1",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",

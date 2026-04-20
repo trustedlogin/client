@@ -95,7 +95,6 @@ call_user_func( function ( $version ) use ( $argv ) {
 		$scss = new ScssPhp\ScssPhp\Compiler();
 		$scss->setImportPaths( $assets_dir . 'src/' );
 		$scss->setOutputStyle( ScssPhp\ScssPhp\OutputStyle::COMPRESSED );
-		$scss->setSourceMap( ScssPhp\ScssPhp\Compiler::SOURCE_MAP_INLINE );
 		$scssContent = file_get_contents( $inputFile );
 		$cssContent  = $scss->compileString( $scss_prefix . $scssContent );
 		$bytes_saved = file_put_contents( $outputFile, $cssContent->getCss() );

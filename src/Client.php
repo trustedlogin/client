@@ -155,7 +155,7 @@ final class Client {
 
 		$this->admin = new Admin( $this->config, $form, $this->support_user );
 
-		$this->ajax = new Ajax( $this->config, $this->logging );
+		$this->ajax = new Ajax( $this->config, $this->logging, $this );
 
 		$this->remote = new Remote( $this->config, $this->logging );
 
@@ -563,6 +563,12 @@ final class Client {
 
 				$this->revoke_access( $user_identifier );
 			}
+
+			// Terminal return for the aggregate "all" branch so the
+			// function doesn't fall through to $this->support_user->get( 'all' )
+			// which would (correctly) return null and cause a misleading
+			// "User does not exist" log + missing revoked webhook summary.
+			return true;
 		}
 
 		$user = $this->support_user->get( $identifier );

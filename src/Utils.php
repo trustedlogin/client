@@ -93,8 +93,13 @@ class Utils {
 		$data = self::format_transient_data( $value, $expiration );
 
 		// Insert or update the option.
+		//
+		// autoload='no' (mirrors WordPress core's set_transient behavior) so
+		// transient rows don't get pulled into wp_load_alloptions on every
+		// request. Reads here go direct to DB through {@see self::get_transient()}
+		// to avoid object-cache issues, so autoload adds cost without benefit.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$result = $wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `option_name` = VALUES(`option_name`), `option_value` = VALUES(`option_value`), `autoload` = VALUES(`autoload`)", $transient, maybe_serialize( $data ), true ) );
+		$result = $wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `option_name` = VALUES(`option_name`), `option_value` = VALUES(`option_value`), `autoload` = VALUES(`autoload`)", $transient, maybe_serialize( $data ), 'no' ) );
 
 		if ( $result ) {
 			do_action( "set_transient_{$transient}", $data['value'], $data['expiration'], $transient ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
@@ -228,18 +233,25 @@ class Utils {
 	}
 
 	/**
-	 * Retrieves and optionally sanitizes a parameter from $_POST or $_GET.
+	 * Retrieves and sanitizes a parameter from $_POST or $_GET.
 	 *
-	 * Use this instead of $_REQUEST to avoid potential security issues related to $_REQUEST including $_COOKIE data.
+	 * Use this instead of $_REQUEST to avoid potential security issues related
+	 * to $_REQUEST including $_COOKIE data. The sanitizer is named explicitly so
+	 * each caller documents its expected shape; passing `null` (or the legacy
+	 * `false`) disables sanitization.
 	 *
 	 * @since 1.8.0
 	 *
-	 * @param string $param The parameter to retrieve.
-	 * @param bool   $sanitize Whether to sanitize the parameter using {@see sanitize_text_field}. Default: true.
+	 * @param string                      $param              The parameter to retrieve.
+	 * @param callable|bool|null          $sanitize_callback  Sanitizer applied to the raw (unslashed) value.
+	 *                                                        - callable: applied to scalars; arrays via {@see map_deep()}.
+	 *                                                        - `null` or `false`: no sanitization.
+	 *                                                        - `true` (legacy): equivalent to `'sanitize_text_field'`.
+	 *                                                        Default: `'sanitize_text_field'`.
 	 *
-	 * @return string|array|null The parameter value or null if not found.
+	 * @return string|array|null The sanitized parameter value or null if not found.
 	 */
-	public static function get_request_param( $param, $sanitize = true ) {
+	public static function get_request_param( $param, $sanitize_callback = 'sanitize_text_field' ) {
 		$value = null;
 
 		//phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
@@ -250,15 +262,26 @@ class Utils {
 		}
 		//phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		if ( ! $sanitize || null === $value ) {
+		if ( null === $value ) {
+			return null;
+		}
+
+		// Back-compat: previous signature was ($param, $sanitize = true). Map
+		// legacy bool arguments to the equivalent callback semantics.
+		if ( true === $sanitize_callback ) {
+			$sanitize_callback = 'sanitize_text_field';
+		} elseif ( false === $sanitize_callback ) {
+			$sanitize_callback = null;
+		}
+
+		if ( null === $sanitize_callback ) {
 			return $value;
 		}
 
 		if ( is_string( $value ) ) {
-			return sanitize_text_field( $value );
+			return call_user_func( $sanitize_callback, $value );
 		}
 
-		// Handle arrays.
-		return map_deep( $value, 'sanitize_text_field' );
+		return map_deep( $value, $sanitize_callback );
 	}
 }
