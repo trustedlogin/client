@@ -258,7 +258,10 @@ final class Encryption {
 		if ( ! is_string( $remote_key ) || 64 !== strlen( $remote_key ) || ! ctype_xdigit( $remote_key ) ) {
 			$this->logging->log( 'Fetched vendor public key failed shape validation (expect 64 hex chars).', __METHOD__, 'error' );
 
-			return new WP_Error( 'invalid_public_key_shape', 'Vendor public key failed shape validation.' );
+			return new WP_Error(
+				'invalid_public_key_shape',
+				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' )
+			);
 		}
 
 		// Optional pinning: if the integrator declared a SHA-256
@@ -271,7 +274,10 @@ final class Encryption {
 			if ( ! hash_equals( strtolower( $expected_fingerprint ), $actual_fingerprint ) ) {
 				$this->logging->log( 'Fetched vendor public key failed fingerprint pin check.', __METHOD__, 'error' );
 
-				return new WP_Error( 'public_key_fingerprint_mismatch', 'Vendor public key fingerprint did not match the pinned value.' );
+				return new WP_Error(
+					'public_key_fingerprint_mismatch',
+					esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
+				);
 			}
 		}
 
@@ -361,13 +367,47 @@ final class Encryption {
 
 		$response = wp_remote_request( $url, $request_options );
 
+		// Log the outgoing URL + status/body preview BEFORE handing off to
+		// handle_response() so a field report with logging enabled has
+		// enough context to post-mortem a WAF intercept or a Connector
+		// misconfig without needing a reproduction.
+		if ( is_wp_error( $response ) ) {
+			// No HTTP response at all — DNS failure, connection refused,
+			// TLS error, timeout. Surface the underlying WP_Error code +
+			// message; "HTTP 0" would hide which failure mode it was.
+			$this->logging->log(
+				sprintf(
+					'Encryption key fetch from %s failed before any HTTP response: %s (%s)',
+					$url,
+					$response->get_error_message(),
+					$response->get_error_code()
+				),
+				__METHOD__,
+				'error'
+			);
+		} else {
+			$body    = (string) wp_remote_retrieve_body( $response );
+			$preview = mb_substr( $body, 0, 300 );
+			$this->logging->log(
+				sprintf(
+					'Fetched encryption key from %s (HTTP %d). Body preview: %s',
+					$url,
+					(int) wp_remote_retrieve_response_code( $response ),
+					'' === $preview ? '(empty)' : $preview
+				),
+				__METHOD__,
+				'debug'
+			);
+		}
+
 		$response_json = $this->remote->handle_response( $response, array( 'publicKey' ) );
 
 		if ( is_wp_error( $response_json ) ) {
-			if ( 'not_found' === $response_json->get_error_code() ) {
-				return new WP_Error( 'not_found', __( 'Encryption key could not be fetched, Vendor site returned 404.', 'trustedlogin' ) );
-			}
-
+			// handle_response() already returns customer-friendly copy for
+			// each known failure shape (HTML intercept, missing publicKey,
+			// generic invalid JSON, unexpected HTTP status). Passing it
+			// through untouched keeps the surface consistent regardless of
+			// which leg of the flow fetched the key.
 			return $response_json;
 		}
 

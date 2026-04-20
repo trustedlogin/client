@@ -367,6 +367,115 @@ final class Form {
 	}
 
 	/**
+	 * Runs the pre-flight pubkey check. Returns null when the plugin's
+	 * support team's site is reachable (so the Grant Access form can
+	 * render normally), or a WP_Error describing the failure (so the
+	 * fallback screen renders instead).
+	 *
+	 * Wraps {@see Encryption::get_vendor_public_key()} — which handles
+	 * its own 10-minute transient cache — and converts success (a key
+	 * string) into `null`. Cached hits cost a single option read.
+	 *
+	 * @since {next}
+	 *
+	 * @return null|\WP_Error
+	 */
+	private function get_preflight_error() {
+		$remote     = new Remote( $this->config, $this->logging );
+		$encryption = new Encryption( $this->config, $remote, $this->logging );
+
+		$key = $encryption->get_vendor_public_key();
+
+		return is_wp_error( $key ) ? $key : null;
+	}
+
+	/**
+	 * Renders the fallback screen that replaces the Grant Access form
+	 * when the pre-flight check fails. Gives the customer the
+	 * specific error message (already customer-friendly by the time
+	 * it reaches here) plus a prominent email-support affordance and
+	 * a "Try again" link that clears the cached failure.
+	 *
+	 * @since {next}
+	 *
+	 * @param \WP_Error $error The pre-flight failure.
+	 *
+	 * @return string HTML.
+	 */
+	private function get_preflight_fallback_html( $error ) {
+		$ns            = $this->config->ns();
+		$vendor_title  = (string) $this->config->get_setting( 'vendor/title' );
+		$vendor_email  = (string) $this->config->get_setting( 'vendor/email' );
+		$support_url   = (string) $this->config->get_setting( 'vendor/support_url' );
+
+		// Prefer the support URL (which is often a full support portal /
+		// ticket form). Fall back to a mailto: on the vendor/email —
+		// every integrator configures one, so we always have a surface.
+		$support_href = '' !== $support_url ? esc_url( $support_url ) : 'mailto:' . rawurlencode( $vendor_email );
+		$support_text = '' !== $support_url
+			? sprintf( /* translators: %s: the plugin's name */
+				esc_html__( 'Contact %s support', 'trustedlogin' ),
+				esc_html( $vendor_title )
+			)
+			: sprintf( /* translators: %s: the support email address */
+				esc_html__( 'Email %s', 'trustedlogin' ),
+				esc_html( $vendor_email )
+			);
+
+		// The "Try again" link clears the 10-minute cache and reloads.
+		// Useful for transient firewall hiccups: if the vendor's team
+		// tells the customer "we fixed it", they can refresh without
+		// waiting for the cache to expire.
+		$retry_url = add_query_arg(
+			array( 'tl-preflight-retry' => $ns ),
+			remove_query_arg( 'tl-preflight-retry' )
+		);
+		$retry_nonce = wp_create_nonce( 'tl-preflight-retry-' . $ns );
+		$retry_url   = add_query_arg( '_wpnonce', $retry_nonce, $retry_url );
+
+		$message = $error->get_error_message();
+		if ( '' === $message ) {
+			$message = esc_html__( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' );
+		}
+
+		ob_start();
+		?>
+		<div class="tl-<?php echo esc_attr( $ns ); ?>-auth tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback" data-preflight-error="<?php echo esc_attr( $error->get_error_code() ); ?>">
+			<section class="tl-<?php echo esc_attr( $ns ); ?>-auth__body">
+				<h2 class="tl-<?php echo esc_attr( $ns ); ?>-auth__intro">
+					<?php
+					printf(
+						/* translators: %s: the plugin's name */
+						esc_html__( 'Support access with %s is temporarily unavailable.', 'trustedlogin' ),
+						esc_html( $vendor_title )
+					);
+					?>
+				</h2>
+				<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__content tl-<?php echo esc_attr( $ns ); ?>-auth__content--error">
+					<p class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__message">
+						<?php echo esc_html( $message ); ?>
+					</p>
+					<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__actions">
+						<?php if ( '' !== $support_href && 'mailto:' !== $support_href ) : ?>
+							<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__contact button button-primary button-hero"
+							   href="<?php echo $support_href; // Already escaped above. ?>"
+							   target="_blank" rel="noopener noreferrer">
+								<?php echo esc_html( $support_text ); ?>
+							</a>
+						<?php endif; ?>
+						<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry"
+						   href="<?php echo esc_url( $retry_url ); ?>">
+							<?php esc_html_e( 'Try again', 'trustedlogin' ); ?>
+						</a>
+					</div>
+				</div>
+			</section>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * Output the contents of the Auth Link Page in wp-admin
 	 *
 	 * @since 1.0.0
@@ -377,6 +486,44 @@ final class Form {
 
 		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
+
+		// Handle the "Try again" link from a prior fallback screen — nonce
+		// verified, then clear the pubkey cache and let the pre-flight
+		// below re-fetch. Any admin can click the link; no capability
+		// gate because every code path that reaches get_auth_screen is
+		// already gated by the admin-menu registration.
+		$retry_ns = Utils::get_request_param( 'tl-preflight-retry' );
+		if ( $retry_ns === $this->config->ns()
+			&& wp_verify_nonce( (string) Utils::get_request_param( '_wpnonce' ), 'tl-preflight-retry-' . $this->config->ns() )
+		) {
+			$option_name = apply_filters(
+				'trustedlogin/' . $this->config->ns() . '/options/vendor_public_key',
+				'tl_' . $this->config->ns() . '_vendor_public_key',
+				$this->config
+			);
+			// Utils::set_transient stores the entry as a regular option;
+			// delete_option is the cache-busting counterpart.
+			delete_option( $option_name );
+		}
+
+		// Pre-flight check: make sure the plugin's support team's site is
+		// actually reachable BEFORE the customer types anything and clicks
+		// Grant Access. The pubkey fetch is transient-cached for 10
+		// minutes, so this is free on the hot path after the first
+		// success — and catches firewall / misconfigure failures
+		// up-front instead of after a wasted click + ajax round-trip.
+		//
+		// Only block for users who already have access (the `has-access`
+		// screen shows the revoke affordance and should always render)
+		// when the failure is NOT already in the cache — no support
+		// team's fault should prevent a customer from revoking existing
+		// access they've already granted.
+		if ( ! $this->support_user->get_all() ) {
+			$preflight = $this->get_preflight_error();
+			if ( is_wp_error( $preflight ) ) {
+				return $this->get_preflight_fallback_html( $preflight );
+			}
+		}
 
 		$content = array(
 			'ns'                      => $this->config->ns(),
@@ -1363,7 +1510,7 @@ final class Form {
 		$query_args = apply_filters(
 			'trustedlogin/' . $this->config->ns() . '/support_url/query_args',
 			array(
-				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' ),
+				'message' => __( 'Could not create support access.', 'trustedlogin' ),
 				'ref'     => Client::get_reference_id(),
 			)
 		);
@@ -1423,7 +1570,7 @@ final class Form {
 				),
 				'error'              => array(
 					// translators: %1$s is the vendor title.
-					'title'   => sprintf( __( 'Error syncing support user to %1$s', 'trustedlogin' ), $vendor_title ),
+					'title'   => sprintf( __( 'Couldn\'t register support access with %1$s', 'trustedlogin' ), $vendor_title ),
 					'content' => wp_kses(
 						$error_content,
 						array(
@@ -1455,16 +1602,16 @@ final class Form {
 					'content' => esc_html__( 'The request took too long to complete. Please try again.', 'trustedlogin' ),
 				),
 				'accesskey'          => array(
-					'title'       => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
+					'title'       => esc_html__( 'Support Access Key Created', 'trustedlogin' ),
 					'content'     => sprintf(
 					// translators: %1$s is the vendor title.
-						__( 'Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin' ),
+						__( 'Share this access key with %1$s to give them secure access:', 'trustedlogin' ),
 						$vendor_title
 					),
 					'revoke_link' => esc_url( add_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns() ), admin_url() ) ),
 				),
 				'error404'           => array(
-					'title'   => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
+					'title'   => esc_html__( 'The support team\'s site could not be found.', 'trustedlogin' ),
 					'content' => '',
 				),
 				'error409'           => array(

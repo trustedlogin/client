@@ -98,7 +98,7 @@ class SiteAccess {
 		}
 
 		if ( empty( $response_json['success'] ) ) {
-			return new \WP_Error( 'sync_error', __( 'Could not sync to TrustedLogin server', 'trustedlogin' ) );
+			return new \WP_Error( 'sync_error', __( 'Support access could not be registered. Please try again in a minute, or contact the plugin\'s support team.', 'trustedlogin' ) );
 		}
 
 		do_action(

@@ -253,4 +253,188 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		$this->assertWPError( $handled_response );
 		$this->assertSame( 'missing_required_key', $handled_response->get_error_code() );
 	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::body_looks_like_html
+	 *
+	 * Data-driven: covers the shapes a hosting firewall / CDN returns in
+	 * the real world (Cloudflare 415 HTML, Wordfence block page, nginx
+	 * 502 Bad Gateway, bare `<html>` tag, etc.) plus negative cases
+	 * (JSON, empty body, plain text, JSON string value containing HTML).
+	 *
+	 * Motivated by the 150+ "trustedlogin - change to admin" support
+	 * tickets where the customer's vendor site returned HTML and the
+	 * Client silently converted that into "Invalid response. Missing
+	 * key: publicKey". The detector needs to catch all the real-world
+	 * shapes without false-positiving on legitimate JSON.
+	 */
+	public function test_body_looks_like_html_detects_firewall_shapes() {
+		$positive_cases = array(
+			'cloudflare_415'      => "<!DOCTYPE html>\n<html><head><title>415</title></head><body>Blocked</body></html>",
+			'wordfence_403'       => "<!DOCTYPE html>\n<html><head><title>Forbidden - Wordfence</title></head><body><h1>Your access to this site has been limited</h1></body></html>",
+			'nginx_502'           => "<html>\n<head><title>502 Bad Gateway</title></head>\n<body><center><h1>502 Bad Gateway</h1></center></body></html>",
+			'mixed_case_doctype'  => "<!doctype html><html>foo</html>",
+			'leading_whitespace'  => "  \n  <!DOCTYPE html><html></html>",
+			'just_html_tag'       => "<html></html>",
+			'just_head_tag'       => "<head></head>",
+			'just_body_tag'       => "<body>blocked</body>",
+		);
+
+		foreach ( $positive_cases as $label => $body ) {
+			$this->assertTrue(
+				Remote::body_looks_like_html( $body ),
+				"Expected '$label' to be detected as HTML"
+			);
+		}
+
+		$negative_cases = array(
+			'empty_string'         => '',
+			'whitespace_only'      => "   \n   ",
+			'plain_json_object'    => '{"publicKey":"abc123"}',
+			'plain_json_array'     => '[1,2,3]',
+			'plain_text'           => 'Could not connect',
+			'json_containing_html' => '{"message":"<html>not a real document</html>"}',
+			'xml'                  => '<?xml version="1.0"?><root/>',
+			'json_leading_space'   => '   {"ok":true}',
+			'html_fragment_no_tag' => 'This is <div>a fragment</div> inside text',
+		);
+
+		foreach ( $negative_cases as $label => $body ) {
+			$this->assertFalse(
+				Remote::body_looks_like_html( $body ),
+				"Expected '$label' to NOT be detected as HTML"
+			);
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * When the vendor site responds with HTML (regardless of HTTP
+	 * status), handle_response should return a `vendor_response_not_json`
+	 * WP_Error whose message mentions "firewall" and includes the HTTP
+	 * status. The customer-friendly copy is specifically the thing
+	 * motivated by the field tickets; regressing it would reintroduce
+	 * the "Invalid response. Missing key: publicKey" surface.
+	 */
+	public function test_handle_response_converts_html_body_to_firewall_error() {
+		$html_415 = array(
+			'headers'  => array( 'content-type' => 'text/html' ),
+			'body'     => "<!DOCTYPE html>\n<html><title>Cloudflare 415</title></html>",
+			'response' => array( 'code' => 415, 'message' => 'Unsupported Media Type' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $html_415, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'vendor_response_not_json', $result->get_error_code() );
+		$this->assertStringContainsString( 'firewall', strtolower( $result->get_error_message() ) );
+		$this->assertStringContainsString( '415', $result->get_error_message() );
+
+		// Must never leak the raw HTML into the customer-facing message.
+		$this->assertStringNotContainsString( '<html>', $result->get_error_message() );
+		$this->assertStringNotContainsString( 'DOCTYPE', $result->get_error_message() );
+
+		// Must not leak internal jargon to the customer.
+		$this->assertStringNotContainsStringIgnoringCase( 'publickey', $result->get_error_message() );
+		$this->assertStringNotContainsStringIgnoringCase( 'trustedlogin', $result->get_error_message() );
+
+		// Error data preserves the status + a sanitized preview for logs.
+		$data = $result->get_error_data();
+		$this->assertIsArray( $data );
+		$this->assertSame( 415, $data['status'] );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * JSON 200 without the required `publicKey` key should produce the
+	 * `missing_public_key` code (not the pre-fix generic
+	 * `missing_required_key`) with customer-friendly copy — the vendor's
+	 * Connector is misconfigured and the customer can't fix it.
+	 */
+	public function test_handle_response_missing_publickey_is_specific() {
+		$json_no_key = array(
+			'headers'  => array( 'content-type' => 'application/json' ),
+			'body'     => '{"somethingElse":"nope"}',
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $json_no_key, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'missing_public_key', $result->get_error_code() );
+		$this->assertStringContainsString( 'support team', strtolower( $result->get_error_message() ) );
+		$this->assertStringNotContainsStringIgnoringCase( 'publickey', $result->get_error_message() );
+		$this->assertStringNotContainsStringIgnoringCase( 'trustedlogin', $result->get_error_message() );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * JSON 200 with empty-string `publicKey` is treated the same as
+	 * missing — an empty key can't be used to encrypt anything.
+	 */
+	public function test_handle_response_empty_publickey_is_specific() {
+		$json_empty_key = array(
+			'headers'  => array( 'content-type' => 'application/json' ),
+			'body'     => '{"publicKey":""}',
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $json_empty_key, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'missing_public_key', $result->get_error_code() );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::check_response_code
+	 *
+	 * Unmapped status codes used to fall through to a silent `return (int)`
+	 * which threw away the HTTP status. That's how the Cloudflare 415
+	 * tickets got "Invalid response." with no context. Now the default
+	 * branch returns a WP_Error that includes the status number.
+	 */
+	public function test_check_response_code_preserves_unmapped_status() {
+		$response_415 = array(
+			'headers'  => array(),
+			'body'     => '{"ok":false}',
+			'response' => array( 'code' => 415, 'message' => 'Unsupported Media Type' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = Remote::check_response_code( $response_415 );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'unexpected_response_code', $result->get_error_code() );
+		$this->assertStringContainsString( '415', $result->get_error_message() );
+		$data = $result->get_error_data();
+		$this->assertSame( 415, $data['status'] );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::check_response_code
+	 *
+	 * 2xx codes without an explicit case should still return the int
+	 * status (legacy contract — callers treat that as success).
+	 */
+	public function test_check_response_code_passes_through_unmapped_2xx() {
+		$response_206 = array(
+			'headers'  => array(),
+			'body'     => 'chunk',
+			'response' => array( 'code' => 206, 'message' => 'Partial Content' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$this->assertSame( 206, Remote::check_response_code( $response_206 ) );
+	}
 }

@@ -120,6 +120,7 @@ services:
       - ./mu-plugins/tl-extra-referer.php:/var/www/html/wp-content/mu-plugins/tl-extra-referer.php
       - ./mu-plugins/tl-webhook-capture.php:/var/www/html/wp-content/mu-plugins/tl-webhook-capture.php
       - ./mu-plugins/tl-wf-compat-harness.php:/var/www/html/wp-content/mu-plugins/tl-wf-compat-harness.php
+      - ./mu-plugins/tl-response-injector.php:/var/www/html/wp-content/mu-plugins/tl-response-injector.php
 
   # TLS reverse-proxy for real-HTTPS e2e tests. Serves https://localhost:8443
   # backed by caddy's self-signed local CA, proxying to client-wp. Tests that
@@ -182,6 +183,7 @@ services:
       - ./mu-plugins/tl-extra-referer.php:/var/www/html/wp-content/mu-plugins/tl-extra-referer.php
       - ./mu-plugins/tl-webhook-capture.php:/var/www/html/wp-content/mu-plugins/tl-webhook-capture.php
       - ./mu-plugins/tl-wf-compat-harness.php:/var/www/html/wp-content/mu-plugins/tl-wf-compat-harness.php
+      - ./mu-plugins/tl-response-injector.php:/var/www/html/wp-content/mu-plugins/tl-response-injector.php
     working_dir: /var/www/html
     user: "33:33"
 

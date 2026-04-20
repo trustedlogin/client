@@ -367,46 +367,160 @@ final class Remote {
 			case 204:
 				return null;
 
+			// All customer-facing messages in this switch deliberately avoid
+			// naming "TrustedLogin" or the internal "vendor" concept. The
+			// person seeing this error just wants support for the plugin
+			// they installed. Every response tells them what to do next,
+			// not what broke internally.
+
 			case 400:
 			case 423:
-				return new \WP_Error( 'unable_to_verify', esc_html__( 'Unable to verify Pause Mode.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unable_to_verify', esc_html__( 'Support access could not be set up right now. Please try again in a few minutes, or contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
 
 			case 401:
-				return new \WP_Error( 'unauthenticated', esc_html__( 'Authentication failed.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unauthenticated', esc_html__( 'Support access could not be verified. Please contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
 
 			case 402:
-				return new \WP_Error( 'account_error', esc_html__( 'TrustedLogin account issue.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'account_error', esc_html__( 'The support team\'s account has an issue that\'s preventing access. Please contact them directly.', 'trustedlogin' ), $api_response );
 
 			case 403:
-				return new \WP_Error( 'invalid_token', esc_html__( 'Invalid tokens.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_token', esc_html__( 'Support access was refused. Please contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
 
-			// the KV store was not found, possible issue with endpoint.
+			// The vendor-side endpoint returned 404. Most often: Connector
+			// not installed on the vendor site, or the REST route is
+			// disabled by a security plugin on the vendor.
 			case 404:
-				return new \WP_Error( 'not_found', esc_html__( 'The TrustedLogin vendor was not found.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'not_found', esc_html__( 'The support team\'s site is not ready to receive access requests. Please contact their support team and let them know.', 'trustedlogin' ), $api_response );
 
-			// The site is a teapot.
 			case 418:
 				return new \WP_Error( 'teapot', '🫖', $api_response );
 
-			// Server offline.
+			// Server offline: connection refused, DNS failure, timeout, or
+			// the vendor's site returned 500/503.
 			case 500:
 			case 503:
 			case 'http_request_failed':
-				return new \WP_Error( 'unavailable', esc_html__( 'The TrustedLogin site is not currently online.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unavailable', esc_html__( 'The support team\'s site is temporarily unreachable. Please try again in a few minutes.', 'trustedlogin' ), $api_response );
 
-			// Server error.
+			// Vendor returned a 501/502/522 — server-side error on their
+			// end. Retrying likely won't help until they fix it.
 			case 501:
 			case 502:
 			case 522:
-				return new \WP_Error( 'server_error', esc_html__( 'The TrustedLogin site is not currently available.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'server_error', esc_html__( 'The support team\'s site returned an error. Please contact their support team directly.', 'trustedlogin' ), $api_response );
 
-			// wp_remote_retrieve_response_code() couldn't parse the $api_response.
+			// wp_remote_retrieve_response_code() couldn't parse the
+			// response at all — network layer failure.
 			case '':
-				return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_response', esc_html__( 'Could not reach the support team\'s site. Please check your internet connection and try again.', 'trustedlogin' ), $api_response );
 
+			// Any response code we don't explicitly map. Preserve the
+			// HTTP status in the returned WP_Error so the UI / logs can
+			// surface it — silently returning an int here used to drop
+			// the context on the floor (see Cloudflare 415 tickets).
 			default:
-				return (int) $response_code;
+				$status = (int) $response_code;
+
+				if ( $status >= 200 && $status < 300 ) {
+					// Preserve legacy behavior: a 2xx without specific
+					// handling is a success path for upstream callers.
+					return $status;
+				}
+
+				return new \WP_Error(
+					'unexpected_response_code',
+					sprintf(
+						/* translators: %d: the HTTP status code returned by the vendor site */
+						esc_html__( 'Support access could not be set up (HTTP %d). Please contact the plugin\'s support team and share this number.', 'trustedlogin' ),
+						$status
+					),
+					array(
+						'status'       => $status,
+						'api_response' => $api_response,
+					)
+				);
 		}
+	}
+
+	/**
+	 * Returns true when the body of a successful-looking HTTP response is
+	 * an HTML document rather than JSON — an extremely common shape when
+	 * a hosting firewall (Wordfence, Cloudflare, Imunify360, Sucuri) or
+	 * CDN has intercepted the request and returned its own branded error
+	 * page in place of the expected JSON body.
+	 *
+	 * Only matches on document-level tags at the very start of the body
+	 * (after leading whitespace). A JSON string value that happens to
+	 * contain `<html>` inside one of its fields won't trigger this.
+	 *
+	 * @since {next}
+	 *
+	 * @param string $response_body Raw HTTP response body.
+	 *
+	 * @return bool True if the body is document-shaped HTML.
+	 */
+	public static function body_looks_like_html( $response_body ) {
+		$leading = ltrim( (string) $response_body );
+
+		if ( '' === $leading ) {
+			return false;
+		}
+
+		return 1 === preg_match(
+			'/^<!?(?:DOCTYPE\s+html|html[\s>]|head[\s>]|body[\s>])/i',
+			$leading
+		);
+	}
+
+	/**
+	 * Detects firewall / CDN HTML intercepts in an HTTP response and
+	 * converts them into a customer-friendly WP_Error naming the
+	 * likely cause (firewall) and preserving the HTTP status.
+	 *
+	 * Called from {@see self::handle_response()} BEFORE the status is
+	 * mapped — we want "firewall blocked this (HTTP 502)" instead of
+	 * the generic "server error" copy, because the actionable next
+	 * step differs.
+	 *
+	 * @since {next}
+	 *
+	 * @param array $api_response The raw array returned by wp_remote_request().
+	 *
+	 * @return null|\WP_Error WP_Error when HTML body detected; null when the
+	 *                       response is not HTML-shaped (continue normal handling).
+	 */
+	private function detect_firewall_intercept( $api_response ) {
+		$body = (string) wp_remote_retrieve_body( $api_response );
+
+		if ( ! self::body_looks_like_html( $body ) ) {
+			return null;
+		}
+
+		$status       = (int) wp_remote_retrieve_response_code( $api_response );
+		$body_preview = mb_substr( wp_strip_all_tags( ltrim( $body ) ), 0, 200 );
+
+		$this->logging->log(
+			sprintf(
+				'Vendor returned HTML (HTTP %d) instead of JSON. Likely a firewall / CDN intercept. Body preview: %s',
+				$status,
+				$body_preview
+			),
+			__METHOD__,
+			'error'
+		);
+
+		return new \WP_Error(
+			'vendor_response_not_json',
+			sprintf(
+				/* translators: %d: the HTTP status code returned by the support team's site */
+				esc_html__( 'Support access could not be set up. A firewall on the plugin\'s support team\'s site blocked the request (HTTP %d). Please contact them and let them know — they\'ll need to allowlist this site or check their firewall logs.', 'trustedlogin' ),
+				$status
+			),
+			array(
+				'status'       => $status,
+				'body_preview' => $body_preview,
+			)
+		);
 	}
 
 	/**
@@ -420,6 +534,18 @@ final class Remote {
 	 * @return array|WP_Error|null If successful response, returns array of JSON data. If failed, returns WP_Error. If
 	 */
 	public function handle_response( $api_response, $required_keys = array() ) {
+
+		// Short-circuit on WAF-shaped responses BEFORE
+		// {@see self::check_response_code()} maps the status to a generic
+		// error. A firewall-intercepted HTML page at any status is more
+		// actionable to the customer ("your firewall is blocking this")
+		// than a generic "Server error (HTTP 502)".
+		if ( ! is_wp_error( $api_response ) ) {
+			$waf_error = $this->detect_firewall_intercept( $api_response );
+			if ( is_wp_error( $waf_error ) ) {
+				return $waf_error;
+			}
+		}
 
 		$response_code = self::check_response_code( $api_response );
 
@@ -436,18 +562,48 @@ final class Remote {
 		}
 
 		$response_body = wp_remote_retrieve_body( $api_response );
+		$response_http = (int) wp_remote_retrieve_response_code( $api_response );
 
 		if ( empty( $response_body ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			$this->logging->log( 'Response body not set: ' . print_r( $response_body, true ), __METHOD__, 'error' );
+			$this->logging->log(
+				sprintf( 'Vendor response body was empty (HTTP %d).', $response_http ),
+				__METHOD__,
+				'error'
+			);
 
-			return new \WP_Error( 'missing_response_body', esc_html__( 'The response was invalid.', 'trustedlogin' ), $api_response );
+			return new \WP_Error(
+				'missing_response_body',
+				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s site returned nothing — a firewall on their side may have blocked the request. Please contact them and share this error.', 'trustedlogin' ),
+				$api_response
+			);
 		}
+
+		// HTML body check already ran at the top of this method before
+		// check_response_code() had a chance to map the status — see
+		// the early return above.
 
 		$response_json = json_decode( $response_body, true );
 
 		if ( empty( $response_json ) ) {
-			return new \WP_Error( 'invalid_response', esc_html__( 'Invalid response.', 'trustedlogin' ), $api_response );
+			$this->logging->log(
+				sprintf(
+					'Vendor response (HTTP %d) was not valid JSON. Body preview: %s',
+					$response_http,
+					mb_substr( (string) $response_body, 0, 200 )
+				),
+				__METHOD__,
+				'error'
+			);
+
+			return new \WP_Error(
+				'invalid_response',
+				sprintf(
+					/* translators: %d: the HTTP status code returned by the support team's site */
+					esc_html__( 'Support access could not be set up — the plugin\'s support team\'s site returned an unexpected response (HTTP %d). Please contact them and share this error.', 'trustedlogin' ),
+					$response_http
+				),
+				$api_response
+			);
 		}
 
 		if ( isset( $response_json['errors'] ) ) {
@@ -463,9 +619,35 @@ final class Remote {
 		}
 
 		foreach ( (array) $required_keys as $required_key ) {
-			if ( ! isset( $response_json[ $required_key ] ) ) {
-				// translators: %s is the name of the missing data from the server.
-				return new \WP_Error( 'missing_required_key', sprintf( esc_html__( 'Invalid response. Missing key: %s', 'trustedlogin' ), $required_key ), $response_body );
+			if ( ! isset( $response_json[ $required_key ] ) || '' === $response_json[ $required_key ] ) {
+				// The publicKey case has a specific customer-friendly surface: it
+				// almost always means the vendor's TrustedLogin install doesn't
+				// have encryption keys generated, or a security plugin on the
+				// vendor site is stripping the response. Either way, the customer
+				// can't fix it themselves — the vendor must.
+				if ( 'publicKey' === $required_key ) {
+					$this->logging->log(
+						sprintf(
+							'Vendor response (HTTP %d) did not include publicKey. Body: %s',
+							$response_http,
+							mb_substr( (string) $response_body, 0, 200 )
+						),
+						__METHOD__,
+						'error'
+					);
+
+					return new \WP_Error(
+						'missing_public_key',
+						esc_html__( 'Support access could not be set up. The plugin\'s support team needs to finish configuring their end — please contact them and let them know.', 'trustedlogin' ),
+						$response_body
+					);
+				}
+
+				return new \WP_Error(
+					'missing_required_key',
+					esc_html__( 'Support access could not be set up. The plugin\'s support team\'s response was incomplete — please contact them and share this error.', 'trustedlogin' ),
+					$response_body
+				);
 			}
 		}
 

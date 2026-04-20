@@ -336,7 +336,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) );
 		}
 
 		timer_start();
@@ -471,7 +471,7 @@ final class Client {
 		);
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) );
 		}
 
 		timer_start();
