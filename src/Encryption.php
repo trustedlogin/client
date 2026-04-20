@@ -252,6 +252,29 @@ final class Encryption {
 			return $remote_key;
 		}
 
+		// Shape-validate BEFORE caching. Sodium public keys are 32 raw
+		// bytes == 64 hex chars. Anything else is a MITM substitution
+		// attempt or a vendor-side misconfiguration — fail closed.
+		if ( ! is_string( $remote_key ) || 64 !== strlen( $remote_key ) || ! ctype_xdigit( $remote_key ) ) {
+			$this->logging->log( 'Fetched vendor public key failed shape validation (expect 64 hex chars).', __METHOD__, 'error' );
+
+			return new WP_Error( 'invalid_public_key_shape', 'Vendor public key failed shape validation.' );
+		}
+
+		// Optional pinning: if the integrator declared a SHA-256
+		// fingerprint in config (`vendor/public_key_fingerprint`),
+		// compare it before caching. Mismatch => refuse the key.
+		$expected_fingerprint = (string) $this->config->get_setting( 'vendor/public_key_fingerprint', '' );
+
+		if ( '' !== $expected_fingerprint ) {
+			$actual_fingerprint = hash( 'sha256', $remote_key );
+			if ( ! hash_equals( strtolower( $expected_fingerprint ), $actual_fingerprint ) ) {
+				$this->logging->log( 'Fetched vendor public key failed fingerprint pin check.', __METHOD__, 'error' );
+
+				return new WP_Error( 'public_key_fingerprint_mismatch', 'Vendor public key fingerprint did not match the pinned value.' );
+			}
+		}
+
 		// Store Vendor public key in the DB for ten minutes.
 		$saved = Utils::set_transient( $this->vendor_public_key_option, $remote_key, self::VENDOR_PUBLIC_KEY_EXPIRY );
 
@@ -327,6 +350,11 @@ final class Encryption {
 			'timeout'     => 45,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
+			// Force TLS verification. The only escape hatch is the
+			// TL_E2E_ALLOW_HTTP_VENDOR constant (e2e/dev only) which
+			// also permits plain http:// vendor URLs. Production
+			// code paths ALWAYS verify.
+			'sslverify'   => ! ( defined( 'TL_E2E_ALLOW_HTTP_VENDOR' ) && TL_E2E_ALLOW_HTTP_VENDOR ),
 		);
 
 		$url = $this->get_remote_encryption_key_url();

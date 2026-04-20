@@ -58,14 +58,14 @@ final class SecurityChecks {
 	 *
 	 * @var int
 	 */
-	const ACCESSKEY_LIMIT_EXPIRY = 36000; // 10 * MINUTE_IN_SECONDS;
+	const ACCESSKEY_LIMIT_EXPIRY = 600; // 10 * MINUTE_IN_SECONDS — was 36000 (10 hours) due to an off-by-60 typo.
 
 	/**
 	 * The number of seconds should block trustedlogin auto-logins for.
 	 *
 	 * @var int
 	 */
-	const LOCKDOWN_EXPIRY = 72000; // 20 * MINUTE_IN_SECONDS;
+	const LOCKDOWN_EXPIRY = 1200; // 20 * MINUTE_IN_SECONDS — was 72000 (20 hours) due to an off-by-60 typo.
 
 	/**
 	 * TrustedLogin endpoint to notify brute-force activity.
@@ -184,21 +184,35 @@ final class SecurityChecks {
 	/**
 	 * Adds new access keys to the stored list of used access keys.
 	 *
+	 * The stored distinctness key is "{ip-hash}|{identifier}" so three bad
+	 * guesses from one attacker IP still trip the per-IP counter, but a
+	 * different IP starts fresh — preventing cross-IP DoS (anyone who
+	 * knows the endpoint can otherwise lock legitimate support out of the
+	 * site by cycling 3 random identifiers).
+	 *
 	 * @param string $user_identifier The identifier provided via {@see Endpoint::maybe_login_support()}.
 	 *
-	 * @return array The list of used access keys.
+	 * @return array The list of used access keys scoped to the caller's IP.
 	 */
 	private function maybe_add_used_accesskey( $user_identifier = '' ) {
 
 		$used_accesskeys = (array) Utils::get_transient( $this->used_accesskey_transient );
 
-		// This is an existing access key.
-		if ( in_array( $user_identifier, $used_accesskeys, true ) ) {
-			return $used_accesskeys;
+		$ip_hash = hash( 'sha256', (string) Utils::get_ip() );
+		$scoped  = $ip_hash . '|' . $user_identifier;
+
+		// Already counted for this IP+identifier — don't double-bump.
+		if ( in_array( $scoped, $used_accesskeys, true ) ) {
+			return array_values( array_filter(
+				$used_accesskeys,
+				function ( $entry ) use ( $ip_hash ) {
+					return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+				}
+			) );
 		}
 
-		// Add the new access key to the list.
-		$used_accesskeys[] = $user_identifier;
+		// Add the new scoped access key to the global list.
+		$used_accesskeys[] = $scoped;
 
 		$transient_set = Utils::set_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
 
@@ -206,7 +220,14 @@ final class SecurityChecks {
 			$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
 		}
 
-		return $used_accesskeys;
+		// Return only entries scoped to THIS IP so the caller's count
+		// is a per-IP counter, not a site-wide one.
+		return array_values( array_filter(
+			$used_accesskeys,
+			function ( $entry ) use ( $ip_hash ) {
+				return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+			}
+		) );
 	}
 
 

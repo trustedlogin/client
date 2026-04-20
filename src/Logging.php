@@ -83,8 +83,20 @@ class Logging {
 		try {
 			$datetime = new \DateTime( '@' . time() );
 
-			// Filename hash changes every day, make it harder to guess.
-			$filename_hash_data = $this->ns . home_url( '/' ) . $datetime->format( 'z' );
+			// Use a persistent cryptographically random salt so the
+			// log filename isn't guessable from public info. Old
+			// scheme hashed (ns + home_url + day_of_year) — ~8 bits
+			// of effective entropy, trivially brute-forceable.
+			$salt = $this->get_log_filename_salt();
+
+			if ( $salt ) {
+				$filename_hash_data = $this->ns . home_url( '/' ) . $salt;
+			} else {
+				// Fallback when the option can't be persisted: still better
+				// than day-of-year. home_url alone is public info, but this
+				// branch only trips when the DB write failed entirely.
+				$filename_hash_data = $this->ns . home_url( '/' );
+			}
 
 			$default_options = array(
 				'extension'      => 'log',
@@ -115,6 +127,37 @@ class Logging {
 		}
 
 		return $klogger;
+	}
+
+	/**
+	 * Returns (and lazily creates) the per-namespace random salt used to
+	 * obscure the log filename hash. Stored in wp_options so it persists
+	 * across requests but rotates if the integrator wipes options.
+	 *
+	 * @return string 64-char hex salt, or empty string if the option can't be written.
+	 */
+	private function get_log_filename_salt() {
+
+		$option_name = 'tl_' . $this->ns . '_log_salt';
+		$existing    = get_option( $option_name, '' );
+
+		if ( is_string( $existing ) && 64 === strlen( $existing ) && ctype_xdigit( $existing ) ) {
+			return $existing;
+		}
+
+		if ( ! function_exists( 'random_bytes' ) ) {
+			return '';
+		}
+
+		try {
+			$salt = bin2hex( random_bytes( 32 ) );
+		} catch ( \Exception $e ) {
+			return '';
+		}
+
+		$stored = update_option( $option_name, $salt, false );
+
+		return $stored ? $salt : '';
 	}
 
 	/**

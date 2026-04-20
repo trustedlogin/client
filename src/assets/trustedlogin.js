@@ -62,29 +62,19 @@
 			}
 			return false;
 		}
-		// Post to the URL-param-supplied origin first. If the opener's
-		// actual scheme differs (site redirects http→https or vice
-		// versa), the first call is silently dropped by the browser.
-		// We also post to the alternate scheme of the SAME host so
-		// protocol mismatches never leave the opener hanging. Still
-		// scoped to the exact host the URL param named — never '*'.
+		// Post ONLY to the URL-param-supplied origin. Scope is tight: scheme
+		// + host + port must match exactly. The opener side (connector
+		// tl-field.js) does host-only comparison on RECEIPT, which already
+		// handles the http↔https redirect case — so we don't need to dual-
+		// dispatch. Dropping the alt-scheme post closes a narrow MITM
+		// variant where an attacker who controls the scheme-variant of the
+		// vendor hostname (http version of an https vendor, or vice versa)
+		// could receive `granted` messages with the access key.
 		try {
 			window.opener.postMessage( data, openerOrigin );
 		} catch ( e ) {
 			if ( tl_obj && tl_obj.debug ) {
-				console.warn( '[trustedlogin] postMessage (primary) failed:', e );
-			}
-		}
-		try {
-			var alt = /^https:\/\//i.test( openerOrigin )
-				? openerOrigin.replace( /^https:/i, 'http:' )
-				: openerOrigin.replace( /^http:/i, 'https:' );
-			if ( alt !== openerOrigin ) {
-				window.opener.postMessage( data, alt );
-			}
-		} catch ( e ) {
-			if ( tl_obj && tl_obj.debug ) {
-				console.warn( '[trustedlogin] postMessage (alt scheme) failed:', e );
+				console.warn( '[trustedlogin] postMessage failed:', e );
 			}
 		}
 		return true;

@@ -153,8 +153,9 @@ class Endpoint {
 		// The expected endpoint doesn't match the one in the request. Silent
 		// no-op: an attacker POSTing random data shouldn't learn the stored
 		// endpoint value or that their guess was close. Only log — no
-		// redirect, no transient, no leakage.
-		if ( $endpoint !== $request[ self::POST_ENDPOINT_KEY ] ) {
+		// redirect, no transient, no leakage. hash_equals for constant-time
+		// compare so per-character timing can't leak the expected value.
+		if ( ! hash_equals( (string) $endpoint, (string) $request[ self::POST_ENDPOINT_KEY ] ) ) {
 			$this->logging->log( 'TrustedLogin login-support: endpoint mismatch on incoming request (silent no-op).', __METHOD__, 'warning' );
 			return;
 		}
@@ -293,6 +294,28 @@ class Endpoint {
 		// a help link that matches the integrating plugin's config.
 		$support_url = (string) $this->config->get_setting( 'vendor/support_url' );
 
+		// Capture the POST referer NOW — this is the vendor page that
+		// initiated the login attempt (where the agent clicked). By the
+		// time wp-login.php renders, the browser referer has been
+		// overwritten by the intermediate redirect hop, so we can't
+		// recover it later.
+		//
+		// Spoofing defense: the Referer header is attacker-controllable,
+		// and the transient is a single site-wide key — an attacker could
+		// POST with Referer: evil.com, send the victim to
+		// wp-login.php?tl_error=..., and have the victim's Go-back link
+		// point at the phishing site. To neutralize:
+		//   1. Only accept the Referer if its host matches a URL the
+		//      integrator has already declared as trusted. Unknown hosts
+		//      (including evil.com) fall through to empty → no link.
+		//   2. On successful match, discard the attacker-controlled path
+		//      and store the MATCHED trusted URL. Prevents /path?query
+		//      phishing even if an attacker sets a Referer whose host
+		//      happens to match.
+		$referer = $this->resolve_safe_referer(
+			isset( $_SERVER['HTTP_REFERER'] ) ? wp_unslash( $_SERVER['HTTP_REFERER'] ) : ''
+		);
+
 		// Persist the GENERIC message for the login screen to pick up.
 		// Detailed reason is never stored in a browser-reachable place.
 		Utils::set_transient(
@@ -301,6 +324,7 @@ class Endpoint {
 				'code'        => sanitize_key( (string) $error_code ),
 				'message'     => (string) $public,
 				'support_url' => esc_url_raw( $support_url ),
+				'referer'     => $referer,
 				'time'        => time(),
 			),
 			60
@@ -319,6 +343,85 @@ class Endpoint {
 		exit();
 	}
 
+	/**
+	 * Match a raw Referer URL against the integrator's trusted-URL list.
+	 *
+	 * Why this exists: the Referer captured at POST time feeds the
+	 * "Go back" link on the failure screen, but Referer is attacker-
+	 * controllable. Returning the matched TRUSTED URL (not the raw
+	 * Referer) means even if an attacker forges a Referer whose host
+	 * happens to match, they can't inject a path or query — the link
+	 * points at the canonical vendor URL the integrator declared.
+	 *
+	 * Extension point: vendors that operate from multiple surfaces
+	 * (main site + dedicated support portal + white-label domains +
+	 * staging) add URLs via the
+	 * `trustedlogin/{ns}/login_feedback/allowed_referer_urls` filter.
+	 * Only HOSTS in the returned list are accepted.
+	 *
+	 * @param string $raw_referer Raw HTTP_REFERER header value.
+	 * @return string Trusted URL to render as the back link, or '' if no match.
+	 */
+	private function resolve_safe_referer( $raw_referer ) {
+		if ( ! is_string( $raw_referer ) || '' === $raw_referer ) {
+			return '';
+		}
+		$referer_host = wp_parse_url( $raw_referer, PHP_URL_HOST );
+		if ( ! $referer_host ) {
+			return '';
+		}
+
+		// Default allowlist: integrator-declared vendor URLs + own host.
+		$default_urls = array(
+			(string) $this->config->get_setting( 'vendor/website' ),
+			(string) $this->config->get_setting( 'vendor/support_url' ),
+			(string) home_url(),
+		);
+
+		/**
+		 * Trusted URLs whose hosts are accepted as the Referer of a
+		 * failed support-login POST. A match renders the MATCHED URL
+		 * (not the raw Referer) as the "Go back" link on the feedback
+		 * screen, so an attacker who forges a matching host still can't
+		 * control the path.
+		 *
+		 * Vendors with multiple surfaces (marketing site, support portal,
+		 * white-label domains, staging) should add their additional URLs
+		 * here. Only the HOSTS of the returned URLs are compared; the
+		 * full URL is rendered as the link when its host matches.
+		 *
+		 * Return an empty array to disable the Go-back link entirely.
+		 *
+		 * @since {next}
+		 *
+		 * @param string[] $default_urls Default trusted URLs (vendor/website, vendor/support_url, home_url()).
+		 * @param Config   $config       Client config, for namespace-aware extension.
+		 */
+		$allowed_urls = apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/login_feedback/allowed_referer_urls',
+			$default_urls,
+			$this->config
+		);
+
+		if ( ! is_array( $allowed_urls ) ) {
+			return '';
+		}
+
+		foreach ( $allowed_urls as $allowed_url ) {
+			$allowed_url = (string) $allowed_url;
+			if ( '' === $allowed_url ) {
+				continue;
+			}
+			$allowed_host = wp_parse_url( $allowed_url, PHP_URL_HOST );
+			if ( $allowed_host && strcasecmp( $allowed_host, $referer_host ) === 0 ) {
+				// Render the CONFIGURED URL (drops attacker-chosen
+				// path/query). esc_url_raw also gates scheme.
+				return (string) esc_url_raw( $allowed_url, array( 'http', 'https' ) );
+			}
+		}
+
+		return '';
+	}
 
 	/**
 	 * Hooked Action to maybe revoke support if the request SupportUser::ID_QUERY_PARAM equals the namespace.
@@ -340,8 +443,16 @@ class Endpoint {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM ) ) {
-			$this->logging->log( 'Removing user failed: Nonce expired.', __METHOD__, 'error' );
+		$user_identifier = Utils::get_request_param( SupportUser::ID_QUERY_PARAM );
+
+		if ( ! $user_identifier ) {
+			$user_identifier = 'all';
+		}
+
+		// Nonce is bound to the target identifier so a nonce for user A
+		// can't be swapped to revoke user B via tlid= parameter change.
+		if ( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM . '|' . $user_identifier ) ) {
+			$this->logging->log( 'Removing user failed: Nonce expired or not scoped to this identifier.', __METHOD__, 'error' );
 			return;
 		}
 
@@ -356,12 +467,6 @@ class Endpoint {
 		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
 			return;
-		}
-
-		$user_identifier = Utils::get_request_param( SupportUser::ID_QUERY_PARAM );
-
-		if ( ! $user_identifier ) {
-			$user_identifier = 'all';
 		}
 
 		/**
@@ -402,12 +507,16 @@ class Endpoint {
 
 			// Preserve the original opener origin so the targeted postMessage
 			// in trustedlogin.js can reach the same opener after redirect.
+			// Route through resolve_safe_referer so only integrator-declared
+			// hosts pass through — an attacker who convinces an admin to
+			// click a revoke URL with tl_origin=https://attacker.com can no
+			// longer coerce a {type:'revoked'} postMessage to their site.
 			$tl_origin_raw = Utils::get_request_param( 'tl_origin' );
 			if ( $tl_origin_raw ) {
-				$tl_origin_raw = rawurldecode( $tl_origin_raw );
-				$parsed        = wp_parse_url( $tl_origin_raw );
-				if ( $parsed && isset( $parsed['scheme'], $parsed['host'] ) && in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
-					$redirect_args['origin'] = $tl_origin_raw;
+				$tl_origin_raw  = rawurldecode( $tl_origin_raw );
+				$trusted_origin = $this->resolve_safe_referer( $tl_origin_raw );
+				if ( '' !== $trusted_origin ) {
+					$redirect_args['origin'] = $trusted_origin;
 				}
 			}
 

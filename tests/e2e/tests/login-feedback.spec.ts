@@ -347,6 +347,182 @@ test( 'crafted wp-login.php?tl_error= without a matching transient shows nothing
     await ctx.close();
 } );
 
+test( 'failure feedback renders "Go back" link pointing at the POST referer', async ( { browser } ) => {
+    // The feedback screen lands on wp-login.php — by that point the browser
+    // referer has been overwritten by the redirect hop, so the link must be
+    // built from the referer captured at POST time by Endpoint::fail_login().
+    const grantCtx = await browser.newContext();
+    const { endpoint } = await grantAndCaptureSecrets( grantCtx );
+    await grantCtx.close();
+
+    const unknownIdentifier = wpCli(
+        'wp-cli-client',
+        `echo bin2hex( random_bytes( 64 ) );`,
+        'generate identifier for referer test',
+    );
+
+    const agentCtx = await browser.newContext();
+    const p = await agentCtx.newPage();
+    // POST originates from the real vendor form page so the browser sends
+    // a Referer header. Without this, wp_get_raw_referer() on the POST has
+    // nothing to store and the Go-back link can't render.
+    await p.goto( VENDOR_STATE.form_page_url, { waitUntil: 'domcontentloaded' } );
+    await p.evaluate( ( { action, endpoint, identifier } ) => {
+        const f = document.createElement( 'form' );
+        f.method = 'POST'; f.action = action;
+        for ( const [ n, v ] of Object.entries( { action: 'trustedlogin', endpoint, identifier } ) ) {
+            const i = document.createElement( 'input' );
+            i.name = n; i.value = v; f.appendChild( i );
+        }
+        document.body.appendChild( f ); f.submit();
+    }, { action: VENDOR_STATE.client_url + '/', endpoint, identifier: unknownIdentifier } );
+
+    await p.waitForURL( /wp-login\.php.*tl_error=security_check_failed/, { timeout: 15_000 } );
+
+    const goBack = p.locator( '.tl-login-feedback__actions a', { hasText: /go back/i } );
+    await expect( goBack ).toBeVisible();
+    // The href must be a plain http(s) URL (no javascript:/data:, etc.) —
+    // esc_url() enforces the scheme allowlist.
+    const href = await goBack.getAttribute( 'href' );
+    expect( href ).toMatch( /^https?:\/\// );
+    // And it should point at the vendor origin (cross-origin by design for
+    // this link; it's an <a href>, not a wp_safe_redirect target).
+    expect( href ).toContain( new URL( VENDOR_STATE.vendor_url ).host );
+
+    await agentCtx.close();
+} );
+
+test( 'integrator can extend the Referer allowlist via filter (multi-domain vendors)', async ( { browser } ) => {
+    // Vendors that serve many customer sites sometimes run support from
+    // multiple surfaces (marketing site + support portal + white-label
+    // domains). The filter
+    //   trustedlogin/{ns}/login_feedback/allowed_referer_urls
+    // lets them opt-in additional hosts without widening the default
+    // allowlist for everyone.
+    //
+    // Test: register a throwaway host via the filter, POST with a Referer
+    // matching it, assert the Go-back link renders pointing at the
+    // filter-added URL.
+
+    // The mu-plugin at tests/e2e/mu-plugins/tl-extra-referer.php registers:
+    //   trustedlogin/pro-block-builder/login_feedback/allowed_referer_urls
+    // and appends 'https://support.vendor.test/portal'.
+
+    const grantCtx = await browser.newContext();
+    const { endpoint } = await grantAndCaptureSecrets( grantCtx );
+    await grantCtx.close();
+
+    const unknownIdentifier = wpCli(
+        'wp-cli-client', `echo bin2hex( random_bytes( 64 ) );`, 'rand ident for filter test',
+    );
+
+    // Browsers own the Referer header on form navigation, so we can't fake
+    // it via page.route(). Use APIRequestContext instead — it lets us set
+    // arbitrary headers on a real POST. We then navigate the page to the
+    // 302 Location (wp-login.php?tl_error=...) to assert the feedback UI.
+    const agentCtx = await browser.newContext();
+    const resp = await agentCtx.request.post( VENDOR_STATE.client_url + '/', {
+        maxRedirects: 0,
+        form: { action: 'trustedlogin', endpoint, identifier: unknownIdentifier },
+        headers: { Referer: 'https://support.vendor.test/some/deep/path?x=1' },
+    } );
+    expect( resp.status() ).toBe( 302 );
+    const location = resp.headers()[ 'location' ] || '';
+    expect( location ).toMatch( /wp-login\.php.*tl_error=security_check_failed/ );
+
+    const p = await agentCtx.newPage();
+    await p.goto( location, { waitUntil: 'domcontentloaded' } );
+
+    const goBack = p.locator( '.tl-login-feedback__actions a', { hasText: /go back/i } );
+    await expect( goBack ).toBeVisible();
+    const href = await goBack.getAttribute( 'href' );
+    // Must be the filter-added URL (host matched), NOT the raw
+    // attacker-path Referer — path/query from Referer is discarded.
+    expect( href ).toBe( 'https://support.vendor.test/portal' );
+    expect( href ).not.toContain( '/some/deep/path' );
+    expect( href ).not.toContain( 'x=1' );
+
+    await agentCtx.close();
+} );
+
+test( 'spoofed cross-origin Referer never reaches the Go-back link', async ( { browser } ) => {
+    // Attack model: an attacker POSTs to client.com/ with a legit endpoint
+    // + bogus identifier + Referer: https://evil.example/phish. The
+    // transient stores referer → attacker sends victim to
+    // wp-login.php?tl_error=..., victim sees Go-back pointing at evil.example.
+    //
+    // Defense: fail_login() only stores the referer if its host matches one
+    // the integrator declared in config (vendor/website, vendor/support_url,
+    // or home_url). An attacker-controlled host falls through to empty.
+    const grantCtx = await browser.newContext();
+    const { endpoint } = await grantAndCaptureSecrets( grantCtx );
+    await grantCtx.close();
+
+    const unknownIdentifier = wpCli(
+        'wp-cli-client',
+        `echo bin2hex( random_bytes( 64 ) );`,
+        'generate identifier for spoof test',
+    );
+
+    // Use APIRequestContext to actually send a forged Referer header
+    // (page.route() can't fake it on a navigation POST — browsers own
+    // that header). This sends the exact attack request an adversary
+    // would send via curl/script.
+    const agentCtx = await browser.newContext();
+    const resp = await agentCtx.request.post( VENDOR_STATE.client_url + '/', {
+        maxRedirects: 0,
+        form: { action: 'trustedlogin', endpoint, identifier: unknownIdentifier },
+        headers: { Referer: 'https://evil.example/phish' },
+    } );
+    expect( resp.status() ).toBe( 302 );
+    const location = resp.headers()[ 'location' ] || '';
+    expect( location ).toMatch( /wp-login\.php.*tl_error=security_check_failed/ );
+
+    const p = await agentCtx.newPage();
+    await p.goto( location, { waitUntil: 'domcontentloaded' } );
+
+    await expect( p.locator( '.tl-login-feedback--error' ) ).toBeVisible();
+    // Spoofed host MUST NOT appear anywhere on the page.
+    const html = await p.content();
+    expect( html ).not.toContain( 'evil.example' );
+    // Go-back link MUST be omitted (host didn't match any allowed list).
+    await expect( p.locator( '.tl-login-feedback__actions a', { hasText: /go back/i } ) ).toHaveCount( 0 );
+
+    await agentCtx.close();
+} );
+
+test( 'failure feedback omits "Go back" when no referer was captured', async ( { browser } ) => {
+    // Direct navigation to the POST endpoint (no Referer header) must produce
+    // a feedback screen WITHOUT a broken/empty Go-back link.
+    const grantCtx = await browser.newContext();
+    const { endpoint } = await grantAndCaptureSecrets( grantCtx );
+    await grantCtx.close();
+
+    const unknownIdentifier = wpCli(
+        'wp-cli-client',
+        `echo bin2hex( random_bytes( 64 ) );`,
+        'generate identifier for no-referer test',
+    );
+
+    const agentCtx = await browser.newContext();
+    const p = await agentCtx.newPage();
+    // Start from about:blank (no origin) so the POST carries no Referer.
+    await p.setContent( `<form id="f" method="POST" action="${ VENDOR_STATE.client_url }/">
+        <input name="action" value="trustedlogin">
+        <input name="endpoint" value="${ endpoint }">
+        <input name="identifier" value="${ unknownIdentifier }">
+    </form><script>document.getElementById('f').submit();</script>` );
+    await p.waitForURL( /wp-login\.php.*tl_error=security_check_failed/, { timeout: 15_000 } );
+
+    await expect( p.locator( '.tl-login-feedback--error' ) ).toBeVisible();
+    // Contact support link must still be present (independent of referer).
+    await expect( p.locator( '.tl-login-feedback__actions a', { hasText: /contact support/i } ) ).toBeVisible();
+    // But Go back must be absent.
+    await expect( p.locator( '.tl-login-feedback__actions a', { hasText: /go back/i } ) ).toHaveCount( 0 );
+
+    await agentCtx.close();
+} );
+
 test( 'failure message is one-hop: consumed after first render', async ( { browser } ) => {
     // Trigger a failure so a transient is set + page shows the message.
     // Reuse the same bogus-identifier technique as the "generic error"

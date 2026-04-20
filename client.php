@@ -36,13 +36,28 @@ $config     = array(
 	'auth'    => array(
 		'api_key' => $public_key,
 	),
-	'vendor'  => array(
-		'namespace'   => 'pro-block-builder',
-		'title'       => 'Pro Block Builder',
-		'email'       => 'support@example.com',
-		'website'     => 'https://example.com',
-		'support_url' => 'https://help.example.com',
-	),
+	// In the e2e Docker stack, read the in-stack vendor URL from the
+	// shared fixture so both the test runner and the client-side config
+	// stay in sync. Outside e2e, fall back to documentation placeholders.
+	'vendor'  => ( static function () {
+		$fixture      = __DIR__ . '/tests/e2e/fixtures/.cache-vendor-state.json';
+		$vendor_url   = 'https://example.com';
+		$support_url  = 'https://help.example.com';
+		if ( is_readable( $fixture ) ) {
+			$state = json_decode( (string) file_get_contents( $fixture ), true );
+			if ( is_array( $state ) && ! empty( $state['vendor_url'] ) ) {
+				$vendor_url  = (string) $state['vendor_url'];
+				$support_url = rtrim( $vendor_url, '/' ) . '/support';
+			}
+		}
+		return array(
+			'namespace'   => 'pro-block-builder',
+			'title'       => 'Pro Block Builder',
+			'email'       => 'support@example.com',
+			'website'     => $vendor_url,
+			'support_url' => $support_url,
+		);
+	} )(),
 	'role'    => 'editor',
 	'caps'    => array(
 		'add' => array(

@@ -268,10 +268,10 @@ final class SupportUser {
 			return $username;
 		}
 
-		$i            = 1;
+		$i            = 2;
 		$new_username = $username;
 		while ( username_exists( $new_username ) ) {
-			$new_username = sprintf( '%s %d', $username, $i + 1 );
+			$new_username = sprintf( '%s %d', $username, $i++ );
 		}
 
 		return $new_username;
@@ -317,9 +317,15 @@ final class SupportUser {
 		$support_user = $this->get( $user_identifier );
 
 		if ( empty( $support_user ) ) {
-			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $user_identifier ), __METHOD__, 'notice' );
+			// Never log the raw identifier — attackers can POST arbitrary
+			// bytes as the identifier (including HTML payloads) hoping the
+			// operator opens the resulting .log file in a browser. Hash it.
+			$identifier_hash = Encryption::hash( (string) $user_identifier );
+			$loggable_hash   = is_wp_error( $identifier_hash ) ? '[hash-failed]' : $identifier_hash;
 
-			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
+			$this->logging->log( 'Support user not found at identifier hash ' . $loggable_hash, __METHOD__, 'notice' );
+
+			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier hash %s.', $loggable_hash ) );
 		}
 
 		$is_active = $this->is_active( $support_user );
@@ -722,7 +728,9 @@ final class SupportUser {
 			array(
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
 				self::ID_QUERY_PARAM                 => $user_identifier,
-				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
+				// Bind nonce to the target identifier so a nonce for
+				// user A can't be swapped to revoke user B.
+				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM . '|' . $user_identifier ),
 			),
 			admin_url()
 		);

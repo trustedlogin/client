@@ -13,6 +13,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// The e2e stack runs everything over plain HTTP (fake-saas, vendor-wp). In
+// production the client SDK forces TLS verification when fetching the
+// vendor's public key. This opt-out constant — which ONLY this mu-plugin
+// defines — tells the SDK it's allowed to talk to an http:// vendor and
+// skip sslverify. Never set this in real code.
+if ( ! defined( 'TL_E2E_ALLOW_HTTP_VENDOR' ) ) {
+	define( 'TL_E2E_ALLOW_HTTP_VENDOR', true );
+}
+
 $ns = 'pro-block-builder';
 
 // Where the client posts envelopes (POST /sites/).

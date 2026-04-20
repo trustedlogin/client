@@ -6,13 +6,19 @@
  * up at https:// after the redirect, and the postMessage origins on the
  * two sides no longer match if we compare full origin strings.
  *
- * Fix is in two places:
+ * Fix is a SINGLE-sided host-match on the OPENER:
  *   - Connector tl-field.js (opener): listenPopupEvents compares HOST
- *     (hostname+port) rather than full origin.
- *   - Client trustedlogin.js (popup): postToOpener dispatches to BOTH
- *     the URL-param origin AND the same-host alternate-scheme origin,
- *     so a scheme-mismatched opener still receives the message on one
- *     of the two calls.
+ *     (hostname+port) rather than full origin. A message delivered from
+ *     the popup's real origin (whichever scheme WP ended up on after the
+ *     HSTS redirect) is still accepted if the HOST matches what the
+ *     opener queued.
+ *
+ * The popup side (client trustedlogin.js postToOpener) was previously
+ * dual-dispatching — once to the URL-param origin, once to the alt-scheme
+ * variant — which opened a narrow MITM path where an attacker controlling
+ * the scheme-variant of the vendor hostname could receive `granted` with
+ * the access key. That alt-dispatch has been removed; the host-match on
+ * the opener side alone is sufficient.
  *
  * Tests here exercise the real wire — no synthetic MessageEvent
  * dispatching (browser-controlled fields like event.origin aren't
@@ -48,18 +54,27 @@ async function loginClientAdmin( ctx: BrowserContext ) {
 // server emits a 301 to https://site, the popup's final URL is on a
 // different scheme than the vendor field's stored value.
 //
-// Reproducing that verbatim in these tests requires a TLS-serving
-// sidecar in the docker stack (e.g. caddy with a self-signed cert
-// proxying to client-wp). Adding that infrastructure is out of scope
-// here. Playwright request interception was attempted as a substitute
-// but the HTTPS redirect chain interacts poorly with Chromium's TLS
-// state before the route handler can fulfill a 301 chain cleanly.
+// The canonical case runs on DEFAULT ports — http://site:80 → https://
+// site:443 — so URL.host drops the port on both sides and the host
+// comparison boils down to "site vs site". That exact permutation
+// can't be reproduced with a docker sidecar on the developer's host
+// machine (Local by Flywheel etc. already bind 80/443), so we cover
+// it in three layers instead:
 //
-// The e2e tests below test the SAME listener code and the SAME
-// postMessage wire; they create the scheme mismatch by having the
-// URL param claim one scheme while the opener is at another. The
-// pure host-comparison logic is additionally covered by real-code
-// Jest unit tests in trustedlogin-connector/public/forms/tl-field.test.js.
+//   - tls-wire.spec.ts runs the full grant flow over the caddy TLS
+//     sidecar (https://localhost:8443 → client-wp:80). That exercises
+//     the real TLS handshake, X-Forwarded-Proto, secure cookies, and
+//     the cross-origin postMessage across a scheme-AND-port boundary.
+//
+//   - trustedlogin-connector/public/forms/tl-field.test.js (Jest)
+//     exercises the host-comparison helper against every scheme/port
+//     permutation using the REAL listener code — including the
+//     default-port cases this docker stack can't serve.
+//
+//   - The tests below create the scheme mismatch by having the URL
+//     param claim one scheme while the opener is at another, on HTTP
+//     only. They verify the postMessage wire end-to-end without the
+//     TLS moving pieces.
 
 test.describe.configure( { mode: 'serial' } );
 
@@ -72,15 +87,16 @@ test.beforeEach( () => {
 // documented in the big NOTE above — left out of this suite in favour
 // of unit tests that prove the comparison logic using the real file.)
 
-test( 'client posts to BOTH URL-param origin and alt-scheme variant', async ( { browser } ) => {
+test( 'client refuses to deliver to scheme-variant when URL-param lies about scheme', async ( { browser } ) => {
     // Scenario exercised: the URL param claims origin=https://localhost:8001,
-    // but the actual opener is at http://localhost:8001. Pre-fix, the
-    // client's postMessage would target only the https origin → browser
-    // drops it → opener never sees any message. With the fix, the client
-    // ALSO posts targeting the http variant of the same host → opener
-    // receives it.
+    // but the actual opener is at http://localhost:8001. The popup side no
+    // longer dual-dispatches to the alt-scheme host — so the browser drops
+    // the (only) postMessage whose targetOrigin doesn't match the opener.
     //
-    // We can observe delivery by collecting messages on the opener.
+    // This is the SAFE behavior: an attacker who controls the alt-scheme
+    // variant of a vendor's hostname can no longer receive `granted`.
+    // The real redirect case (popup started on http but WP redirected to
+    // https) is handled by the OPENER's host-only comparison instead.
     const ctx = await browser.newContext();
     await loginClientAdmin( ctx );
 
@@ -104,31 +120,19 @@ test( 'client posts to BOTH URL-param origin and alt-scheme variant', async ( { 
     // Drive the grant manually by clicking the CTA inside the popup.
     await popup.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click();
 
-    // The http opener should receive `granted` despite the URL param
-    // telling the popup to target https — because postToOpener now
-    // ALSO posts to the http alt-scheme variant.
-    await opener.waitForFunction( () => {
-        const msgs = ( window as any ).__tlMessages || [];
-        return msgs.some( ( m: any ) => m.data?.type === 'granted' );
-    }, null, { timeout: 30_000 } );
+    // Give the popup's JS a few seconds to run through post-grant logic
+    // so any messages it intended to emit would have fired by now.
+    await popup.waitForTimeout( 5_000 );
 
     const msgs  = await opener.evaluate( () => ( window as any ).__tlMessages );
     const types = msgs.map( ( m: any ) => m.data?.type );
 
+    // No `granted` message should have reached http://localhost:8001
+    // when the URL param targets https://localhost:8001.
     expect(
         types,
-        'opener should receive granted despite scheme mismatch in URL param'
-    ).toContain( 'granted' );
-
-    // event.origin on a received postMessage is the SENDER's origin
-    // (the popup at client_url). What we're verifying is that the
-    // opener received it at all — when the URL param lied that the
-    // target should be https://localhost:8001. Pre-fix, no message
-    // would arrive on the http://localhost:8001 opener; post-fix, the
-    // alt-scheme fallback post reaches us.
-    const grantedMsg = msgs.find( ( m: any ) => m.data?.type === 'granted' );
-    expect( grantedMsg.origin, 'message came from the client popup' ).toBe( VENDOR_STATE.client_url );
-    expect( grantedMsg.data.key, 'granted payload carries the access key' ).toBeTruthy();
+        'opener must NOT receive granted when URL-param scheme disagrees with opener scheme'
+    ).not.toContain( 'granted' );
 
     await ctx.close();
 } );

@@ -235,6 +235,36 @@ wp_vendor eval '
     }
 '
 
+# ----- SaaS envelope-signing public key --------------------------------------
+#
+# Fetch the fake-saas signing public key and push it into the vendor WP as
+# option `trustedlogin_vendor_saas_envelope_public_key`. The connector's
+# EnvelopeVerifier reads this option (with a filter override) so the full
+# grant flow becomes MITM-resistant by default.
+
+bold "Fetching fake-saas envelope-signing public key"
+SAAS_PUBKEY=""
+for attempt in 1 2 3 4 5; do
+    SAAS_PUBKEY=$(curl -fsS http://localhost:8003/signing-pubkey 2>/dev/null \
+        | sed -n 's/.*"publicKey"[ ]*:[ ]*"\([0-9a-f]*\)".*/\1/p' \
+        || true)
+    if [[ -n "$SAAS_PUBKEY" ]]; then
+        break
+    fi
+    warn "  signing-pubkey not ready (attempt $attempt/5) — retrying"
+    sleep 2
+done
+
+if [[ -n "$SAAS_PUBKEY" ]]; then
+    bold "  SaaS pubkey: ${SAAS_PUBKEY:0:16}... (${#SAAS_PUBKEY} chars)"
+    wp_vendor option update trustedlogin_vendor_saas_envelope_public_key "$SAAS_PUBKEY" >/dev/null
+else
+    warn "  Could not fetch fake-saas signing pubkey — envelope signing will be off"
+    SAAS_PUBKEY=""
+    # Make sure any stale value is cleared.
+    wp_vendor option delete trustedlogin_vendor_saas_envelope_public_key >/dev/null 2>&1 || true
+fi
+
 # ----- Gravity Form with TL field --------------------------------------------
 #
 # PR #184 registers a custom GF field type. We create a form programmatically
@@ -324,11 +354,13 @@ cat > fixtures/.cache-vendor-state.json <<EOF
   "form_id":        "${FORM_ID}",
   "form_page_url":  "${PAGE_URL}",
   "client_url":     "http://localhost:8002",
+  "client_url_tls": "https://localhost:8443",
   "client_url_docker": "http://client-wp",
   "vendor_url":     "http://localhost:8001",
   "namespace":      "pro-block-builder",
   "account_id":     "999",
-  "api_public_key": "90bd9d918670ea15"
+  "api_public_key": "90bd9d918670ea15",
+  "saas_envelope_pubkey": "${SAAS_PUBKEY}"
 }
 EOF
 
