@@ -70,6 +70,20 @@ fi
 bold "Activating trustedlogin-client (the bind-mounted repo root)"
 wp_client plugin activate trustedlogin-client
 
+# Compat-test plugins are installed but left deactivated; the matching specs
+# (compat-wps-hide-login.spec.ts, compat-wordfence.spec.ts) activate them
+# per-test and clean up after so existing specs keep running on a vanilla WP.
+bold "Ensuring compat-test plugins are installed (deactivated by default)"
+for plugin in wps-hide-login wordfence; do
+    if wp_client plugin is-installed "$plugin" >/dev/null 2>&1; then
+        wp_client plugin deactivate "$plugin" >/dev/null 2>&1 || true
+    else
+        wp_client plugin install "$plugin" --activate=false 2>&1 | tail -3 \
+            || warn "$plugin install failed (spec will retry)"
+        wp_client plugin deactivate "$plugin" >/dev/null 2>&1 || true
+    fi
+done
+
 bold "Enabling pretty permalinks"
 wp_client rewrite structure '/%postname%/' --hard
 wp_client rewrite flush --hard
