@@ -464,4 +464,71 @@
 			}
 		}
 	}
+
+	// Pre-flight fallback screen — shown in place of the Grant Access
+	// form when the client can't reach the support team's site. Primary
+	// CTA ("Contact support") + muted retry link stacked underneath so
+	// the retry is discoverable without competing with the primary.
+	.tl-#{$namespace}-preflight-fallback {
+
+		.tl-#{$namespace}-auth__intro {
+			// Softer than the default 2em heading — this is a "we're
+			// temporarily down" screen, not a call to action.
+			font-size: 1.5em;
+			color: $color-555;
+		}
+
+		.tl-#{$namespace}-preflight-fallback__message {
+			text-align: center;
+			color: $color-555;
+			padding: 0 $vertical-spacing;
+		}
+
+		.tl-#{$namespace}-preflight-fallback__actions {
+			// Vertical stack — primary button, then the muted retry
+			// link centered beneath it.
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: $vertical-spacing / 2;
+			margin-top: $vertical-spacing;
+		}
+
+		.tl-#{$namespace}-preflight-fallback__contact {
+			margin: 0;
+		}
+
+		.tl-#{$namespace}-preflight-fallback__retry-wrap {
+			// p-tag wrapper keeps the link aligned with paragraph
+			// typography without picking up block-button styling.
+			margin: 0;
+			padding: 0;
+		}
+
+		.tl-#{$namespace}-preflight-fallback__retry {
+			// Muted secondary affordance — not a button, not a CTA.
+			display: inline-flex;
+			align-items: center;
+			gap: .25em;
+			color: lighten($color-555, 15%);
+			font-size: .95em;
+			text-decoration: none;
+			border-bottom: 1px dotted lighten($color-555, 25%);
+			padding-bottom: 1px;
+
+			&:hover,
+			&:focus {
+				color: $color-555;
+				border-bottom-style: solid;
+			}
+
+			.dashicons {
+				font-size: 18px;
+				width: 18px;
+				height: 18px;
+				line-height: 18px;
+				vertical-align: middle;
+			}
+		}
+	}
 }

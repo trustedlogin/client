@@ -455,7 +455,7 @@ final class Form {
 					<p class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__message">
 						<?php echo esc_html( $message ); ?>
 					</p>
-					<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__actions">
+					<div class="tl-<?php echo esc_attr( $ns ); ?>-auth__actions tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__actions">
 						<?php if ( '' !== $support_href && 'mailto:' !== $support_href ) : ?>
 							<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__contact button button-primary button-hero"
 							   href="<?php echo $support_href; // Already escaped above. ?>"
@@ -463,10 +463,13 @@ final class Form {
 								<?php echo esc_html( $support_text ); ?>
 							</a>
 						<?php endif; ?>
-						<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry"
-						   href="<?php echo esc_url( $retry_url ); ?>">
-							<?php esc_html_e( 'Try again', 'trustedlogin' ); ?>
-						</a>
+						<p class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry-wrap">
+							<a class="tl-<?php echo esc_attr( $ns ); ?>-preflight-fallback__retry"
+							   href="<?php echo esc_url( $retry_url ); ?>">
+								<span class="dashicons dashicons-update" aria-hidden="true"></span>
+								<?php esc_html_e( 'Try reconnecting', 'trustedlogin' ); ?>
+							</a>
+						</p>
 					</div>
 				</div>
 			</section>
