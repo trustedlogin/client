@@ -116,7 +116,10 @@ else
 fi
 
 bold "Staging gravityforms"
-clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms"
+# Explicit empty 4th arg (local_source) for consistency with the other
+# clone_with_token call site. gravityforms has no local checkout we
+# can copy from, so we always fall through to git clone.
+clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms" ""
 
 # Gravity Forms's dev branch ships source JS/CSS that only resolves after a
 # build. Without this step, assets 404 (theme-foundation.min.css, etc.) and

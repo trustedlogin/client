@@ -19,10 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 add_action( 'init', function () {
-	$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	if ( strpos( $path, '/tl-wf-harness/' ) === false ) {
+	// Pin the match to the path segment ONLY. A substring match on
+	// REQUEST_URI would match a legitimate query like ?redirect=/tl-wf-harness/…
+	// and light up this harness for any admin who pasted such a URL.
+	$request_path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+	if ( ! preg_match( '#^(?:/index\.php)?/tl-wf-harness/(enable|disable)/?$#', $request_path, $match ) ) {
 		return;
 	}
+	$action = $match[1];
 
 	$secret = defined( 'TL_WF_HARNESS_SECRET' ) ? TL_WF_HARNESS_SECRET : 'e2e-only';
 	if ( ! isset( $_GET['k'] ) || ! hash_equals( $secret, (string) $_GET['k'] ) ) {
@@ -39,7 +43,16 @@ add_action( 'init', function () {
 
 	$e = wfWAF::getInstance()->getStorageEngine();
 
-	if ( strpos( $path, '/tl-wf-harness/enable' ) !== false ) {
+	// Wordfence's storage engine can be null if WAF state is broken
+	// (corrupted wflogs dir, missing config). Bail cleanly so the spec
+	// sees a clear error instead of a PHP fatal.
+	if ( ! $e ) {
+		status_header( 503 );
+		echo "storage engine unavailable\n";
+		exit;
+	}
+
+	if ( 'enable' === $action ) {
 		$e->setConfig( 'wafStatus', 'enabled' );
 		$e->unsetConfig( 'whitelistedURLParams', 'livewaf' );
 		$e->saveConfig( '' );
@@ -50,7 +63,7 @@ add_action( 'init', function () {
 		exit;
 	}
 
-	if ( strpos( $path, '/tl-wf-harness/disable' ) !== false ) {
+	if ( 'disable' === $action ) {
 		$e->setConfig( 'wafStatus', 'disabled' );
 		$e->saveConfig( '' );
 		echo 'wafStatus=' . $e->getConfig( 'wafStatus', 'UNSET' ) . PHP_EOL;
@@ -58,6 +71,8 @@ add_action( 'init', function () {
 		exit;
 	}
 
+	// Regex guarantees one of enable/disable matched — this is
+	// a safety net only.
 	status_header( 404 );
 	exit;
 }, 1 );

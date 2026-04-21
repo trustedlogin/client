@@ -253,6 +253,14 @@ final class Client {
 			return $this->extend_access( $user_id );
 		}
 
+		// Check SSL before creating a support user. Creating locally and
+		// then failing the SaaS sync on the SSL gate would orphan the
+		// user — it can never be used to log in because no envelope
+		// reached the vendor dashboard. Fail-fast keeps state clean.
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ), array( 'error_code' => 426 ) );
+		}
+
 		timer_start();
 
 		try {
@@ -335,9 +343,9 @@ final class Client {
 			),
 		);
 
-		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) );
-		}
+		// SSL was already verified at the top of grant_access(); no
+		// second check needed here. The return_data is now ready for
+		// the SaaS sync below.
 
 		timer_start();
 
@@ -428,6 +436,16 @@ final class Client {
 	 */
 	private function extend_access( $user_id ) {
 
+		// Check SSL BEFORE any local mutation. If we extend the user's
+		// expiration first and only then notice we can't reach the SaaS,
+		// local + remote state diverge: the site believes the agent's
+		// access is extended, but the envelope the agent needs to log
+		// in via the vendor dashboard still reflects the old expiration.
+		// Fail fast so the customer is asked to enable HTTPS and retry.
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ), array( 'error_code' => 426 ) );
+		}
+
 		timer_start();
 
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
@@ -469,10 +487,6 @@ final class Client {
 				'remote' => null, // Updated later.
 			),
 		);
-
-		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) );
-		}
 
 		timer_start();
 

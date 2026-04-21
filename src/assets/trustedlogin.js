@@ -194,9 +194,12 @@
 			var errorCode   = 'unknown';
 
 			if ( response && response.statusText === 'timeout' ) {
+				// Fall back to the localized generic failure copy rather than
+				// a hardcoded English string when the integrator's lang file
+				// doesn't define a timeout-specific entry.
 				userMessage = ( tl_obj.lang.status.timeout && tl_obj.lang.status.timeout.content )
 					? tl_obj.lang.status.timeout.content
-					: 'The request took too long to complete. Please try again.';
+					: tl_obj.lang.status.failed.content;
 				errorCode = 'timeout';
 			} else if ( response && response.responseText === '0' ) {
 				userMessage = tl_obj.lang.status.failed_permissions.content;

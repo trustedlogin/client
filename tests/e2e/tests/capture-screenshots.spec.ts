@@ -29,9 +29,14 @@ const DEFAULT_DOCS_DIR = path.resolve(
 );
 const OUT_DIR = process.env.TL_DOCS_STATIC_DIR || DEFAULT_DOCS_DIR;
 
+// We check the PARENT of OUT_DIR because OUT_DIR itself is created
+// on first run (fs.mkdirSync below) — but the parent (the checked-out
+// docs repo's static/img/client tree) must already exist. Without it,
+// we're either on the wrong machine layout or the docs repo isn't
+// checked out at the expected sibling path.
 if ( ! fs.existsSync( path.dirname( OUT_DIR ) ) ) {
     throw new Error(
-        `trustedlogin-docs static dir not found at ${ OUT_DIR }. ` +
+        `trustedlogin-docs repo not found (expected the parent of ${ OUT_DIR } to exist). ` +
         `Set TL_DOCS_STATIC_DIR to override the output location.`,
     );
 }
