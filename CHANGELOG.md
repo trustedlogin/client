@@ -1,10 +1,48 @@
 # Changelog for TrustedLogin Client
 
-## 1.10 (March 10, 2025)
+## 1.10 (TBD)
 
-- Added postMessage response to the opener when access is granted or revoked
-- Added hidden input to store the expiration date of the support user
-- Added expiration to the message sent to the opener when access is granted
+This release overhauls the Grant Access screen's error UX to surface clear, customer-friendly messages when the plugin's support site is unreachable, adds safe post-redirect login feedback with Referer-allowlist protection, and fixes a webhook body shape that security plugins were flagging as XSS.
+
+#### 🚀 Added
+
+- Adds a pre-flight check on the Grant Support Access screen that detects when the plugin's support site is unreachable (firewall intercept, misconfigured installation, network failure) and replaces the grant button with a clear error banner, a "Contact support" button, and a "Try reconnecting" link.
+- Adds post-redirect login feedback so support agents who hit an expired, revoked, or blocked access key now see a friendly explanation instead of a silent no-op landing page:
+  - Success banner on wp-admin when access is granted.
+  - Info notice when an already-authenticated user hits their own access link (now includes the current user's display name).
+  - "Go back" link on failure screens that safely returns the agent to the vendor surface they came from.
+- Adds postMessage responses to the grant popup so the opening window learns when access is granted, extended, or revoked without polling.
+- Adds a hidden input to the form output containing the support user's expiration date, along with that expiration in the opener message.
+- Adds the `trustedlogin/{namespace}/login_feedback/allowed_referer_urls` filter so vendors who run support from multiple domains (marketing site, help portal, white-label domains) can accept Referers from all of them. See the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks).
+- Adds the `trustedlogin/{namespace}/webhook/request_args` filter, giving integrators full control over headers and body shape sent to the configured webhook URL.
+
+#### ✨ Improved
+
+- Rewrites every customer-facing error message to drop internal jargon ("TrustedLogin", "vendor", "endpoint", "publicKey") and name the actionable next step. For example, "Invalid response. Missing key: publicKey" becomes "Support access could not be set up. The plugin's support team needs to finish configuring their end — please contact them and let them know."
+- Shrinks the Grant Access screen CSS by roughly 21% by removing an inline source map from the compiled stylesheet.
+- Removes transient rows from WordPress's autoloaded options so Client SDK transients no longer pay the cost of being loaded on every page request.
+- Tightens the post-redirect "Go back" link against phishing — the Referer host must match one of the vendor's configured URLs, and the configured URL (not the raw Referer) is what gets rendered.
+
+#### 🐛 Fixed
+
+- Fixes webhook POST requests being blocked by security plugins (Wordfence, Cloudflare, Imunify360, Sucuri) as false-positive XSS. The webhook body is now JSON-encoded with a `Content-Type: application/json` header by default, avoiding the pattern that tripped those rules. Integrators whose custom receiver needs form encoding can revert via the `webhook/request_args` filter.
+- Fixes a denial-of-service in the lockdown counter where distinct support-user identifiers from the same IP could trigger a site-wide lockdown. The counter is now scoped per IP.
+- Fixes `Client::revoke_access( 'all' )` not returning `true` after a successful revoke loop.
+- Fixes an infinite loop in `SupportUser::generate_unique_username()` when the initial username was taken.
+- Fixes the revoke nonce being shared across support users. The nonce is now scoped to the specific support user identifier.
+
+#### 💻 Developer Updates
+
+- Adds `Utils::delete_transient( $transient )` as the counterpart to `Utils::set_transient()`. Previously callers had to reach through the abstraction and call `delete_option()` directly.
+- Adds `Remote::body_looks_like_html()` and introduces new error codes returned by `Remote::handle_response()`: `vendor_response_not_json` (firewall/CDN intercept detected), `missing_public_key` (vendor's installation not fully configured), and `unexpected_response_code` (HTTP status preserved in the error data).
+- Replaces the `bool $sanitize` parameter on `Utils::get_request_param()` with a `callable $sanitize_callback` (default: `'sanitize_text_field'`). The legacy `bool` signature is still honored for back-compatibility.
+- Adds a proper `require` block to `composer.json` pinning PHP 5.3+ and `ext-curl`/`ext-json`. Previously the PHP floor lived in `require-dev` and was not enforced at install time.
+- `Ajax::__construct` now accepts an optional `Client` instance so the ajax handler can reuse the already-constructed object graph instead of rebuilding it per request.
+- Validates the vendor public key before caching — must be exactly 64 hex characters. Adds an optional `vendor/public_key_fingerprint` Config setting for pinning.
+- Adds sensitive-header scrubbing to the debug log output (`Authorization`, `auth`, `api_key` are redacted before serialization).
+- Stores a persistent random salt in `tl_{namespace}_log_salt` so log filenames are no longer guessable from `home_url()` alone.
+- Removes the `postMessage` alt-scheme fallback in `trustedlogin.js` in favor of single-origin scheme-strict delivery.
+- Excludes `*.css.map`, `tests/`, and dev config files from published composer dist / GitHub source archives via `.gitattributes` `export-ignore`.
 
 ## 1.9.0 (August 25, 2024)
 
