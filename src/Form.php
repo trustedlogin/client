@@ -129,15 +129,6 @@ final class Form {
 			return;
 		}
 
-		// Surface a login-attempt failure even for anonymous visitors. If an
-		// unauthenticated user just bounced here from a failed support login,
-		// they'll otherwise see the plain WP login form with no context on
-		// why — the whole point of fail_login() is to explain what happened.
-		if ( ! empty( $_GET['tl_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$this->print_login_error_screen();
-			return;
-		}
-
 		// Once logged-in, take user back to auth request screen.
 		if ( ! is_user_logged_in() ) {
 			$_REQUEST['redirect_to'] = site_url( add_query_arg( array() ) );
@@ -150,45 +141,6 @@ final class Form {
 		}
 
 		$this->print_request_screen();
-	}
-
-	/**
-	 * Render the WP login screen with only a TrustedLogin error banner
-	 * inserted above the normal login form.
-	 *
-	 * Used when a failed support login redirected here and the visitor
-	 * is anonymous — we need them to see WHY the flow didn't complete,
-	 * without bypassing WP's normal login UI below the banner.
-	 *
-	 * @return void
-	 */
-	public function print_login_error_screen() {
-		global $wp_version;
-
-		$banner = $this->get_login_feedback_html();
-		if ( '' === $banner ) {
-			// No matching transient / code mismatch — don't leak a fake
-			// banner for a crafted URL.
-			return;
-		}
-
-		if ( version_compare( $wp_version, '5.2.0', '<' ) ) {
-			add_filter( 'login_headertitle', '__return_empty_string' );
-		} else {
-			add_filter( 'login_headertext', '__return_empty_string' );
-		}
-		add_filter( 'login_headerurl', array( $this, 'callback_return_vendor_website' ) );
-
-		login_header();
-
-		wp_enqueue_style( 'common' );
-		wp_add_inline_style( 'common', $this->get_login_inline_css() );
-
-		echo $banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-		login_footer();
-
-		die();
 	}
 
 	/**
@@ -226,12 +178,6 @@ final class Form {
 
 		// Print the styles before the HTML to prevent FOUC.
 		wp_print_styles( 'trustedlogin-' . $this->config->ns() );
-
-		// Surface any login-failure feedback stored by Endpoint::fail_login()
-		// BEFORE the auth screen so the user sees WHY they landed here rather
-		// than on the client admin.
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo $this->get_login_feedback_html();
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->get_auth_screen();
@@ -275,20 +221,6 @@ final class Form {
 	.login h1 a {
 		background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ) . '")!important;
 		background-size: contain!important;
-	}
-	.tl-login-feedback {
-		margin: 0 auto 16px;
-		max-width: 420px;
-		padding: 12px 16px;
-		border-radius: 4px;
-		font-size: 14px;
-		line-height: 1.5;
-	}
-	.tl-login-feedback--error {
-		color: #9b2c2c;
-		background: #fff5f5;
-		border: 1px solid #fed7d7;
-		border-left: 4px solid #c02b0a;
 	}
 	';
 	}
@@ -1875,90 +1807,6 @@ EOD;
 	 *
 	 * @return bool
 	 */
-	/**
-	 * Build the feedback banner HTML rendered above the auth screen when a
-	 * prior login attempt failed. Reads the short-lived transient set by
-	 * {@see Endpoint::fail_login()} and discards it after read so the user
-	 * doesn't see the same message on a subsequent visit.
-	 *
-	 * Only renders when:
-	 *   - the current request is the TrustedLogin login screen; AND
-	 *   - the URL carries a `tl_error` query param matching a known code.
-	 *
-	 * The transient itself stores the GENERIC user-facing message — detailed
-	 * reasons live in the log, never in a browser-reachable place.
-	 *
-	 * @return string Empty string when no feedback is queued.
-	 */
-	private function get_login_feedback_html() {
-		if ( empty( $_GET['tl_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			return '';
-		}
-
-		$error_code = sanitize_key( wp_unslash( (string) $_GET['tl_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( '' === $error_code ) {
-			return '';
-		}
-
-		$key   = 'trustedlogin_' . $this->config->ns() . '_login_error';
-		$value = Utils::get_transient( $key );
-
-		// The URL `tl_error` code must match the transient's stored code —
-		// otherwise an attacker linking a victim to a crafted URL can't
-		// surface a fake message, since they can't write to the transient.
-		if ( ! is_array( $value )
-			|| empty( $value['message'] )
-			|| ! isset( $value['code'] )
-			|| $error_code !== $value['code']
-		) {
-			return '';
-		}
-
-		// One-hop consumption: expire the transient immediately so a page
-		// refresh can't replay the banner. Utils is the TrustedLogin-owned
-		// transient API (not WP's own) — stick with it to keep reads and
-		// writes consistent with how fail_login() produced the value.
-		Utils::set_transient( $key, '', 1 );
-
-		// Build the retry/help footer — shown below the generic message
-		// so the user isn't stuck on wp-login.php with nowhere to go.
-		$actions = array();
-
-		// Use the referer captured at POST time (stored in the transient by
-		// fail_login()). wp_get_referer() on the wp-login.php GET only sees
-		// the intermediate redirect hop — by that point the original vendor
-		// URL is gone. esc_url() below gates the scheme list to http(s)
-		// and scrubs javascript:/data:/etc. Cross-origin is fine here: we're
-		// rendering an <a href>, not calling wp_safe_redirect().
-		$referer = isset( $value['referer'] ) ? (string) $value['referer'] : '';
-		if ( $referer ) {
-			$actions[] = sprintf(
-				'<a href="%s">%s</a>',
-				esc_url( $referer, array( 'http', 'https' ) ),
-				esc_html__( '← Go back', 'trustedlogin' )
-			);
-		}
-
-		if ( ! empty( $value['support_url'] ) ) {
-			$actions[] = sprintf(
-				'<a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span></a>',
-				esc_url( (string) $value['support_url'] ),
-				esc_html__( 'Contact support', 'trustedlogin' ),
-				esc_html__( '(opens in a new tab)', 'trustedlogin' )
-			);
-		}
-
-		$footer = $actions
-			? sprintf( '<div class="tl-login-feedback__actions">%s</div>', implode( ' &middot; ', $actions ) )
-			: '';
-
-		return sprintf(
-			'<div id="login_error" role="alert" class="tl-login-feedback tl-login-feedback--error">%s%s</div>',
-			wp_kses( (string) $value['message'], array( 'strong' => array(), 'em' => array(), 'br' => array() ) ),
-			$footer
-		);
-	}
-
 	private function is_login_screen() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return did_action( 'login_init' ) && isset( $_GET['ns'] ) && $_GET['ns'] === $this->config->ns();

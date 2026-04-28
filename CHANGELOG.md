@@ -1,5 +1,31 @@
 # Changelog for TrustedLogin Client
 
+## 1.11.0 (TBD)
+
+This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record, instead of on the customer's `wp-login.php` with a generic banner that points back at the integrator's own help docs.
+
+#### 🚀 Added
+
+- New `LoginAttempts` class that POSTs failed support logins to the TrustedLogin SaaS at `POST /api/v1/sites/{secret_id}/login-attempts`. Single-shot, 3-second hard timeout (so a slow SaaS never blocks the agent UX), no retries.
+- New `Endpoint::render_standalone_failure_page()` — a generic "Support login could not complete" page rendered on the customer site when the SaaS POST can't be made or the redirect target isn't trusted. Returns HTTP 200 (browsers replace 4xx/5xx with their own error chrome).
+- Per-namespace opt-out via the `TRUSTEDLOGIN_DISABLE_AUDIT_{NS}` constant (uppercase namespace), matching the existing `TRUSTEDLOGIN_DISABLE_{NS}` pattern.
+- `Remote::send()` gains an optional 5th `$timeout` argument (default `null` → existing 15-second behaviour, back-compat with all existing callers).
+
+#### 🛠 Changed
+
+- `Endpoint::fail_login()` is rewritten: on the `login_failed` branch it pre-captures the matched user's `site_identifier_hash` BEFORE `SupportUser::maybe_login()` deletes the expired user, derives `secret_id`, POSTs to SaaS, and on success redirects the agent back to the trusted referer with `?tl_attempt=lpat_…`. On `security_check_failed` (no user resolved), or on any failure (SaaS unreachable, untrusted referer, audit disabled, 422/429/5xx), renders the standalone fallback page instead of `wp-login.php`.
+- `Endpoint::__construct` widens by two optional args (`LoginAttempts`, `SupportUser`) so the new `fail_login()` path has its dependencies wired. Existing 2-arg call sites continue to work — only the `maybe_login_support()` flow needs the new args.
+
+#### 🗑 Removed
+
+- `Form::print_login_error_screen()`, `Form::get_login_feedback_html()`, `Endpoint::public_failure_messages()`, the `?tl_error=` query-param branch in `Form::maybe_print_request_screen()`, the `tl-login-feedback*` CSS, and the previous wp-login.php-override redirect path. Roughly 250 LoC.
+- The old `tests/e2e/tests/login-feedback.spec.ts` (the wp-login.php override flow). Replaced by `tests/e2e/tests/login-attempts.spec.ts` covering the new SaaS-mediated round trip.
+
+#### 🔒 Security
+
+- `detailed_reason` is freeform internal forensic text. SaaS stores it but never returns it via the read API; the customer site's local log keeps the full text. The plaintext identifier never crosses the wire — `identifier_hash` is `sha256(site_identifier_hash)`, derived from user-meta on the customer side, not the URL parameter.
+- `endpoint_mismatch` reporting is intentionally NOT wired. The existing silent no-op at `Endpoint::maybe_login_support()` line ~184 is the anti-probing defence; surfacing it would create an attacker oracle for endpoint-hash guesses.
+
 ## 1.10 (TBD)
 
 This release overhauls the Grant Access screen's error UX to surface clear, customer-friendly messages when the plugin's support site is unreachable, adds safe post-redirect login feedback with Referer-allowlist protection, and fixes a webhook body shape that security plugins were flagging as XSS.

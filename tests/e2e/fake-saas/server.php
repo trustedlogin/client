@@ -176,10 +176,59 @@ if ( $expected_token !== '' && strpos( $path, '/__' ) !== 0 ) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+//  Login-attempts (Plan B) — constants shared by the actual POST handler
+//  AND the debug routes below.
+// ---------------------------------------------------------------------------
+const LOGIN_ATTEMPT_MODE_STATE_KEY         = 'login_attempts_mode';
+const LOGIN_ATTEMPT_REQUEST_LOG_KEY        = 'login_attempts';
+const LOGIN_ATTEMPT_REQUEST_LOG_MAX        = 100;
+const LOGIN_ATTEMPT_FIXED_LPAT_UUID        = 'a1a5bea0-372a-47ca-8090-2f36ad870abc';
+
+// Allowed `mode` values (kept in sync with the test spec — JSON-stringified
+// over the wire). When adding a new mode, mirror it in the spec's
+// FakeSaasMode constant.
+const LOGIN_ATTEMPT_MODE_OK                = 'ok';
+const LOGIN_ATTEMPT_MODE_RATE_LIMITED      = 'rate_limited';
+const LOGIN_ATTEMPT_MODE_SERVER_ERROR      = 'server_error';
+
+// Status codes returned per mode. HTTP semantics are well-known but
+// keeping them named here makes the test failure modes self-documenting.
+const LOGIN_ATTEMPT_HTTP_CREATED           = 201;
+const LOGIN_ATTEMPT_HTTP_RATE_LIMITED      = 429;
+const LOGIN_ATTEMPT_HTTP_SERVER_ERROR      = 500;
+
 // Debug routes.
 if ( $method === 'GET' && $path === '/__state' ) {
 	with_state_locked( fn( $state ) => array( null, $state, 200 ) );
 }
+
+// Plan B: flip the next /sites/{secret_id}/login-attempts response.
+// Body: {"mode": "ok" | "rate_limited" | "server_error"}.
+if ( $method === 'POST' && $path === '/__login-attempts-mode' ) {
+	$body = read_body();
+	with_state_locked( function ( $state ) use ( $body ) {
+		$requested = isset( $body['mode'] ) ? (string) $body['mode'] : LOGIN_ATTEMPT_MODE_OK;
+		$allowed   = array(
+			LOGIN_ATTEMPT_MODE_OK,
+			LOGIN_ATTEMPT_MODE_RATE_LIMITED,
+			LOGIN_ATTEMPT_MODE_SERVER_ERROR,
+		);
+		$state[ LOGIN_ATTEMPT_MODE_STATE_KEY ] = in_array( $requested, $allowed, true )
+			? $requested
+			: LOGIN_ATTEMPT_MODE_OK;
+
+		return array( $state, array( 'mode' => $state[ LOGIN_ATTEMPT_MODE_STATE_KEY ] ), 200 );
+	} );
+}
+
+// Plan B: dump every login-attempt POST the fake-saas has seen since reset.
+if ( $method === 'GET' && $path === '/__login-attempts' ) {
+	with_state_locked( function ( $state ) {
+		return array( null, array( 'requests' => $state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ] ?? array() ), 200 );
+	} );
+}
+
 if ( $method === 'POST' && $path === '/__reset' ) {
 	with_state_locked( fn( $state ) => array(
 		array( 'envelopes' => array(), 'messages' => array() ),
@@ -368,6 +417,50 @@ if ( $method === 'POST' && preg_match( '#^sites/(\d+)/([a-f0-9]+)/get-envelope$#
 //     pings this to confirm the identifier hasn't been flagged by the SaaS
 //     as suspicious. Expired envelopes are treated as unknown so replays
 //     past the TTL fail exactly like they would against the real SaaS.
+// 4b. POST sites/{secret_id}/login-attempts — client SDK reports a failed
+//     support login (Plan B). Test-controllable response: by default returns
+//     201 with a mock lpat_<UUID>; the /__login-attempts-mode debug
+//     endpoint flips to rate_limited (429) or server_error (500). Debug
+//     endpoints are registered above the /api/v1/ prefix gate.
+if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/login-attempts$#', $endpoint, $m ) ) {
+	$secret_id = $m[1];
+	$body      = read_body();
+
+	with_state_locked( function ( $state ) use ( $secret_id, $body ) {
+		// Append to a tiny in-memory request log so tests can assert what
+		// was sent (most importantly: that secret_id is in the URL not the
+		// body, and that detailed_reason was forwarded for storage).
+		$state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ]   = $state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ] ?? array();
+		$state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ][] = array(
+			'secret_id' => $secret_id,
+			'body'      => $body,
+			'time'      => time(),
+		);
+		// Cap log size so a flooding test doesn't blow up state.json.
+		if ( count( $state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ] ) > LOGIN_ATTEMPT_REQUEST_LOG_MAX ) {
+			$state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ] = array_slice(
+				$state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ],
+				-LOGIN_ATTEMPT_REQUEST_LOG_MAX
+			);
+		}
+
+		$mode = $state[ LOGIN_ATTEMPT_MODE_STATE_KEY ] ?? LOGIN_ATTEMPT_MODE_OK;
+		switch ( $mode ) {
+			case LOGIN_ATTEMPT_MODE_RATE_LIMITED:
+				return array( $state, array( 'error' => 'rate limit hit' ), LOGIN_ATTEMPT_HTTP_RATE_LIMITED );
+			case LOGIN_ATTEMPT_MODE_SERVER_ERROR:
+				return array( $state, array( 'error' => 'upstream broke' ), LOGIN_ATTEMPT_HTTP_SERVER_ERROR );
+			case LOGIN_ATTEMPT_MODE_OK:
+			default:
+				return array(
+					$state,
+					array( 'id' => 'lpat_' . LOGIN_ATTEMPT_FIXED_LPAT_UUID ),
+					LOGIN_ATTEMPT_HTTP_CREATED,
+				);
+		}
+	} );
+}
+
 if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/verify-identifier$#', $endpoint, $m ) ) {
 	$secret_id = $m[1];
 	with_state_locked( function ( $state ) use ( $secret_id ) {

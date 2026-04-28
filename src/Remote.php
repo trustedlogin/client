@@ -198,7 +198,7 @@ final class Remote {
 	 *
 	 * @return array|WP_Error wp_remote_request() response or WP_Error if something went wrong
 	 */
-	public function send( $path, $data, $method = 'POST', $additional_headers = array() ) {
+	public function send( $path, $data, $method = 'POST', $additional_headers = array(), $timeout = null ) {
 
 		if ( ! is_string( $path ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
@@ -248,7 +248,7 @@ final class Remote {
 
 		$request_options = array(
 			'method'      => $method,
-			'timeout'     => 15,
+			'timeout'     => null === $timeout ? 15 : (int) $timeout,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
 		);

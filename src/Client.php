@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.9.0';
+	const VERSION = '1.11.0';
 
 	/**
 	 * Instance of Config
@@ -143,21 +143,26 @@ final class Client {
 
 		$this->logging = new Logging( $config );
 
-		$this->endpoint = new Endpoint( $this->config, $this->logging );
-
 		$this->cron = new Cron( $this->config, $this->logging );
 
 		$this->support_user = new SupportUser( $this->config, $this->logging );
 
 		$this->site_access = new SiteAccess( $this->config, $this->logging );
 
+		// Remote / LoginAttempts must be built BEFORE Endpoint —
+		// Endpoint::fail_login delegates to LoginAttempts on the
+		// login_failed branch, and LoginAttempts wraps Remote.
+		$this->remote = new Remote( $this->config, $this->logging );
+
+		$login_attempts = new LoginAttempts( $this->config, $this->remote, $this->logging );
+
+		$this->endpoint = new Endpoint( $this->config, $this->logging, $login_attempts, $this->support_user );
+
 		$form = new Form( $this->config, $this->logging, $this->support_user, $this->site_access );
 
 		$this->admin = new Admin( $this->config, $form, $this->support_user );
 
 		$this->ajax = new Ajax( $this->config, $this->logging, $this );
-
-		$this->remote = new Remote( $this->config, $this->logging );
 
 		if ( $init ) {
 			$this->init();
