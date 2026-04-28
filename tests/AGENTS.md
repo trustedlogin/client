@@ -198,3 +198,141 @@ Each `tests/test-*.php` file targets one src/ class. Keep that mapping clean —
 ## Commit hygiene
 
 Per the repo's top-level `AGENTS.md`, commit messages and code comments must describe what the code does today, not what it used to do or what audit / review process flagged it. Tests are public artifacts too — name them by the property they assert (`test_foo_rejects_garbage_input`), not by the bug they prevent (`test_foo_no_longer_eats_pets`).
+
+## Tests that pass for the wrong reason
+
+A green test is necessary but not sufficient. Below are the patterns that produce false confidence — recurring shapes seen in this codebase and adjacent ones (TrustedLogin SaaS / Connector). Self-review every test against this list before committing.
+
+### 1. The narrowed assertion that hides an unidentified emitter
+
+Pattern: `assertNothingSent()` fails because something is dispatching, you don't know what, and you replace it with `assertNotSentTo($specific_class)` to make the test pass.
+
+Diagnostic: dump the captured emissions (Reflection on the fake's internal `notifications` / `events` / `mail` array). Every test framework's `fake()` exposes the captured items somewhere. Once you know the source, decide:
+- It's a legitimate emitter from the test fixtures? Move `fake()` to AFTER the fixture creation so it's not observed.
+- It's an emitter from the SUT? Either widen the test to assert it's the only thing sent, or trace it to a sibling listener that needs its own coverage.
+
+The narrow-the-assertion shortcut is almost always wrong — the unidentified emitter is either real coverage or a real bug.
+
+### 2. The wiring assertion that replaces the property assertion
+
+Pattern: the actual property (e.g. "endpoint rejects requests without nonce") is hard to drive in the test framework, so the test asserts the property's *prerequisite* (e.g. "the filter responsible for the property is registered") and calls it covered.
+
+Wiring assertions are useful but not equivalent to property tests. If the test framework can't drive the auth path, find a workaround:
+- Set the magic globals the production path checks (e.g. `$GLOBALS['wp_rest_auth_cookie'] = true` to fake "this is cookie auth").
+- Call the filter callback directly rather than through `apply_filters()` — bypasses unrelated callbacks that may set headers / cookies and break the test environment.
+- If the test framework genuinely can't reach the property, write an e2e (Playwright / browser-driven) test instead of accepting a wiring proxy.
+
+### 3. The synthetic input that doesn't match production
+
+Pattern: a test injects an error code / payload shape / event the SUT *could* receive in theory, but never actually sees in production. The test passes because it tests the synthetic path; the production path remains untested.
+
+Examples:
+- A WP_Error with code `'http_error_404'` when the production code only ever emits `'not_found'`.
+- A request body field that the production client never sends.
+- An event with a payload shape produced by no live emitter.
+
+Diagnostic: trace every test fixture back to its real-world producer. If you can't find one, the test is testing a hypothetical, not the system. Either change the fixture to match production, or document explicitly that this test pins a defense-in-depth fallback (and add a sibling test for the real production input).
+
+### 4. The defense gap cemented as "expected"
+
+Pattern: a defensive test pins behavior that's a pragmatic design choice (e.g. "Connector trusts SaaS for clamping"). The test green-lights the design but also locks the gap in place, making the next person who looks at it less likely to question whether the trust boundary is right.
+
+If the design is genuinely correct, fine — but add a sibling test that pins the *defense-in-depth* layer (e.g. "Connector also clamps locally so a SaaS regression can't bleed through"). Two layers, two tests, two opportunities for a future change to be flagged.
+
+### 5. Acceptance ranges so wide they swallow the bug
+
+Pattern: `assertContains($status, [200, 401, 403, 404, 405, 413, 414])` because you weren't sure which exact status the test would produce. The list is wide enough that a 5xx-fix regression that drops the response to 400 still passes.
+
+Always:
+- Either narrow to one status per test (split the test).
+- Or, when range is intentional (404 vs 405 differ by web-server config), explicitly enumerate ONLY the acceptable codes and exclude 5xx + 200-on-rejection.
+
+### 6. The test that wasn't actually exercising the SUT
+
+Pattern: a parameter-binding mistake, type coercion, or sanitizer call in the request pipeline transforms the test input before it reaches the SUT. The test "passes" because the SUT was given trivially-valid input.
+
+The classic case in this codebase: the WP REST `'sanitize_callback' => 'absint'` route arg. **`absint(-50) = 50`, not 0.** A test sending `-50` to exercise a min-clamp branch reaches the controller as `50` — well inside the valid range, no clamp triggered, test green for the wrong reason. Always trace what the SUT actually receives:
+
+```php
+$args = $this->dispatch_with_per_page( -50 );
+// add temporarily: $this->fail( var_export( $args, true ) );
+```
+
+Once you know what the SUT really sees, restructure the test to either use a value that survives sanitization or to assert the sanitization transform itself.
+
+### 7. Test pollution from process-global state
+
+Pattern: tests pass when run alone but fail in combination. The first-run results are real; the combined-run failures are not "flake".
+
+Common pollution sources in WP / Laravel test environments:
+- PHP `define()` constants — once defined, they're permanent for the run. Use unique names per test.
+- `add_action()` / `add_filter()` registrations — accumulate across test classes unless explicitly removed in `tearDown()`. Use `remove_all_actions(<hook>)` / `remove_all_filters(<hook>)`.
+- `$_GET` / `$_SERVER` — survive across tests unless reset in `setUp()`.
+- `$GLOBALS['wp_rest_auth_cookie']` and similar WP REST globals.
+- Headers already sent — once PHPUnit echoes the progress dot, any later `header()` call warns.
+
+Always restore globals in a `try { } finally { }` block when a test mutates them.
+
+## WP REST testing — gotchas in `WP_UnitTestCase`
+
+If a Client SDK feature ever exposes a REST route, these caught me on the SaaS / Connector side:
+
+### `dispatch()` skips `check_authentication()`
+
+`rest_get_server()->dispatch( $request )` runs the route handler but does NOT run the auth filter chain. `check_authentication()` only fires from `serve_request()`. To test auth-chain behavior:
+- Call the specific filter callback directly (e.g. `rest_cookie_check_errors( null )`).
+- Or apply the filter manually with `apply_filters( 'rest_authentication_errors', null )`.
+
+Both bypass the dispatch path — which means the route's permission_callback isn't exercised by them. You usually want both: filter test asserts auth behavior, dispatch test asserts routing + permission.
+
+### Cookie auth simulation
+
+`wp_set_current_user( $admin_id )` does NOT set `$wp_rest_auth_cookie`. `rest_cookie_check_errors()` reads that global to decide whether to enforce the nonce branch. To test cookie-auth behavior under WP_UnitTestCase:
+
+```php
+$GLOBALS['wp_rest_auth_cookie'] = true;
+try {
+    $result = rest_cookie_check_errors( null );
+    // ...
+} finally {
+    unset( $GLOBALS['wp_rest_auth_cookie'] );
+}
+```
+
+### `rest_cookie_check_errors()` calls `header()` on success
+
+When the nonce is valid, the function calls `rest_get_server()->send_header( 'X-WP-Nonce', ... )` to refresh the response nonce. Native `header()` warns when output has already been sent (PHPUnit's progress dots count). With `convertWarningsToExceptions="true"` in phpunit-integration.xml, that warning becomes a `TypeError` and the test fails.
+
+Workaround: `@`-suppress the call when you don't care about response headers:
+
+```php
+return @rest_cookie_check_errors( null );
+```
+
+### Route registration must happen on `rest_api_init`
+
+Calling `register_rest_route` from outside the `rest_api_init` action triggers an `_doing_it_wrong` notice. WP_UnitTestCase converts that to a test failure. Wrap registration in the action:
+
+```php
+add_action( 'rest_api_init', function () {
+    ( new MyEndpoint() )->register();
+} );
+do_action( 'rest_api_init', rest_get_server() );
+```
+
+### Resolver / dependency injection via filters
+
+If the endpoint's `permission_callback` ends in real instantiation, inject a fake via a project-defined filter (e.g. `FILTER_RESOLVER_INJECT`) and short-circuit before the real call. Type hints on the production code may force you to wrap a duck-typed double in a real instance — test the resolver layer with the real class, the dependent layer with the duck.
+
+## Generalizable findings recap
+
+A condensed list to reread before any new test commit:
+
+1. Faking notifications/events: place the `fake()` call AFTER fixture creation so the fixtures' legitimate emissions don't pollute the test's assertion target.
+2. `absint(-N) = N`, not 0. Sanitizers transform inputs BEFORE the SUT; test what the SUT actually receives.
+3. `WP_REST_Server::dispatch()` skips `check_authentication()`. Drive the auth pipeline manually if you want to test it.
+4. Process-global state (constants, hooks, $_SERVER, REST globals) survives across tests. Use unique values per test or restore in `finally`.
+5. A test that passes when run alone but fails in combination is signaling pollution, not flake.
+6. `final` classes can't be `extend`ed for stubbing — use anonymous classes + Reflection on private properties.
+7. Wiring assertions ("the filter is registered") are weaker than property assertions ("the filter rejects bad input"). Prefer property tests; fall back to wiring only when the framework genuinely can't drive the property.
+8. If a test's input passes through any sanitizer/coercer/validator before reaching the SUT, document what the SUT actually sees. The expected branch may not be the one actually exercised.
