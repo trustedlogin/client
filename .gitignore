@@ -12,3 +12,5 @@ site/
 .phpunit.result.cache
 vendor/
 *.css.map
+/.playwright-mcp
+/.claude

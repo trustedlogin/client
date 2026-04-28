@@ -17,12 +17,10 @@ namespace TrustedLogin;
  *
  * Opt-out is per-namespace via TRUSTEDLOGIN_DISABLE_AUDIT_{NS}
  * (uppercase, matching the existing TRUSTEDLOGIN_DISABLE_{NS}
- * pattern). The team-level `enable_audit_log` toggle is NOT yet
- * plumbed through to the customer side — that's a deliberate
- * follow-up: SaaS POST /sites needs to expose the flag before
- * the client can ingest it.
- *
- * Spec: docs/superpowers/specs/2026-04-27-login-attempt-feedback-design.md
+ * pattern). A team-level `enable_audit_log` toggle is NOT plumbed
+ * through to the customer side today — landing it requires the
+ * SaaS POST /sites response to expose the flag so the client can
+ * ingest and persist it as a namespaced option.
  */
 final class LoginAttempts {
 

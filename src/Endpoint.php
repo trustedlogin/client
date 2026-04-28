@@ -296,9 +296,7 @@ class Endpoint {
 	 *     then passes it here. We derive secret_id, POST to SaaS, and
 	 *     on success redirect with ?tl_attempt=lpat_…
 	 *
-	 * Spec: docs/superpowers/specs/2026-04-27-login-attempt-feedback-design.md
-	 *
-	 * @param string      $error_code           One of the spec's enum codes.
+	 * @param string      $error_code           One of the documented enum codes.
 	 * @param string      $detailed_reason      Internal log + SaaS forensics; never shown to the user.
 	 * @param string|null $site_identifier_hash The original site_identifier_hash from user-meta
 	 *                                          (login_failed path only). NULL in security_check_failed.

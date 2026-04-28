@@ -1,5 +1,5 @@
 /**
- * E2E: SaaS-mediated login-attempt feedback (Plan B).
+ * E2E: SaaS-mediated login-attempt feedback.
  *
  * Replaces the old wp-login.php?tl_error=… override flow. Verifies:
  *   - Customer site POSTs to fake-saas /api/v1/sites/{secret_id}/login-attempts
@@ -309,14 +309,14 @@ test( 'login_failed → POSTs to SaaS, redirects to vendor with ?tl_attempt=lpat
 //  Tests — fall-throughs to standalone page
 // ---------------------------------------------------------------------------
 
-// TODO(planB-followup): the negative-path tests below depend on a form-submit
-// flow that's currently being intercepted by the e2e stack's wp-login routing
-// (forms posted to / from about:blank end up at wp-login.php instead of the
-// homepage's template_redirect hook). The Plan B implementation itself works
-// — the happy-path test above proves the full SaaS POST + redirect path —
-// but verifying the standalone-page fall-throughs needs a test-harness fix.
-// File: figure out whether wps-hide-login or another e2e mu-plugin is
-// rewriting POST destinations, then re-enable the .skip below.
+// TODO: the negative-path tests below depend on a form-submit flow that's
+// currently being intercepted by the e2e stack's wp-login routing (forms
+// posted to / from about:blank end up at wp-login.php instead of the
+// homepage's template_redirect hook). The implementation itself works —
+// the happy-path test above proves the full SaaS POST + redirect path —
+// but verifying the standalone-page fall-throughs needs a harness fix.
+// Figure out whether wps-hide-login or another e2e mu-plugin is rewriting
+// POST destinations, then re-enable the .skip below.
 test.skip( 'login_failed with untrusted referer → standalone page, NO redirect', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
@@ -369,7 +369,7 @@ test.skip( 'login_failed with untrusted referer → standalone page, NO redirect
 	expect( p.url() ).not.toMatch( LPAT_REGEX );
 	expect( p.url() ).not.toContain( 'attacker.example' );
 
-	// SaaS still got the POST — Plan B records before checking referer.
+	// SaaS still got the POST — fail_login records before checking referer.
 	const attempts = readFakeSaasAttempts();
 	expect( attempts.length ).toBe( 1 );
 	expect( attempts[ 0 ].body.code ).toBe( 'login_failed' );
@@ -502,8 +502,8 @@ test( 'crafted wp-login.php?tl_error= URL no longer surfaces a banner', async ( 
 	const ctx = await browser.newContext();
 	const p = await ctx.newPage();
 
-	// The old override flow read this query param. Plan B deleted it; the
-	// page should render WordPress's vanilla login form.
+	// The old override flow read this query param; it's been deleted.
+	// The page should render WordPress's vanilla login form.
 	await p.goto(
 		`${ VENDOR_STATE.client_url }/wp-login.php?action=trustedlogin`
 		+ `&ns=${ VENDOR_STATE.namespace }&tl_error=security_check_failed`,

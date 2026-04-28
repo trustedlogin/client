@@ -35,6 +35,30 @@ Examples of the rewrite:
 
 **When in doubt, squash.** If a commit was written with exploit detail and you catch it before push, use `git commit --fixup=amend:<sha>` with a sanitized message and autosquash before the branch goes up. For already-pushed public history, coordinate with the team before force-push — some forks may already be tracking.
 
+### Internal-process references
+
+Code comments, docblocks, and commit messages are **public artifacts**. They must read as standalone documentation of what the code does today — never as a journal of how it got there.
+
+**Don't reference internal plans, specs, tickets, or review processes:**
+
+- No "Plan A / Plan B / Plan C" or any other internal codename for a feature delivery.
+- No "spec:" / "design doc:" / "see docs/superpowers/..." path pointers. The code is the source of truth — if a comment needs an off-tree document to make sense, the comment is wrong.
+- No CodeRabbit / Mockery / "review found" attributions. Apply the fix, write the comment from the perspective of the code's current behavior.
+- No JIRA / Linear / GitHub-issue numbers in code (`# fixes ABC-123`). Belong in PR descriptions, not source.
+- No "TODO(<initiative>-followup)" tags that reference internal Initiative names. Plain `TODO:` is fine when you describe the gap; an initiative name only the team recognises is noise.
+- No "future SaaS revision will…" or "when X lands we'll switch on…" speculation. If you can't make the change today, file a ticket; don't seed a code comment that will rot into a stale promise.
+
+**What to write instead:** factual description of *what the code does now*, with the trigger that made it non-obvious. "We use generic message X here so an attacker can't distinguish failure modes" is good — it stands on its own. "Per Plan B's spec section, …" is bad — the reader has no way to verify or even find the spec.
+
+| Avoid | Prefer |
+|---|---|
+| `// Plan A always returns client_ip_redacted; presenter passes through.` | `// Upstream returns the redacted IP only; presenter passes through.` |
+| `// Spec: docs/superpowers/specs/2026-04-27-foo.md` | *(delete; let the code stand)* |
+| `// TODO(planB-followup): test-harness fix needed` | `// TODO: form posts from about:blank end up at wp-login.php; need a different submit path.` |
+| `// When SaaS adds the admin-scoped IP, switch on $is_admin here.` | *(delete; if it's not feasible today, don't write speculative scaffolding into source)* |
+
+If the comment needs the reader to know about an internal artifact, the comment is paying down debt for a different artifact — write the documentation in the right place (the PR description, an internal `docs/`, the audit log) and let the code stand on its own.
+
 ### Why this matters for the client SDK specifically
 
 The client SDK is vendored into every customer's plugin zip — often thousands of sites per integrator. When a security fix lands in `main` and a release tag follows, patch-diff attackers will compare the tagged release to the previous version. A descriptive commit message shortcuts their reconnaissance. Unpatched downstream sites become targets the moment the commit is public.

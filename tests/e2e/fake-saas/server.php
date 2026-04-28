@@ -177,8 +177,8 @@ if ( $expected_token !== '' && strpos( $path, '/__' ) !== 0 ) {
 }
 
 // ---------------------------------------------------------------------------
-//  Login-attempts (Plan B) — constants shared by the actual POST handler
-//  AND the debug routes below.
+//  Login-attempts — constants shared by the actual POST handler AND the
+//  debug routes below.
 // ---------------------------------------------------------------------------
 const LOGIN_ATTEMPT_MODE_STATE_KEY         = 'login_attempts_mode';
 const LOGIN_ATTEMPT_REQUEST_LOG_KEY        = 'login_attempts';
@@ -203,7 +203,7 @@ if ( $method === 'GET' && $path === '/__state' ) {
 	with_state_locked( fn( $state ) => array( null, $state, 200 ) );
 }
 
-// Plan B: flip the next /sites/{secret_id}/login-attempts response.
+// Flip the next /sites/{secret_id}/login-attempts response.
 // Body: {"mode": "ok" | "rate_limited" | "server_error"}.
 if ( $method === 'POST' && $path === '/__login-attempts-mode' ) {
 	$body = read_body();
@@ -222,7 +222,7 @@ if ( $method === 'POST' && $path === '/__login-attempts-mode' ) {
 	} );
 }
 
-// Plan B: dump every login-attempt POST the fake-saas has seen since reset.
+// Dump every login-attempt POST the fake-saas has seen since reset.
 if ( $method === 'GET' && $path === '/__login-attempts' ) {
 	with_state_locked( function ( $state ) {
 		return array( null, array( 'requests' => $state[ LOGIN_ATTEMPT_REQUEST_LOG_KEY ] ?? array() ), 200 );
@@ -418,10 +418,10 @@ if ( $method === 'POST' && preg_match( '#^sites/(\d+)/([a-f0-9]+)/get-envelope$#
 //     as suspicious. Expired envelopes are treated as unknown so replays
 //     past the TTL fail exactly like they would against the real SaaS.
 // 4b. POST sites/{secret_id}/login-attempts — client SDK reports a failed
-//     support login (Plan B). Test-controllable response: by default returns
-//     201 with a mock lpat_<UUID>; the /__login-attempts-mode debug
-//     endpoint flips to rate_limited (429) or server_error (500). Debug
-//     endpoints are registered above the /api/v1/ prefix gate.
+//     support login. Test-controllable response: by default returns 201
+//     with a mock lpat_<UUID>; the /__login-attempts-mode debug endpoint
+//     flips to rate_limited (429) or server_error (500). Debug endpoints
+//     are registered above the /api/v1/ prefix gate.
 if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/login-attempts$#', $endpoint, $m ) ) {
 	$secret_id = $m[1];
 	$body      = read_body();
