@@ -57,6 +57,26 @@ final class LoginAttempts {
 	/** Lower bound of upstream-error range. */
 	const HTTP_SERVER_ERROR_MIN = 500;
 
+	/**
+	 * Patterns scrubbed from `detailed_reason` before the SaaS POST.
+	 * The field is freeform and frequently echoes WP_Error messages
+	 * that accidentally include credentials. Each entry pairs a
+	 * regex with a replacement; matches collapse to the replacement
+	 * so the surrounding context still aids debugging.
+	 *
+	 * The list intentionally errs broad — the local Logging class
+	 * already has the unscrubbed text, and the SaaS doesn't need
+	 * raw secrets to render the agent UX.
+	 */
+	const SECRET_SCRUB_PATTERNS = array(
+		// Bearer / token / authorization headers in any casing.
+		'/(\b(?:Bearer|Token|Authorization)\s*[:=]?\s*)[A-Za-z0-9._\-+\/=]{8,}/i' => '$1[redacted]',
+		// Stripe-style live/test secret keys.
+		'/\b(sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}/i'                            => '[redacted-stripe-key]',
+		// Generic "secret" / "password" / "api_key" key=value pairs.
+		'/(\b(?:secret|password|api[_-]?key)\s*[:=]\s*)["\']?[^"\'\s,;]{4,}["\']?/i' => '$1[redacted]',
+	);
+
 	/** @var Config */
 	private $config;
 
@@ -123,10 +143,19 @@ final class LoginAttempts {
 
 		$path = sprintf( self::ENDPOINT_PATH, rawurlencode( $secret_id ) );
 
-		// 3-second hard timeout matches the spec — the SaaS POST sits on
-		// the critical path between fail_login() and the redirect, so we
-		// trade reporting accuracy for agent-experience latency.
-		$response = $this->remote->send( $path, $body, 'POST', array(), self::HTTP_TIMEOUT_SECONDS );
+		// 3-second hard timeout. The SaaS POST sits on the critical path
+		// between fail_login() and the redirect, so we trade reporting
+		// accuracy for agent-experience latency. Wrapped in try/catch
+		// because pre_http_request filters from third-party plugins can
+		// throw — must never abort fail_login(); always fall through
+		// to the standalone page.
+		try {
+			$response = $this->remote->send( $path, $body, 'POST', array(), self::HTTP_TIMEOUT_SECONDS );
+		} catch ( \Exception $e ) {
+			$this->logging->log( 'login-attempt POST threw: ' . $e->getMessage(), __METHOD__, 'error' );
+
+			return new \WP_Error( 'saas_unreachable', 'SaaS unreachable: ' . $e->getMessage() );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			$this->logging->log( 'login-attempt POST network error: ' . $response->get_error_message(), __METHOD__, 'warning' );
@@ -238,9 +267,12 @@ final class LoginAttempts {
 
 		// detailed_reason is freeform but capped — matches SaaS-side
 		// validation. Truncate rather than reject; the local log
-		// already has the full text.
+		// already has the full text. mb_strcut keeps the truncation
+		// on a UTF-8 byte-sequence boundary so the SaaS never sees
+		// half a multibyte codepoint.
 		if ( isset( $payload['detailed_reason'] ) && is_string( $payload['detailed_reason'] ) ) {
-			$payload['detailed_reason'] = substr( $payload['detailed_reason'], 0, self::MAX_DETAILED_REASON_LENGTH );
+			$payload['detailed_reason'] = $this->scrub_secrets( $payload['detailed_reason'] );
+			$payload['detailed_reason'] = mb_strcut( $payload['detailed_reason'], 0, self::MAX_DETAILED_REASON_LENGTH, 'UTF-8' );
 		}
 
 		// identifier_hash, when present, must be SHA-256 hex.
@@ -253,7 +285,7 @@ final class LoginAttempts {
 		}
 
 		if ( isset( $payload['client_user_agent'] ) && is_string( $payload['client_user_agent'] ) ) {
-			$payload['client_user_agent'] = substr( $payload['client_user_agent'], 0, self::MAX_USER_AGENT_LENGTH );
+			$payload['client_user_agent'] = mb_strcut( $payload['client_user_agent'], 0, self::MAX_USER_AGENT_LENGTH, 'UTF-8' );
 		}
 
 		if ( isset( $payload['client_ip'] ) && ! filter_var( $payload['client_ip'], FILTER_VALIDATE_IP ) ) {
@@ -261,5 +293,24 @@ final class LoginAttempts {
 		}
 
 		return $payload;
+	}
+
+	/**
+	 * Replace known credential patterns inside a freeform string with
+	 * `[redacted]` markers. Used on `detailed_reason` before the SaaS
+	 * POST. The replacements are conservative (strict patterns + 8+
+	 * chars of payload) — false positives are preferable to leaking
+	 * a real secret into the SaaS.
+	 *
+	 * @param string $text
+	 *
+	 * @return string
+	 */
+	private function scrub_secrets( $text ) {
+		foreach ( self::SECRET_SCRUB_PATTERNS as $pattern => $replacement ) {
+			$text = preg_replace( $pattern, $replacement, $text );
+		}
+
+		return (string) $text;
 	}
 }
