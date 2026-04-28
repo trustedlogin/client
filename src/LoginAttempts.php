@@ -66,6 +66,13 @@ final class LoginAttempts {
 	/** @var Logging */
 	private $logging;
 
+	/**
+	 * @param Config  $config  Provides the namespace for opt-out checks.
+	 * @param Remote  $remote  Used for the SaaS POST.
+	 * @param Logging $logging All non-success branches log a single line
+	 *                         each; the standalone fallback page renders
+	 *                         to the user regardless.
+	 */
 	public function __construct( Config $config, Remote $remote, Logging $logging ) {
 		$this->config  = $config;
 		$this->remote  = $remote;
@@ -73,10 +80,29 @@ final class LoginAttempts {
 	}
 
 	/**
-	 * @param array $payload See spec for shape; secret_id is REQUIRED in the
-	 *                       payload and gets pulled out into the URL path.
+	 * Send a failure event to the SaaS. `secret_id` is required in the
+	 * payload and gets pulled out into the URL path (it does not enter
+	 * the POST body). Recognised body keys, all optional unless noted:
 	 *
-	 * @return array|\WP_Error Array with 'id' on success; WP_Error otherwise.
+	 * - code              (required) machine-readable failure tag.
+	 * - client_site_url   (required) the integrator site URL.
+	 * - attempted_at      (required) ISO-8601 timestamp.
+	 * - detailed_reason             freeform; truncated to
+	 *                                MAX_DETAILED_REASON_LENGTH.
+	 * - identifier_hash             SHA-256 hex of the site identifier;
+	 *                                dropped silently if malformed.
+	 * - client_user_agent           UA string; truncated to
+	 *                                MAX_USER_AGENT_LENGTH.
+	 * - client_ip                   IPv4/IPv6; dropped silently if
+	 *                                FILTER_VALIDATE_IP rejects it.
+	 *
+	 * @param array $payload
+	 *
+	 * @return array|\WP_Error Array with 'id' on success; WP_Error
+	 *                         otherwise (audit disabled, missing
+	 *                         secret_id, validation failure, network
+	 *                         error, rate-limit, 5xx, or malformed
+	 *                         response).
 	 */
 	public function report( array $payload ) {
 		if ( ! $this->is_audit_log_enabled() ) {
