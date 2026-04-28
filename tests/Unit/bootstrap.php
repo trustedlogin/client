@@ -23,6 +23,123 @@ if ( ! defined( 'TL_DOING_TESTS' ) ) {
 	define( 'TL_DOING_TESTS', true );
 }
 
+// WP time-window constants used by Config defaults / decay validation.
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
+	define( 'MINUTE_IN_SECONDS', 60 );
+}
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
+	define( 'HOUR_IN_SECONDS', 60 * MINUTE_IN_SECONDS );
+}
+if ( ! defined( 'DAY_IN_SECONDS' ) ) {
+	define( 'DAY_IN_SECONDS', 24 * HOUR_IN_SECONDS );
+}
+if ( ! defined( 'WEEK_IN_SECONDS' ) ) {
+	define( 'WEEK_IN_SECONDS', 7 * DAY_IN_SECONDS );
+}
+if ( ! defined( 'MONTH_IN_SECONDS' ) ) {
+	define( 'MONTH_IN_SECONDS', 30 * DAY_IN_SECONDS );
+}
+
+// Form output uses esc_url + esc_html.
+if ( ! function_exists( 'esc_url' ) ) {
+	function esc_url( $url ) {
+		$url = (string) $url;
+		if ( '' === $url ) {
+			return '';
+		}
+		// Match real esc_url's permissive scheme handling — http and
+		// https BOTH valid (vendor sites may legitimately be on
+		// http; the vendor controls their own infrastructure).
+		// javascript: / data: / file: / vbscript: rejected.
+		if ( ! preg_match( '/^https?:\/\//i', $url ) ) {
+			return '';
+		}
+		// URL-encode the characters that would break a CSS / HTML
+		// attribute string context.
+		return str_replace(
+			array( '"', "'", '<', '>', ' ' ),
+			array( '%22', '%27', '%3C', '%3E', '%20' ),
+			$url
+		);
+	}
+}
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_attr' ) ) {
+	function esc_attr( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_html__' ) ) {
+	function esc_html__( $text, $domain = '' ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( '__' ) ) {
+	function __( $text, $domain = '' ) { return (string) $text; }
+}
+if ( ! function_exists( 'wp_kses_bad_protocol' ) ) {
+	function wp_kses_bad_protocol( $string, $allowed_protocols ) {
+		// Tiny safe-list approximation: empty out the URL if it doesn't
+		// start with one of the allowed schemes.
+		$string = (string) $string;
+		foreach ( (array) $allowed_protocols as $proto ) {
+			if ( 0 === stripos( $string, $proto . ':' ) ) {
+				return $string;
+			}
+		}
+		return '';
+	}
+}
+if ( ! function_exists( 'sanitize_title_with_dashes' ) ) {
+	function sanitize_title_with_dashes( $title ) {
+		$title = strtolower( (string) $title );
+		return preg_replace( '/[^a-z0-9-]/', '-', $title );
+	}
+}
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( $hook, $value ) { return $value; }
+}
+if ( ! function_exists( 'do_action' ) ) {
+	function do_action( ...$args ) {}
+}
+if ( ! function_exists( 'add_action' ) ) {
+	function add_action( ...$args ) {}
+}
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter( ...$args ) {}
+}
+if ( ! function_exists( 'get_site_url' ) ) {
+	function get_site_url() { return 'https://example.test'; }
+}
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( $name, $default = false ) { return $default; }
+}
+if ( ! function_exists( 'update_option' ) ) {
+	function update_option( $name, $value ) { return true; }
+}
+if ( ! function_exists( 'plugin_dir_url' ) ) {
+	function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/test/'; }
+}
+if ( ! function_exists( 'plugin_dir_path' ) ) {
+	function plugin_dir_path( $file ) { return dirname( $file ) . '/'; }
+}
+if ( ! function_exists( 'wp_upload_dir' ) ) {
+	function wp_upload_dir() { return array( 'basedir' => sys_get_temp_dir(), 'baseurl' => 'https://example.test/uploads' ); }
+}
+if ( ! function_exists( 'wp_mkdir_p' ) ) {
+	function wp_mkdir_p( $dir ) { return is_dir( $dir ) || mkdir( $dir, 0755, true ); }
+}
+if ( ! function_exists( 'register_activation_hook' ) ) {
+	function register_activation_hook( ...$args ) {}
+}
+if ( ! function_exists( 'register_deactivation_hook' ) ) {
+	function register_deactivation_hook( ...$args ) {}
+}
+
 if ( ! function_exists( 'wp_unslash' ) ) {
 	function wp_unslash( $value ) {
 		if ( is_array( $value ) ) {

@@ -208,6 +208,24 @@ final class Form {
 	 * @return string
 	 */
 	private function get_login_inline_css() {
+		// Skip the logo rule entirely when no URL is set so we don't
+		// emit a `background-image: url("")` rule. Run esc_url through
+		// the URL itself: the function URL-encodes any character that
+		// could break out of the CSS string context (notably `"`),
+		// and Config validation already rejects non-http(s) schemes.
+		$logo_url = (string) $this->config->get_setting( 'vendor/logo_url' );
+		$logo_css = '';
+
+		if ( '' !== $logo_url ) {
+			$logo_url = esc_url( $logo_url );
+			if ( '' !== $logo_url ) {
+				$logo_css = sprintf(
+					'.login h1 a { background-image: url("%s")!important; background-size: contain!important; }',
+					$logo_url
+				);
+			}
+		}
+
 		return '
 	#login {
 		width: auto;
@@ -218,10 +236,7 @@ final class Form {
 	.login h1 {
 		margin-top: 36px;
 	}
-	.login h1 a {
-		background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ) . '")!important;
-		background-size: contain!important;
-	}
+	' . $logo_css . '
 	';
 	}
 
