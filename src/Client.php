@@ -287,7 +287,7 @@ final class Client {
 		$site_identifier_hash = Encryption::get_random_hash( $this->logging );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
-			wp_delete_user( $support_user_id );
+			$this->rollback_orphan_support_user( $support_user_id );
 
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
 
@@ -308,7 +308,7 @@ final class Client {
 		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
-			wp_delete_user( $support_user_id );
+			$this->rollback_orphan_support_user( $support_user_id );
 
 			$did_setup->add_data( array( 'error_code' => 503 ) );
 
@@ -322,7 +322,7 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
-			wp_delete_user( $support_user_id );
+			$this->rollback_orphan_support_user( $support_user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
 
@@ -377,7 +377,7 @@ final class Client {
 
 			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
 
-			wp_delete_user( $support_user_id );
+			$this->rollback_orphan_support_user( $support_user_id );
 
 			return $exception_error;
 		}
@@ -391,7 +391,7 @@ final class Client {
 
 			$created->add_data( array( 'status_code' => 503 ) );
 
-			wp_delete_user( $support_user_id );
+			$this->rollback_orphan_support_user( $support_user_id );
 
 			return $created;
 		}
@@ -680,6 +680,28 @@ final class Client {
 		}
 
 		return $metadata;
+	}
+
+	/**
+	 * Roll back a partially-created support user when the SaaS sync
+	 * fails mid-grant. Plain wp_delete_user() leaves the user record
+	 * in the network table on multisite — the user can no longer
+	 * log in, but a row remains in wp_users with the cloned
+	 * support-role caps in user_meta. wpmu_delete_user removes the
+	 * record from the network entirely.
+	 *
+	 * @param int $support_user_id The user id to remove.
+	 *
+	 * @return void
+	 */
+	private function rollback_orphan_support_user( $support_user_id ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		wp_delete_user( $support_user_id );
+
+		if ( is_multisite() && function_exists( 'wpmu_delete_user' ) ) {
+			wpmu_delete_user( $support_user_id );
+		}
 	}
 
 	/**

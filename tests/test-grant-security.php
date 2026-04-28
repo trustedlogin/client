@@ -333,6 +333,97 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 	}
 
 	// -----------------------------------------------------------------
+	//  Item 11 — user-create / SaaS-sync race. If the local support
+	//  user is created but the SaaS sync subsequently fails, the
+	//  local user MUST be rolled back. An orphan user with the
+	//  cloned support role and no SaaS handle is a privilege
+	//  escalation surface — it can be used to log in via the
+	//  endpoint URL but the integrator has no record of the grant.
+	// -----------------------------------------------------------------
+
+	public function test_grant_access_rolls_back_local_user_when_saas_sync_fails(): void {
+		$this->become_admin();
+
+		// Build a real Client with the full dependency graph but no
+		// hooks fired. Then Reflection-swap just the Remote — the
+		// outermost HTTP boundary — to simulate SaaS unreachable.
+		$client = new \TrustedLogin\Client( $this->config, false );
+
+		$fake_remote = new class {
+			public $sent = array();
+
+			public function send( $path, $data = array(), $method = 'POST', $additional_headers = array(), $timeout = null ) {
+				$this->sent[] = compact( 'path', 'data', 'method' );
+				return new \WP_Error( 'http_request_failed', 'simulated SaaS unreachable' );
+			}
+
+			public function handle_response( $response ) {
+				return $response;
+			}
+
+			public function init() {}
+
+			public function maybe_send_webhook( ...$args ) {}
+		};
+
+		$rc = new ReflectionClass( $client );
+
+		// Swap Client::$remote.
+		$prop = $rc->getProperty( 'remote' );
+		$prop->setAccessible( true );
+		$prop->setValue( $client, $fake_remote );
+
+		// Also swap SiteAccess's internal remote — sync_secret takes
+		// it injected, but it caches a ref through the Client's
+		// instantiated graph. Force the same fake there.
+		$site_access_prop = $rc->getProperty( 'site_access' );
+		$site_access_prop->setAccessible( true );
+		$site_access = $site_access_prop->getValue( $client );
+
+		$site_access_rc = new ReflectionClass( $site_access );
+		// SiteAccess uses a `Remote` typed param to sync_secret —
+		// the call site in Client passes Client::$remote in. Confirm
+		// by reading src/Client.php near sync_secret( ..., $remote ).
+		// If SiteAccess holds its own ref, swap it too.
+		if ( $site_access_rc->hasProperty( 'remote' ) ) {
+			$sa_remote = $site_access_rc->getProperty( 'remote' );
+			$sa_remote->setAccessible( true );
+			$sa_remote->setValue( $site_access, $fake_remote );
+		}
+
+		add_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_true' );
+
+		try {
+			$result = $client->grant_access();
+		} finally {
+			remove_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_true' );
+		}
+
+		// Two acceptable outcomes — both are fail-closed:
+		//   a) WP_Error returned with the local user already deleted
+		//      (grant_access's wp_delete_user rollback path fires).
+		//   b) The flow returns earlier with a different WP_Error
+		//      (e.g. the secret_id step doesn't reach the SaaS).
+		// What's NEVER acceptable: a successful return AND an
+		// orphaned support user left in the DB.
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$result,
+			'grant_access must NOT return a success array when the SaaS sync fails.'
+		);
+
+		// `get_all()` has a function-static cache that persists
+		// across test methods, so use the unhashed-email lookup
+		// instead — that's the unique key for the support user
+		// in this test (vendor.email is generated per-test in setUp).
+		$leftover = get_user_by( 'email', $this->config->get_setting( 'vendor/email' ) );
+		$this->assertFalse(
+			$leftover,
+			'After SaaS-sync failure, NO support user may remain in the local DB. Orphaned support users with cloned-role caps are a privilege-escalation surface — the endpoint URL would still let an attacker log in even though the integrator has no record of the grant.'
+		);
+	}
+
+	// -----------------------------------------------------------------
 	//  Item 10 — endpoint URL replay after revoke
 	// -----------------------------------------------------------------
 
