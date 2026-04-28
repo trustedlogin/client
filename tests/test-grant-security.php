@@ -37,6 +37,7 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 	const IDENT_X     = 'targetX-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 	const IDENT_HAPPY = 'happyPath-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 	const IDENT_REPLAY = 'replay-target-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+	const IDENT_EXPIRED = 'expired-target-aaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 	/** @var \TrustedLogin\Config */
 	private $config;
@@ -267,6 +268,49 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 		$this->assertNull(
 			$this->support_user->get( self::IDENT_HAPPY ),
 			'Admin with delete_users + correct-target nonce must be able to revoke.'
+		);
+	}
+
+	// -----------------------------------------------------------------
+	//  Item 4 — decay (TTL) enforcement at maybe_login. The Cron
+	//  schedule is the primary expiration mechanism; the
+	//  maybe_login flow is the safety net for "cron didn't fire"
+	//  scenarios. An expired user attempting to log in via the
+	//  endpoint URL must be refused AND cleaned up — never given
+	//  access just because the scheduled revoke missed.
+	// -----------------------------------------------------------------
+
+	public function test_maybe_login_refuses_and_deletes_expired_support_user(): void {
+		$this->become_admin();
+
+		$user = $this->seed_support_user( self::IDENT_EXPIRED );
+
+		// Stamp expiration in the past — production stamps it via
+		// SupportUser::setup() at create-time.
+		$expires_meta_key = 'tl_' . $this->config->ns() . '_expires';
+		update_user_option( $user->ID, $expires_meta_key, time() - HOUR_IN_SECONDS, true );
+
+		$this->assertNotNull(
+			$this->support_user->get( self::IDENT_EXPIRED ),
+			'Sanity: support user exists before maybe_login.'
+		);
+
+		$result = $this->support_user->maybe_login( self::IDENT_EXPIRED );
+
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$result,
+			'maybe_login must return WP_Error for an expired user — never grant a session even if the Cron revoke missed.'
+		);
+		$this->assertSame(
+			'access_expired',
+			$result->get_error_code(),
+			'The error code must be access_expired so the standalone fallback page can render the right copy.'
+		);
+
+		$this->assertNull(
+			$this->support_user->get( self::IDENT_EXPIRED ),
+			'maybe_login must DELETE the expired user — leaving them around would let a future flow with a different code path inadvertently log them in.'
 		);
 	}
 
