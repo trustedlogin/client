@@ -336,3 +336,70 @@ A condensed list to reread before any new test commit:
 6. `final` classes can't be `extend`ed for stubbing — use anonymous classes + Reflection on private properties.
 7. Wiring assertions ("the filter is registered") are weaker than property assertions ("the filter rejects bad input"). Prefer property tests; fall back to wiring only when the framework genuinely can't drive the property.
 8. If a test's input passes through any sanitizer/coercer/validator before reaching the SUT, document what the SUT actually sees. The expected branch may not be the one actually exercised.
+
+## Real-Client integration tests vs. Reflection-stub unit tests
+
+For tests that exercise behavior across multiple SDK objects (grant, revoke, endpoint replay), prefer the **real-Client pattern**:
+
+```php
+$client = new \TrustedLogin\Client( $config, false );  // false = no init() / no WP hooks
+```
+
+`$init = false` constructs the full dependency graph (Remote, SiteAccess, SupportUser, Endpoint, Ajax) without firing the hook-registration side effects. The test exercises real flows; only the OUTERMOST boundary (HTTP / Remote) needs a stub if you want to control SaaS responses.
+
+Use Reflection-stub unit tests only when:
+- The SUT is a private method with no exposed entry point (`Form::get_login_inline_css`).
+- The SUT's dependencies are themselves `final` classes that can't be subclassed and aren't injectable through any public constructor.
+
+For `test-grant-security.php` style integration tests, the real-Client pattern handles:
+- The full email-collision dance in `SupportUser::create()`.
+- Hook-driven flows (`maybe_revoke_support` triggers `do_action('trustedlogin/{ns}/access/revoke')` consumed by `Cron::revoke`).
+- Cron schedule + delete chains.
+
+### Multisite test-environment quirks
+
+`WP_TESTS_MULTISITE=1` is set in `phpunit.xml.dist`. That means:
+
+- A user created with `factory()->user->create(['role' => 'administrator'])` is a regular site admin without `delete_users`. In multisite, that cap requires super-admin. Tests that exercise revoke / delete must call `grant_super_admin($user_id)` after `wp_set_current_user`.
+- `email_exists()` checks the network-wide users table, so support-user creation with the same vendor email collides across sites.
+
+### `SupportUser::get()` identifier-length contract
+
+`get($id)` hashes the input only when `strlen($id) > 32`. Production `site_identifier_hash` values are 64-byte hex (128 chars), so the hash branch always fires. Test fixtures using short labels (`'targetA'`) hit the no-hash branch and lookup fails silently.
+
+**Fix:** use 40-char identifiers in tests so they always go through the hash path:
+
+```php
+const IDENT_TARGET = 'targetA-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+```
+
+### Cron action handler is wired separately from the Endpoint
+
+`Endpoint::maybe_revoke_support` triggers `do_action('trustedlogin/{ns}/access/revoke', $user_identifier)`. The consumer is `Cron::revoke`, registered by `Cron::init()` — which `Client::init()` calls. If a test instantiates `Endpoint` directly (without `Client::init`), it must wire the Cron handler itself:
+
+```php
+$this->cron = new \TrustedLogin\Cron( $this->config, $this->logging );
+$this->cron->init();
+```
+
+Otherwise the `do_action` fires into a void and the actual delete never happens — the test sees the support user still present after revoke.
+
+Detach in `tearDown` to avoid handler accumulation across test methods:
+
+```php
+remove_action(
+    'trustedlogin/' . $this->config->ns() . '/access/revoke',
+    array( $this->cron, 'revoke' ),
+    1
+);
+```
+
+### `wp_safe_redirect` and `wp_die` in tests
+
+Both `exit()` after their work, which would halt the test runner. Use a filter to abort the redirect or a custom handler for wp_die:
+
+```php
+add_filter( 'wp_redirect', static function () { return false; }, 10, 2 );
+```
+
+Returning `false` from `wp_redirect` skips the actual `header()` call and lets the test continue.
