@@ -13,6 +13,15 @@
 	<testsuites>
 		<testsuite name="default">
 			<directory prefix="test-" suffix=".php">./tests/</directory>
+			<!-- e2e/ ships GF + WP test fixtures (test-MultipleFeed-framework
+			     etc.) that the recursive scan would otherwise pick up. They
+			     are not our integration tests; they are vendored fixtures
+			     used by Playwright. Exclude so phpunit doesn't try to load
+			     GF_UnitTestCase. -->
+			<exclude>./tests/e2e</exclude>
+			<!-- Unit suite has its own bootstrap. Don't double-run from the
+			     integration suite. -->
+			<exclude>./tests/Unit</exclude>
 		</testsuite>
 	</testsuites>
 </phpunit>
