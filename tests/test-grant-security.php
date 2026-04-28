@@ -468,6 +468,159 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 	}
 
 	// -----------------------------------------------------------------
+	//  Item 12 — concurrent grants. A true load test (parallel HTTP
+	//  workers) is out of scope for unit tests, but the underlying
+	//  uniqueness + non-clobber properties that MAKE concurrent
+	//  grants safe are testable here:
+	//
+	//   - Each grant produces a fresh site_identifier_hash
+	//     (Encryption::get_random_hash, already covered in
+	//     tests/Unit/GrantingFlowSecurityTest).
+	//   - The endpoint hash + secret_id derived from a hash are
+	//     deterministic-by-input, so distinct identifiers produce
+	//     distinct endpoint URLs.
+	//   - The Cron schedule keys events by the identifier hash
+	//     (passed via $args to wp_schedule_single_event), so two
+	//     grants for two different users coexist as two separate
+	//     scheduled events.
+	//   - Cron::reschedule for one identifier does NOT clear another
+	//     identifier's pending revoke.
+	// -----------------------------------------------------------------
+
+	public function test_endpoint_hashes_are_distinct_for_distinct_identifiers(): void {
+		$hash_a = $this->endpoint->get_hash( self::IDENT_A );
+		$hash_b = $this->endpoint->get_hash( self::IDENT_REAL );
+
+		$this->assertNotEmpty( $hash_a );
+		$this->assertNotEmpty( $hash_b );
+		$this->assertNotSame(
+			$hash_a,
+			$hash_b,
+			'Two grants with distinct identifiers must produce distinct endpoint hashes — otherwise concurrent grants collide on the same login URL.'
+		);
+	}
+
+	public function test_secret_ids_are_distinct_for_distinct_identifiers(): void {
+		$secret_a = $this->endpoint->generate_secret_id( self::IDENT_A, $this->endpoint->get_hash( self::IDENT_A ) );
+		$secret_b = $this->endpoint->generate_secret_id( self::IDENT_REAL, $this->endpoint->get_hash( self::IDENT_REAL ) );
+
+		$this->assertNotEmpty( $secret_a );
+		$this->assertNotEmpty( $secret_b );
+		$this->assertNotSame(
+			$secret_a,
+			$secret_b,
+			'Two grants must produce distinct secret_ids — the SaaS uses secret_id as the row key, so collision means one grant overwrites the other.'
+		);
+	}
+
+	public function test_cron_schedule_for_one_identifier_does_not_clobber_another(): void {
+		$expires_a = time() + HOUR_IN_SECONDS;
+		$expires_b = time() + 2 * HOUR_IN_SECONDS;
+
+		$scheduled_a = $this->cron->schedule( $expires_a, self::IDENT_A );
+		$scheduled_b = $this->cron->schedule( $expires_b, self::IDENT_REAL );
+
+		$this->assertNotFalse(
+			$scheduled_a,
+			'Cron::schedule for identifier A must succeed.'
+		);
+		$this->assertNotFalse(
+			$scheduled_b,
+			'Cron::schedule for identifier B must succeed even though A is already scheduled.'
+		);
+
+		// Both events must be present — wp_next_scheduled returns
+		// the timestamp for an event matching (hook, args). Args
+		// are the per-identifier hash, so distinct identifiers
+		// must yield distinct schedules.
+		$hook_name = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+
+		$next_a = wp_next_scheduled(
+			$hook_name,
+			array( \TrustedLogin\Encryption::hash( self::IDENT_A ) )
+		);
+		$next_b = wp_next_scheduled(
+			$hook_name,
+			array( \TrustedLogin\Encryption::hash( self::IDENT_REAL ) )
+		);
+
+		$this->assertSame(
+			$expires_a,
+			$next_a,
+			'Identifier A\'s cron event must be scheduled at A\'s expiration.'
+		);
+		$this->assertSame(
+			$expires_b,
+			$next_b,
+			'Identifier B\'s cron event must coexist at B\'s expiration — not clobbered by A\'s scheduling.'
+		);
+
+		// Cleanup so subsequent tests don't see leftover schedules.
+		wp_clear_scheduled_hook( $hook_name, array( \TrustedLogin\Encryption::hash( self::IDENT_A ) ) );
+		wp_clear_scheduled_hook( $hook_name, array( \TrustedLogin\Encryption::hash( self::IDENT_REAL ) ) );
+	}
+
+	public function test_cron_reschedule_targets_only_the_named_identifier(): void {
+		$expires_a   = time() + HOUR_IN_SECONDS;
+		$expires_b   = time() + 2 * HOUR_IN_SECONDS;
+		$rescheduled = time() + 3 * HOUR_IN_SECONDS;
+
+		$this->cron->schedule( $expires_a, self::IDENT_A );
+		$this->cron->schedule( $expires_b, self::IDENT_REAL );
+
+		$this->cron->reschedule( $rescheduled, self::IDENT_A );
+
+		$hook_name = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+
+		$next_a = wp_next_scheduled(
+			$hook_name,
+			array( \TrustedLogin\Encryption::hash( self::IDENT_A ) )
+		);
+		$next_b = wp_next_scheduled(
+			$hook_name,
+			array( \TrustedLogin\Encryption::hash( self::IDENT_REAL ) )
+		);
+
+		$this->assertSame(
+			$rescheduled,
+			$next_a,
+			'reschedule(A) must move A to the new timestamp.'
+		);
+		$this->assertSame(
+			$expires_b,
+			$next_b,
+			'reschedule(A) must NOT touch B\'s pending revoke.'
+		);
+
+		wp_clear_scheduled_hook( $hook_name, array( \TrustedLogin\Encryption::hash( self::IDENT_A ) ) );
+		wp_clear_scheduled_hook( $hook_name, array( \TrustedLogin\Encryption::hash( self::IDENT_REAL ) ) );
+	}
+
+	public function test_two_consecutive_grant_setups_produce_distinct_identifier_hashes(): void {
+		// Each grant generates a fresh site_identifier_hash via
+		// Encryption::get_random_hash. Two consecutive calls must
+		// produce distinct values — otherwise grant A and grant B
+		// would alias to the same support session.
+		$hash_a = \TrustedLogin\Encryption::get_random_hash( $this->logging );
+		$hash_b = \TrustedLogin\Encryption::get_random_hash( $this->logging );
+
+		$this->assertNotInstanceOf( \WP_Error::class, $hash_a );
+		$this->assertNotInstanceOf( \WP_Error::class, $hash_b );
+		$this->assertNotSame(
+			$hash_a,
+			$hash_b,
+			'Two consecutive get_random_hash() calls must produce distinct values — concurrent grants depend on this for non-collision.'
+		);
+
+		// Pin the length too — production assumes 128-hex chars
+		// (random_bytes(64) → bin2hex). A regression that returns
+		// shorter values would shrink the entropy available for
+		// concurrent-grant separation.
+		$this->assertSame( 128, strlen( $hash_a ) );
+		$this->assertSame( 128, strlen( $hash_b ) );
+	}
+
+	// -----------------------------------------------------------------
 	//  Item 10 — endpoint URL replay after revoke
 	// -----------------------------------------------------------------
 
