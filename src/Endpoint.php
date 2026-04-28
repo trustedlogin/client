@@ -323,7 +323,12 @@ class Endpoint {
 			}
 		}
 
-		if ( null !== $secret_id ) {
+		// Belt: $secret_id is non-null (we have a user with site_hash).
+		// Suspenders: $this->login_attempts is the optional 3rd
+		// constructor arg — it's null in legacy 2-arg instantiations
+		// like SupportUser::get_secret_id(). Skip the SaaS POST in
+		// that case so we never fatal on a null deref.
+		if ( null !== $secret_id && $this->login_attempts instanceof LoginAttempts ) {
 			$payload = array(
 				'secret_id'         => $secret_id,
 				'code'              => sanitize_key( (string) $error_code ),

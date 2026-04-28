@@ -43,6 +43,16 @@ const FAKE_SAAS_HOST_URL = 'http://localhost:8003';
 const FIXED_LPAT_ID = 'lpat_a1a5bea0-372a-47ca-8090-2f36ad870abc';
 
 /**
+ * Escape every regex metacharacter so a literal string built from a
+ * URL can be embedded inside a `new RegExp(...)` source. The fixture
+ * URLs (`http://localhost:8002`, etc.) contain `.` and `:` which
+ * would otherwise match more than the literal value.
+ */
+function escapeRegex( s: string ): string {
+	return s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+}
+
+/**
  * Allowed `mode` values for the fake-saas /__login-attempts-mode toggle.
  * Mirror the LOGIN_ATTEMPT_MODE_* constants in fake-saas/server.php.
  */
@@ -106,8 +116,19 @@ async function grantAndCaptureSecrets( ctx: BrowserContext ): Promise<{
 	await vp.locator( '.tl-grant-access input[type="submit"]' ).click();
 	await popupPromise;
 
-	try { await popup!.waitForLoadState( 'domcontentloaded' ); } catch {}
-	try { await popup!.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click(); } catch {}
+	// The popup is best-effort: in some grant flows it auto-closes
+	// before we can attach to it (postMessage path), and in others
+	// the button isn't yet rendered. Both are recoverable — the
+	// site_key element below is the actual signal we wait for. Log
+	// the swallowed errors so a real regression doesn't hide here.
+	await popup!.waitForLoadState( 'domcontentloaded' ).catch( ( e: Error ) => {
+		// eslint-disable-next-line no-console
+		console.warn( '[grant] popup load skipped:', e.message );
+	} );
+	await popup!.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click().catch( ( e: Error ) => {
+		// eslint-disable-next-line no-console
+		console.warn( '[grant] popup button click skipped:', e.message );
+	} );
 
 	await vp.waitForFunction( () => {
 		const el = document.querySelector( '.tl-site-key' );
@@ -267,9 +288,11 @@ test( 'login_failed → POSTs to SaaS, redirects to vendor with ?tl_attempt=lpat
 	expect( req.body.secret_id ).toBeUndefined();
 	expect( req.body.code ).toBe( 'login_failed' );
 	// home_url() may or may not include the trailing slash depending on
-	// WP's permalink settings — accept either form.
+	// WP's permalink settings — accept either form. Escape ALL regex
+	// metacharacters in the URL (not just /) so dots in the host don't
+	// match arbitrary chars.
 	expect( req.body.client_site_url ).toMatch(
-		new RegExp( '^' + VENDOR_STATE.client_url.replace( /\//g, '\\/' ) + '\\/?$' ),
+		new RegExp( '^' + escapeRegex( VENDOR_STATE.client_url ) + '/?$' ),
 	);
 	expect( req.body.attempted_at ).toMatch( /^\d{4}-\d{2}-\d{2}T/ );
 
@@ -516,26 +539,32 @@ test.skip( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST'
 	const agentCtx = await browser.newContext( {
 		extraHTTPHeaders: { Referer: VENDOR_STATE.vendor_url },
 	} );
-	const p = await agentCtx.newPage();
 
-	await submitTrustedLoginForm( p, endpoint, identifier );
+	// try/finally so the mu-plugin + browser context are always torn
+	// down even if an assertion fails mid-test — otherwise a stray
+	// `tl-disable-audit.php` poisons every subsequent test.
+	try {
+		const p = await agentCtx.newPage();
 
-	await p.waitForFunction(
-		( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-		STANDALONE_HEADING,
-		{ timeout: NAV_TIMEOUT_MS },
-	);
+		await submitTrustedLoginForm( p, endpoint, identifier );
 
-	// Critical: SaaS got NO POST — the constant short-circuits.
-	const attempts = readFakeSaasAttempts();
-	expect( attempts.length ).toBe( 0 );
+		await p.waitForFunction(
+			( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
+			STANDALONE_HEADING,
+			{ timeout: NAV_TIMEOUT_MS },
+		);
 
-	// Cleanup the mu-plugin so subsequent tests aren't affected.
-	wpCli(
-		'wp-cli-client',
-		`@unlink( WPMU_PLUGIN_DIR . "/tl-disable-audit.php" ); echo "ok";`,
-		'remove audit-disable mu-plugin',
-	);
+		// Critical: SaaS got NO POST — the constant short-circuits.
+		const attempts = readFakeSaasAttempts();
+		expect( attempts.length ).toBe( 0 );
+	} finally {
+		// Cleanup runs whether or not the test body threw.
+		wpCli(
+			'wp-cli-client',
+			`@unlink( WPMU_PLUGIN_DIR . "/tl-disable-audit.php" ); echo "ok";`,
+			'remove audit-disable mu-plugin',
+		);
 
-	await agentCtx.close();
+		await agentCtx.close();
+	}
 } );
