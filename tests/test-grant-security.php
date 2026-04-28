@@ -271,6 +271,68 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 	}
 
 	// -----------------------------------------------------------------
+	//  Item 8 — username collision. SupportUser::generate_unique_username
+	//  produces "<vendor> Support"; if a user with that login already
+	//  exists, it appends " 2", " 3", … until a free name is found.
+	//  The property: a pre-existing user with the same username is
+	//  NEVER silently bound to the new support-grant context.
+	// -----------------------------------------------------------------
+
+	public function test_create_does_not_bind_to_pre_existing_username(): void {
+		$this->become_admin();
+
+		// Pre-seed a non-support user whose login matches what
+		// generate_unique_username would otherwise pick. Vendor
+		// title is "GravityView" → username "GravityView Support"
+		// (after sanitize_user the space becomes part of the
+		// stored login).
+		$expected_default = sanitize_user( 'GravityView Support' );
+		$squatter_id      = self::factory()->user->create( array(
+			'user_login' => $expected_default,
+			'user_email' => 'squatter-' . bin2hex( random_bytes( 4 ) ) . '@example.test',
+			'role'       => 'subscriber',
+		) );
+		$this->assertIsInt( $squatter_id );
+		$this->assertSame( $expected_default, get_userdata( $squatter_id )->user_login );
+
+		// Now create the support user. The squatter must NOT be
+		// touched; the support user must get a different login.
+		$support_user_id = $this->support_user->create();
+		$this->assertIsInt(
+			$support_user_id,
+			'create() must succeed even when the default username is taken: ' . ( is_wp_error( $support_user_id ) ? $support_user_id->get_error_code() : gettype( $support_user_id ) )
+		);
+		$this->assertNotSame(
+			$squatter_id,
+			$support_user_id,
+			'create() must not silently re-bind to a pre-existing user with the default support username.'
+		);
+
+		$support_user = get_userdata( $support_user_id );
+		$this->assertInstanceOf( \WP_User::class, $support_user );
+		$this->assertNotSame(
+			$expected_default,
+			$support_user->user_login,
+			'New support user MUST have a distinct user_login when the default is taken (expected " 2"-suffix).'
+		);
+		// Suffix should start with " 2" when the first slot is busy.
+		$this->assertStringStartsWith(
+			$expected_default . ' ',
+			$support_user->user_login,
+			'Collision-resolution suffix must keep the original prefix, not pick an unrelated name.'
+		);
+
+		// Squatter's role/email/login must be unchanged.
+		$squatter_after = get_userdata( $squatter_id );
+		$this->assertSame( $expected_default, $squatter_after->user_login );
+		$this->assertContains(
+			'subscriber',
+			(array) $squatter_after->roles,
+			'Pre-existing user role must NOT have been modified by the support-user creation flow.'
+		);
+	}
+
+	// -----------------------------------------------------------------
 	//  Item 10 — endpoint URL replay after revoke
 	// -----------------------------------------------------------------
 
