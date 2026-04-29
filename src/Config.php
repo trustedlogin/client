@@ -246,7 +246,9 @@ final class Config {
 		}
 
 		if ( false !== $this->get_setting( 'clone_role', true, $this->settings ) ) {
-			$added_caps = $this->get_setting( 'caps/add', array(), $this->settings );
+			// Normalize so list-shape entries (['cap']) get checked
+			// against the prevented-cap guard the same as assoc shape.
+			$added_caps = SupportRole::normalize_caps_map( $this->get_setting( 'caps/add', array(), $this->settings ) );
 
 			foreach ( SupportRole::$prevented_caps as $invalid_cap ) {
 				if ( array_key_exists( $invalid_cap, $added_caps ) ) {
@@ -382,15 +384,18 @@ final class Config {
 	 */
 	public function ns() {
 
-		static $namespace;
+		// Memoize per raw namespace value so multiple Config instances
+		// (a site with more than one plugin integrating this SDK) each
+		// resolve to their own sanitized namespace.
+		static $namespace = array();
 
-		if ( ! $namespace ) {
-			$ns = $this->get_setting( 'vendor/namespace' );
+		$raw = (string) $this->get_setting( 'vendor/namespace' );
 
-			$namespace = Utils::sanitize_with_dashes( $ns );
+		if ( ! isset( $namespace[ $raw ] ) ) {
+			$namespace[ $raw ] = Utils::sanitize_with_dashes( $raw );
 		}
 
-		return $namespace;
+		return $namespace[ $raw ];
 	}
 
 	/**
