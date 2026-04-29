@@ -15,35 +15,26 @@ If a test can be written without depending on the WP database, custom post types
 
 ### Unit suite (preferred for new tests)
 
-The cheapest path. Runs in seconds against a tiny PHP container — no MySQL, no WordPress. The local toolchain handles PHP 8.0 + PHPUnit 9 via the `gkunit` Docker wrapper:
+The cheapest path. Runs in seconds against the host PHP — no Docker, no MySQL, no WordPress.
 
 ```bash
-gkunit test --php 8.0 --plugin-dir "$(pwd)" -- --configuration=/app/plugin/phpunit-unit.xml
+composer test:unit
 ```
 
-Or directly with Docker (faster for iteration, same image):
-
-```bash
-docker run --rm \
-    -v "$(pwd)":/app/plugin \
-    -w /app/plugin \
-    gravitykit/php:8.0 \
-    vendor/bin/phpunit -c phpunit-unit.xml
-```
-
-The `gravitykit/php:8.0` image is pulled by `gkunit` on first use. You don't need to build anything.
+That's `phpunit --configuration=phpunit-unit.xml`. The unit-only config skips `tests/bootstrap.php` (which expects a WP test lib) and only loads the plugin's autoloader, so it works on any machine with PHP and the dev composer dependencies installed.
 
 ### Integration suite
 
-Needs `WP_TESTS_DIR` set to a WordPress test library checkout, plus a MySQL test database. The pre-existing setup is brittle on local machines (works in CI). Locally, prefer `gkunit`:
+Needs `WP_TESTS_DIR` set to a WordPress test library checkout, plus a MySQL test database.
 
 ```bash
-gkunit test --php 8.0 --plugin-dir "$(pwd)"
+composer test:integration   # alias for: phpunit --configuration=phpunit.xml.dist
+composer test               # same — phpunit picks up phpunit.xml.dist by default
 ```
 
-(Without an explicit `--configuration`, gkunit picks `phpunit.xml.dist`, which runs the integration suite.)
+If `WP_TESTS_DIR` isn't set, `tests/bootstrap.php` will fail loudly. Bootstrap a local WP test lib with `bin/install-wp-tests.sh` (copy from the trustedlogin-connector repo if needed) before running.
 
-If running outside gkunit, `composer test` works **only** when `WP_TESTS_DIR` points at a fully installed WP test lib that's been initialized with `bin/install-wp-tests.sh` (the trustedlogin-connector repo ships that script — copy from there if needed).
+> Why no Docker wrapper here: the test infra is intentionally TrustedLogin-native. If you maintain a multi-PHP-version Docker setup elsewhere, run it from outside the repo against `composer test:unit` / `composer test:integration` — but nothing in this repo's tooling depends on it.
 
 ### Linting + static analysis
 
@@ -95,25 +86,24 @@ foreach ( array( 'config' => $cfg, 'remote' => $double, 'logging' => $log ) as $
 
 ### 3. PHPUnit silently exits 0 with no output when no tests are discovered
 
-If your test file has a parse error, a missing class, an uncaught fatal during require, or a namespace that PHPUnit's discovery can't reflect, `vendor/bin/phpunit -c phpunit-unit.xml` will exit 0 and print nothing. Diagnostic recipe:
+If your test file has a parse error, a missing class, an uncaught fatal during require, or a namespace that PHPUnit's discovery can't reflect, `composer test:unit` will exit 0 and print nothing. Diagnostic recipe:
 
 ```bash
 # Confirm PHP can load the test file at all
-docker run --rm -v $PWD:/app/plugin -w /app/plugin gravitykit/php:8.0 \
-    php -l tests/Unit/YourTest.php
+php -l tests/Unit/YourTest.php
 
 # Step through requires in a tmp script that writes progress to a file:
 cat > /tmp/diag.php <<'PHP'
 <?php
-file_put_contents('/app/plugin/.diag-step', 'start');
-require '/app/plugin/vendor/autoload.php';
-file_put_contents('/app/plugin/.diag-step', 'autoload');
-require '/app/plugin/tests/Unit/bootstrap.php';
-file_put_contents('/app/plugin/.diag-step', 'bootstrap');
-require '/app/plugin/tests/Unit/YourTest.php';
-file_put_contents('/app/plugin/.diag-step', 'testfile');
+file_put_contents(__DIR__ . '/.diag-step', 'start');
+require __DIR__ . '/vendor/autoload.php';
+file_put_contents(__DIR__ . '/.diag-step', 'autoload');
+require __DIR__ . '/tests/Unit/bootstrap.php';
+file_put_contents(__DIR__ . '/.diag-step', 'bootstrap');
+require __DIR__ . '/tests/Unit/YourTest.php';
+file_put_contents(__DIR__ . '/.diag-step', 'testfile');
 PHP
-docker run --rm -v $PWD:/app/plugin -v /tmp/diag.php:/tmp/diag.php gravitykit/php:8.0 php /tmp/diag.php
+php /tmp/diag.php
 cat .diag-step  # tells you which step crashed
 ```
 
@@ -403,3 +393,158 @@ add_filter( 'wp_redirect', static function () { return false; }, 10, 2 );
 ```
 
 Returning `false` from `wp_redirect` skips the actual `header()` call and lets the test continue.
+
+## Test layering — what goes where
+
+The suite is split across three layers, and each layer has a specific job. When picking where to put a new test, ask: **does this test require the production wire path, or is it really an integration test?**
+
+| Layer | Lives in | Tests | Use when |
+|---|---|---|---|
+| Unit | `tests/Unit/` (own bootstrap) | Isolated PHP logic, no WP | Pure functions, parsing, data shape |
+| Integration | `tests/test-*.php` (PHPUnit + WP_UnitTestCase) | SDK behavior in real WP | "Does this method do the right thing in PHP?" |
+| E2E | `tests/e2e/tests/*.spec.ts` (Playwright + Apache + wp-cron) | Production wire path | "Does this work for a real admin in a browser, or when wp-cron actually fires?" |
+
+### When something belongs in PHPUnit, not e2e
+
+A test belongs in PHPUnit (faster, easier to debug) UNLESS it requires:
+
+- **Real HTTP context.** wp-cli runs as CLI — no `$_SERVER['HTTPS']`, no headers, different output buffering. If the bug only manifests under Apache, the test must drive a real HTTP request.
+- **Real wp-cron dispatch.** PHPUnit can call action handlers directly, but that bypasses wp-cron's deduplication, locking, and per-event scheduling. Use `wp cron event run --due-now` only when verifying that wp-cron actually finds and fires a registered hook.
+- **JavaScript state machine.** AJAX nonce flow, popup messaging, DOM updates after click — none of these run in PHP-only tests.
+- **Auth gates at HTTP time.** `current_user_can` at the AJAX handler, REST `permission_callback`, admin-page menu cap. The cap matrix on a `WP_User` is testable in PHPUnit; the HTTP-time gate is not.
+
+### Real e2e specs in this repo
+
+After the Phase-1 migration, `tests/e2e/tests/` only contains specs that actually require Playwright:
+
+| Spec | Requires |
+|---|---|
+| `cap-enforcement.spec.ts` | Real HTTP requests as a logged-in support user, asserts wp-admin returns the `wp_die()` interstitial |
+| `cron-expiration.spec.ts` | `wp cron event run --due-now` — production wp-cron dispatch path |
+| `revoke-flow.spec.ts` | Same — verifies the new SaaS-revoke retry hook is wired such that wp-cron actually finds it |
+| `grant-flow.spec.ts` | Real admin login → click → AJAX → DOM update |
+| `revoke-flow-browser.spec.ts` | Same — drives the revoke-link nonce gate at HTTP time |
+| `extend-flow-browser.spec.ts` | Same — drives existing-grant detection through the form |
+| `grant-error-banner.spec.ts` | Forces SaaS 500 mid-grant, asserts user-friendly error UX + rollback (no orphan support user) |
+
+### Common e2e pitfall — fake-e2e via `wp eval`
+
+The pre-Phase-1 e2e suite had several specs that used `wp eval` to call SDK methods directly and assert on PHP-level state. Those are **integration tests in disguise** — Playwright is just a runner, the test never exercises the production wire path. Symptoms a spec is fake-e2e:
+
+- It only uses `wpCli()` and never opens a `Page` (or only opens one to login).
+- It would run unchanged if you replaced `wp eval` with a PHPUnit `assertEquals`.
+- Failures reproduce identically when you call the same SDK method from PHPUnit.
+
+These belong in `tests/test-*.php`. Phase-1 migrated 7 such specs back into PHPUnit; the e2e directory is honest about what it tests now.
+
+### Browser-driven flow specs — real admin login
+
+`helpers/login.ts::loginAsAdmin(page)` drives the actual `wp-login.php` form submission. Cookies land in the page's BrowserContext jar; subsequent navigation is authenticated.
+
+```ts
+import { test } from '@playwright/test';
+import { loginAsAdmin } from './helpers/login';
+import { GrantForm } from './helpers/grant-form';
+
+test( 'admin can revoke', async ( { page } ) => {
+    await loginAsAdmin( page );
+    const form = new GrantForm( page );
+    await form.navigate();
+    await form.revokeButton().click();
+    // ...
+} );
+```
+
+**Don't use `tl-test-login` mu-plugin for browser-flow specs.** That helper is a cookie-jar shortcut, appropriate only when auth itself isn't what's under test (cap-enforcement uses it because the cap gate is the SUT, not the login). Real flow specs (grant/revoke/extend/error) MUST go through `wp-login.php` so they validate the production auth wire path end-to-end.
+
+### Pre-seeding state for browser specs
+
+`helpers/seed.ts::seedSupportUser()` mints a support user via the SDK directly through wp-cli. Browser-flow specs that start from "a grant already exists" (revoke, extend) use this instead of driving the full grant flow first — that'd couple every spec to grant-flow's stability and triple test runtime.
+
+### Multisite gotcha — `wpmu_delete_user` load order
+
+`wpmu_delete_user` lives in `wp-admin/includes/ms.php` which is **not** auto-loaded outside network admin context. The SDK's `function_exists('wpmu_delete_user')` returns false during admin_init dispatches like the revoke-via-URL flow, and the user record leaks into the network table even though wp_delete_user removed it from the per-site usermeta.
+
+The fix (already applied in `SupportUser::delete()` and `Client::rollback_orphan_support_user()`):
+
+```php
+if ( is_multisite() ) {
+    require_once ABSPATH . 'wp-admin/includes/ms.php';
+}
+```
+
+This is the kind of bug PHPUnit can't catch — the suite runs as multisite and ms.php IS loaded by the test bootstrap. Only browser-driven e2e against admin_init exposes the load-order gap.
+
+## Capability-enforcement layer cake
+
+When a change touches `SupportRole` or `SupportUser`, three layers each catch a different class of bug. Skip any one and a real defect can ship green:
+
+1. **Unit (`tests/Unit/*`)** — pins the assoc-vs-list normalization at the `Config` / `SupportRole::normalize_caps_map()` boundary, before WordPress role storage is involved.
+2. **Integration (`tests/test-cap-management.php`)** — exercises the real `SupportRole::create()` against a real `WP_Role`, then confirms `$user->has_cap('edit_posts') === false` via `wp_set_current_user()`. This is the same `has_cap()` resolver every wp-admin screen uses, so when this passes the cap matrix on the live user is correct.
+3. **E2E (`tests/e2e/tests/cap-enforcement.spec.ts`)** — drives an actual Apache request as a freshly-minted support user and asserts wp-admin renders the `wp_die()` interstitial. Covers role-clone scenarios for editor, administrator (with `prevented_caps` stripping), subscriber, and the role-refresh-on-second-grant path.
+
+Don't trust the unit layer alone — the original list-shape bug passed every assoc-shape unit test and only surfaced when the integration layer drove `remove_cap()` against a real `WP_Role`.
+
+### Cap-enforcement e2e mechanics
+
+- Mint support users via the SDK's real classes inside `wpCli`. `(new SupportRole($cfg, $log))->create()` then `(new SupportUser($cfg, $log))->create()` returns a real `user_id`. Each test uses a unique namespace (`'capns_' + random`) so role slugs and emails don't collide across scenarios.
+- A small `tl-test-login.php` mu-plugin (gated on the `TL_TEST_LOGIN_SECRET` constant — defaults to `e2e-only`) accepts `?user_id=N&k=secret` and calls `wp_set_auth_cookie()`. That's the cleanest way to put a freshly-minted user into Playwright's cookie jar without going through the full grant flow.
+- Don't grep response bodies for `Sorry, you are not allowed` — that string leaks into JS l10n bundles on legitimate wp-admin screens and false-positives. Match `<title>WordPress &rsaquo; Error` instead — that's the `wp_die()` interstitial's unique signal.
+
+### E2E debugging — visibility into failed tests
+
+When a Playwright test fails, several artifacts are produced automatically. Use them — don't dig through test-results/ by hand.
+
+| Tool | What it shows | When to reach for it |
+|---|---|---|
+| `npx playwright show-report` | HTML report with every failed test, its error, screenshot, trace links | First stop after any failed run |
+| `npx playwright show-trace test-results/<test>/trace.zip` | Time-traveling debugger — every action, network request, DOM snapshot, console log | When the assertion is right but the actual behaviour is unclear |
+| `cat test-results/<test>/error-context.md` | Concise failure summary auto-written by Playwright | Quick check from the terminal |
+| `cat test-results/wp-debug.log` | Last 500 lines of `client-wp`\'s WordPress `debug.log`, captured by the global-teardown if any test failed | When a failure looks WordPress-side (PHP warning, hook misfire, multisite quirk) |
+| `npx playwright test --headed` | Watch the browser run live | Reproducing flakes; visual confirmation |
+| `PWDEBUG=1 npx playwright test <spec>` | Step through the test in Playwright Inspector | When you need to pause mid-flow and inspect state |
+
+The global teardown only writes `wp-debug.log` when there are failure folders under `test-results/` — clean runs leave nothing behind.
+
+### wp-cli stderr surfacing
+
+`wpCli()` uses `spawnSync` (not `execSync`) so it can capture stderr on success too. Any non-empty stderr — typically PHP warnings/notices that don\'t cause a non-zero exit — gets forwarded to the test runner\'s stderr prefixed with `[wp-cli stderr (label)]`. That means:
+
+- A spec that "passes" while the SDK emits a PHP deprecation surfaces the warning in CI logs and the Playwright HTML report.
+- A wp-cli call that hits a `wp_die()` mid-eval still throws (non-zero exit), but a silent `Notice: undefined index` no longer hides.
+
+Docker compose framing (`Container e2e-mariadb-1 Running`, etc.) is filtered out of both stdout and stderr so the operator sees only signal.
+
+### E2E (browser) suite — general gotchas
+
+These apply to any spec under `tests/e2e/`, not just cap-enforcement:
+
+- **Docker mount staleness.** `docker compose restart <service>` does NOT pick up new volume mounts on a running container. Adding a new mu-plugin or fixture file to `docker-compose.yml` requires `docker compose up -d --force-recreate <service>`. The bind-mounted file is silently absent inside the container if you only restart — Apache returns 404 for the new endpoint with no error in any log. Symptom: a freshly-added mu-plugin endpoint returns the WordPress 404 template even though the file is on disk on the host.
+
+- **Wordfence-leftover after a SIGKILLed run.** `compat-wordfence.spec.ts` activates Wordfence in `beforeAll` and deactivates it in `afterAll`. If a test run is killed before `afterAll` (e.g. `pkill -9 playwright` mid-debug, Ctrl-C ignored), Wordfence stays network-active. Subsequent runs hit the WAF on every request — login, AJAX, page loads each grow from <1s to ~8s, blowing past Playwright's 15s `actionTimeout` and timing out the click → navigation race in browser-driven flow specs. **Recovery:** `docker compose run --rm wp-cli-client wp plugin deactivate wordfence --network`. **Prevention:** `global-setup.ts` deactivates it defensively on every run, so this state shouldn't survive into a fresh `npx playwright test` invocation.
+
+- **`waitForURL` predicates that are already true.** A common authoring mistake: `Promise.all([page.waitForURL(predicate), button.click()])` where the predicate matches the URL the page is *already on*. The wait resolves immediately on entry, the Promise.all resolves when the click completes, and you race ahead of the click's actual side effect (typically an AJAX-then-redirect chain that takes another 1-3s). Use `waitForResponse('**/admin-ajax.php')`, `waitForLoadState('load')`, or — simplest — assert directly on the post-click DOM state with a generous timeout.
+
+- **`page.click` waits for "scheduled navigations" by default.** After login, WP redirects to `/wp-admin/` which loads slow widgets (admin pointers, MOTW-blocked external resources). Click waits for the load event before resolving and that can blow past `actionTimeout`. Use `click({ noWaitAfter: true })` and assert with `waitForURL` separately when only the navigation start matters.
+
+### `caps/add` and `caps/remove` shape-normalization contract
+
+Both settings accept either:
+
+```php
+'caps' => array( 'remove' => array( 'edit_posts' => 'reason text' ) ), // assoc
+'caps' => array( 'remove' => array( 'edit_posts' ) ),                  // list
+```
+
+`SupportRole::normalize_caps_map()` reshapes list entries into `[cap_name => '']` so the key is always the cap name. Anything calling `caps/add` or `caps/remove` programmatically should funnel through this helper — the prevented-cap guard in `Config::validate()` already does, and so does the cap-merge in `SupportRole::create()`. New call sites must do the same.
+
+### `SupportRole::create()` reconcile semantics
+
+When the role already exists from a prior grant, `create()` no longer returns it untouched. It computes the desired cap set from the current config (clone source + `caps/add` − `prevented_caps` − `caps/remove`) and reconciles via `add_cap`/`remove_cap` so cap-config changes between grants take effect. Two implications for tests:
+
+- The role-refresh test (`test_existing_role_is_refreshed_when_cap_config_changes`) is now a real assertion, not a documented gap.
+- If clone source is missing, `create()` falls back to "return whatever existing role is there" — the historical behavior — because reconcile against a nonexistent clone is undefined. The pre-existing `test_support_user_create_role` test pins this fallback.
+
+### `SupportUser::create()` email-collision guard
+
+`$allow_existing_user_match = true` only flips when the configured `vendor/email` actually contains the `{hash}` placeholder. Tests that exercise this guard must use a vendor email WITHOUT `{hash}` for the collision case to fire — otherwise the guard correctly stays in opt-in mode and a "second create" silently rebinds to the existing user.
