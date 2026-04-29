@@ -477,6 +477,29 @@ if ( $method === 'POST' && preg_match( '#^sites/([a-f0-9]+)/verify-identifier$#'
 	} );
 }
 
+// 4c. DELETE sites/{secret_id} — client SDK revokes a site on cleanup.
+if ( $method === 'DELETE' && preg_match( '#^sites/([a-f0-9]+)/?$#', $endpoint, $m ) ) {
+	$secret_id = $m[1];
+	with_state_locked( function ( $state ) use ( $secret_id ) {
+		$kept = array();
+		$found = false;
+		foreach ( $state['envelopes'] as $entry ) {
+			if ( $entry['secret_id'] === $secret_id ) {
+				$found = true;
+				continue;
+			}
+			$kept[] = $entry;
+		}
+		$state['envelopes'] = $kept;
+		if ( ! $found ) {
+			// Match production: idempotent delete returns success even
+			// when the row was already gone.
+			return array( $state, array( 'deleted' => false, 'reason' => 'unknown_secret_id' ), 200 );
+		}
+		return array( $state, array( 'deleted' => true ), 200 );
+	} );
+}
+
 // 5. POST accounts/{id}/messages — client SDK posts an encrypted message.
 if ( $method === 'POST' && preg_match( '#^accounts/(\d+)/messages$#', $endpoint, $m ) ) {
 	$body       = read_body();

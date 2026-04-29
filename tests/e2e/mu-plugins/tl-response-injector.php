@@ -35,6 +35,14 @@ add_filter(
 			return $preempt;
 		}
 
+		// Counter for tests that need to assert the injector actually
+		// intercepted. Production never reads this — it\'s test-only.
+		$hits   = (int) get_option( 'tl_inject_pubkey_hits', 0 );
+		update_option( 'tl_inject_pubkey_hits', $hits + 1, false );
+		$urls   = (array) get_option( 'tl_inject_pubkey_urls', array() );
+		$urls[] = $url;
+		update_option( 'tl_inject_pubkey_urls', $urls, false );
+
 		$mode = (string) $inject['mode'];
 
 		switch ( $mode ) {

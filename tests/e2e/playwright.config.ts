@@ -2,9 +2,42 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // capture-screenshots.spec.ts is a documentation-generation tool, not a
+  // regression test — its own file header documents that it should be run
+  // individually (`npx playwright test capture-screenshots.spec.ts`).
+  // Excluding it from the default invocation prevents the screenshot
+  // pipeline\'s state assumptions from polluting regression runs.
+  // Run it explicitly when generating docs.
+  testIgnore: [ '**/capture-screenshots.spec.ts' ],
   timeout: 60_000,
   retries: 0,
   workers: 1,
+
+  // Dual reporter: `list` keeps the default per-test progress on stdout
+  // for CI logs and humans; `html` writes a full report to
+  // playwright-report/ that you can open with `npx playwright show-report`
+  // after a failed run. The HTML report links every failed test to its
+  // trace.zip + screenshots — far better than digging through
+  // test-results/<long-name>/ by hand.
+  reporter: [
+    [ 'list' ],
+    [ 'html', { open: 'never', outputFolder: 'playwright-report' } ],
+  ],
+
+  // Wired up in global-setup.ts — defensively deactivates Wordfence
+  // before any spec runs. compat-wordfence.spec.ts activates it in
+  // its own beforeAll; if a previous run was SIGKILLed mid-flight,
+  // its afterAll never ran and Wordfence stays network-active,
+  // adding ~7s of WAF overhead per request and timing out every
+  // browser-driven flow spec.
+  globalSetup: './global-setup.ts',
+
+  // Wired up in global-teardown.ts — captures client-wp\'s WordPress
+  // debug.log into test-results/wp-debug.log when any test failed.
+  // Without this, debugging a failure means manually opening a docker
+  // shell after the fact and hoping subsequent tests didn't overwrite
+  // the log.
+  globalTeardown: './global-teardown.ts',
 
   use: {
     ignoreHTTPSErrors: true,
@@ -38,17 +71,15 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
     },
-    {
-      // caddy TLS sidecar — exposes client-wp via https://localhost:8443.
-      // Hit the root, not /wp-login.php — wps-hide-login (exercised by
-      // compat-wps-hide-login.spec.ts) renames wp-login.php to a custom
-      // slug and 404s the vanilla path. If the plugin is left active by
-      // a previous failed run, the health-check would bomb with exit 56.
+    // caddy TLS sidecar health check — gated behind TL_E2E_SKIP_TLS=1
+    // for runs that don't need the TLS path. Specs that actually require
+    // TLS (tls-wire, protocol-mismatch) probe it themselves at test time.
+    ...( process.env.TL_E2E_SKIP_TLS === '1' ? [] : [ {
       command: 'curl -sfk https://localhost:8443/ > /dev/null',
       url: 'https://localhost:8443/',
       ignoreHTTPSErrors: true,
       reuseExistingServer: true,
       timeout: 30_000,
-    },
+    } ] ),
   ],
 });

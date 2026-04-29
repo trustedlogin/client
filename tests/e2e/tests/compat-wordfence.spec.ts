@@ -213,7 +213,13 @@ function fireWebhook(): void {
 test.describe.configure( { mode: 'serial' } );
 
 test.beforeAll( async () => {
-    wpCommand( 'wp-cli-client', 'plugin activate wordfence' );
+    // --network: client-wp is multisite, and the suite's global-setup
+    // pre-deactivates wordfence with --network as a defensive measure
+    // (recovers state from a SIGKILLed previous run). Activating
+    // per-site here would leave it in `active` rather than the
+    // `active-network` state Wordfence expects on multisite — its
+    // WAF middleware paths key off the network-active install marker.
+    wpCommand( 'wp-cli-client', 'plugin activate wordfence --network' );
 
     // Install the synthetic rule. Its first evaluation must happen
     // AFTER we flip wafStatus to 'enabled' below — otherwise Wordfence's
@@ -238,9 +244,12 @@ test.beforeAll( async () => {
 
 test.afterAll( async () => {
     // Return WAF to disabled so subsequent specs run against a vanilla WP.
+    // --network must match the beforeAll's --network activation —
+    // otherwise the deactivate is a no-op on the network-active install
+    // and Wordfence keeps adding ~7s WAF overhead to every request.
     try { await wfHarness( 'disable' ); } catch ( _ ) { /* best-effort */ }
     dockerExec( 'client-wp', `: > /var/www/html/wp-content/wflogs/rules.php` );
-    wpCommand( 'wp-cli-client', 'plugin deactivate wordfence' );
+    wpCommand( 'wp-cli-client', 'plugin deactivate wordfence --network' );
 } );
 
 test.beforeEach( () => {

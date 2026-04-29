@@ -6,7 +6,7 @@
  * real errors and leave tests running on stale state).
  */
 
-import { execSync, type ExecSyncOptionsWithStringEncoding } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import * as path from 'path';
 
 export const E2E_DIR = path.resolve( __dirname, '..' );
@@ -18,6 +18,12 @@ export const E2E_DIR = path.resolve( __dirname, '..' );
  *
  * Caller is responsible for escaping single quotes inside the PHP
  * snippet, or using JSON.stringify for string literals.
+ *
+ * Visibility: PHP warnings/notices that don\'t cause a non-zero exit
+ * land on stderr. Without surfacing them, a test that "passes" while
+ * the SDK is actually emitting deprecation warnings would silently
+ * drift. We dump non-empty stderr to the test process\'s stderr,
+ * prefixed so it\'s greppable in CI logs and the Playwright HTML report.
  */
 export function wpCli(
     container: 'wp-cli-client' | 'wp-cli-vendor',
@@ -26,33 +32,41 @@ export function wpCli(
 ): string {
     const cmd = `docker compose run --rm -T ${ container } wp eval '${ phpSnippet }'`;
 
-    let stdout: string;
-    try {
-        stdout = execSync( cmd, {
-            cwd:      E2E_DIR,
-            encoding: 'utf8',
-            timeout:  30_000,
-            stdio:    [ 'ignore', 'pipe', 'pipe' ],
-        } as ExecSyncOptionsWithStringEncoding );
-    } catch ( e: any ) {
-        // execSync throws on non-zero exit; surface both streams so we
-        // don't debug blind. Include the snippet that failed so the
-        // test report is self-contained.
+    // Use spawnSync so we can read BOTH stdout and stderr on success.
+    // execSync would discard stderr unless the command non-zero-exited.
+    // wp-cli eval emits PHP warnings on stderr while still exiting 0,
+    // and silently swallowing those would let regressions like cap
+    // notices or deprecation warnings ride into production.
+    const result = spawnSync( 'docker', [
+        'compose', 'run', '--rm', '-T', container, 'wp', 'eval', phpSnippet,
+    ], {
+        cwd:      E2E_DIR,
+        encoding: 'utf8',
+        timeout:  30_000,
+        stdio:    [ 'ignore', 'pipe', 'pipe' ],
+    } );
+
+    if ( result.error ) {
+        throw new Error(
+            `wpCli failed${ label ? ' (' + label + ')' : '' }: ${ result.error.message }\n  cmd: ${ cmd }`
+        );
+    }
+
+    if ( result.status !== 0 ) {
         const msg = [
             `wpCli failed${ label ? ' (' + label + ')' : '' }:`,
             `  cmd: ${ cmd }`,
-            `  exit: ${ e.status ?? '?' }`,
-            `  stdout: ${ ( e.stdout || '' ).toString().trim() || '(empty)' }`,
-            `  stderr: ${ ( e.stderr || '' ).toString().trim() || '(empty)' }`,
+            `  exit: ${ result.status ?? '?' }`,
+            `  stdout: ${ ( result.stdout || '' ).toString().trim() || '(empty)' }`,
+            `  stderr: ${ ( result.stderr || '' ).toString().trim() || '(empty)' }`,
         ].join( '\n' );
         throw new Error( msg );
     }
 
-    // wp-cli eval puts PHP warnings on stderr but still exits 0. Docker
-    // compose prepends " Container e2e-mariadb-1  Running" etc. to
-    // stdout. Strip those framing lines, then look for explicit PHP
-    // error markers we shouldn't tolerate silently.
-    const body = stdout
+    // Docker compose framing — Container/Network status lines — lands
+    // on the stream where the daemon emits progress. Strip those so the
+    // returned body is just the wp-cli eval output the caller asked for.
+    const body = ( result.stdout || '' )
         .split( '\n' )
         .filter( line => ! /^\s*Container /.test( line ) )
         .filter( line => ! /^Creating volume /.test( line ) )
@@ -62,6 +76,24 @@ export function wpCli(
     if ( /(Fatal error|Uncaught |Parse error):/i.test( body ) ) {
         throw new Error(
             `wpCli produced a PHP fatal${ label ? ' (' + label + ')' : '' }:\n${ body }\n  cmd: ${ cmd }`
+        );
+    }
+
+    // Surface non-fatal stderr (PHP warnings/notices/deprecations) to
+    // the test runner\'s stderr so they show up in the Playwright HTML
+    // report and CI logs. Filter out docker compose framing first.
+    const cleanedStderr = ( result.stderr || '' )
+        .split( '\n' )
+        .filter( line => line.trim() !== '' )
+        .filter( line => ! /^\s*Container /.test( line ) )
+        .filter( line => ! /^Creating volume /.test( line ) )
+        .filter( line => ! /^Network /.test( line ) )
+        .join( '\n' )
+        .trim();
+
+    if ( cleanedStderr ) {
+        process.stderr.write(
+            `[wp-cli stderr${ label ? ' (' + label + ')' : '' }]\n${ cleanedStderr }\n`
         );
     }
 
