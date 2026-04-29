@@ -211,10 +211,14 @@ final class SupportUser {
 		$user_email                = $this->config->get_setting( 'vendor/email' );
 		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
-		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
+		// Only treat the email as opt-in to existing-user reuse when the
+		// integrator actually templated against the {hash} placeholder.
+		// Without that, a second create() call should refuse to silently
+		// re-bind to whatever WP user happens to share the address.
+		if ( is_string( $user_email ) && false !== strpos( $user_email, '{hash}' ) && defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
 			$user_email                = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
-			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
+			$allow_existing_user_match = true;
 		}
 
 		$user_id_of_email = email_exists( $user_email );
@@ -496,6 +500,17 @@ final class SupportUser {
 
 		// Needed to ensure wp_delete_user() exists.
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		// Needed so wpmu_delete_user() is callable on multisite. Without
+		// this, deletion only clears per-site usermeta and the user
+		// record persists in the network wp_users table — the next
+		// grant attempt collides via email_exists() and the leaked
+		// network row is never cleaned up. The function is admin-only
+		// in WP\'s standard load order, but revoke-via-URL fires from
+		// admin_init before WP has loaded ms.php on its own.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 
 		$user = $this->get( $user_identifier );
 
