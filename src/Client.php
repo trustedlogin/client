@@ -622,13 +622,18 @@ final class Client {
 			return $secret_id;
 		}
 
-		// Revoke site in SaaS.
+		// Revoke site in SaaS. The result is advisory — local cleanup
+		// continues regardless, and a failed sync gets queued for the
+		// SaaS-revoke retry cron so the site eventually drops from SaaS.
 		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
 
-		// Couldn't sync to SaaS.
 		if ( is_wp_error( $site_revoked ) ) {
-			// TODO: Add a cron-task to try syncing revocation again later.
-			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
+			$this->logging->log(
+				'SaaS revoke sync failed (' . $site_revoked->get_error_code() . '). Queueing retry; local revoke will continue.',
+				__METHOD__,
+				'error'
+			);
+			$this->cron->queue_saas_revoke_retry( $secret_id );
 		}
 
 		$deleted_user = $this->support_user->delete( $identifier, true, true );
@@ -648,7 +653,8 @@ final class Client {
 		}
 
 		/**
-		 * Site was removed in SaaS, user was deleted.
+		 * Local cleanup succeeded. SaaS sync is either done already or
+		 * queued in the retry cron.
 		 */
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/access/revoked',
@@ -659,7 +665,27 @@ final class Client {
 			)
 		);
 
-		return $site_revoked;
+		return true;
+	}
+
+	/**
+	 * Retry an outstanding SaaS revoke for a single secret_id. Called from
+	 * {@see Cron::retry_saas_revoke()} when the initial sync failed.
+	 *
+	 * @since TODO
+	 *
+	 * @param string $secret_id Site secret identifier.
+	 *
+	 * @return bool True on success, false if the SaaS sync still failed.
+	 */
+	public function retry_saas_revoke( $secret_id ) {
+		if ( ! is_string( $secret_id ) || '' === $secret_id ) {
+			return false;
+		}
+
+		$result = $this->site_access->revoke( $secret_id, $this->remote );
+
+		return ! is_wp_error( $result );
 	}
 
 	/**
@@ -696,6 +722,14 @@ final class Client {
 	 */
 	private function rollback_orphan_support_user( $support_user_id ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		// wpmu_delete_user lives in wp-admin/includes/ms.php which isn\'t
+		// auto-loaded outside network admin context. Without this load
+		// the network user row leaks every time rollback fires from
+		// admin_init / template_redirect.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
 
 		wp_delete_user( $support_user_id );
 

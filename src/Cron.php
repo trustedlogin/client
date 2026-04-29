@@ -18,6 +18,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Cron {
 
 	/**
+	 * Maximum number of times the SaaS-revoke retry cron will reattempt a
+	 * single secret_id before giving up. Each attempt waits longer than
+	 * the previous (5 min × attempt, capped at 1 hour).
+	 *
+	 * @since TODO
+	 */
+	const MAX_SAAS_REVOKE_RETRIES = 5;
+
+	/**
 	 * Config instance.
 	 *
 	 * @var \TrustedLogin\Config
@@ -30,6 +39,13 @@ final class Cron {
 	 * @var string
 	 */
 	private $hook_name;
+
+	/**
+	 * The hook name for the deferred SaaS-revoke retry job.
+	 *
+	 * @var string
+	 */
+	private $retry_hook_name;
 
 	/**
 	 * Logging instance.
@@ -48,7 +64,8 @@ final class Cron {
 		$this->config  = $config;
 		$this->logging = $logging;
 
-		$this->hook_name = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+		$this->hook_name       = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+		$this->retry_hook_name = 'trustedlogin/' . $this->config->ns() . '/site/retry_revoke';
 	}
 
 	/**
@@ -58,6 +75,136 @@ final class Cron {
 	 */
 	public function init() {
 		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
+		add_action( $this->retry_hook_name, array( $this, 'retry_saas_revoke' ), 1 );
+	}
+
+	/**
+	 * Option key holding the per-namespace queue of pending SaaS revokes.
+	 * Shape: { secret_id: attempt_count, ... }.
+	 *
+	 * @since TODO
+	 */
+	private function pending_queue_option_key() {
+		return 'tl_' . $this->config->ns() . '_pending_saas_revoke';
+	}
+
+	/**
+	 * Returns the current pending-SaaS-revoke queue.
+	 *
+	 * @since TODO
+	 *
+	 * @return array<string, int>
+	 */
+	private function get_pending_saas_revoke_queue() {
+		$queue = get_option( $this->pending_queue_option_key(), array() );
+		return is_array( $queue ) ? $queue : array();
+	}
+
+	/**
+	 * Persist the queue, deleting the option entirely when empty so we
+	 * don't leave a stub option behind.
+	 *
+	 * @since TODO
+	 *
+	 * @param array<string, int> $queue
+	 */
+	private function save_pending_saas_revoke_queue( array $queue ) {
+		if ( empty( $queue ) ) {
+			delete_option( $this->pending_queue_option_key() );
+			return;
+		}
+		update_option( $this->pending_queue_option_key(), $queue, false );
+	}
+
+	/**
+	 * Compute the retry delay (in seconds) for a given attempt count.
+	 * Linear backoff capped at 1 hour: 5, 10, 15, 20, 25 minutes →
+	 * after MAX attempts the queue gives up.
+	 *
+	 * @since TODO
+	 *
+	 * @param int $attempt 1-indexed.
+	 */
+	private function retry_backoff_seconds( $attempt ) {
+		return (int) min( 5 * MINUTE_IN_SECONDS * max( 1, (int) $attempt ), HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Queue a deferred SaaS-revoke retry for a secret_id whose initial
+	 * sync failed. {@see Client::revoke_access()} calls this when
+	 * SiteAccess::revoke returns WP_Error so the local delete can complete
+	 * without losing the SaaS-side cleanup.
+	 *
+	 * @since TODO
+	 *
+	 * @param string $secret_id Site secret identifier.
+	 * @param int    $attempt   1-indexed attempt counter.
+	 *
+	 * @return bool True if the retry was queued; false if input invalid.
+	 */
+	public function queue_saas_revoke_retry( $secret_id, $attempt = 1 ) {
+		if ( ! is_string( $secret_id ) || '' === $secret_id ) {
+			return false;
+		}
+
+		$attempt = max( 1, (int) $attempt );
+		$queue   = $this->get_pending_saas_revoke_queue();
+
+		$queue[ $secret_id ] = $attempt;
+		$this->save_pending_saas_revoke_queue( $queue );
+
+		if ( ! wp_next_scheduled( $this->retry_hook_name ) ) {
+			wp_schedule_single_event( time() + $this->retry_backoff_seconds( $attempt ), $this->retry_hook_name );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Hooked Action: process the pending SaaS-revoke queue.
+	 *
+	 * For each queued secret_id, ask the live Client to retry the
+	 * SiteAccess::revoke call. Successes drop from the queue.
+	 * Failures bump the attempt counter; once a secret hits
+	 * {@see self::MAX_SAAS_REVOKE_RETRIES} attempts we log and drop it.
+	 *
+	 * @since TODO
+	 */
+	public function retry_saas_revoke() {
+		$queue = $this->get_pending_saas_revoke_queue();
+		if ( empty( $queue ) ) {
+			return;
+		}
+
+		$client    = new Client( $this->config, false );
+		$remaining = array();
+
+		foreach ( $queue as $secret_id => $attempt ) {
+			$secret_id = (string) $secret_id;
+			$attempt   = max( 1, (int) $attempt );
+
+			$ok = $client->retry_saas_revoke( $secret_id );
+
+			if ( $ok ) {
+				$this->logging->log( 'Pending SaaS revoke succeeded after ' . $attempt . ' attempt(s).', __METHOD__, 'notice' );
+				continue;
+			}
+
+			$next_attempt = $attempt + 1;
+			if ( $next_attempt > self::MAX_SAAS_REVOKE_RETRIES ) {
+				$this->logging->log( 'Pending SaaS revoke gave up after ' . self::MAX_SAAS_REVOKE_RETRIES . ' attempts. Dropping from retry queue.', __METHOD__, 'error' );
+				continue;
+			}
+
+			$remaining[ $secret_id ] = $next_attempt;
+		}
+
+		$this->save_pending_saas_revoke_queue( $remaining );
+
+		if ( ! empty( $remaining ) ) {
+			$next_delay = $this->retry_backoff_seconds( max( $remaining ) );
+			wp_schedule_single_event( time() + $next_delay, $this->retry_hook_name );
+		}
 	}
 
 	/**
