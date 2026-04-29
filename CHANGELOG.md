@@ -2,7 +2,7 @@
 
 ## 1.11.0 (TBD)
 
-This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record, instead of on the customer's `wp-login.php` with a generic banner that points back at the integrator's own help docs.
+This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record, instead of on the customer's `wp-login.php` with a generic banner that points back at the integrator's own help docs. It also tightens how the support role is built when integrators customize which capabilities a support session gets.
 
 #### 🚀 Added
 
@@ -13,6 +13,11 @@ This release rewrites the failed-login feedback flow so support agents land on *
 
 #### 🛠 Changed
 
+- The `caps/add` and `caps/remove` settings now accept both list (`['edit_posts']`) and associative (`['edit_posts' => 'reason']`) array shapes. Previously the list shape silently failed to add or remove the configured capability.
+- The support role is now reconciled against the current `caps` configuration on each grant. Previously, once the role had been created, subsequent changes to `caps/add` or `caps/remove` were ignored until the role was deleted.
+- A second support-user creation with the same `vendor/email` now returns `WP_Error('email_exists')` unless the email contains the `{hash}` placeholder. Previously the SDK would rebind the new session to whatever user already held that address.
+- `Client::revoke_access()` returns `true` once the local cleanup completes, regardless of whether the SaaS sync succeeded. Failed SaaS revocations are queued for retry by a new cron handler with linear backoff (5/10/15/20/25 minutes, capped at 5 attempts) so the SaaS-side site record eventually drops without blocking the admin's revoke action on transient SaaS errors.
+- On WordPress multisite, support-user deletion now removes the user from the network user table as well as the per-site usermeta. Previously the per-site delete ran but `wpmu_delete_user()` was unavailable in the request context where revoke fires, leaving an orphan user record that collided with subsequent grants on the same vendor email.
 - `Endpoint::fail_login()` is rewritten: on the `login_failed` branch it pre-captures the matched user's `site_identifier_hash` BEFORE `SupportUser::maybe_login()` deletes the expired user, derives `secret_id`, POSTs to SaaS, and on success redirects the agent back to the trusted referer with `?tl_attempt=lpat_…`. On `security_check_failed` (no user resolved), or on any failure (SaaS unreachable, untrusted referer, audit disabled, 422/429/5xx), renders the standalone fallback page instead of `wp-login.php`.
 - `Endpoint::__construct` widens by two optional args (`LoginAttempts`, `SupportUser`) so the new `fail_login()` path has its dependencies wired. Existing 2-arg call sites continue to work — only the `maybe_login_support()` flow needs the new args.
 
