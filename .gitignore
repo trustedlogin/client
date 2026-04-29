@@ -14,3 +14,20 @@ vendor/
 *.css.map
 /.playwright-mcp
 /.claude
+
+# Local-only outputs from test / dev iteration. The patterns are
+# anchored to the repo root and prefixed so committed assets under
+# src/ aren't affected.
+/audit-*.png
+/final-*.png
+/live-*.png
+/lv-*.png
+/mk-*.png
+/mockup-*.png
+/sidebar-*.png
+/signup-*.png
+/connector-wp-install.png
+/dashboard-redesign.png
+/plans-page-smoke.png
+/.unit-out
+/tests/e2e/output/
