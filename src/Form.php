@@ -474,7 +474,11 @@ final class Form {
 			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions tl-' . esc_attr( $this->config->ns() ) . '-auth__actions--unavailable';
 		} else {
 			$response_html   = '<div class="tl-' . esc_attr( $this->config->ns() ) . '-auth__response" aria-live="assertive"></div>';
-			$actions_html    = $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false );
+			// tag=button: render as a real <button> so the browser\'s
+			// native disabled-attribute click suppression prevents
+			// double-submits during the in-flight AJAX (was: <a>
+			// styled as a button, which has no native disabled state).
+			$actions_html    = $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button&tag=button', false );
 			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions';
 		}
 
@@ -1418,6 +1422,27 @@ final class Form {
 		}
 
 		$anchor_html = $text . $powered_by;
+
+		// `<button>` is the right semantic when the click triggers
+		// JS (the AJAX grant flow) rather than navigation. As a
+		// real button, the browser natively blocks clicks once the
+		// JS sets `disabled` — no JS-side hasClass guard required to
+		// stop a rapid double-click from firing two AJAX requests.
+		// `<a>` is kept as the legacy/fallback tag for integrators
+		// that embed the grant button outside the auth screen.
+		if ( 'button' === $tag ) {
+			return sprintf(
+				'<button type="button" class="%1$s button-trustedlogin-%2$s" %3$s>%4$s</button>',
+				/* %1$s */
+				esc_attr( $css_class ),
+				/* %2$s */
+				$this->config->ns(),
+				/* %3$s */
+				$data_string,
+				/* %4$s */
+				$anchor_html
+			);
+		}
 
 		return sprintf(
 			'<%1$s href="%2$s" class="%3$s button-trustedlogin-%4$s" aria-role="button" %5$s>%6$s</%1$s>',

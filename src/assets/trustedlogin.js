@@ -154,7 +154,28 @@
 
 	$body.on( 'click', tl_obj.selector, function ( e ) {
 		e.preventDefault();
-		grantAccess( $( this ) );
+
+		// Re-entrancy guard. Two paths into this handler:
+		//
+		//   1. Realistic human burst (>= a few ms apart). The first
+		//      click\'s grantAccess sets `disabled` on the element;
+		//      the browser then suppresses subsequent click events
+		//      natively. We never re-enter here.
+		//   2. Synthetic burst (programmatic / scripted). Two click
+		//      events can be DISPATCHED before either reaches JS,
+		//      meaning both fire even with the disabled attribute
+		//      set mid-stream. JS runs serially, so this `prop`
+		//      check at handler entry catches the second invocation
+		//      after the first has flagged the button.
+		//
+		// Both layers (native attribute + JS check) are required to
+		// guarantee the contract that one click → one AJAX.
+		var $btn = $( this );
+		if ( $btn.prop( 'disabled' ) ) {
+			return false;
+		}
+
+		grantAccess( $btn );
 		return false;
 	} );
 
@@ -167,10 +188,17 @@
 	} );
 
 	function grantAccess( $button ) {
+		// Set the native HTML `disabled` attribute first. For a real
+		// <button>, the browser dispatches no further click events
+		// while disabled — that\'s the contract preventing a rapid
+		// double-click from firing two AJAX requests. addClass alone
+		// is purely visual; the attribute is the functional guard.
+		// .addClass( 'disabled' ) is kept for stylesheet selectors
+		// that pre-date the attribute change.
+		$button.prop( 'disabled', true ).addClass( 'disabled' );
+
 		postToOpener( { type: 'granting' } );
 		hideWindow();
-
-		$button.addClass( 'disabled' );
 
 		if ( 'extend' === $button.data( 'access' ) ) {
 			outputStatus( tl_obj.lang.status.extending.content, 'pending' );
@@ -310,7 +338,7 @@
 			.text( content );
 
 		if ( 'error' === type ) {
-			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).removeClass( 'disabled' );
+			$( tl_obj.selector ).text( tl_obj.lang.buttons.go_to_site ).prop( 'disabled', false ).removeClass( 'disabled' );
 			$body.off( 'click', tl_obj.selector );
 		}
 	}
