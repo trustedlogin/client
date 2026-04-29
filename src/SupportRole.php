@@ -228,33 +228,41 @@ final class SupportRole {
 			return new \WP_Error( 'cloned_role_slug_not_string', 'The slug for the cloned support role must be a string.' );
 		}
 
-		$role_exists = get_role( $new_role_slug );
+		$existing_role = get_role( $new_role_slug );
+		$old_role      = get_role( $clone_role_slug );
 
-		if ( $role_exists ) {
-			$this->logging->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
-			return $role_exists;
-		}
-
-		$this->logging->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
-
-		$old_role = get_role( $clone_role_slug );
-
+		// Without a clone source there's no way to derive the desired
+		// cap set. Preserve the historical "return whatever's there"
+		// behaviour so callers get back a usable role.
 		if ( empty( $old_role ) ) {
+			if ( $existing_role ) {
+				$this->logging->log( 'Not creating user role; it already exists', __METHOD__, 'notice' );
+				return $existing_role;
+			}
 			return new \WP_Error( 'role_does_not_exist', 'Error: the role to clone does not exist: ' . $clone_role_slug );
 		}
 
+		$add_caps    = self::normalize_caps_map( $this->config->get_setting( 'caps/add' ) );
+		$remove_caps = self::normalize_caps_map( $this->config->get_setting( 'caps/remove' ) );
+
 		$capabilities = $old_role->capabilities;
 
-		$add_caps = $this->config->get_setting( 'caps/add' );
-
-		foreach ( (array) $add_caps as $add_cap => $reason ) {
+		foreach ( $add_caps as $add_cap => $reason ) {
 			$capabilities[ $add_cap ] = true;
 		}
 
-		// These roles should never be assigned to TrustedLogin roles.
+		// These caps should never be granted to TrustedLogin roles.
 		foreach ( self::$prevented_caps as $prevented_cap ) {
 			unset( $capabilities[ $prevented_cap ] );
 		}
+
+		// caps/remove wins over caps/add when both reference the same cap.
+		foreach ( $remove_caps as $remove_cap => $description ) {
+			unset( $capabilities[ $remove_cap ] );
+		}
+
+		// Flag identifying this role as TrustedLogin-managed.
+		$capabilities[ self::get_capability_flag( $this->config->ns() ) ] = true;
 
 		/**
 		 * Modify the display name of the created support role.
@@ -269,12 +277,30 @@ final class SupportRole {
 			$this
 		);
 
-		/**
-		 * Add a flag to declare that this role was created by TrustedLogin.
-		 *
-		 * @used-by SupportRole::delete()
-		 */
-		$capabilities[ self::get_capability_flag( $this->config->ns() ) ] = true;
+		if ( $existing_role ) {
+			// Reconcile against the desired cap set so config changes
+			// between grants (caps/add or caps/remove updates) take
+			// effect on the second call instead of returning a stale
+			// role.
+			$current_caps = is_array( $existing_role->capabilities ) ? $existing_role->capabilities : array();
+
+			foreach ( array_diff_key( $current_caps, $capabilities ) as $stale_cap => $_unused ) {
+				$existing_role->remove_cap( $stale_cap );
+			}
+
+			foreach ( $capabilities as $cap => $granted ) {
+				$has_now = isset( $current_caps[ $cap ] ) ? (bool) $current_caps[ $cap ] : false;
+				if ( $has_now !== (bool) $granted ) {
+					$existing_role->add_cap( $cap, (bool) $granted );
+				}
+			}
+
+			$this->logging->log( 'Reconciled existing role ' . $new_role_slug . ' against current cap config.', __METHOD__, 'notice' );
+
+			return $existing_role;
+		}
+
+		$this->logging->log( 'New role slug: ' . $new_role_slug . ', Clone role slug: ' . $clone_role_slug, __METHOD__, 'debug' );
 
 		$new_role = add_role( $new_role_slug, $role_display_name, $capabilities );
 
@@ -290,16 +316,45 @@ final class SupportRole {
 			);
 		}
 
-		$remove_caps = $this->config->get_setting( 'caps/remove' );
-
 		if ( ! empty( $remove_caps ) ) {
 			foreach ( $remove_caps as $remove_cap => $description ) {
-				$new_role->remove_cap( $remove_cap );
 				$this->logging->log( 'Capability ' . $remove_cap . ' removed from role.', __METHOD__, 'info' );
 			}
 		}
 
 		return $new_role;
+	}
+
+	/**
+	 * Normalize a caps map to {cap_name => description}.
+	 *
+	 * Accepts either an associative map ({cap => description}) or a flat
+	 * list ([cap, cap, ...]). List entries are reshaped so the cap name
+	 * is the key, matching the assoc form used by callers below.
+	 *
+	 * @since TODO
+	 *
+	 * @param mixed $caps Either {cap => description} or [cap, cap, ...].
+	 * @return array<string, string> {cap_name => description}.
+	 */
+	public static function normalize_caps_map( $caps ): array {
+		$out = array();
+
+		if ( ! is_array( $caps ) ) {
+			return $out;
+		}
+
+		foreach ( $caps as $key => $value ) {
+			if ( is_int( $key ) && is_string( $value ) && '' !== $value ) {
+				$out[ $value ] = '';
+				continue;
+			}
+			if ( is_string( $key ) && '' !== $key ) {
+				$out[ $key ] = is_string( $value ) ? $value : '';
+			}
+		}
+
+		return $out;
 	}
 
 	/**
