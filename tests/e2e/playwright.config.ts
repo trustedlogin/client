@@ -49,7 +49,7 @@ export default defineConfig({
     video: 'off',
   },
 
-  webServer: [
+  webServer: process.env.TL_E2E_SKIP_HEALTHCHECK === '1' ? [] : [
     {
       command: 'curl -sf http://localhost:8001/ > /dev/null',
       url: 'http://localhost:8001/',
