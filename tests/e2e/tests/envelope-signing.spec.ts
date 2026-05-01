@@ -132,14 +132,72 @@ async function resetFakeSaaS( page: Page ) {
 }
 
 async function revokeIfGranted() {
-    wpCli(
-        'wp-cli-client',
-        `require_once ABSPATH . "wp-admin/includes/user.php"; `
-        + `$users = get_users( array( "meta_key" => "tl_pro-block-builder_id" ) ); `
-        + `foreach ( $users as $u ) { wp_delete_user( $u->ID ); } `
-        + `echo count( $users );`,
-        'revokeIfGranted',
+    // Trigger the Client SDK's own revoke flow so each test starts
+    // with no support user. This goes through `Client::revoke_access`
+    // → `SupportUser::delete` → `wp_delete_user` + (multisite-safe)
+    // `wpmu_delete_user`, mirroring what a customer admin would do
+    // by clicking "revoke access" in production.
+    //
+    // The PHP runs via `wp eval-file` so the file's namespace
+    // separators survive verbatim — passing PHP with backslashes
+    // through `wp eval` shell-quoting mangles them on the way in.
+    const phpFile = path.join( os.tmpdir(), `tl-e2e-revoke-${ Date.now() }.php` );
+    fs.writeFileSync(
+        phpFile,
+        `<?php
+// Use the Client SDK handle exposed by tl-e2e-sdk-handle.php (an
+// e2e-only mu-plugin). Falling back to "no client" is a hard error
+// here — the helper is part of the e2e fixture, not optional.
+if ( ! isset( $GLOBALS['__tl_e2e']['client'] ) ) {
+    fwrite( STDERR, "tl_e2e_client missing — is tl-e2e-sdk-handle.php loaded?\\n" );
+    exit( 1 );
+}
+try {
+    $result = $GLOBALS['__tl_e2e']['client']->revoke_access( 'all' );
+    echo 'sdk_revoke=' . var_export( $result, true );
+} catch ( \\Throwable $e ) {
+    echo 'sdk_revoke_threw=' . $e->getMessage();
+}
+`
     );
+    const e2eDir = path.resolve( __dirname, '..' );
+    try {
+        execSync(
+            `docker compose run --rm -T -v ${ phpFile }:/tmp/revoke.php wp-cli-client wp eval-file /tmp/revoke.php`,
+            { cwd: e2eDir, stdio: 'pipe' },
+        );
+    } catch ( e: any ) {
+        throw new Error( `[revokeIfGranted] SDK revoke command failed: ${ e?.message || e }` );
+    } finally {
+        try { fs.unlinkSync( phpFile ); } catch ( _e ) { /* ignore */ }
+    }
+
+    // Verify the SDK revoke actually removed all TrustedLogin users.
+    // If users remain, fail loudly — that's an SDK bug we want to
+    // catch, not paper over. Matches the user's intent: "if
+    // revokeIfGranted fails to remove all TL users, that should be a
+    // failed test."
+    const remainingRaw = execSync(
+        `docker exec e2e-mariadb-1 mysql -uwp -pwp client_wp -N -e "
+            SELECT u.ID, u.user_email
+            FROM wp_users u
+            LEFT JOIN wp_usermeta um ON u.ID = um.user_id
+                                     AND um.meta_key LIKE 'tl_%_id'
+            WHERE (u.user_email = 'support@example.com' OR um.meta_key IS NOT NULL)
+              AND u.user_login != 'admin'
+        "`,
+        { stdio: [ 'ignore', 'pipe', 'pipe' ] }
+    ).toString().trim();
+
+    if ( remainingRaw !== '' ) {
+        throw new Error(
+            '[revokeIfGranted] SDK revoke left TrustedLogin users behind:\n'
+            + remainingRaw
+            + '\nThis indicates an SDK regression in revoke_access(\'all\') — '
+            + 'investigate Client::revoke_access / SupportUser::delete before '
+            + 'falling back to manual cleanup.'
+        );
+    }
 }
 
 /**
