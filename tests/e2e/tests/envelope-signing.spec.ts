@@ -112,17 +112,54 @@ async function runFullVendorGrantFlow( page: Page, context: BrowserContext ): Pr
     const granted = msgs.find( ( m: any ) => m?.data?.type === 'granted' )!;
     const accessKey: string = granted.data.key;
 
-    // Now simulate the agent clicking the help-desk widget link — this goes
-    // through AccessKeyLogin::handle() which is where verify_envelope runs.
+    // Drive the same path the React Access Key Login form (and the
+    // Help Scout widget's embedded form) drive: POST to the
+    // REST endpoint at /wp-json/trustedlogin/v1/access_key with the
+    // ak + ak_account_id + a freshly-minted nonce. That endpoint
+    // calls AccessKeyLogin::handle() which calls
+    // TrustedLoginService::get_valid_secrets() → verify_envelope —
+    // the chokepoint where envelope signature verification actually
+    // runs.
+    //
+    // Don't use the bare `/wp-admin/?trustedlogin=1&ak=...` URL —
+    // that would only fire if MaybeRedirect::handle were registered
+    // as a template_redirect action, which it isn't on this branch.
     await loginAsVendorAdmin( context );
-    const agentPage = await context.newPage();
-    await agentPage.goto(
-        `${ VENDOR_STATE.vendor_url }/wp-admin/?trustedlogin=1&ak=${ encodeURIComponent( accessKey ) }&ak_account_id=${ VENDOR_STATE.account_id }`,
-        { waitUntil: 'domcontentloaded' },
+    // Mint nonces inside the SAME session as the REST POST. Two
+    // nonces are needed:
+    //   - ak_nonce: the connector's custom verifier (action='ak-redirect')
+    //   - rest_nonce: WP REST cookie check (X-WP-Nonce header,
+    //     action='wp_rest'). Without this, WP rejects with 403
+    //     `rest_cookie_invalid_nonce` before the connector handler
+    //     even runs.
+    // Both come from the admin-ajax helper in vendor-e2e-ak-nonce.php
+    // executed under the cookie session, so session tokens match.
+    const nonceRes = await context.request.post(
+        `${ VENDOR_STATE.vendor_url }/wp-admin/admin-ajax.php?action=tl_e2e_get_ak_nonce`,
     );
-    // Let the admin_init callback run and any logs flush.
-    await agentPage.waitForTimeout( 1500 );
-    await agentPage.close();
+    const nonceJson = await nonceRes.json();
+    if ( ! nonceJson?.success ) {
+        throw new Error( '[runFullVendorGrantFlow] could not mint nonces: ' + JSON.stringify( nonceJson ) );
+    }
+    const akNonce   = nonceJson.data.ak_nonce   as string;
+    const restNonce = nonceJson.data.rest_nonce as string;
+    const restRes = await context.request.post(
+        `${ VENDOR_STATE.vendor_url }/wp-json/trustedlogin/v1/access_key`,
+        {
+            data: {
+                ak:             accessKey,
+                ak_account_id:  VENDOR_STATE.account_id,
+                _tl_ak_nonce:   akNonce,
+            },
+            headers: { 'X-WP-Nonce': restNonce },
+        }
+    );
+    // Print so the test runner shows the actual response. The
+    // tampered scenario expects a non-2xx or a wrapped error; the
+    // happy scenario expects 2xx with `success`.
+    const restBody = await restRes.text();
+    // eslint-disable-next-line no-console
+    console.log( `[runFullVendorGrantFlow] access_key REST: ${ restRes.status() } ${ restBody.substring( 0, 400 ) }` );
 
     return accessKey;
 }

@@ -156,7 +156,7 @@ if ($existing) {
 
 $team = (new App\Actions\CreateTeam())->create($user, [
     "name" => "E2E Real-SaaS Team",
-    "authorizationEndpoint" => "http://host.docker.internal:8001",
+    "authorizationEndpoint" => "http://host.docker.internal:8001/wp-json",
     "supportUrl" => "https://help.example.com",
 ]);
 
@@ -216,7 +216,7 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
     ->update([
         "apiToken"              => "'"$PINNED_API_TOKEN"'",
         "publicKey"             => "'"$PINNED_PUBLIC_KEY"'",
-        "authorizationEndpoint" => "http://host.docker.internal:8001",
+        "authorizationEndpoint" => "http://host.docker.internal:8001/wp-json",
     ]);
 $team = App\Models\Team::find('"$REAL_TEAM_ID"');
 fwrite(STDERR, "  pinned: publicKey=" . $team->publicKey . ", apiToken=" . $team->apiToken . PHP_EOL);
@@ -229,22 +229,31 @@ fwrite(STDERR, "  pinned: publicKey=" . $team->publicKey . ", apiToken=" . $team
 # seed used account_id="999"; we rewrite it to the real team id.
 
 bold "Updating vendor-wp connector config to use team_id=$REAL_TEAM_ID"
+# Two option keys hold the team config:
+#   - `trustedlogin_vendor_config` (newer, used by some flows)
+#   - `trustedlogin_vendor_team_settings` (older, what `SettingsApi::fromSaved`
+#     reads — and what AccessKeyLogin -> getByAccountId resolves)
+# Update both so every code path sees the dynamic id, not the
+# bootstrap-vendor.sh seed of "999".
 docker compose run --rm -T wp-cli-vendor wp eval '
-$teams = [
-    [
-        "id"             => 1,
-        "account_id"     => "'"$REAL_TEAM_ID"'",
-        "private_key"    => "'"$PINNED_API_TOKEN"'",
-        "public_key"     => "'"$PINNED_PUBLIC_KEY"'",
-        "helpdesk"       => [ "helpscout" ],
-        "approved_roles" => [ "administrator", "editor" ],
-        "name"           => "E2E Vendor Team (real SaaS)",
-        "debug_enabled"  => "on",
-    ],
+$team = [
+    "id"             => 1,
+    "account_id"     => "'"$REAL_TEAM_ID"'",
+    "private_key"    => "'"$PINNED_API_TOKEN"'",
+    "public_key"     => "'"$PINNED_PUBLIC_KEY"'",
+    "helpdesk"       => [ "helpscout" ],
+    "approved_roles" => [ "administrator", "editor" ],
+    "name"           => "E2E Vendor Team (real SaaS)",
+    "debug_enabled"  => "on",
+    "helpdesk_data"  => [ "helpscout" => [ "secret" => "fake-helpscout-secret" ] ],
 ];
 update_site_option(
     "trustedlogin_vendor_config",
-    [ "teams" => $teams, "config_version" => 1 ]
+    [ "teams" => [ $team ], "config_version" => 1 ]
+);
+update_option(
+    "trustedlogin_vendor_team_settings",
+    wp_json_encode( [ $team ] )
 );
 ' > /dev/null 2>&1
 

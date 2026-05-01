@@ -74,6 +74,8 @@ services:
       # Gravity Forms — cloned by bootstrap-vendor.sh into fixtures/.
       - ./fixtures/gravityforms:/var/www/html/wp-content/plugins/gravityforms
       - ./mu-plugins/vendor-fake-saas.php:/var/www/html/wp-content/mu-plugins/vendor-fake-saas.php
+      - ./mu-plugins/vendor-real-saas.php:/var/www/html/wp-content/mu-plugins/vendor-real-saas.php
+      - ./mu-plugins/vendor-e2e-ak-nonce.php:/var/www/html/wp-content/mu-plugins/vendor-e2e-ak-nonce.php
 
   client-wp:
     image: wordpress:php8.2-apache
