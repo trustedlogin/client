@@ -85,6 +85,27 @@ bold "Staging trustedlogin-connector (PR #184 branch)"
 LOCAL_CONNECTOR="${LOCAL_CONNECTOR:-$HOME/Local/dev/app/public/wp-content/plugins/trustedlogin-connector}"
 clone_with_token "trustedlogin/trustedlogin-connector" "$CONNECTOR_BRANCH" "fixtures/trustedlogin-connector" "$LOCAL_CONNECTOR"
 
+# Ensure the SaaS-envelope-signature verification fix is present in the
+# fixture. The fix lives on `feature/activity-page-saas-rebuild`
+# (commit 90f06ec6) but PR #184 — the GravityForms field branch we
+# pin to here — predates it. Without the fix the connector accepts
+# tampered envelopes silently (the SaaS signs them but `verify_envelope`
+# only checks struct, never the signature). Cherry-pick on top so
+# the e2e exercises the fixed code path. Idempotent — skips when
+# already applied.
+SECURITY_FIX_COMMIT="${SECURITY_FIX_COMMIT:-90f06ec6b5cf4804dfda47115f40ef2887d33f21}"
+if ! grep -q 'verify_envelope_signature' fixtures/trustedlogin-connector/php/TrustedLoginService.php 2>/dev/null; then
+    bold "  Cherry-picking envelope-signature verification fix (${SECURITY_FIX_COMMIT:0:7})"
+    (
+        cd fixtures/trustedlogin-connector
+        git fetch origin feature/activity-page-saas-rebuild --depth=50 > /dev/null 2>&1
+        # Drop any conflicting untracked files the cherry-pick will create.
+        rm -f php/EnvelopeVerifier.php tests/Integration/EnvelopeVerifierTest.php 2>/dev/null
+        git cherry-pick "$SECURITY_FIX_COMMIT" > /dev/null 2>&1 \
+            || warn "Cherry-pick failed; envelope-signing tests will fail until fix is applied."
+    )
+fi
+
 if [[ ! -d "fixtures/trustedlogin-connector/vendor" || "$REFRESH_PLUGINS" == "true" ]]; then
     bold "  composer install inside trustedlogin-connector"
     docker run --rm -v "$(pwd)/fixtures/trustedlogin-connector:/app" -w /app \
