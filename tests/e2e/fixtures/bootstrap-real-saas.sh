@@ -58,8 +58,25 @@ fatal() { printf "\033[31m✗\033[0m %s\n" "$*" >&2; exit 1; }
 [ -f "$SAAS_DIR/docker-compose.yml" ] || fatal "$SAAS_DIR has no docker-compose.yml"
 [ -f "fixtures/.cache-vendor-state.json" ] || fatal "Run bootstrap-vendor.sh first."
 
-bold "Bringing up real SaaS docker stack at $SAAS_DIR"
-( cd "$SAAS_DIR" && docker compose up -d > /dev/null 2>&1 )
+bold "Bringing up real SaaS docker stack at $SAAS_DIR (VAULT_DRIVER=vault)"
+# docker-compose interpolates `\${VAULT_DRIVER:-mysql}` from the shell
+# env. The default is `mysql` (binds VaultContract → VaultMySql, a
+# stub whose storeSiteSecret ignores the secret param). For the e2e
+# we need real Vault so client-side encrypted envelopes round-trip
+# faithfully. Force `vault` here and recreate the laravel.test
+# container so the env injection actually changes.
+(
+    cd "$SAAS_DIR"
+    export VAULT_DRIVER=vault
+    docker compose up -d --no-recreate > /dev/null 2>&1
+    # Recreate laravel.test only if its VAULT_DRIVER env differs.
+    current=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' \
+        $(docker compose ps -q laravel.test 2>/dev/null) 2>/dev/null \
+        | grep -E '^VAULT_DRIVER=' | head -1 | cut -d= -f2 | tr -d '\r\n ')
+    if [ "$current" != "vault" ]; then
+        docker compose up -d --force-recreate laravel.test > /dev/null 2>&1
+    fi
+)
 
 bold "Waiting for the real SaaS to be ready on host port $SAAS_PORT"
 for i in $(seq 1 60); do
@@ -163,16 +180,28 @@ wget -q -O - --header="Content-Type: application/json" \
   || true
 ' || true
 
-bold "Provisioning Vault kv mount at tl-team-${REAL_TEAM_ID}/"
-# The SaaS controller type-hints the concrete `Vault` (real HTTP impl)
-# in createSite/getEnvelope, but the AddTeamToVault listener uses
-# `VaultContract` which is bound to `VaultMySql` (a no-op for
-# createKeyStore). The result: AddTeamToVault doesn't actually create
-# the mount in real Vault. Provision it explicitly.
-docker exec trustedlogin-ecommerce-vault-1 sh -c "
-VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=trustedlogin \
-    vault secrets enable -path=tl-team-${REAL_TEAM_ID} kv 2>&1
-" | grep -v "path is already in use" || true
+bold "Ensuring Vault keystore exists for team ${REAL_TEAM_ID}"
+# CreateTeam fires AddTeamToVault which provisions the keystore. But
+# when the bootstrap is reusing an existing team (e.g., a prior run
+# created the team under VAULT_DRIVER=mysql when the listener was a
+# no-op), the mount may be missing. Call createKeyStore via the same
+# VaultContract the production code uses — idempotent, no raw
+# `vault secrets enable`.
+docker compose -f "$SAAS_DIR/docker-compose.yml" exec -T --privileged laravel.test php -r '
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$team = App\Models\Team::find('"$REAL_TEAM_ID"');
+$vault = app(App\Http\Clients\VaultContract::class);
+try { $vault->createKeyStore($team); fwrite(STDERR, "  keystore: ok\n"); } catch (\Throwable $e) {
+    if (strpos($e->getMessage(), "path is already in use") !== false) {
+        fwrite(STDERR, "  keystore: already exists\n");
+    } else { fwrite(STDERR, "  keystore failed: " . $e->getMessage() . "\n"); }
+}
+foreach (["cud" => "write-policy", "delete" => "delete-policy", "read" => "read-policy"] as $cap => $policy) {
+    try { $vault->addKeyStorePolicy($team, $cap, $policy); } catch (\Throwable $e) { /* idempotent */ }
+}
+'
 
 bold "Pinning team apiToken + publicKey to values the e2e connector + client expect"
 # Eloquent's save() silently filters apiToken / publicKey on Team
