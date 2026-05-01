@@ -149,6 +149,20 @@ echo $team->id;
 [ -n "$REAL_TEAM_ID" ] || fatal "CreateTeam returned no id"
 bold "  team_id: $REAL_TEAM_ID"
 
+bold "Bumping Elasticsearch cluster.max_shards_per_node to 5000 (e2e churn)"
+# The SaaS audit logger creates one ES index per team per date, so e2e
+# runs accumulate hundreds quickly. Default 1000-shard limit produces
+# noisy "Validation Failed: this action would add [2] shards" errors on
+# every Site/Team event. Doesn't fail the request (the writes are
+# rescue'd), but pollutes laravel.log. Bump idempotently.
+docker exec elasticsearch sh -c '
+PAYLOAD=$(printf "%s" "{\"persistent\":{\"cluster.max_shards_per_node\":5000}}")
+wget -q -O - --header="Content-Type: application/json" \
+    --post-data="$PAYLOAD" \
+    "http://localhost:9200/_cluster/settings" > /dev/null 2>&1 \
+  || true
+' || true
+
 bold "Provisioning Vault kv mount at tl-team-${REAL_TEAM_ID}/"
 # The SaaS controller type-hints the concrete `Vault` (real HTTP impl)
 # in createSite/getEnvelope, but the AddTeamToVault listener uses
