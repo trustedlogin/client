@@ -89,7 +89,7 @@ final class SupportRole {
 	);
 
 	/**
-	 * SupportUser constructor.
+	 * SupportRole constructor.
 	 *
 	 * @param Config  $config  Config instance.
 	 * @param Logging $logging Logging instance.
@@ -332,7 +332,7 @@ final class SupportRole {
 	 * list ([cap, cap, ...]). List entries are reshaped so the cap name
 	 * is the key, matching the assoc form used by callers below.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @param mixed $caps Either {cap => description} or [cap, cap, ...].
 	 * @return array<string, string> {cap_name => description}.

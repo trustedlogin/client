@@ -22,7 +22,7 @@ final class Cron {
 	 * single secret_id before giving up. Each attempt waits longer than
 	 * the previous (5 min × attempt, capped at 1 hour).
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 */
 	const MAX_SAAS_REVOKE_RETRIES = 5;
 
@@ -82,7 +82,7 @@ final class Cron {
 	 * Option key holding the per-namespace queue of pending SaaS revokes.
 	 * Shape: { secret_id: attempt_count, ... }.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 */
 	private function pending_queue_option_key() {
 		return 'tl_' . $this->config->ns() . '_pending_saas_revoke';
@@ -91,7 +91,7 @@ final class Cron {
 	/**
 	 * Returns the current pending-SaaS-revoke queue.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @return array<string, int>
 	 */
@@ -104,7 +104,7 @@ final class Cron {
 	 * Persist the queue, deleting the option entirely when empty so we
 	 * don't leave a stub option behind.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @param array<string, int> $queue
 	 */
@@ -121,7 +121,7 @@ final class Cron {
 	 * Linear backoff capped at 1 hour: 5, 10, 15, 20, 25 minutes →
 	 * after MAX attempts the queue gives up.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @param int $attempt 1-indexed.
 	 */
@@ -135,7 +135,7 @@ final class Cron {
 	 * SiteAccess::revoke returns WP_Error so the local delete can complete
 	 * without losing the SaaS-side cleanup.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @param string $secret_id Site secret identifier.
 	 * @param int    $attempt   1-indexed attempt counter.
@@ -168,7 +168,7 @@ final class Cron {
 	 * Failures bump the attempt counter; once a secret hits
 	 * {@see self::MAX_SAAS_REVOKE_RETRIES} attempts we log and drop it.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 */
 	public function retry_saas_revoke() {
 		$queue = $this->get_pending_saas_revoke_queue();

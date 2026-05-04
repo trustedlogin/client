@@ -1,18 +1,26 @@
-# Changelog for TrustedLogin Client
+## 1.10.0 (April 29, 2026)
 
-## 1.11.0 (TBD)
-
-This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record, instead of on the customer's `wp-login.php` with a generic banner that points back at the integrator's own help docs. It also tightens how the support role is built when integrators customize which capabilities a support session gets.
+This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record (instead of on the customer's `wp-login.php` with a generic banner), overhauls the Grant Access screen's customer-facing error messages, and fixes several long-standing capability and multisite issues.
 
 #### 🚀 Added
 
 - New `LoginAttempts` class that POSTs failed support logins to the TrustedLogin SaaS at `POST /api/v1/sites/{secret_id}/login-attempts`. Single-shot, 3-second hard timeout (so a slow SaaS never blocks the agent UX), no retries.
 - New `Endpoint::render_standalone_failure_page()` — a generic "Support login could not complete" page rendered on the customer site when the SaaS POST can't be made or the redirect target isn't trusted. Returns HTTP 200 (browsers replace 4xx/5xx with their own error chrome).
-- Per-namespace opt-out via the `TRUSTEDLOGIN_DISABLE_AUDIT_{NS}` constant (uppercase namespace), matching the existing `TRUSTEDLOGIN_DISABLE_{NS}` pattern.
+- Per-namespace audit opt-out via the `TRUSTEDLOGIN_DISABLE_AUDIT_{NS}` constant (uppercase namespace), matching the existing `TRUSTEDLOGIN_DISABLE_{NS}` pattern.
 - `Remote::send()` gains an optional 5th `$timeout` argument (default `null` → existing 15-second behaviour, back-compat with all existing callers).
+- Pre-flight check on the Grant Support Access screen that detects when the plugin's support site is unreachable (firewall intercept, misconfigured installation, network failure) and replaces the grant button with a clear error banner, a "Contact support" button, and a "Try reconnecting" link.
+- Post-redirect login feedback so support agents who hit an expired, revoked, or blocked access key now see a friendly explanation instead of a silent no-op landing page:
+  - Success banner on wp-admin when access is granted.
+  - Info notice when an already-authenticated user hits their own access link (now includes the current user's display name).
+  - "Go back" link on failure screens that safely returns the agent to the vendor surface they came from.
+- `postMessage` responses to the grant popup so the opening window learns when access is granted, extended, or revoked without polling.
+- A hidden input on the form containing the support user's expiration date, along with that expiration in the opener message.
+- New filter `trustedlogin/{namespace}/login_feedback/allowed_referer_urls` so vendors who run support from multiple domains (marketing site, help portal, white-label domains) can accept Referers from all of them. See the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks).
+- New filter `trustedlogin/{namespace}/webhook/request_args`, giving integrators full control over headers and body shape sent to the configured webhook URL.
 
 #### 🛠 Changed
 
+- Rewrites every customer-facing error message to drop internal jargon ("TrustedLogin", "vendor", "endpoint", "publicKey") and name the actionable next step. For example, "Invalid response. Missing key: publicKey" becomes "Support access could not be set up. The plugin's support team needs to finish configuring their end — please contact them and let them know."
 - The `caps/add` and `caps/remove` settings now accept both list (`['edit_posts']`) and associative (`['edit_posts' => 'reason']`) array shapes. Previously the list shape silently failed to add or remove the configured capability.
 - The support role is now reconciled against the current `caps` configuration on each grant. Previously, once the role had been created, subsequent changes to `caps/add` or `caps/remove` were ignored until the role was deleted.
 - A second support-user creation with the same `vendor/email` now returns `WP_Error('email_exists')` unless the email contains the `{hash}` placeholder. Previously the SDK would rebind the new session to whatever user already held that address.
@@ -20,6 +28,18 @@ This release rewrites the failed-login feedback flow so support agents land on *
 - On WordPress multisite, support-user deletion now removes the user from the network user table as well as the per-site usermeta. Previously the per-site delete ran but `wpmu_delete_user()` was unavailable in the request context where revoke fires, leaving an orphan user record that collided with subsequent grants on the same vendor email.
 - `Endpoint::fail_login()` is rewritten: on the `login_failed` branch it pre-captures the matched user's `site_identifier_hash` BEFORE `SupportUser::maybe_login()` deletes the expired user, derives `secret_id`, POSTs to SaaS, and on success redirects the agent back to the trusted referer with `?tl_attempt=lpat_…`. On `security_check_failed` (no user resolved), or on any failure (SaaS unreachable, untrusted referer, audit disabled, 422/429/5xx), renders the standalone fallback page instead of `wp-login.php`.
 - `Endpoint::__construct` widens by two optional args (`LoginAttempts`, `SupportUser`) so the new `fail_login()` path has its dependencies wired. Existing 2-arg call sites continue to work — only the `maybe_login_support()` flow needs the new args.
+- The Grant Access screen's grant button now renders as a real `<button>` element so the browser's native `disabled` attribute prevents a rapid double-click from minting two support users. Combined with a JS-side re-entrancy guard to catch synthetic-burst inputs.
+- The Grant Access screen CSS is roughly 21% smaller — an inline source map was removed from the compiled stylesheet.
+- Transient rows are no longer autoloaded by WordPress, so Client SDK transients no longer pay the cost of being loaded on every page request.
+
+#### 🐛 Fixed
+
+- A site running two TrustedLogin-enabled plugins now correctly resolves each Client instance to its own namespace. Previously `Config::ns()` used a function-static cache, so the second instance silently inherited the first's namespace and every namespaced filter, hook, option, menu, and role collapsed onto the first.
+- Fixes webhook POST requests being blocked by security plugins (Wordfence, Cloudflare, Imunify360, Sucuri) as false-positive XSS. The webhook body is now JSON-encoded with a `Content-Type: application/json` header by default, avoiding the pattern that tripped those rules. Integrators whose custom receiver needs form encoding can revert via the `webhook/request_args` filter.
+- Fixes a denial-of-service in the lockdown counter where distinct support-user identifiers from the same IP could trigger a site-wide lockdown. The counter is now scoped per IP.
+- Fixes `Client::revoke_access( 'all' )` not returning `true` after a successful revoke loop.
+- Fixes an infinite loop in `SupportUser::generate_unique_username()` when the initial username was taken.
+- Fixes the revoke nonce being shared across support users. The nonce is now scoped to the specific support user identifier.
 
 #### 🗑 Removed
 
@@ -30,37 +50,10 @@ This release rewrites the failed-login feedback flow so support agents land on *
 
 - `detailed_reason` is freeform internal forensic text. SaaS stores it but never returns it via the read API; the customer site's local log keeps the full text. The plaintext identifier never crosses the wire — `identifier_hash` is `sha256(site_identifier_hash)`, derived from user-meta on the customer side, not the URL parameter.
 - `endpoint_mismatch` reporting is intentionally NOT wired. The existing silent no-op at `Endpoint::maybe_login_support()` line ~184 is the anti-probing defence; surfacing it would create an attacker oracle for endpoint-hash guesses.
-
-## 1.10 (TBD)
-
-This release overhauls the Grant Access screen's error UX to surface clear, customer-friendly messages when the plugin's support site is unreachable, adds safe post-redirect login feedback with Referer-allowlist protection, and fixes a webhook body shape that security plugins were flagging as XSS.
-
-#### 🚀 Added
-
-- Adds a pre-flight check on the Grant Support Access screen that detects when the plugin's support site is unreachable (firewall intercept, misconfigured installation, network failure) and replaces the grant button with a clear error banner, a "Contact support" button, and a "Try reconnecting" link.
-- Adds post-redirect login feedback so support agents who hit an expired, revoked, or blocked access key now see a friendly explanation instead of a silent no-op landing page:
-  - Success banner on wp-admin when access is granted.
-  - Info notice when an already-authenticated user hits their own access link (now includes the current user's display name).
-  - "Go back" link on failure screens that safely returns the agent to the vendor surface they came from.
-- Adds postMessage responses to the grant popup so the opening window learns when access is granted, extended, or revoked without polling.
-- Adds a hidden input to the form output containing the support user's expiration date, along with that expiration in the opener message.
-- Adds the `trustedlogin/{namespace}/login_feedback/allowed_referer_urls` filter so vendors who run support from multiple domains (marketing site, help portal, white-label domains) can accept Referers from all of them. See the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks).
-- Adds the `trustedlogin/{namespace}/webhook/request_args` filter, giving integrators full control over headers and body shape sent to the configured webhook URL.
-
-#### ✨ Improved
-
-- Rewrites every customer-facing error message to drop internal jargon ("TrustedLogin", "vendor", "endpoint", "publicKey") and name the actionable next step. For example, "Invalid response. Missing key: publicKey" becomes "Support access could not be set up. The plugin's support team needs to finish configuring their end — please contact them and let them know."
-- Shrinks the Grant Access screen CSS by roughly 21% by removing an inline source map from the compiled stylesheet.
-- Removes transient rows from WordPress's autoloaded options so Client SDK transients no longer pay the cost of being loaded on every page request.
-- Tightens the post-redirect "Go back" link against phishing — the Referer host must match one of the vendor's configured URLs, and the configured URL (not the raw Referer) is what gets rendered.
-
-#### 🐛 Fixed
-
-- Fixes webhook POST requests being blocked by security plugins (Wordfence, Cloudflare, Imunify360, Sucuri) as false-positive XSS. The webhook body is now JSON-encoded with a `Content-Type: application/json` header by default, avoiding the pattern that tripped those rules. Integrators whose custom receiver needs form encoding can revert via the `webhook/request_args` filter.
-- Fixes a denial-of-service in the lockdown counter where distinct support-user identifiers from the same IP could trigger a site-wide lockdown. The counter is now scoped per IP.
-- Fixes `Client::revoke_access( 'all' )` not returning `true` after a successful revoke loop.
-- Fixes an infinite loop in `SupportUser::generate_unique_username()` when the initial username was taken.
-- Fixes the revoke nonce being shared across support users. The nonce is now scoped to the specific support user identifier.
+- The post-redirect "Go back" link is hardened against phishing — the Referer host must match one of the vendor's configured URLs, and the configured URL (not the raw Referer) is what gets rendered.
+- Validates the vendor public key before caching — must be exactly 64 hex characters. Adds an optional `vendor/public_key_fingerprint` Config setting for pinning the key against MITM substitution.
+- Adds sensitive-header scrubbing to the debug log output (`Authorization`, `auth`, `api_key` are redacted before serialization).
+- Stores a persistent random salt in `tl_{namespace}_log_salt` so log filenames are no longer guessable from `home_url()` alone.
 
 #### 💻 Developer Updates
 
@@ -68,10 +61,8 @@ This release overhauls the Grant Access screen's error UX to surface clear, cust
 - Adds `Remote::body_looks_like_html()` and introduces new error codes returned by `Remote::handle_response()`: `vendor_response_not_json` (firewall/CDN intercept detected), `missing_public_key` (vendor's installation not fully configured), and `unexpected_response_code` (HTTP status preserved in the error data).
 - Replaces the `bool $sanitize` parameter on `Utils::get_request_param()` with a `callable $sanitize_callback` (default: `'sanitize_text_field'`). The legacy `bool` signature is still honored for back-compatibility.
 - Adds a proper `require` block to `composer.json` pinning PHP 5.3+ and `ext-curl`/`ext-json`. Previously the PHP floor lived in `require-dev` and was not enforced at install time.
+- Adds `composer test:unit` and `composer test:integration` scripts so the two-suite test layout has first-class entry points.
 - `Ajax::__construct` now accepts an optional `Client` instance so the ajax handler can reuse the already-constructed object graph instead of rebuilding it per request.
-- Validates the vendor public key before caching — must be exactly 64 hex characters. Adds an optional `vendor/public_key_fingerprint` Config setting for pinning.
-- Adds sensitive-header scrubbing to the debug log output (`Authorization`, `auth`, `api_key` are redacted before serialization).
-- Stores a persistent random salt in `tl_{namespace}_log_salt` so log filenames are no longer guessable from `home_url()` alone.
 - Removes the `postMessage` alt-scheme fallback in `trustedlogin.js` in favor of single-origin scheme-strict delivery.
 - Excludes `*.css.map`, `tests/`, and dev config files from published composer dist / GitHub source archives via `.gitattributes` `export-ignore`.
 

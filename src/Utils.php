@@ -117,7 +117,7 @@ class Utils {
 	 * wrapper exists so callers don't need to know about the internal
 	 * representation.
 	 *
-	 * @since {next}
+	 * @since 1.10.0
 	 *
 	 * @param string $transient Transient name.
 	 *

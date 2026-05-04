@@ -47,7 +47,7 @@ final class Remote {
 	private $logging;
 
 	/**
-	 * SupportUser constructor.
+	 * Remote constructor.
 	 *
 	 * @param Config  $config Config object.
 	 * @param Logging $logging Logging object.
@@ -453,7 +453,7 @@ final class Remote {
 	 * (after leading whitespace). A JSON string value that happens to
 	 * contain `<html>` inside one of its fields won't trigger this.
 	 *
-	 * @since {next}
+	 * @since 1.10.0
 	 *
 	 * @param string $response_body Raw HTTP response body.
 	 *
@@ -482,7 +482,7 @@ final class Remote {
 	 * the generic "server error" copy, because the actionable next
 	 * step differs.
 	 *
-	 * @since {next}
+	 * @since 1.10.0
 	 *
 	 * @param array $api_response The raw array returned by wp_remote_request().
 	 *

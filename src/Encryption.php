@@ -415,7 +415,7 @@ final class Encryption {
 	}
 
 	/**
-	 * Encrypts a string using the public bey provided by the plugin/theme developers' server.
+	 * Encrypts a string using the public key provided by the plugin/theme developers' server.
 	 *
 	 * @since 1.0.0
 	 * @uses \sodium_crypto_box_keypair_from_secretkey_and_publickey() to generate key.

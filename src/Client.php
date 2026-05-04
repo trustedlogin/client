@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.11.0';
+	const VERSION = '1.10.0';
 
 	/**
 	 * Instance of Config
@@ -232,7 +232,7 @@ final class Client {
 	}
 
 	/**
-	 * This creates a TrustedLogin user ✨
+	 * Creates a TrustedLogin support user.
 	 *
 	 * @since 1.5.0 Added $ticket_data parameter.
 	 *
@@ -672,7 +672,7 @@ final class Client {
 	 * Retry an outstanding SaaS revoke for a single secret_id. Called from
 	 * {@see Cron::retry_saas_revoke()} when the initial sync failed.
 	 *
-	 * @since TODO
+	 * @since 1.10.0
 	 *
 	 * @param string $secret_id Site secret identifier.
 	 *
