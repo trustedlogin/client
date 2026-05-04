@@ -62,7 +62,7 @@ final class Form {
 	private $logging;
 
 	/**
-	 * Admin constructor.
+	 * Form constructor.
 	 *
 	 * @param Config      $config Config object.
 	 * @param Logging     $logging Logging object.
@@ -323,7 +323,7 @@ final class Form {
 	 * its own 10-minute transient cache — and converts success (a key
 	 * string) into `null`. Cached hits cost a single option read.
 	 *
-	 * @since {next}
+	 * @since 1.10.0
 	 *
 	 * @return null|\WP_Error
 	 */
@@ -348,7 +348,7 @@ final class Form {
 	 *   - A muted "Try reconnecting" link underneath, which clears the
 	 *     10-minute pubkey transient and reloads.
 	 *
-	 * @since {next}
+	 * @since 1.10.0
 	 *
 	 * @param \WP_Error $error The pre-flight failure.
 	 *
@@ -1117,14 +1117,16 @@ final class Form {
 				$output_html,
 				array(
 					'a'        => array(
-						'class'       => array(),
-						'id'          => array(),
-						'href'        => array(),
-						'title'       => array(),
-						'rel'         => array(),
-						'target'      => array(),
-						'data-toggle' => array(),
-						'data-access' => array(),
+						'class'             => array(),
+						'id'                => array(),
+						'href'              => array(),
+						'title'             => array(),
+						'rel'               => array(),
+						'target'            => array(),
+						'aria-role'         => array(),
+						'data-toggle'       => array(),
+						'data-access'       => array(),
+						'data-tl-namespace' => array(),
 					),
 					'img'      => array(
 						'class' => array(),
@@ -1258,11 +1260,21 @@ final class Form {
 						'placeholder' => array(),
 					),
 					'button'   => array(
-						'class'     => array(),
-						'id'        => array(),
-						'aria-live' => array(),
-						'style'     => array(),
-						'title'     => array(),
+						'class'             => array(),
+						'id'                => array(),
+						'aria-live'         => array(),
+						'style'             => array(),
+						'title'             => array(),
+						// `type` is needed to keep the rendered `<button>`
+						// from defaulting to `submit` and breaking out of
+						// any wrapping form. `data-access` drives the
+						// extend-vs-grant copy in the JS click handler.
+						// `data-tl-namespace` lets the delegated handler
+						// resolve the right config when multiple TL plugins
+						// coexist on a single page.
+						'type'              => array( 'button' ),
+						'data-access'       => array(),
+						'data-tl-namespace' => array(),
 					),
 				),
 				$allowed_protocols
@@ -1318,8 +1330,21 @@ final class Form {
 			'create_ticket' => $this->is_create_ticket_enabled(),
 		);
 
-		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor.
-		wp_localize_script( 'trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings );
+		// Multi-namespace coexistence: when two TrustedLogin-using
+		// plugins render their buttons on the same page, the legacy
+		// wp_localize_script(..., 'tl_obj', ...) emits two competing
+		// `var tl_obj = {...};` blobs and the second one wins — so the
+		// first vendor's click handler dispatches to the wrong AJAX
+		// action. The fix is a single shared root, namespaced by ns.
+		// The companion JS reads window.trustedLogin[ns] and the
+		// rendered button carries `data-tl-namespace` so the delegated
+		// click handler can resolve the right config per click.
+		$inline = sprintf(
+			'window.trustedLogin = window.trustedLogin || {}; window.trustedLogin[%s] = %s;',
+			wp_json_encode( $this->config->ns() ),
+			wp_json_encode( $button_settings )
+		);
+		wp_add_inline_script( 'trustedlogin-' . $this->config->ns(), $inline, 'before' );
 
 		wp_enqueue_script( 'trustedlogin-' . $this->config->ns() );
 
@@ -1393,7 +1418,12 @@ final class Form {
 			$tag = 'a';
 		}
 
-		$data_atts = array();
+		// `tl-namespace` lets the delegated click handler look up the
+		// correct config under window.trustedLogin[ns] when more than
+		// one TrustedLogin-using plugin coexists on the page.
+		$data_atts = array(
+			'tl-namespace' => $this->config->ns(),
+		);
 
 		if ( $this->support_user->get_all() ) {
 			$text                = '<span class="dashicons dashicons-update-alt dashicons--small"></span> ' . esc_html( $atts['exists_text'] );
