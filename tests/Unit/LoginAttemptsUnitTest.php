@@ -37,8 +37,6 @@ use TrustedLogin\LoginAttempts;
 
 class LoginAttemptsUnitTest extends TestCase {
 
-	const VALID_HASH = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-
 	/** @var object Anonymous-class double with `last_*` capture + `next_response` script. */
 	private $remote;
 
@@ -237,30 +235,68 @@ class LoginAttemptsUnitTest extends TestCase {
 		$this->assertSame( 3, $this->remote->last_timeout );
 	}
 
-	public function test_report_drops_identifier_hash_when_not_64_hex() {
+	public function test_report_strips_caller_supplied_identifier_hash() {
+		// Load-bearing safety property: report() ignores any
+		// `identifier_hash` field on the context array. The only way
+		// to get an `identifier_hash` onto the wire is through the
+		// dedicated $raw_site_hash second argument, which the method
+		// then sha256s itself. If a caller mistakenly drops a
+		// plaintext identifier on the array, it stays off the wire.
 		$this->remote->next_response = $this->okResponse();
 
 		$payload                    = $this->validPayload();
-		$payload['identifier_hash'] = str_repeat( 'G', 64 );
+		$payload['identifier_hash'] = 'plaintext-leak-canary';
 
 		$this->sut->report( $payload );
 
 		$this->assertArrayNotHasKey(
 			'identifier_hash',
 			$this->remote->last_body,
-			'A 64-char-but-not-hex identifier_hash must be silently dropped.'
+			'Caller-supplied identifier_hash on the context array MUST be stripped — only the sha256 of the raw_site_hash arg may reach the wire.'
 		);
 	}
 
-	public function test_report_keeps_valid_identifier_hash() {
+	public function test_report_hashes_raw_site_hash_into_identifier_hash() {
+		$this->remote->next_response = $this->okResponse();
+
+		$raw_site_hash = 'arbitrary-raw-site-hash-from-user-meta';
+
+		$this->sut->report( $this->validPayload(), $raw_site_hash );
+
+		$this->assertSame(
+			hash( 'sha256', $raw_site_hash ),
+			$this->remote->last_body['identifier_hash'],
+			'The wire identifier_hash must be sha256( raw_site_hash ).'
+		);
+	}
+
+	public function test_report_omits_identifier_hash_when_no_raw_site_hash_passed() {
+		$this->remote->next_response = $this->okResponse();
+
+		// Default second arg is null. No identifier_hash on wire.
+		$this->sut->report( $this->validPayload() );
+
+		$this->assertArrayNotHasKey(
+			'identifier_hash',
+			$this->remote->last_body,
+			'When no raw_site_hash is supplied, the wire payload must omit identifier_hash entirely.'
+		);
+	}
+
+	public function test_report_caller_supplied_identifier_hash_loses_to_raw_site_hash() {
 		$this->remote->next_response = $this->okResponse();
 
 		$payload                    = $this->validPayload();
-		$payload['identifier_hash'] = self::VALID_HASH;
+		$payload['identifier_hash'] = 'should-be-stripped';
+		$raw_site_hash              = 'real-raw-hash';
 
-		$this->sut->report( $payload );
+		$this->sut->report( $payload, $raw_site_hash );
 
-		$this->assertSame( self::VALID_HASH, $this->remote->last_body['identifier_hash'] );
+		$this->assertSame(
+			hash( 'sha256', $raw_site_hash ),
+			$this->remote->last_body['identifier_hash'],
+			'When both are present, the sha256 of raw_site_hash must win and the caller field must be stripped.'
+		);
 	}
 
 	public function test_report_drops_invalid_client_ip() {

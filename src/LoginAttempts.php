@@ -101,22 +101,31 @@ final class LoginAttempts {
 
 	/**
 	 * Send a failure event to the SaaS. `secret_id` is required in the
-	 * payload and gets pulled out into the URL path (it does not enter
-	 * the POST body). Recognised body keys, all optional unless noted:
+	 * context array and gets pulled out into the URL path (it does not
+	 * enter the POST body). Recognised body keys, all optional unless
+	 * noted:
 	 *
 	 * - code              (required) machine-readable failure tag.
 	 * - client_site_url   (required) the integrator site URL.
 	 * - attempted_at      (required) ISO-8601 timestamp.
 	 * - detailed_reason             freeform; truncated to
 	 *                                MAX_DETAILED_REASON_LENGTH.
-	 * - identifier_hash             SHA-256 hex of the site identifier;
-	 *                                dropped silently if malformed.
 	 * - client_user_agent           UA string; truncated to
 	 *                                MAX_USER_AGENT_LENGTH.
 	 * - client_ip                   IPv4/IPv6; dropped silently if
 	 *                                FILTER_VALIDATE_IP rejects it.
 	 *
-	 * @param array $payload
+	 * The `identifier_hash` field is intentionally NOT accepted on the
+	 * context array. Pass the RAW site_identifier_hash as the second
+	 * argument; this method takes the SHA-256 itself before composing
+	 * the wire body. That makes it structurally impossible for a
+	 * caller to leak a plaintext identifier on the `identifier_hash`
+	 * field by mistake.
+	 *
+	 * @param array       $context              Body fields above (NOT including identifier_hash).
+	 * @param string|null $raw_site_hash        Raw site_identifier_hash from user-meta. NULL or
+	 *                                          empty string is allowed and produces a payload
+	 *                                          without an identifier_hash field.
 	 *
 	 * @return array|\WP_Error Array with 'id' on success; WP_Error
 	 *                         otherwise (audit disabled, missing
@@ -124,19 +133,29 @@ final class LoginAttempts {
 	 *                         error, rate-limit, 5xx, or malformed
 	 *                         response).
 	 */
-	public function report( array $payload ) {
+	public function report( array $context, $raw_site_hash = null ) {
 		if ( ! $this->is_audit_log_enabled() ) {
 			return new \WP_Error( 'audit_log_disabled', 'Audit log is disabled for this namespace.' );
 		}
 
-		if ( empty( $payload['secret_id'] ) || ! is_string( $payload['secret_id'] ) ) {
+		if ( empty( $context['secret_id'] ) || ! is_string( $context['secret_id'] ) ) {
 			return new \WP_Error( 'missing_secret_id', 'secret_id is required.' );
 		}
 
-		$secret_id = $payload['secret_id'];
-		unset( $payload['secret_id'] ); // Goes in the URL, not the body.
+		// Strip any caller-supplied identifier_hash field — only the
+		// hash this method computes from $raw_site_hash is allowed
+		// onto the wire. This is the load-bearing safety property of
+		// the explicit second argument.
+		unset( $context['identifier_hash'] );
 
-		$body = $this->validate_and_normalize( $payload );
+		if ( is_string( $raw_site_hash ) && '' !== $raw_site_hash ) {
+			$context['identifier_hash'] = hash( 'sha256', $raw_site_hash );
+		}
+
+		$secret_id = $context['secret_id'];
+		unset( $context['secret_id'] ); // Goes in the URL, not the body.
+
+		$body = $this->validate_and_normalize( $context );
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
@@ -229,14 +248,33 @@ final class LoginAttempts {
 	public function resolve_client_ip() {
 		$candidates = array();
 
-		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-			$candidates[] = wp_unslash( (string) $_SERVER['HTTP_CF_CONNECTING_IP'] );
-		}
+		// HTTP_CF_CONNECTING_IP and HTTP_X_FORWARDED_FOR are regular
+		// request headers — anyone sending an HTTP request can set
+		// them to any value. They are only trustworthy when the
+		// customer site is behind a reverse proxy (Cloudflare,
+		// nginx, AWS ALB, etc.) that strips the inbound copy and
+		// rewrites them with the actual client IP.
+		//
+		// Default: do NOT trust proxy headers. Integrators whose
+		// customer sites run behind a stripping proxy can opt in via
+		// the filter below. Audit-log accuracy on non-proxy
+		// deployments is a smaller cost than letting any visitor
+		// freely spoof the recorded IP.
+		$trust_proxy_headers = (bool) apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/audit/trust_proxy_ip_headers',
+			false
+		);
 
-		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-			// XFF is a comma-separated list with the originating client first.
-			$xff_list     = explode( ',', wp_unslash( (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
-			$candidates[] = trim( (string) $xff_list[0] );
+		if ( $trust_proxy_headers ) {
+			if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+				$candidates[] = wp_unslash( (string) $_SERVER['HTTP_CF_CONNECTING_IP'] );
+			}
+
+			if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+				// XFF is a comma-separated list with the originating client first.
+				$xff_list     = explode( ',', wp_unslash( (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+				$candidates[] = trim( (string) $xff_list[0] );
+			}
 		}
 
 		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {

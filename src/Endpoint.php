@@ -224,7 +224,16 @@ class Endpoint {
 			// $user object here. fail_login() will skip the SaaS POST and
 			// render the standalone page — this branch is best-effort
 			// reporting, by design.
-			$this->fail_login( 'security_check_failed', $is_verified->get_error_message(), null );
+			//
+			// Pass error_code, NOT error_message, as the SaaS-bound
+			// reason. The SDK\'s WP_Error codes are a controlled vocabulary
+			// (`in_lockdown`, `brute_force_detected`, etc.); their
+			// messages are translated freeform text that may interpolate
+			// internal state. Keeping the wire field on error_code
+			// removes that data-leak surface; the full message stays in
+			// the local debug.log via Logging::log() inside fail_login.
+			$this->fail_login( 'security_check_failed', (string) $is_verified->get_error_code(), null );
+			return;
 		}
 
 		// Prefer the injected SupportUser (so tests can swap it). Fall back
@@ -264,7 +273,13 @@ class Endpoint {
 			// shape of a real grant. Pass the pre-captured site_hash so
 			// fail_login can compute secret_id even when maybe_login
 			// already deleted the user.
-			$this->fail_login( 'login_failed', $is_logged_in->get_error_message(), $pre_login_site_hash );
+			//
+			// error_code (controlled vocabulary), not error_message
+			// (freeform, may interpolate user identifiers / display
+			// names). The full message stays in local debug.log via
+			// Logging::log() inside fail_login.
+			$this->fail_login( 'login_failed', (string) $is_logged_in->get_error_code(), $pre_login_site_hash );
+			return;
 		}
 
 		/**
@@ -314,6 +329,14 @@ class Endpoint {
 		$attempt   = null;
 		$secret_id = null;
 
+		// Upstream contract: $site_identifier_hash arrived either NULL
+		// (security_check_failed branch — verify() ran before user
+		// resolution) or as a string captured from a matched WP_User\'s
+		// user-meta on the login_failed branch. The block below derives
+		// secret_id from that hash; it does NOT independently confirm
+		// the user still exists (maybe_login may have deleted them
+		// mid-flow), only that the hash format and hashing math are
+		// well-formed.
 		if ( is_string( $site_identifier_hash ) && '' !== $site_identifier_hash ) {
 			$derived = $this->generate_secret_id( $site_identifier_hash, $this->get_hash( $site_identifier_hash ) );
 			if ( ! is_wp_error( $derived ) && '' !== (string) $derived ) {
@@ -321,13 +344,12 @@ class Endpoint {
 			}
 		}
 
-		// Belt: $secret_id is non-null (we have a user with site_hash).
-		// Suspenders: $this->login_attempts is the optional 3rd
-		// constructor arg — it's null in legacy 2-arg instantiations
-		// like SupportUser::get_secret_id(). Skip the SaaS POST in
-		// that case so we never fatal on a null deref.
+		// $this->login_attempts is the optional 3rd constructor arg —
+		// it's null in legacy 2-arg instantiations like
+		// SupportUser::get_secret_id(). Skip the SaaS POST in that
+		// case so we never fatal on a null deref.
 		if ( null !== $secret_id && $this->login_attempts instanceof LoginAttempts ) {
-			$payload = array(
+			$context = array(
 				'secret_id'         => $secret_id,
 				'code'              => sanitize_key( (string) $error_code ),
 				'detailed_reason'   => (string) $detailed_reason,
@@ -337,11 +359,13 @@ class Endpoint {
 					? substr( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ), 0, LoginAttempts::MAX_USER_AGENT_LENGTH )
 					: null,
 				'client_ip'         => $this->login_attempts->resolve_client_ip(),
-				// Plaintext identifier material never crosses the wire.
-				'identifier_hash'   => hash( 'sha256', $site_identifier_hash ),
 			);
 
-			$attempt = $this->login_attempts->report( $payload );
+			// Pass the raw site_identifier_hash separately. report()
+			// owns the sha256 wrap so callers cannot accidentally place
+			// a plaintext identifier on the `identifier_hash` field of
+			// the wire payload.
+			$attempt = $this->login_attempts->report( $context, $site_identifier_hash );
 		}
 
 		$referer = $this->resolve_safe_referer(
@@ -434,7 +458,7 @@ class Endpoint {
 		 *
 		 * Return an empty array to disable the Go-back link entirely.
 		 *
-		 * @since {next}
+		 * @since 1.10.0
 		 *
 		 * @param string[] $default_urls Default trusted URLs (vendor/website, vendor/support_url, home_url()).
 		 * @param Config   $config       Client config, for namespace-aware extension.
