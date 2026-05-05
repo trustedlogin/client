@@ -309,15 +309,7 @@ test( 'login_failed → POSTs to SaaS, redirects to vendor with ?tl_attempt=lpat
 //  Tests — fall-throughs to standalone page
 // ---------------------------------------------------------------------------
 
-// TODO: the negative-path tests below depend on a form-submit flow that's
-// currently being intercepted by the e2e stack's wp-login routing (forms
-// posted to / from about:blank end up at wp-login.php instead of the
-// homepage's template_redirect hook). The implementation itself works —
-// the happy-path test above proves the full SaaS POST + redirect path —
-// but verifying the standalone-page fall-throughs needs a harness fix.
-// Figure out whether wps-hide-login or another e2e mu-plugin is rewriting
-// POST destinations, then re-enable the .skip below.
-test.skip( 'login_failed with untrusted referer → standalone page, NO redirect', async ( { browser } ) => {
+test( 'login_failed with untrusted referer → standalone page, NO redirect', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
 	await grantCtx.close();
@@ -377,7 +369,7 @@ test.skip( 'login_failed with untrusted referer → standalone page, NO redirect
 	await agentCtx.close();
 } );
 
-test.skip( 'security_check_failed (no user) → standalone page, NO SaaS POST', async ( { browser } ) => {
+test( 'security_check_failed (no user) → standalone page, NO SaaS POST', async ( { browser } ) => {
 	// Random identifier matches no support user — verify() rejects BEFORE
 	// the user lookup runs. fail_login is called with $user = null, so
 	// secret_id can't be recovered, the SaaS POST is skipped, and we
@@ -413,7 +405,7 @@ test.skip( 'security_check_failed (no user) → standalone page, NO SaaS POST', 
 	await agentCtx.close();
 } );
 
-test.skip( 'SaaS 5xx → standalone page (lost report, agent unblocked)', async ( { browser } ) => {
+test( 'SaaS 5xx → standalone page (lost report, agent unblocked)', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
 	await grantCtx.close();
@@ -443,7 +435,7 @@ test.skip( 'SaaS 5xx → standalone page (lost report, agent unblocked)', async 
 	await agentCtx.close();
 } );
 
-test.skip( 'SaaS 429 → standalone page (rate-limit eaten, no spam)', async ( { browser } ) => {
+test( 'SaaS 429 → standalone page (rate-limit eaten, no spam)', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
 	await grantCtx.close();
@@ -468,7 +460,7 @@ test.skip( 'SaaS 429 → standalone page (rate-limit eaten, no spam)', async ( {
 	await agentCtx.close();
 } );
 
-test.skip( 'standalone page returns HTTP 200 (so browser does not show its own error chrome)', async ( { browser } ) => {
+test( 'standalone page returns HTTP 200 (so browser does not show its own error chrome)', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
 	await grantCtx.close();
@@ -521,7 +513,7 @@ test( 'crafted wp-login.php?tl_error= URL no longer surfaces a banner', async ( 
 //  Tests — opt-out via TRUSTEDLOGIN_DISABLE_AUDIT_{NS} constant
 // ---------------------------------------------------------------------------
 
-test.skip( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST', async ( { browser } ) => {
+test( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST', async ( { browser } ) => {
 	const grantCtx = await browser.newContext();
 	const { endpoint, identifier } = await grantAndCaptureSecrets( grantCtx );
 	await grantCtx.close();
