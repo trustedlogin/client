@@ -50,20 +50,21 @@ function resetState(): void {
 			'  if (empty($cron[$ts])) { unset($cron[$ts]); }',
 			'}',
 			'update_option("cron", $cron);',
-			// Drop any lingering test users with cron-e2e@ email.
-			// We hit wp_users / wp_usermeta directly instead of
-			// wp_delete_user because that helper is admin-only, may
-			// no-op silently inside wp eval (wp-cli doesn't load
-			// wp-admin/includes/user.php), and the leftover user from
-			// a previous run trips email_exists() in
-			// SupportUser::create() with USER_ERR:user_exists before
-			// the cron path under test even runs.
+			// Drop any lingering TL support users so SupportUser::create()
+			// doesn't bail with USER_ERR:user_exists. SupportUser::exists()
+			// queries by meta_key=tl_{ns}_id, so we have to clear users
+			// with that meta — not just users matching this test's email
+			// (other browser-driven specs like grant-flow leave support
+			// users behind too). Hits wp_users / wp_usermeta directly
+			// because wp_delete_user lives in wp-admin/includes/user.php
+			// and is no-op'd silently inside wp eval.
 			'global $wpdb;',
-			'$ids = $wpdb->get_col("SELECT ID FROM {$wpdb->users} WHERE user_login != \'admin\' AND user_email LIKE \'%cron-e2e@%\'");',
-			'foreach ($ids as $uid) {',
-			'  $wpdb->delete( $wpdb->usermeta, array( "user_id" => (int) $uid ) );',
-			'  $wpdb->delete( $wpdb->users,    array( "ID"      => (int) $uid ) );',
-			'  clean_user_cache( (int) $uid );',
+			'$ids = $wpdb->get_col( $wpdb->prepare( "SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s", "tl_' + NS + '_id" ) );',
+			'foreach ( array_unique( array_map( "intval", $ids ) ) as $uid ) {',
+			'  if ( $uid <= 1 ) { continue; }', // never touch admin
+			'  $wpdb->delete( $wpdb->usermeta, array( "user_id" => $uid ) );',
+			'  $wpdb->delete( $wpdb->users,    array( "ID"      => $uid ) );',
+			'  clean_user_cache( $uid );',
 			'}',
 			'echo "ok";',
 		].join( ' ' ),
