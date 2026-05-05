@@ -146,19 +146,45 @@ class LoginAttemptsUnitTest extends TestCase {
 	//  resolve_client_ip — header priority matrix
 	// ---------------------------------------------------------------
 
-	public function test_resolve_client_ip_prefers_cf_connecting_ip() {
-		$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.5';
-		$_SERVER['HTTP_X_FORWARDED_FOR']  = '198.51.100.7, 10.0.0.1';
-		$_SERVER['REMOTE_ADDR']           = '192.0.2.1';
+	// Secure default: HTTP_CF_CONNECTING_IP and HTTP_X_FORWARDED_FOR
+	// are spoofable by any HTTP client unless the customer site is
+	// behind a stripping reverse proxy. resolve_client_ip() ignores
+	// them by default and returns REMOTE_ADDR. Integrators whose
+	// deployments fit the proxy shape opt in via the
+	// trustedlogin/{ns}/audit/trust_proxy_ip_headers filter, which
+	// is exercised by the integration suite (the unit bootstrap's
+	// apply_filters() is a pass-through stub, so the opt-in path
+	// can't be driven from here).
 
-		$this->assertSame( '203.0.113.5', $this->sut->resolve_client_ip() );
+	/**
+	 * Default posture: HTTP_CF_CONNECTING_IP is spoofable by any client
+	 * unless a stripping reverse proxy is in front of the customer site,
+	 * so resolve_client_ip() ignores it without an opt-in filter.
+	 *
+	 * REMOTE_ADDR is intentionally NOT set — if the implementation
+	 * consulted CF at all, the assertion would observe '203.0.113.5'
+	 * instead of null.
+	 *
+	 * @return void
+	 */
+	public function test_resolve_client_ip_ignores_spoofable_cf_header_by_default() {
+		$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.5';
+
+		$this->assertNull( $this->sut->resolve_client_ip() );
 	}
 
-	public function test_resolve_client_ip_falls_through_to_xff_first_hop() {
+	/**
+	 * Same posture for HTTP_X_FORWARDED_FOR — the comma-separated first
+	 * hop is freely settable by any HTTP client. REMOTE_ADDR is
+	 * intentionally NOT set so a regression that consulted XFF at all
+	 * would observe '198.51.100.7' instead of null.
+	 *
+	 * @return void
+	 */
+	public function test_resolve_client_ip_ignores_spoofable_xff_header_by_default() {
 		$_SERVER['HTTP_X_FORWARDED_FOR'] = '198.51.100.7, 10.0.0.1';
-		$_SERVER['REMOTE_ADDR']          = '192.0.2.1';
 
-		$this->assertSame( '198.51.100.7', $this->sut->resolve_client_ip() );
+		$this->assertNull( $this->sut->resolve_client_ip() );
 	}
 
 	public function test_resolve_client_ip_falls_through_to_remote_addr() {
@@ -167,16 +193,16 @@ class LoginAttemptsUnitTest extends TestCase {
 		$this->assertSame( '192.0.2.1', $this->sut->resolve_client_ip() );
 	}
 
-	public function test_resolve_client_ip_skips_invalid_cf_uses_xff() {
-		$_SERVER['HTTP_CF_CONNECTING_IP'] = 'not-an-ip';
+	/**
+	 * The secure default returns null when REMOTE_ADDR is unusable
+	 * even if valid proxy headers are present — proves the proxy
+	 * headers are never consulted, not just deprioritized.
+	 *
+	 * @return void
+	 */
+	public function test_resolve_client_ip_returns_null_when_remote_addr_invalid_and_proxy_headers_ignored() {
+		$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.5';
 		$_SERVER['HTTP_X_FORWARDED_FOR']  = '198.51.100.7';
-
-		$this->assertSame( '198.51.100.7', $this->sut->resolve_client_ip() );
-	}
-
-	public function test_resolve_client_ip_returns_null_when_all_invalid() {
-		$_SERVER['HTTP_CF_CONNECTING_IP'] = 'garbage';
-		$_SERVER['HTTP_X_FORWARDED_FOR']  = 'also garbage';
 		$_SERVER['REMOTE_ADDR']           = '999.999.999.999';
 
 		$this->assertNull( $this->sut->resolve_client_ip() );
