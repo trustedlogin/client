@@ -499,13 +499,14 @@ test( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST', asy
 	await grantCtx.close();
 	expireSupportUser();
 
-	// Define the constant via a one-shot mu-plugin write.
-	wpCli(
-		'wp-cli-client',
-		`file_put_contents( WPMU_PLUGIN_DIR . "/tl-disable-audit.php", `
-		+ `"<?php define( 'TRUSTEDLOGIN_DISABLE_AUDIT_PRO-BLOCK-BUILDER', true );" );`
-		+ `echo "ok";`,
-		'install audit-disable mu-plugin',
+	// Drop a one-shot mu-plugin via `docker compose exec` as root —
+	// wp-cli-client runs as www-data (uid 33) and can't write to
+	// mu-plugins/, which is created at root permissions when the WP
+	// image initializes the volume.
+	execSync(
+		`docker compose exec -T --user root client-wp sh -c `
+		+ `'echo "<?php define( \\"TRUSTEDLOGIN_DISABLE_AUDIT_PRO-BLOCK-BUILDER\\", true );" > /var/www/html/wp-content/mu-plugins/tl-disable-audit.php'`,
+		{ cwd: path.join( __dirname, '..' ), encoding: 'utf8', timeout: 10_000, stdio: [ 'ignore', 'pipe', 'pipe' ] },
 	);
 
 	const agentCtx = await browser.newContext( {
@@ -530,11 +531,11 @@ test( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST', asy
 		const attempts = readFakeSaasAttempts();
 		expect( attempts.length ).toBe( 0 );
 	} finally {
-		// Cleanup runs whether or not the test body threw.
-		wpCli(
-			'wp-cli-client',
-			`@unlink( WPMU_PLUGIN_DIR . "/tl-disable-audit.php" ); echo "ok";`,
-			'remove audit-disable mu-plugin',
+		// Cleanup runs whether or not the test body threw. Same root-shell
+		// trick as the install above.
+		execSync(
+			`docker compose exec -T --user root client-wp rm -f /var/www/html/wp-content/mu-plugins/tl-disable-audit.php`,
+			{ cwd: path.join( __dirname, '..' ), encoding: 'utf8', timeout: 10_000, stdio: [ 'ignore', 'pipe', 'pipe' ] },
 		);
 
 		await agentCtx.close();
