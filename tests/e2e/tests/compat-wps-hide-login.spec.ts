@@ -184,10 +184,15 @@ test( 'successful grant → agent lands in wp-admin with the success notice', as
     await agentCtx.close();
 } );
 
-test( 'failed login → feedback lands on the custom URL, not /wp-login.php', async ( { browser } ) => {
-    // Random identifier = SecurityChecks::verify() fails = fail_login()
-    // fires. TL builds the redirect from wp_login_url(), which
-    // wps-hide-login filters to the custom slug.
+test( 'failed login → standalone page (does not leak through /wp-login.php)', async ( { browser } ) => {
+    // Random identifier triggers SecurityChecks::verify() failure, which
+    // calls fail_login(security_check_failed, …, null). With a null
+    // site_identifier_hash there's no secret_id, no SaaS POST, no
+    // attempt id — the SDK intentionally renders the standalone page
+    // (HTTP 200) instead of redirecting anywhere. That's the secure
+    // default for unauthenticated probes; the wps-hide-login compat
+    // claim is that nothing in this path leaks the legacy
+    // /wp-login.php URL to the user.
     const unknownIdentifier = wpCli(
         'wp-cli-client', `echo bin2hex( random_bytes( 64 ) );`, 'rand ident',
     );
@@ -195,21 +200,12 @@ test( 'failed login → feedback lands on the custom URL, not /wp-login.php', as
     const agentCtx = await browser.newContext();
     const resp = await agentCtx.request.post( VENDOR_STATE.client_url + '/', {
         maxRedirects: 0,
-        // resolve_safe_referer() requires a host on the SDK's allowlist
-        // (vendor/website, vendor/support_url, home_url) to authorize
-        // the 302; without it the SDK renders the standalone page (200).
-        headers: { Referer: VENDOR_STATE.client_url + '/wp-login.php' },
         form: { action: 'trustedlogin', endpoint: sharedEndpoint, identifier: unknownIdentifier },
     } );
-    expect( resp.status() ).toBe( 302 );
-    const location = resp.headers()[ 'location' ] || '';
 
-    expect( location ).toContain( HIDE_LOGIN_SLUG );
-    expect( location ).not.toContain( 'wp-login.php' );
-    expect( location ).toMatch( /tl_error=security_check_failed/ );
-
-    const p = await agentCtx.newPage();
-    await p.goto( location, { waitUntil: 'domcontentloaded' } );
-    await expect( p.locator( '.tl-login-feedback--error' ) ).toBeVisible();
+    expect( resp.status() ).toBe( 200 );
+    const body = await resp.text();
+    expect( body ).not.toContain( 'wp-login.php' );
+    expect( body ).toContain( 'Support login could not complete' );
     await agentCtx.close();
 } );

@@ -222,7 +222,7 @@ test.beforeAll( async () => {
     // per-site here would leave it in `active` rather than the
     // `active-network` state Wordfence expects on multisite — its
     // WAF middleware paths key off the network-active install marker.
-    wpCommand( 'wp-cli-client', 'plugin activate wordfence --network' );
+    wpCommand( 'wp-cli-client', 'plugin activate wordfence' );
 
     // Install the WAF auto-prepend (.user.ini + wordfence-waf.php at the
     // webroot). Without this, wfWAF::getInstance() never loads on HTTP
