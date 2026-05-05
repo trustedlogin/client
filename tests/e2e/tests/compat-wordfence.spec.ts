@@ -224,6 +224,17 @@ test.beforeAll( async () => {
     // WAF middleware paths key off the network-active install marker.
     wpCommand( 'wp-cli-client', 'plugin activate wordfence --network' );
 
+    // Install the WAF auto-prepend (.user.ini + wordfence-waf.php at the
+    // webroot). Without this, wfWAF::getInstance() never loads on HTTP
+    // requests and the harness reports "wfWAF not loaded". docker-compose
+    // mounts a php.ini override (user_ini.cache_ttl=0) so the .user.ini
+    // takes effect on the next request.
+    wpCli(
+        'wp-cli-client',
+        `require_once ABSPATH . "wp-admin/includes/file.php"; WP_Filesystem(); global $wp_filesystem; $h = new wfWAFAutoPrependHelper( "apache-mod_php", null ); try { $h->performInstallation( $wp_filesystem ); echo "ok"; } catch ( Throwable $e ) { echo "FAIL:" . $e->getMessage(); }`,
+        'install Wordfence WAF auto-prepend',
+    );
+
     // Install the synthetic rule. Its first evaluation must happen
     // AFTER we flip wafStatus to 'enabled' below — otherwise Wordfence's
     // learning mode will auto-allowlist the first hit and later runs
@@ -252,6 +263,13 @@ test.afterAll( async () => {
     // and Wordfence keeps adding ~7s WAF overhead to every request.
     try { await wfHarness( 'disable' ); } catch ( _ ) { /* best-effort */ }
     dockerExec( 'client-wp', `: > /var/www/html/wp-content/wflogs/rules.php` );
+    // Uninstall WAF auto-prepend so non-wordfence specs don't pay the
+    // .user.ini hit on every request.
+    wpCli(
+        'wp-cli-client',
+        `require_once ABSPATH . "wp-admin/includes/file.php"; WP_Filesystem(); global $wp_filesystem; $h = new wfWAFAutoPrependHelper( "apache-mod_php", null ); try { $h->uninstall(); echo "ok"; } catch ( Throwable $e ) { echo "FAIL:" . $e->getMessage(); }`,
+        'uninstall Wordfence WAF auto-prepend',
+    );
     wpCommand( 'wp-cli-client', 'plugin deactivate wordfence --network' );
 } );
 

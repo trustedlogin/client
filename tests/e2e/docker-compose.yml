@@ -115,6 +115,9 @@ services:
         }
     volumes:
       - client-wp-data:/var/www/html
+      # PHP override: user_ini.cache_ttl=0 so Wordfence WAF .user.ini
+      # changes are visible on the next request (compat-wordfence spec).
+      - ./php-conf/zz-tl-e2e-user-ini-no-cache.ini:/usr/local/etc/php/conf.d/zz-tl-e2e-user-ini-no-cache.ini:ro
       # Bind-mount THIS client repo as a WordPress plugin. client.php is the
       # plugin entry point and loads the library directly from src/ — so PR #138's
       # changes are exercised without any build step.
