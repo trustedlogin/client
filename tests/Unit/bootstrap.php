@@ -149,6 +149,14 @@ if ( ! function_exists( 'wp_unslash' ) ) {
 	}
 }
 
+if ( ! function_exists( 'sanitize_text_field' ) ) {
+	function sanitize_text_field( $str ) {
+		$str = (string) $str;
+		$str = preg_replace( '/[\r\n\t ]+/', ' ', strip_tags( $str ) );
+		return trim( $str );
+	}
+}
+
 if ( ! function_exists( 'wp_remote_retrieve_response_code' ) ) {
 	function wp_remote_retrieve_response_code( $response ) {
 		return is_array( $response ) && isset( $response['response']['code'] )

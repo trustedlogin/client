@@ -262,7 +262,7 @@ class LoginAttemptsUnitTest extends TestCase {
 	}
 
 	/**
-	 * A code outside VALID_CODES MUST short-circuit with WP_Error
+	 * A code outside valid_codes() MUST short-circuit with WP_Error
 	 * `invalid_code` before any wire body leaves the network. Locks in
 	 * the controlled-vocabulary contract so a typo at the call site
 	 * fails fast instead of waiting for an opaque 422 from the SaaS.
@@ -286,7 +286,7 @@ class LoginAttemptsUnitTest extends TestCase {
 	}
 
 	/**
-	 * Every constant listed in VALID_CODES must round-trip through
+	 * Every constant listed in valid_codes() must round-trip through
 	 * report() to the wire body. The other side of the contract from
 	 * test_report_rejects_unrecognized_code — guards against a refactor
 	 * that drops a code from the allowlist while a caller still uses it.
@@ -294,7 +294,7 @@ class LoginAttemptsUnitTest extends TestCase {
 	 * @return void
 	 */
 	public function test_report_accepts_every_valid_code() {
-		foreach ( LoginAttempts::VALID_CODES as $code ) {
+		foreach ( LoginAttempts::valid_codes() as $code ) {
 			$this->remote->next_response = $this->okResponse();
 			$this->remote->last_body     = null;
 
@@ -303,7 +303,7 @@ class LoginAttemptsUnitTest extends TestCase {
 
 			$result = $this->sut->report( $payload );
 
-			$this->assertIsArray( $result, sprintf( 'VALID_CODES[%s] should round-trip.', $code ) );
+			$this->assertIsArray( $result, sprintf( 'valid_codes()[%s] should round-trip.', $code ) );
 			$this->assertSame( $code, $this->remote->last_body['code'] );
 		}
 	}

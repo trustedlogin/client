@@ -1,5 +1,7 @@
 <?php
 /**
+ * Reports a failed support-login attempt to the SaaS.
+ *
  * @package TrustedLogin
  *
  * @copyright 2026 TrustedLogin LLC
@@ -33,18 +35,6 @@ final class LoginAttempts {
 	const CODE_SECURITY_CHECK_FAILED = 'security_check_failed';
 
 	/**
-	 * Allowed values of the wire `code` field. Enforced in
-	 * {@see self::validate_and_normalize()} so a value outside this list
-	 * fails locally before the SaaS POST goes out.
-	 *
-	 * @since 1.10.0
-	 */
-	const VALID_CODES = array(
-		self::CODE_LOGIN_FAILED,
-		self::CODE_SECURITY_CHECK_FAILED,
-	);
-
-	/**
 	 * Hard timeout (seconds) on the SaaS POST. Sits on the critical
 	 * path between fail_login() and the redirect — short to keep the
 	 * agent UX snappy on a slow SaaS.
@@ -76,35 +66,68 @@ final class LoginAttempts {
 	const HTTP_SERVER_ERROR_MIN = 500;
 
 	/**
-	 * Patterns scrubbed from `detailed_reason` before the SaaS POST.
-	 * The field is freeform and frequently echoes WP_Error messages
-	 * that accidentally include credentials. Each entry pairs a
-	 * regex with a replacement; matches collapse to the replacement
-	 * so the surrounding context still aids debugging.
+	 * Plugin configuration; read for the namespace used by opt-out filters.
 	 *
-	 * The list intentionally errs broad — the local Logging class
-	 * already has the unscrubbed text, and the SaaS doesn't need
-	 * raw secrets to render the agent UX.
+	 * @var Config
 	 */
-	const SECRET_SCRUB_PATTERNS = array(
-		// Bearer / token / authorization headers in any casing.
-		'/(\b(?:Bearer|Token|Authorization)\s*[:=]?\s*)[A-Za-z0-9._\-+\/=]{8,}/i' => '$1[redacted]',
-		// Stripe-style live/test secret keys.
-		'/\b(sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}/i'                            => '[redacted-stripe-key]',
-		// Generic "secret" / "password" / "api_key" key=value pairs.
-		'/(\b(?:secret|password|api[_-]?key)\s*[:=]\s*)["\']?[^"\'\s,;]{4,}["\']?/i' => '$1[redacted]',
-	);
-
-	/** @var Config */
 	private $config;
 
-	/** @var Remote */
+	/**
+	 * Remote HTTP client used for the SaaS POST.
+	 *
+	 * @var Remote
+	 */
 	private $remote;
 
-	/** @var Logging */
+	/**
+	 * Logger; every non-success branch writes a single line.
+	 *
+	 * @var Logging
+	 */
 	private $logging;
 
 	/**
+	 * Allowed values of the wire `code` field. Enforced in
+	 * {@see self::validate_and_normalize()} so a value outside this list
+	 * fails locally before the SaaS POST goes out.
+	 *
+	 * @since 1.10.0
+	 *
+	 * @return string[]
+	 */
+	public static function valid_codes() {
+		return array(
+			self::CODE_LOGIN_FAILED,
+			self::CODE_SECURITY_CHECK_FAILED,
+		);
+	}
+
+	/**
+	 * Regex patterns scrubbed from `detailed_reason` before the SaaS POST.
+	 *
+	 * The field is freeform and frequently echoes WP_Error messages that
+	 * accidentally include credentials. Each entry pairs a regex with a
+	 * replacement; matches collapse to the replacement so the surrounding
+	 * context still aids debugging. Errs broad — the local Logging class
+	 * already has the unscrubbed text, and the SaaS doesn't need raw
+	 * secrets to render the agent UX.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function secret_scrub_patterns() {
+		return array(
+			// Bearer / token / authorization headers in any casing.
+			'/(\b(?:Bearer|Token|Authorization)\s*[:=]?\s*)[A-Za-z0-9._\-+\/=]{8,}/i' => '$1[redacted]',
+			// Stripe-style live/test secret keys.
+			'/\b(sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}/i' => '[redacted-stripe-key]',
+			// Generic "secret" / "password" / "api_key" key=value pairs.
+			'/(\b(?:secret|password|api[_-]?key)\s*[:=]\s*)["\']?[^"\'\s,;]{4,}["\']?/i' => '$1[redacted]',
+		);
+	}
+
+	/**
+	 * Wire up the dependencies needed to report a failed login attempt.
+	 *
 	 * @param Config  $config  Provides the namespace for opt-out checks.
 	 * @param Remote  $remote  Used for the SaaS POST.
 	 * @param Logging $logging All non-success branches log a single line
@@ -284,19 +307,22 @@ final class LoginAttempts {
 		);
 
 		if ( $trust_proxy_headers ) {
+			// Each candidate goes through filter_var( FILTER_VALIDATE_IP ) below
+			// before it's used, but sanitize_text_field() satisfies the WPCS
+			// "InputNotSanitized" sniff and is harmless on IP-shaped strings.
 			if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-				$candidates[] = wp_unslash( (string) $_SERVER['HTTP_CF_CONNECTING_IP'] );
+				$candidates[] = sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
 			}
 
 			if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 				// XFF is a comma-separated list with the originating client first.
-				$xff_list     = explode( ',', wp_unslash( (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+				$xff_list     = explode( ',', sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
 				$candidates[] = trim( (string) $xff_list[0] );
 			}
 		}
 
 		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
-			$candidates[] = wp_unslash( (string) $_SERVER['REMOTE_ADDR'] );
+			$candidates[] = sanitize_text_field( wp_unslash( (string) $_SERVER['REMOTE_ADDR'] ) );
 		}
 
 		foreach ( $candidates as $candidate ) {
@@ -309,7 +335,13 @@ final class LoginAttempts {
 	}
 
 	/**
-	 * @param array $payload
+	 * Validate the wire payload and normalize it for the SaaS POST.
+	 *
+	 * Rejects missing required fields and disallowed `code` values; truncates
+	 * oversize freeform fields (`detailed_reason`, `client_user_agent`); drops
+	 * malformed `identifier_hash` / `client_ip` so they don't reach the wire.
+	 *
+	 * @param array $payload Caller-supplied wire body before validation.
 	 *
 	 * @return array|\WP_Error Validated body for POST, or WP_Error.
 	 */
@@ -324,14 +356,14 @@ final class LoginAttempts {
 		// Error message intentionally does not echo $payload['code'] —
 		// keeps untrusted bytes out of the local debug log.
 		//
-		// Defensive (string) cast: VALID_CODES is checked with strict
+		// Defensive (string) cast: valid_codes() is checked with strict
 		// in_array, so a numeric / bool / null code would slip through
 		// the array check and only fail later. Casting up-front means
 		// 0, '0', 1, true, false, null all fail the allowlist check
 		// here rather than reaching the SaaS POST. Schema upstream
 		// should enforce string-ness already, but this is the
 		// last-line guard.
-		if ( ! in_array( (string) $payload['code'], self::VALID_CODES, true ) ) {
+		if ( ! in_array( (string) $payload['code'], self::valid_codes(), true ) ) {
 			return new \WP_Error(
 				'invalid_code',
 				'Field "code" is not in the allowlist.'
@@ -375,12 +407,12 @@ final class LoginAttempts {
 	 * chars of payload) — false positives are preferable to leaking
 	 * a real secret into the SaaS.
 	 *
-	 * @param string $text
+	 * @param string $text Freeform input that may carry credentials.
 	 *
 	 * @return string
 	 */
 	private function scrub_secrets( $text ) {
-		foreach ( self::SECRET_SCRUB_PATTERNS as $pattern => $replacement ) {
+		foreach ( self::secret_scrub_patterns() as $pattern => $replacement ) {
 			$text = preg_replace( $pattern, $replacement, $text );
 		}
 
