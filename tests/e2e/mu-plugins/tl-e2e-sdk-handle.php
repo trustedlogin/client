@@ -23,6 +23,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action(
     'init',
     function () {
+        // Gate: only instantiate inside wp-cli / wp eval contexts. In an
+        // HTTP admin request the client.php at the repo root has already
+        // instantiated TrustedLogin\Client for the same namespace —
+        // creating a SECOND Client here would re-register all of the
+        // SDK's admin hooks (menu page, scripts, the grant button) and
+        // the admin page would render two grant buttons, breaking
+        // grant-flow / popup / nonce-tampering / etc. specs with
+        // strict-mode "resolved to 2 elements" failures. The handle is
+        // only consumed by envelope-signing.spec.ts via wp eval — which
+        // ships its own PHP process and does not see the HTTP-time
+        // Client instance.
+        if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
+            return;
+        }
+
         if ( ! class_exists( '\\TrustedLogin\\Client' ) ) {
             return;
         }
