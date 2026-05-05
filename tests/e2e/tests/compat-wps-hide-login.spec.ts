@@ -224,22 +224,24 @@ test( 'revoke with tl_return=login → redirect uses wps-hide-login slug, NOT wp
     const ctx = await browser.newContext();
     await loginClientAdmin( ctx, HIDE_LOGIN_SLUG );
 
-    // wp_create_nonce binds to the CURRENT user id. wp eval defaults to
-    // user 0; the actual request lands as user 1 (admin). Set user 1
-    // before minting so wp_verify_nonce in the request context matches.
-    const nonce = wpCli(
-        'wp-cli-client',
-        `wp_set_current_user( get_user_by( "login", "admin" )->ID ); `
-        + `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( sharedIdentifier ) } );`,
-        'create revoke nonce',
-    ).trim();
+    // Scrape the revoke URL from the SDK's grant admin page rather
+    // than minting a nonce ourselves. wp_create_nonce binds to the
+    // current user_id AND wp_get_session_token(); wp-cli has no
+    // session token, so a CLI-minted nonce can't match a browser
+    // request's. The SDK already renders a working revoke link
+    // server-side bound to the logged-in admin's session.
+    const adminPage = await ctx.newPage();
+    await adminPage.goto( `${ VENDOR_STATE.client_url }/wp-admin/admin.php?page=grant-${ VENDOR_STATE.namespace }-access`, { waitUntil: 'domcontentloaded' } );
+    const baseRevokeUrl = await adminPage.locator( '.tl-client-revoke-button' ).first().getAttribute( 'href' );
+    await adminPage.close();
+    if ( ! baseRevokeUrl ) {
+        throw new Error( 'Revoke link not found on grant admin page — sharedIdentifier may already be revoked.' );
+    }
 
-    // Param names mirror the SDK constants — REVOKE_SUPPORT_QUERY_PARAM
-    // ('revoke-tl') and SupportUser::ID_QUERY_PARAM ('tlid'), with the
-    // nonce action 'revoke-tl|{identifier}' (Endpoint.php:523,
-    // SupportUser.php:748). tl_return=login flips the post-revoke
-    // redirect from home_url() to wp_login_url() (Endpoint.php:570).
-    const revokeUrl = `${ VENDOR_STATE.client_url }/wp-admin/?revoke-tl=${ encodeURIComponent( VENDOR_STATE.namespace ) }&tlid=${ encodeURIComponent( sharedIdentifier ) }&_wpnonce=${ encodeURIComponent( nonce ) }&tl_return=login`;
+    // is_login_screen() is the SDK's gate for adding tl_return=login
+    // (Form.php:289), which only fires in the popup flow. Append it
+    // here so we exercise the wp_login_url() branch (Endpoint.php:570).
+    const revokeUrl = baseRevokeUrl + '&tl_return=login';
     const resp = await ctx.request.get( revokeUrl, { maxRedirects: 0 } );
 
     expect( resp.status(), 'revoke handler should 302 to wp_login_url() with revoked=1' ).toBe( 302 );
