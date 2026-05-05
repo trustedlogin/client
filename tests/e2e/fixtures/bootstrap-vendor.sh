@@ -259,16 +259,21 @@ wp_vendor eval '
 # Connector activates BEFORE team settings are seeded (the activation
 # happens during `wp plugin activate`, while teams come in via the
 # update_option above). Capabilities::migrate_approved_roles_to_caps()
-# fires from the activation hook against an empty teams option and grants
-# nothing. Re-run it now that approved_roles=[administrator,editor] exists
-# so the connector menu pages pass the MENU_ACCESS virtual cap for the
-# admin user — without this the React access-key-login screen 403s and
-# react-spa.spec.ts hits "Sorry, you are not allowed to access this page."
+# fires from the activation hook against an empty teams option, marks
+# the once-only migration option as DONE, and grants no caps. Re-running
+# the method later short-circuits on that option.
+#
+# Delete the migration sentinel + re-run after teams are seeded so
+# approved_roles=[administrator,editor] grants DECRYPT_MESSAGES to those
+# roles. Without this, the admin user fails the connector menu's
+# MENU_ACCESS virtual cap and the React access-key-login screen 403s
+# with "Sorry, you are not allowed to access this page" (react-spa.spec).
 bold "Re-running Capabilities::migrate_approved_roles_to_caps after team seed"
 wp_vendor eval '
     if ( class_exists( "\\\\TrustedLogin\\\\Vendor\\\\Capabilities" ) ) {
-        \TrustedLogin\Vendor\Capabilities::migrate_approved_roles_to_caps();
-        echo "OK\n";
+        delete_option( \TrustedLogin\Vendor\Capabilities::APPROVED_ROLES_MIGRATION_OPTION );
+        $granted = \TrustedLogin\Vendor\Capabilities::migrate_approved_roles_to_caps();
+        echo "OK granted=" . (int) $granted . "\n";
     } else {
         echo "SKIPPED (class not found on this branch)\n";
     }

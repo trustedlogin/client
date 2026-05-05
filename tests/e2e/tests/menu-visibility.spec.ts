@@ -89,7 +89,11 @@ test.beforeAll( () => {
 	// create_users by default.
 	wpCli(
 		'wp-cli-client',
-		`$u = new WP_User( ${ siteAdminId } ); $u->remove_cap( "create_users" ); echo "ok";`,
+		// add_cap("create_users", false), not remove_cap("create_users") —
+		// remove_cap only deletes USER-level cap entries, but admins
+		// inherit create_users from the administrator ROLE. Storing the
+		// cap as false at the user level overrides the role's true.
+		`$u = new WP_User( ${ siteAdminId } ); $u->add_cap( "create_users", false ); echo "ok";`,
 		'strip create_users from siteAdminId',
 	);
 } );
