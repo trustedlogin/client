@@ -264,12 +264,12 @@ class Utils {
 	 *
 	 * @since 1.8.0
 	 *
-	 * @param string                      $param              The parameter to retrieve.
-	 * @param callable|bool|null          $sanitize_callback  Sanitizer applied to the raw (unslashed) value.
-	 *                                                        - callable: applied to scalars; arrays via {@see map_deep()}.
-	 *                                                        - `null` or `false`: no sanitization.
-	 *                                                        - `true` (legacy): equivalent to `'sanitize_text_field'`.
-	 *                                                        Default: `'sanitize_text_field'`.
+	 * @param string             $param              The parameter to retrieve.
+	 * @param callable|bool|null $sanitize_callback  Sanitizer applied to the raw (unslashed) value.
+	 *                                               - callable: applied to scalars; arrays via {@see map_deep()}.
+	 *                                               - `null` or `false`: no sanitization.
+	 *                                               - `true` (legacy): equivalent to `'sanitize_text_field'`.
+	 *                                               Default: `'sanitize_text_field'`.
 	 *
 	 * @return string|array|null The sanitized parameter value or null if not found.
 	 */

@@ -337,7 +337,7 @@ final class SupportRole {
 	 * @param mixed $caps Either {cap => description} or [cap, cap, ...].
 	 * @return array<string, string> {cap_name => description}.
 	 */
-	public static function normalize_caps_map( $caps ): array {
+	public static function normalize_caps_map( $caps ) {
 		$out = array();
 
 		if ( ! is_array( $caps ) ) {

@@ -203,12 +203,14 @@ final class SecurityChecks {
 
 		// Already counted for this IP+identifier — don't double-bump.
 		if ( in_array( $scoped, $used_accesskeys, true ) ) {
-			return array_values( array_filter(
-				$used_accesskeys,
-				function ( $entry ) use ( $ip_hash ) {
-					return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
-				}
-			) );
+			return array_values(
+				array_filter(
+					$used_accesskeys,
+					function ( $entry ) use ( $ip_hash ) {
+						return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+					}
+				)
+			);
 		}
 
 		// Add the new scoped access key to the global list.
@@ -222,12 +224,14 @@ final class SecurityChecks {
 
 		// Return only entries scoped to THIS IP so the caller's count
 		// is a per-IP counter, not a site-wide one.
-		return array_values( array_filter(
-			$used_accesskeys,
-			function ( $entry ) use ( $ip_hash ) {
-				return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
-			}
-		) );
+		return array_values(
+			array_filter(
+				$used_accesskeys,
+				function ( $entry ) use ( $ip_hash ) {
+					return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+				}
+			)
+		);
 	}
 
 

@@ -387,7 +387,7 @@ final class Encryption {
 			);
 		} else {
 			$body    = (string) wp_remote_retrieve_body( $response );
-			$preview = mb_substr( $body, 0, 300 );
+			$preview = mb_substr( $body, 0, 300, 'UTF-8' );
 			$this->logging->log(
 				sprintf(
 					'Fetched encryption key from %s (HTTP %d). Body preview: %s',

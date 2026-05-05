@@ -130,10 +130,10 @@ final class Remote {
 			// Integrators whose custom webhook receiver requires form
 			// encoding can revert to the legacy shape from the filter below:
 			//
-			//   add_filter( 'trustedlogin/{ns}/webhook/request_args',
-			//       function ( $args, $url, $data ) {
-			//           return array( 'body' => $data );
-			//       }, 10, 3 );
+			// add_filter( 'trustedlogin/{ns}/webhook/request_args',
+			// function ( $args, $url, $data ) {
+			// return array( 'body' => $data );
+			// }, 10, 3 ); .
 			$encoded = wp_json_encode( $data );
 			if ( false === $encoded ) {
 				// Falls through to form encoding only when JSON encoding
@@ -191,10 +191,11 @@ final class Remote {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $path Path for the REST API request (no initial or trailing slash needed).
-	 * @param array  $data Data sent with POST, PUT, or DELETE requests as JSON-encoded body.
-	 * @param string $method HTTP method to use for the request.
-	 * @param array  $additional_headers Any additional headers to be set with the request. Merged with default headers.
+	 * @param string   $path               Path for the REST API request (no initial or trailing slash needed).
+	 * @param array    $data               Data sent with POST, PUT, or DELETE requests as JSON-encoded body.
+	 * @param string   $method             HTTP method to use for the request.
+	 * @param array    $additional_headers Any additional headers to be set with the request. Merged with default headers.
+	 * @param int|null $timeout            Per-call timeout (seconds). null falls through to the class default.
 	 *
 	 * @return array|WP_Error wp_remote_request() response or WP_Error if something went wrong
 	 */
@@ -497,7 +498,7 @@ final class Remote {
 		}
 
 		$status       = (int) wp_remote_retrieve_response_code( $api_response );
-		$body_preview = mb_substr( wp_strip_all_tags( ltrim( $body ) ), 0, 200 );
+		$body_preview = mb_substr( wp_strip_all_tags( ltrim( $body ) ), 0, 200, 'UTF-8' );
 
 		$this->logging->log(
 			sprintf(
@@ -589,7 +590,7 @@ final class Remote {
 				sprintf(
 					'Vendor response (HTTP %d) was not valid JSON. Body preview: %s',
 					$response_http,
-					mb_substr( (string) $response_body, 0, 200 )
+					mb_substr( (string) $response_body, 0, 200, 'UTF-8' )
 				),
 				__METHOD__,
 				'error'
@@ -630,7 +631,7 @@ final class Remote {
 						sprintf(
 							'Vendor response (HTTP %d) did not include publicKey. Body: %s',
 							$response_http,
-							mb_substr( (string) $response_body, 0, 200 )
+							mb_substr( (string) $response_body, 0, 200, 'UTF-8' )
 						),
 						__METHOD__,
 						'error'

@@ -73,11 +73,15 @@ class Endpoint {
 	private $config;
 
 	/**
+	 * Reports a failed support-login attempt to the SaaS.
+	 *
 	 * @var LoginAttempts
 	 */
 	private $login_attempts;
 
 	/**
+	 * The support-user resolver, used to capture the site_hash for failed logins.
+	 *
 	 * @var SupportUser
 	 */
 	private $support_user;
@@ -111,7 +115,7 @@ class Endpoint {
 	 * @param SupportUser|null   $support_user   Same rationale — only the maybe_login_support path
 	 *                                            needs it (to capture site_hash before maybe_login).
 	 */
-	public function __construct( Config $config, Logging $logging, ?LoginAttempts $login_attempts = null, ?SupportUser $support_user = null ) {
+	public function __construct( Config $config, Logging $logging, LoginAttempts $login_attempts = null, SupportUser $support_user = null ) {
 
 		$this->config         = $config;
 		$this->logging        = $logging;
@@ -325,7 +329,6 @@ class Endpoint {
 			'error'
 		);
 
-
 		$attempt   = null;
 		$secret_id = null;
 
@@ -356,7 +359,7 @@ class Endpoint {
 				'client_site_url'   => home_url(),
 				'attempted_at'      => gmdate( 'c' ),
 				'client_user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] )
-					? substr( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ), 0, LoginAttempts::MAX_USER_AGENT_LENGTH )
+					? substr( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ) ), 0, LoginAttempts::MAX_USER_AGENT_LENGTH )
 					: null,
 				'client_ip'         => $this->login_attempts->resolve_client_ip(),
 			);
@@ -369,9 +372,8 @@ class Endpoint {
 		}
 
 		$referer = $this->resolve_safe_referer(
-			isset( $_SERVER['HTTP_REFERER'] ) ? wp_unslash( (string) $_SERVER['HTTP_REFERER'] ) : ''
+			isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_REFERER'] ) ) : ''
 		);
-
 
 		if ( ! is_wp_error( $attempt ) && ! empty( $attempt['id'] ) && '' !== $referer ) {
 			// Happy path — attempt recorded AND referer trusted.
@@ -402,6 +404,7 @@ class Endpoint {
 			'<p>' . esc_html( $body ) . '</p>',
 			esc_html( $heading ),
 			array(
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- self:: constant; not output.
 				'response'  => self::STANDALONE_PAGE_HTTP_STATUS,
 				'back_link' => false,
 			)

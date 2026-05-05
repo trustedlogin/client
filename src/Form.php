@@ -286,7 +286,7 @@ final class Form {
 		// original `origin` param through so the postMessage can be targeted
 		// at the correct opener origin after the redirect.
 		if ( $this->is_login_screen() ) {
-			$extra = array( 'tl_return' => 'login' );
+			$extra      = array( 'tl_return' => 'login' );
 			$req_origin = Utils::get_request_param( 'origin' );
 			if ( $req_origin ) {
 				// Validate: must be an absolute http(s) URL we can parse.
@@ -473,7 +473,7 @@ final class Form {
 			$actions_html    = $preflight['actions_html'];
 			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions tl-' . esc_attr( $this->config->ns() ) . '-auth__actions--unavailable';
 		} else {
-			$response_html   = '<div class="tl-' . esc_attr( $this->config->ns() ) . '-auth__response" aria-live="assertive"></div>';
+			$response_html = '<div class="tl-' . esc_attr( $this->config->ns() ) . '-auth__response" aria-live="assertive"></div>';
 			// tag=button: render as a real <button> so the browser\'s
 			// native disabled-attribute click suppression prevents
 			// double-submits during the in-flight AJAX (was: <a>
@@ -1211,12 +1211,12 @@ final class Form {
 						'id'    => array(),
 					),
 					'div'      => array(
-						'class'                 => array(),
-						'id'                    => array(),
-						'role'                  => array(),
-						'aria-live'             => array(),
-						'data-preflight-error'  => array(),
-						'style'                 => array(),
+						'class'                => array(),
+						'id'                   => array(),
+						'role'                 => array(),
+						'aria-live'            => array(),
+						'data-preflight-error' => array(),
+						'style'                => array(),
 					),
 					'small'    => array(
 						'class'       => array(),
@@ -1802,18 +1802,28 @@ EOD;
 			?>
 			<div class="notice notice-success is-dismissible">
 				<p>
-					<strong><?php echo esc_html( sprintf(
+					<strong>
+					<?php
+					echo esc_html(
+						sprintf(
 						// translators: %s vendor title (e.g. Acme Widgets).
-						__( 'You are logged in as a %s support user.', 'trustedlogin' ),
-						$vendor_title
-					) ); ?></strong>
+							__( 'You are logged in as a %s support user.', 'trustedlogin' ),
+							$vendor_title
+						)
+					);
+					?>
+					</strong>
 					<?php if ( $expiration ) : ?>
 						<br>
-						<?php echo esc_html( sprintf(
+						<?php
+						echo esc_html(
+							sprintf(
 							// translators: %s human-readable duration like "1 week".
-							__( 'Access expires in %s.', 'trustedlogin' ),
-							$expiration
-						) ); ?>
+								__( 'Access expires in %s.', 'trustedlogin' ),
+								$expiration
+							)
+						);
+						?>
 					<?php endif; ?>
 				</p>
 			</div>
