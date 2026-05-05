@@ -98,6 +98,8 @@ jobs:
           docker compose run --rm -T wp-cli-vendor wp eval '$r = get_role("administrator"); if (!$r) { echo "no admin role\n"; exit; } foreach ($r->capabilities as $cap => $has) { if ($has && false !== stripos($cap, "trustedlogin")) { echo "  " . $cap . "\n"; } }' 2>&1 || true
           echo "=== migration sentinel option ==="
           docker compose run --rm -T wp-cli-vendor wp option get trustedlogin_connector_approved_roles_migrated 2>&1 || true
+          echo "=== auth-cookie probe of access_key_login admin page ==="
+          docker compose run --rm -T wp-cli-vendor wp eval '$cookie = wp_generate_auth_cookie( 1, time() + 3600, "logged_in" ); $r = wp_remote_get( "http://vendor-wp/wp-admin/admin.php?page=trustedlogin_access_key_login", array( "cookies" => array( LOGGED_IN_COOKIE => $cookie ), "redirection" => 0 ) ); echo "code=" . wp_remote_retrieve_response_code( $r ) . PHP_EOL; $body = wp_remote_retrieve_body( $r ); foreach ( array( "Sorry, you are", "trustedlogin_access_key_login", "do_not_allow", "wp_die", "wp-login" ) as $needle ) { echo "  has(\"" . $needle . "\")=" . ( false !== strpos( $body, $needle ) ? "yes" : "no" ) . PHP_EOL; }' 2>&1 || true
 
       - name: Dump fake-saas state on failure
         if: failure()
