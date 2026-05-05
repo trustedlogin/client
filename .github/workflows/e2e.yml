@@ -43,15 +43,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         working-directory: tests/e2e
-        run: |
-          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
-            # Cache hit: browsers are present, but apt OS deps aren't —
-            # install just the system libs (fast, ~10s).
-            npx playwright install-deps chromium
-          else
-            npx playwright install --with-deps chromium
-          fi
+        # Skipped on cache hit. ubuntu-latest ships most Chromium runtime
+        # libs preinstalled; if a runner-image rotation drops one, the
+        # next test launch fails fast and we put `install-deps` back in.
+        run: npx playwright install --with-deps chromium
 
       # Resolve + restore caches BEFORE `docker compose up`. The compose
       # file bind-mounts ./fixtures/trustedlogin-connector and
