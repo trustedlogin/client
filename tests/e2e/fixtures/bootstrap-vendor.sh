@@ -236,6 +236,8 @@ wp_vendor eval '
             "approved_roles" => [ "administrator", "editor" ],
             "name"           => "E2E Vendor Team",
             "debug_enabled"  => "on",
+            // Pre-mark connected so MenuPage registers SLUG_ACCESS_KEY.
+            "connected"      => "checked_is_connected",
             "helpdesk_data"  => [
                 "helpscout" => [ "secret" => "fake-helpscout-secret" ],
             ],
