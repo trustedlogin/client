@@ -261,6 +261,53 @@ class LoginAttemptsUnitTest extends TestCase {
 		$this->assertSame( 3, $this->remote->last_timeout );
 	}
 
+	/**
+	 * A code outside VALID_CODES MUST short-circuit with WP_Error
+	 * `invalid_code` before any wire body leaves the network. Locks in
+	 * the controlled-vocabulary contract so a typo at the call site
+	 * fails fast instead of waiting for an opaque 422 from the SaaS.
+	 *
+	 * @return void
+	 */
+	public function test_report_rejects_unrecognized_code() {
+		$this->remote->next_response = $this->okResponse();
+
+		$payload         = $this->validPayload();
+		$payload['code'] = 'made_up_code';
+
+		$result = $this->sut->report( $payload );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'invalid_code', $result->get_error_code() );
+		$this->assertNull(
+			$this->remote->last_body,
+			'Unrecognized code MUST short-circuit before the SaaS POST goes out.'
+		);
+	}
+
+	/**
+	 * Every constant listed in VALID_CODES must round-trip through
+	 * report() to the wire body. The other side of the contract from
+	 * test_report_rejects_unrecognized_code — guards against a refactor
+	 * that drops a code from the allowlist while a caller still uses it.
+	 *
+	 * @return void
+	 */
+	public function test_report_accepts_every_valid_code() {
+		foreach ( LoginAttempts::VALID_CODES as $code ) {
+			$this->remote->next_response = $this->okResponse();
+			$this->remote->last_body     = null;
+
+			$payload         = $this->validPayload();
+			$payload['code'] = $code;
+
+			$result = $this->sut->report( $payload );
+
+			$this->assertIsArray( $result, sprintf( 'VALID_CODES[%s] should round-trip.', $code ) );
+			$this->assertSame( $code, $this->remote->last_body['code'] );
+		}
+	}
+
 	public function test_report_strips_caller_supplied_identifier_hash() {
 		// Load-bearing safety property: report() ignores any
 		// `identifier_hash` field on the context array. The only way

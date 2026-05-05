@@ -26,6 +26,24 @@ final class LoginAttempts {
 
 	const ENDPOINT_PATH = 'sites/%s/login-attempts';
 
+	/** Wire `code` value: the user resolved + maybe_login() returned a WP_Error. */
+	const CODE_LOGIN_FAILED = 'login_failed';
+
+	/** Wire `code` value: verify() rejected the request before user resolution. */
+	const CODE_SECURITY_CHECK_FAILED = 'security_check_failed';
+
+	/**
+	 * Allowed values of the wire `code` field. Enforced in
+	 * {@see self::validate_and_normalize()} so a value outside this list
+	 * fails locally before the SaaS POST goes out.
+	 *
+	 * @since 1.10.0
+	 */
+	const VALID_CODES = array(
+		self::CODE_LOGIN_FAILED,
+		self::CODE_SECURITY_CHECK_FAILED,
+	);
+
 	/**
 	 * Hard timeout (seconds) on the SaaS POST. Sits on the critical
 	 * path between fail_login() and the redirect — short to keep the
@@ -102,7 +120,7 @@ final class LoginAttempts {
 	/**
 	 * Send a failure event to the SaaS. `secret_id` is required in the
 	 * context array and gets pulled out into the URL path (it does not
-	 * enter the POST body). Recognised body keys, all optional unless
+	 * enter the POST body). Recognized body keys, all optional unless
 	 * noted:
 	 *
 	 * - code              (required) machine-readable failure tag.
@@ -301,6 +319,15 @@ final class LoginAttempts {
 			if ( empty( $payload[ $key ] ) ) {
 				return new \WP_Error( 'missing_field', 'Field "' . $key . '" is required.' );
 			}
+		}
+
+		// Error message intentionally does not echo $payload['code'] —
+		// keeps untrusted bytes out of the local debug log.
+		if ( ! in_array( $payload['code'], self::VALID_CODES, true ) ) {
+			return new \WP_Error(
+				'invalid_code',
+				'Field "code" is not in the allowlist.'
+			);
 		}
 
 		// detailed_reason is freeform but capped — matches SaaS-side

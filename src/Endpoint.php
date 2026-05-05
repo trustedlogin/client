@@ -232,7 +232,7 @@ class Endpoint {
 			// internal state. Keeping the wire field on error_code
 			// removes that data-leak surface; the full message stays in
 			// the local debug.log via Logging::log() inside fail_login.
-			$this->fail_login( 'security_check_failed', (string) $is_verified->get_error_code(), null );
+			$this->fail_login( LoginAttempts::CODE_SECURITY_CHECK_FAILED, (string) $is_verified->get_error_code(), null );
 			return;
 		}
 
@@ -278,7 +278,7 @@ class Endpoint {
 			// (freeform, may interpolate user identifiers / display
 			// names). The full message stays in local debug.log via
 			// Logging::log() inside fail_login.
-			$this->fail_login( 'login_failed', (string) $is_logged_in->get_error_code(), $pre_login_site_hash );
+			$this->fail_login( LoginAttempts::CODE_LOGIN_FAILED, (string) $is_logged_in->get_error_code(), $pre_login_site_hash );
 			return;
 		}
 
