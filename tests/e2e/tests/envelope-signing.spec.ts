@@ -300,11 +300,16 @@ function removeTamperMuPlugin() {
  * exercises the reject-unsigned codepath.
  */
 function installEnforceMuPlugin() {
+    // Filter name ships from trustedlogin-connector — see
+    // php/TrustedLoginService.php#L445 + php/EnvelopeVerifier.php#L99.
+    // The legacy name (trustedlogin/vendor/require_envelope_signature)
+    // never matched anywhere in the connector and silently no-op'd,
+    // leaving this spec asserting hard-mode against a soft-mode build.
     const php = `<?php
 /**
  * Plugin Name: TrustedLogin e2e - Enforce envelope signing (hard mode).
  */
-add_filter( 'trustedlogin/vendor/require_envelope_signature', '__return_true' );
+add_filter( 'trustedlogin/connector/envelope/require-signature', '__return_true' );
 `;
     dockerWriteFile( VENDOR_CONTAINER, `${ MU_PLUGIN_DIR }/e2e-envelope-enforce.php`, php );
 }
