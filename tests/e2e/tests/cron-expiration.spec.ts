@@ -50,7 +50,14 @@ function resetState(): void {
 			'  if (empty($cron[$ts])) { unset($cron[$ts]); }',
 			'}',
 			'update_option("cron", $cron);',
-			// Drop any lingering test users.
+			// Drop any lingering test users. wp_delete_user lives in
+			// wp-admin/includes/user.php, which `wp eval` does NOT
+			// auto-load — without the require_once, the call would
+			// fatal silently and the next mint would see a left-over
+			// user with email cron-e2e@example.test, surfacing
+			// USER_ERR:user_exists before the cron path under test
+			// even gets to run.
+			'require_once ABSPATH . "wp-admin/includes/user.php";',
 			'global $wpdb;',
 			'$ids = $wpdb->get_col("SELECT ID FROM {$wpdb->users} WHERE user_login != \'admin\' AND user_email LIKE \'%cron-e2e@%\'");',
 			'foreach ($ids as $uid) {',
