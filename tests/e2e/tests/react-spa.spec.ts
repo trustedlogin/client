@@ -127,7 +127,8 @@ test( 'React SPA auto-submits when ak + ak_account_id are in URL → lands on cl
     // the browser to the client-site login endpoint. The final URL
     // should be somewhere on the client's wp-admin (the agent is now
     // logged in as the support user).
-    await page.waitForURL( new RegExp( '^' + VENDOR_STATE.client_url.replace( /[/.]/g, '\\$&' ) + '/wp-admin/' ), { timeout: 30_000 } );
+    const clientUrlRe = VENDOR_STATE.client_url.replace( /[\\^$.*+?()[\]{}|]/g, '\\$&' );
+    await page.waitForURL( new RegExp( '^' + clientUrlRe + '/wp-admin/' ), { timeout: 30_000 } );
 
     // Proof-of-life that this was a REAL authenticated admin session:
     // the WP admin bar renders for logged-in users only.

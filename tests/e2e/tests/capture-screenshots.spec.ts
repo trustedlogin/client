@@ -16,7 +16,7 @@
  */
 
 import { test, BrowserContext, Page } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
@@ -66,8 +66,11 @@ function ensureCssMatchesNamespace( namespace: string ): void {
     }
 
     console.log( `[capture] CSS missing '${ marker }' — rebuilding for namespace '${ namespace }'` );
-    execSync(
-        `docker run --rm -v ${ JSON.stringify( repoRoot ) }:/app -w /app php:8.2-cli php bin/build-sass --namespace=${ namespace }`,
+    // execFileSync (not execSync) — argv array bypasses /bin/sh entirely so
+    // repoRoot / namespace can't be interpreted as shell metacharacters.
+    execFileSync(
+        'docker',
+        [ 'run', '--rm', '-v', `${ repoRoot }:/app`, '-w', '/app', 'php:8.2-cli', 'php', 'bin/build-sass', `--namespace=${ namespace }` ],
         { stdio: [ 'ignore', 'pipe', 'pipe' ], timeout: 60_000 },
     );
 }

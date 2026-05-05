@@ -36,7 +36,7 @@
  *        (format-level regression guard).
  */
 
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -96,8 +96,11 @@ function writeInContainer( service: string, containerPath: string, content: stri
     const tmp = path.join( E2E_DIR, `.tmp-${ Date.now() }-${ Math.random().toString( 36 ).slice( 2 ) }` );
     fs.writeFileSync( tmp, content );
     try {
-        execSync(
-            `docker compose cp ${ JSON.stringify( tmp ) } ${ service }:${ JSON.stringify( containerPath ) }`,
+        // execFileSync (not execSync) — argv array bypasses /bin/sh entirely so
+        // tmp / containerPath can't be interpreted as shell metacharacters.
+        execFileSync(
+            'docker',
+            [ 'compose', 'cp', tmp, `${ service }:${ containerPath }` ],
             { cwd: E2E_DIR, timeout: 30_000, stdio: [ 'ignore', 'pipe', 'pipe' ] },
         );
     } finally {
