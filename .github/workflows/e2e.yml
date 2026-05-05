@@ -137,37 +137,6 @@ jobs:
         working-directory: tests/e2e
         run: npm test
 
-      - name: Diagnose vendor REST + plugin pause state on failure
-        if: failure()
-        working-directory: tests/e2e
-        run: |
-          echo "=== paused_plugins option (HTTP-side WP fatal protection) ==="
-          docker compose run --rm -T wp-cli-vendor wp option get paused_plugins --format=json 2>&1 || true
-          echo "=== active_plugins on vendor ==="
-          docker compose run --rm -T wp-cli-vendor wp option get active_plugins --format=json 2>&1 || true
-          echo "=== vendor wp-content/debug.log — TL-PROBE entries ==="
-          docker compose exec -T vendor-wp bash -c 'test -f wp-content/debug.log && grep -F "[TL-PROBE]" wp-content/debug.log | tail -n 20 || echo "(no debug.log or no probe entries)"' || true
-          echo "=== vendor wp-content/debug.log (last 200 lines, all entries) ==="
-          docker compose exec -T vendor-wp bash -c 'test -f wp-content/debug.log && tail -n 200 wp-content/debug.log || echo "(no debug.log)"' || true
-          echo "=== install curl + probe vendor REST endpoint over HTTP ==="
-          docker compose exec -T vendor-wp bash -c 'command -v curl >/dev/null 2>&1 || (apt-get update -qq && apt-get install -yqq curl) >/dev/null 2>&1; curl -si "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key"' || true
-          echo "=== probe via Host: vendor-wp ==="
-          docker compose exec -T vendor-wp bash -c 'curl -si -H "Host: vendor-wp" "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key"' || true
-          echo "=== probe via pretty /wp-json path ==="
-          docker compose exec -T vendor-wp bash -c 'curl -si "http://127.0.0.1/wp-json/trustedlogin/v1/public_key"' || true
-          echo "=== route registered in wp-cli context? ==="
-          docker compose run --rm -T wp-cli-vendor wp eval 'echo isset( rest_get_server()->get_routes()["/trustedlogin/v1/public_key"] ) ? "REGISTERED\n" : "MISSING\n";' 2>&1 || true
-          echo "=== same probe via rest_do_request from wp-cli ==="
-          docker compose run --rm -T wp-cli-vendor wp eval '$r = rest_do_request( new WP_REST_Request( "GET", "/trustedlogin/v1/public_key" ) ); echo "status=" . $r->get_status() . " data=" . wp_json_encode( $r->get_data() ) . "\n";' 2>&1 || true
-          echo "=== admin user (uid=1) TL cap state ==="
-          docker compose run --rm -T wp-cli-vendor wp eval '$u = get_user_by("id", 1); if (!$u) { echo "no admin\n"; exit; } echo "user: " . $u->user_login . " roles: " . implode(",", $u->roles) . "\n"; foreach (["trustedlogin_decrypt_messages","trustedlogin_menu_access","read","manage_options"] as $c) { echo "  " . $c . " => " . ( user_can($u, $c) ? "yes" : "no" ) . "\n"; }' 2>&1 || true
-          echo "=== administrator role caps (just TL ones) ==="
-          docker compose run --rm -T wp-cli-vendor wp eval '$r = get_role("administrator"); if (!$r) { echo "no admin role\n"; exit; } foreach ($r->capabilities as $cap => $has) { if ($has && false !== stripos($cap, "trustedlogin")) { echo "  " . $cap . "\n"; } }' 2>&1 || true
-          echo "=== migration sentinel option ==="
-          docker compose run --rm -T wp-cli-vendor wp option get trustedlogin_connector_approved_roles_migrated 2>&1 || true
-          echo "=== auth-cookie probe of access_key_login admin page ==="
-          docker compose run --rm -T wp-cli-vendor wp eval '$cookie = wp_generate_auth_cookie( 1, time() + 3600, "logged_in" ); $r = wp_remote_get( "http://vendor-wp/wp-admin/admin.php?page=trustedlogin_access_key_login", array( "cookies" => array( LOGGED_IN_COOKIE => $cookie ), "redirection" => 0 ) ); echo "code=" . wp_remote_retrieve_response_code( $r ) . PHP_EOL; $body = wp_remote_retrieve_body( $r ); foreach ( array( "Sorry, you are", "trustedlogin_access_key_login", "do_not_allow", "wp_die", "wp-login" ) as $needle ) { echo "  has(\"" . $needle . "\")=" . ( false !== strpos( $body, $needle ) ? "yes" : "no" ) . PHP_EOL; }' 2>&1 || true
-
       - name: Dump fake-saas state on failure
         if: failure()
         working-directory: tests/e2e
