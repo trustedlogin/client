@@ -7,6 +7,10 @@ wp-cli.local.yml
 node_modules/
 site/
 *.sql
+# E2E fixture: MariaDB init script that creates the second database
+# (client_wp) + grants. The wildcard above hides ad-hoc DB dumps; this
+# fixture is part of the docker-compose stack and must ship in CI.
+!tests/e2e/fixtures/init-databases.sql
 *.tar.gz
 *.zip
 .phpunit.result.cache
