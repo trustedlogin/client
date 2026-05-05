@@ -57,7 +57,9 @@ jobs:
           docker compose run --rm -T wp-cli-vendor wp option get paused_plugins --format=json 2>&1 || true
           echo "=== active_plugins on vendor ==="
           docker compose run --rm -T wp-cli-vendor wp option get active_plugins --format=json 2>&1 || true
-          echo "=== vendor wp-content/debug.log (last 200 lines) ==="
+          echo "=== vendor wp-content/debug.log — TL-PROBE entries ==="
+          docker compose exec -T vendor-wp bash -c 'test -f wp-content/debug.log && grep -F "[TL-PROBE]" wp-content/debug.log | tail -n 20 || echo "(no debug.log or no probe entries)"' || true
+          echo "=== vendor wp-content/debug.log (last 200 lines, all entries) ==="
           docker compose exec -T vendor-wp bash -c 'test -f wp-content/debug.log && tail -n 200 wp-content/debug.log || echo "(no debug.log)"' || true
           echo "=== install curl + probe vendor REST endpoint over HTTP ==="
           docker compose exec -T vendor-wp bash -c 'command -v curl >/dev/null 2>&1 || (apt-get update -qq && apt-get install -yqq curl) >/dev/null 2>&1; curl -si "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key"' || true
