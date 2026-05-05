@@ -323,7 +323,15 @@ final class LoginAttempts {
 
 		// Error message intentionally does not echo $payload['code'] —
 		// keeps untrusted bytes out of the local debug log.
-		if ( ! in_array( $payload['code'], self::VALID_CODES, true ) ) {
+		//
+		// Defensive (string) cast: VALID_CODES is checked with strict
+		// in_array, so a numeric / bool / null code would slip through
+		// the array check and only fail later. Casting up-front means
+		// 0, '0', 1, true, false, null all fail the allowlist check
+		// here rather than reaching the SaaS POST. Schema upstream
+		// should enforce string-ness already, but this is the
+		// last-line guard.
+		if ( ! in_array( (string) $payload['code'], self::VALID_CODES, true ) ) {
 			return new \WP_Error(
 				'invalid_code',
 				'Field "code" is not in the allowlist.'
