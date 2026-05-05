@@ -21,16 +21,83 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
 
-      - name: Install Playwright dependencies
+      - name: Install npm deps
+        working-directory: tests/e2e
+        run: npm ci || npm install
+
+      # Playwright pins browser binary versions to its own version. Key
+      # the cache on package-lock.json so a Playwright bump invalidates.
+      - name: Read Playwright version
+        id: pw
+        working-directory: tests/e2e
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
         working-directory: tests/e2e
         run: |
-          npm ci || npm install
-          npx playwright install --with-deps chromium
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            # Cache hit: browsers are present, but apt OS deps aren't —
+            # install just the system libs (fast, ~10s).
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Start docker stack
         working-directory: tests/e2e
         run: docker compose up -d --wait
+
+      # Pre-resolve branch HEAD SHAs so the cache key invalidates the
+      # moment connector or gravityforms get a new commit. Falls back to
+      # branch name if the API call fails — cache will still hit on a
+      # later run that successfully resolved the same branch.
+      - name: Resolve connector + GF SHAs for cache key
+        id: refs
+        env:
+          GH_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          CONNECTOR_BRANCH: feature/183-form-plugins-login-field
+          GF_BRANCH: master
+        run: |
+          conn=$(gh api "repos/trustedlogin/trustedlogin-connector/commits/${CONNECTOR_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
+          gf=$(gh api "repos/gravityforms/gravityforms/commits/${GF_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
+          # bootstrap-vendor.sh content hash so cherry-picks / fixture changes
+          # invalidate the cache too.
+          boot=$(sha256sum tests/e2e/fixtures/bootstrap-vendor.sh | cut -c1-12)
+          echo "conn=${conn:-${CONNECTOR_BRANCH//\//-}}" >> "$GITHUB_OUTPUT"
+          echo "gf=${gf:-$GF_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "boot=$boot" >> "$GITHUB_OUTPUT"
+
+      # Cache the entire connector fixture dir incl. .git, vendor/, node_modules/,
+      # build/, wpbuild/. clone_with_token in bootstrap detects the existing
+      # .git and does fetch+reset instead of a full re-clone; composer install
+      # and yarn build are skipped by their existing file-marker checks.
+      - name: Restore connector fixture
+        id: connector-cache
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/fixtures/trustedlogin-connector
+          key: connector-fixture-${{ runner.os }}-${{ steps.refs.outputs.conn }}-${{ steps.refs.outputs.boot }}
+          restore-keys: |
+            connector-fixture-${{ runner.os }}-
+
+      - name: Restore gravityforms fixture
+        id: gf-cache
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/fixtures/gravityforms
+          key: gravityforms-fixture-${{ runner.os }}-${{ steps.refs.outputs.gf }}-${{ steps.refs.outputs.boot }}
+          restore-keys: |
+            gravityforms-fixture-${{ runner.os }}-
 
       - name: Bootstrap vendor (clones connector PR #184 + Gravity Forms)
         working-directory: tests/e2e
