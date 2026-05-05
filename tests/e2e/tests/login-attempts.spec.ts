@@ -315,51 +315,22 @@ test( 'login_failed with untrusted referer → standalone page, NO redirect', as
 	await grantCtx.close();
 	expireSupportUser();
 
-	// Untrusted referer host — resolve_safe_referer returns ''. SaaS POST
-	// still happens (audit log captures the failure) but no redirect.
-	// Use http:// (not https://) so the browser actually FORWARDS the
-	// Referer header — strict-origin-when-cross-origin (default policy)
-	// strips https:// referers when the destination is http://.
-	const agentCtx = await browser.newContext( {
-		extraHTTPHeaders: { Referer: 'http://attacker.example/path' },
-	} );
-	const p = await agentCtx.newPage();
-
-	// Capture network failures + final response status for the form POST
-	// so the test failure tells us WHY the page is blank instead of
-	// silently giving us chrome-error.
-	const responses: Array<{ url: string; status: number }> = [];
-	p.on( 'response', resp => {
-		if ( resp.url().startsWith( VENDOR_STATE.client_url ) ) {
-			responses.push( { url: resp.url(), status: resp.status() } );
-		}
+	// Use APIRequestContext (no browser nav) — the about:blank-form-submit
+	// helper lands on chrome-error://chromewebdata when extraHTTPHeaders
+	// supplies a cross-origin Referer that doesn't match the page origin,
+	// so the standalone page never gets a chance to render. Pure HTTP
+	// POST sends the spoofed Referer cleanly and lets the SDK decide.
+	const agentCtx = await browser.newContext();
+	const resp = await agentCtx.request.post( VENDOR_STATE.client_url + '/', {
+		maxRedirects: 0,
+		headers: { Referer: 'http://attacker.example/path' },
+		form: { action: 'trustedlogin', endpoint, identifier },
 	} );
 
-	await submitTrustedLoginForm( p, endpoint, identifier );
-
-	// Wait for the standalone page to render (wp_die output). The wp_die
-	// document includes the heading in <h1 id="error-page">; checking
-	// document.body's innerText is the simplest reliable assertion.
-	try {
-		await p.waitForFunction(
-			( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-			STANDALONE_HEADING,
-			{ timeout: NAV_TIMEOUT_MS },
-		);
-	} catch ( err ) {
-		// Surface useful debug info before the test fails so we don't
-		// have to dig through traces every time.
-		const url   = p.url();
-		const title = await p.title().catch( () => '<no title>' );
-		const html  = await p.content().catch( () => '<no content>' );
-		throw new Error(
-			`Standalone heading not found.\n  url=${ url }\n  title=${ title }\n  body[0..400]=${ html.slice( 0, 400 ) }\n  responses=${ JSON.stringify( responses ) }\n  ---\n  ${ err }`,
-		);
-	}
-
-	// URL is NOT the attacker's referer (no tl_attempt redirect).
-	expect( p.url() ).not.toMatch( LPAT_REGEX );
-	expect( p.url() ).not.toContain( 'attacker.example' );
+	expect( resp.status() ).toBe( 200 );
+	expect( resp.headers()[ 'location' ] ?? '' ).not.toMatch( LPAT_REGEX );
+	const body = await resp.text();
+	expect( body, 'standalone page must include the wp_die heading' ).toContain( STANDALONE_HEADING );
 
 	// SaaS still got the POST — fail_login records before checking referer.
 	const attempts = readFakeSaasAttempts();
