@@ -10,7 +10,10 @@ export default defineConfig({
   // Run it explicitly when generating docs.
   testIgnore: [ '**/capture-screenshots.spec.ts' ],
   timeout: 60_000,
-  retries: 0,
+  // CI gets one retry to absorb transient docker/Apache races (e.g.
+  // envelope-signing tamper mu-plugin docker-cp racing realpath cache).
+  // Local runs stay strict so flakes surface immediately.
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
 
   // Dual reporter: `list` keeps the default per-test progress on stdout
