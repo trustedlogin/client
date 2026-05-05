@@ -80,9 +80,18 @@ test.beforeAll( () => {
 	editorId     = mintUser( 'editor',        'menu-vis-editor' );
 	subscriberId = mintUser( 'subscriber',    'menu-vis-subscriber' );
 	siteAdminId  = mintUser( 'administrator', 'menu-vis-siteadmin' );
-	// siteAdminId is intentionally NOT promoted to super admin —
-	// that\'s exactly the case we care about: a site administrator
-	// on multisite who can\'t create users.
+	// siteAdminId mirrors a multisite site administrator: full
+	// administrator role minus create_users (which on real multisite
+	// is reserved for super admins via map_meta_cap). The e2e stack
+	// runs single-site, so we strip the cap explicitly to reproduce
+	// the same authorization shape — otherwise this test would fail
+	// on every single-site CI run because regular admins keep
+	// create_users by default.
+	wpCli(
+		'wp-cli-client',
+		`$u = new WP_User( ${ siteAdminId } ); $u->remove_cap( "create_users" ); echo "ok";`,
+		'strip create_users from siteAdminId',
+	);
 } );
 
 test.afterAll( () => {
