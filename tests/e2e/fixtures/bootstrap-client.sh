@@ -59,7 +59,12 @@ if ! grep -q "$CSS_MARKER" "$CLIENT_REPO_ROOT/src/assets/trustedlogin.css" 2>/de
     bold "  composer install + build-sass --namespace=$CLIENT_NAMESPACE"
     # composer install ensures scssphp is present; then build-sass compiles
     # trustedlogin.scss into trustedlogin.css with the right namespace.
-    docker run --rm -v "$CLIENT_REPO_ROOT:/app" -w /app composer:2 \
+    # GIT_CONFIG_* env vars set safe.directory=* so git (invoked by composer
+    # to pin dist references) doesn't bail with "fatal: detected dubious
+    # ownership" on the bind-mounted repo.
+    docker run --rm -v "$CLIENT_REPO_ROOT:/app" -w /app \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+        composer:2 \
         install --no-interaction --no-progress --quiet 2>&1 | tail -3
     docker run --rm -v "$CLIENT_REPO_ROOT:/app" -w /app php:8.2-cli \
         php bin/build-sass --namespace="$CLIENT_NAMESPACE" 2>&1 | tail -3

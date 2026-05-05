@@ -108,7 +108,12 @@ fi
 
 if [[ ! -d "fixtures/trustedlogin-connector/vendor" || "$REFRESH_PLUGINS" == "true" ]]; then
     bold "  composer install inside trustedlogin-connector"
+    # GIT_CONFIG_* env vars set safe.directory=* inside the container so git
+    # (invoked by composer to pin dist references) doesn't bail with
+    # "fatal: detected dubious ownership" when the bind-mounted /app is
+    # owned by the host runner UID rather than the container's user.
     docker run --rm -v "$(pwd)/fixtures/trustedlogin-connector:/app" -w /app \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
         composer:2 install --no-dev --no-progress --no-interaction --prefer-dist
 fi
 
@@ -130,6 +135,7 @@ if [[ ! -f "$CONNECTOR_BUILD_MARKER" || ! -f "$CONNECTOR_APP_MARKER" || "$REFRES
         -v "$(pwd)/fixtures/trustedlogin-connector:/app" -w /app \
         -e npm_config_cache=/tmp/npm-cache \
         -e CI=true \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
         node:20 sh -c "yarn install --frozen-lockfile --silent && yarn build:js && yarn build:css && yarn build:app" \
         || warn "  Connector build failed — settings page may render empty"
 else
@@ -157,6 +163,7 @@ if [[ ! -f "$GF_BUILD_MARKER" || "$REFRESH_PLUGINS" == "true" ]]; then
     docker run --rm \
         -v "$(pwd)/fixtures/gravityforms:/app" -w /app \
         -e npm_config_cache=/tmp/npm-cache \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
         node:20 sh -c "npm ci --no-audit --no-fund && npm run dist && npm run minify" \
         || warn "  GF build failed — front-end may render with missing assets"
 else
