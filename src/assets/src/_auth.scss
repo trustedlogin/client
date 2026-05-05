@@ -4,7 +4,17 @@
 		min-width: $container-width-min;
 		max-width: $container-width-max;
 		display: block;
-		margin: ($gutter-width * 3) auto;
+		// Asymmetric block margin: tighter above so the card sits
+		// close to the wp-login `<h1>` logo (which already has its
+		// own bottom padding), and roomier below so the footer
+		// links don't crowd the viewport bottom. Side margin uses
+		// `max()` so wide viewports still auto-center the card AND
+		// narrow viewports get a fixed 24px inset — without this,
+		// the white section runs flush to the browser chrome below
+		// ~728px viewport width.
+		margin-block-start: ($vertical-spacing / 2);
+		margin-block-end: ($vertical-spacing * 2);
+		margin-inline: max(#{$vertical-spacing}, calc((100% - #{$container-width-max}) / 2));
 		font-size: 1em;
 		text-align: center;
 		zoom: 1;
@@ -14,7 +24,11 @@
 			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
 			border-radius: $border-radius-base;
 			overflow: hidden;
-			padding: 40px 5% $gutter-width;
+			// Bottom padding bumped from `$gutter-width` (10px) so the
+			// Grant Access button + ToS line stop hugging the card's
+			// bottom edge. Top stays at 40px for the existing visual
+			// balance with the intro heading.
+			padding: 40px 5% ($vertical-spacing * 2);
 			border-bottom: 1px solid $color-light-grey-900;
 
 			* {
