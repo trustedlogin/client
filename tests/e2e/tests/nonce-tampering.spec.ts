@@ -36,14 +36,16 @@ test( 'tampered nonce surfaces an error banner and mints no user', async ( { pag
 	const grant = form.grantButton();
 	await expect( grant, 'grant button must render before tampering' ).toBeVisible();
 
-	// Replace the localized nonce with a known-bad value. wp-localized
-	// `tl_obj` is a window-global; mutating it is exactly the failure
-	// mode an expired-from-disk nonce produces server-side: the
-	// browser still has _A_ value, just one that won\'t verify.
-	await page.evaluate( () => {
+	// Replace the localized nonce with a known-bad value. The SDK now
+	// publishes per-namespace config under window.trustedLogin[ns]
+	// (replacing the legacy window.tl_obj — see tl-obj-isolation spec).
+	// Mutating it is exactly the failure mode an expired-from-disk
+	// nonce produces server-side: the browser still has _A_ value,
+	// just one that won't verify.
+	await page.evaluate( ( ns ) => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		( window as any ).tl_obj._nonce = 'expired-or-tampered';
-	} );
+		( window as any ).trustedLogin[ ns ]._nonce = 'expired-or-tampered';
+	}, NS );
 
 	await grant.click();
 
