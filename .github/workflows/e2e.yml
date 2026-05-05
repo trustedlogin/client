@@ -53,14 +53,12 @@ jobs:
             npx playwright install --with-deps chromium
           fi
 
-      - name: Start docker stack
-        working-directory: tests/e2e
-        run: docker compose up -d --wait
-
-      # Pre-resolve branch HEAD SHAs so the cache key invalidates the
-      # moment connector or gravityforms get a new commit. Falls back to
-      # branch name if the API call fails — cache will still hit on a
-      # later run that successfully resolved the same branch.
+      # Resolve + restore caches BEFORE `docker compose up`. The compose
+      # file bind-mounts ./fixtures/trustedlogin-connector and
+      # ./fixtures/gravityforms into vendor-wp's plugin dir; if those host
+      # dirs don't exist when the stack starts, Docker creates them
+      # ROOT-OWNED and tar's cache extraction then fails with Permission
+      # denied (every file becomes "Cannot open: Permission denied").
       - name: Resolve connector + GF SHAs for cache key
         id: refs
         env:
@@ -70,17 +68,11 @@ jobs:
         run: |
           conn=$(gh api "repos/trustedlogin/trustedlogin-connector/commits/${CONNECTOR_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
           gf=$(gh api "repos/gravityforms/gravityforms/commits/${GF_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
-          # bootstrap-vendor.sh content hash so cherry-picks / fixture changes
-          # invalidate the cache too.
           boot=$(sha256sum tests/e2e/fixtures/bootstrap-vendor.sh | cut -c1-12)
           echo "conn=${conn:-${CONNECTOR_BRANCH//\//-}}" >> "$GITHUB_OUTPUT"
           echo "gf=${gf:-$GF_BRANCH}" >> "$GITHUB_OUTPUT"
           echo "boot=$boot" >> "$GITHUB_OUTPUT"
 
-      # Cache the entire connector fixture dir incl. .git, vendor/, node_modules/,
-      # build/, wpbuild/. clone_with_token in bootstrap detects the existing
-      # .git and does fetch+reset instead of a full re-clone; composer install
-      # and yarn build are skipped by their existing file-marker checks.
       - name: Restore connector fixture
         id: connector-cache
         uses: actions/cache@v4
@@ -98,6 +90,10 @@ jobs:
           key: gravityforms-fixture-${{ runner.os }}-${{ steps.refs.outputs.gf }}-${{ steps.refs.outputs.boot }}
           restore-keys: |
             gravityforms-fixture-${{ runner.os }}-
+
+      - name: Start docker stack
+        working-directory: tests/e2e
+        run: docker compose up -d --wait
 
       - name: Bootstrap vendor (clones connector PR #184 + Gravity Forms)
         working-directory: tests/e2e
