@@ -209,3 +209,43 @@ test( 'failed login → standalone page (does not leak through /wp-login.php)', 
     expect( body ).toContain( 'Support login could not complete' );
     await agentCtx.close();
 } );
+
+test( 'revoke with tl_return=login → redirect uses wps-hide-login slug, NOT wp-login.php', async ( { browser } ) => {
+    // wps-hide-login filters site_url / login_url / wp_redirect to swap
+    // 'wp-login.php' for the configured slug. The SDK's revoke handler
+    // is the only place that uses wp_login_url() (Endpoint.php:592 in
+    // the tl_return=login branch — fired when an agent revokes from the
+    // popup); fail_login uses $referer instead, so this revoke flow is
+    // the only real test of "SDK respects wps-hide-login's wp_login_url
+    // filter".
+    //
+    // Build the revoke URL fresh (admin_url() + revoke-tl + id + nonce)
+    // so we don't depend on the granted user state from the file's
+    // beforeAll, and so the nonce binds to the actual support user.
+    const ctx = await browser.newContext();
+    // grantAndCaptureSecrets logs in internally; ctx.request inherits
+    // the admin session cookie that the revoke handler's
+    // current_user_can('delete_users') gate needs.
+    const { identifier } = await grantAndCaptureSecrets( ctx );
+    const nonce = wpCli(
+        'wp-cli-client',
+        `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( identifier ) } );`,
+        'create revoke nonce',
+    ).trim();
+
+    // Param names mirror the SDK constants — REVOKE_SUPPORT_QUERY_PARAM
+    // ('revoke-tl') and SupportUser::ID_QUERY_PARAM ('tlid'), with the
+    // nonce action 'revoke-tl|{identifier}' (Endpoint.php:523,
+    // SupportUser.php:748). tl_return=login flips the post-revoke
+    // redirect from home_url() to wp_login_url() (Endpoint.php:570).
+    const revokeUrl = `${ VENDOR_STATE.client_url }/wp-admin/?revoke-tl=${ encodeURIComponent( VENDOR_STATE.namespace ) }&tlid=${ encodeURIComponent( identifier ) }&_wpnonce=${ encodeURIComponent( nonce ) }&tl_return=login`;
+    const resp = await ctx.request.get( revokeUrl, { maxRedirects: 0 } );
+
+    expect( resp.status(), 'revoke handler should 302 to wp_login_url() with revoked=1' ).toBe( 302 );
+    const location = resp.headers()[ 'location' ] ?? '';
+    expect( location, 'redirect must NOT leak the legacy /wp-login.php path' ).not.toContain( 'wp-login.php' );
+    expect( location, 'redirect must hit the wps-hide-login slug' ).toContain( HIDE_LOGIN_SLUG );
+    expect( location, 'revoke marker for the popup postMessage handler' ).toContain( 'revoked=1' );
+
+    await ctx.close();
+} );
