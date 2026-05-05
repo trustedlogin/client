@@ -67,6 +67,9 @@ type FakeSaasMode = typeof FAKE_SAAS_MODE[ keyof typeof FAKE_SAAS_MODE ];
 const LPAT_REGEX = /tl_attempt=lpat_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 
 const STANDALONE_HEADING = 'Support login could not complete';
+// wp_die() puts the second-arg "title" only in <title>, not in <h1> —
+// so body.innerText assertions need to match the message paragraph instead.
+const STANDALONE_BODY = 'Return to your support tool to try again.';
 
 // Test wait budgets (in milliseconds) — extracted so a slow CI box can
 // nudge them in one place.
@@ -371,7 +374,7 @@ test( 'security_check_failed (no user) → standalone page, NO SaaS POST', async
 
 	await p.waitForFunction(
 		( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-		STANDALONE_HEADING,
+		STANDALONE_BODY,
 		{ timeout: NAV_TIMEOUT_MS },
 	);
 
@@ -398,7 +401,7 @@ test( 'SaaS 5xx → standalone page (lost report, agent unblocked)', async ( { b
 
 	await p.waitForFunction(
 		( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-		STANDALONE_HEADING,
+		STANDALONE_BODY,
 		{ timeout: NAV_TIMEOUT_MS },
 	);
 
@@ -428,7 +431,7 @@ test( 'SaaS 429 → standalone page (rate-limit eaten, no spam)', async ( { brow
 
 	await p.waitForFunction(
 		( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-		STANDALONE_HEADING,
+		STANDALONE_BODY,
 		{ timeout: NAV_TIMEOUT_MS },
 	);
 
@@ -519,7 +522,7 @@ test( 'TRUSTEDLOGIN_DISABLE_AUDIT_{NS} = true → standalone page, NO POST', asy
 
 		await p.waitForFunction(
 			( heading ) => document.body && document.body.innerText.indexOf( heading ) !== -1,
-			STANDALONE_HEADING,
+			STANDALONE_BODY,
 			{ timeout: NAV_TIMEOUT_MS },
 		);
 
