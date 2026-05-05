@@ -42,7 +42,8 @@
     "szepeviktor/phpstan-wordpress": "^1.3",
     "phpstan/extension-installer": "^1.3",
     "yoast/phpunit-polyfills": "^1.0.0",
-    "scssphp/scssphp": "^2.1"
+    "scssphp/scssphp": "^2.1",
+    "symfony/filesystem": "^7.0"
   },
   "scripts": {
     "format": "vendor/bin/phpcbf --standard=.phpcs.xml.dist --report-summary --report-source",

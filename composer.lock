@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0e77894e1c82d50b85f2101a66a87c8f",
+    "content-hash": "b04162967be40aed503adcb4923e58ce",
     "packages": [],
     "packages-dev": [
         {
@@ -2770,25 +2770,25 @@
         },
         {
             "name": "symfony/filesystem",
-            "version": "v8.0.8",
+            "version": "v7.4.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/filesystem.git",
-                "reference": "66b769ae743ce2d13e435528fbef4af03d623e5a"
+                "reference": "dcd8f96bcdc0f128ec406c765cc066c6035d1be3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/filesystem/zipball/66b769ae743ce2d13e435528fbef4af03d623e5a",
-                "reference": "66b769ae743ce2d13e435528fbef4af03d623e5a",
+                "url": "https://api.github.com/repos/symfony/filesystem/zipball/dcd8f96bcdc0f128ec406c765cc066c6035d1be3",
+                "reference": "dcd8f96bcdc0f128ec406c765cc066c6035d1be3",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.4",
+                "php": ">=8.2",
                 "symfony/polyfill-ctype": "~1.8",
                 "symfony/polyfill-mbstring": "~1.8"
             },
             "require-dev": {
-                "symfony/process": "^7.4|^8.0"
+                "symfony/process": "^6.4|^7.0|^8.0"
             },
             "type": "library",
             "autoload": {
@@ -2816,7 +2816,7 @@
             "description": "Provides basic utilities for the filesystem",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/filesystem/tree/v8.0.8"
+                "source": "https://github.com/symfony/filesystem/tree/v7.4.9"
             },
             "funding": [
                 {
@@ -2836,7 +2836,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-30T15:14:47+00:00"
+            "time": "2026-04-18T13:18:21+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -3326,11 +3326,11 @@
     "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
-    "platform": {},
-    "platform-dev": {
+    "platform": {
         "php": ">=5.3.0",
         "ext-curl": "*",
         "ext-json": "*"
     },
+    "platform-dev": {},
     "plugin-api-version": "2.9.0"
 }
