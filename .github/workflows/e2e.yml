@@ -45,6 +45,27 @@ jobs:
         working-directory: tests/e2e
         run: ./fixtures/bootstrap-client.sh
 
+      # The vendor-wp + client-wp containers were started BEFORE the bootstraps
+      # cloned trustedlogin-connector / gravityforms / built the bind-mounted
+      # client plugin assets. On Linux (GH-Actions runners), the apache+mod_php
+      # workers in those long-lived containers primed PHP's realpath cache with
+      # the EMPTY bind-mount dirs that existed at start time. Even though the
+      # bind-mounts go live the moment the host dirs get populated, the cached
+      # "no such file" stat keeps wp_get_active_and_valid_plugins() skipping
+      # those plugins for the realpath_cache_ttl window (default 120s) — every
+      # HTTP request from Playwright then sees a vanilla WP with no connector
+      # and the e2e suite cascades into 404 hell.
+      #
+      # Restart kills the stale PHP workers + clears realpath_cache. wp-cli is
+      # unaffected because each call is a fresh PHP process. macOS Docker
+      # Desktop (FUSE-backed file sharing) does not exhibit this — pure-Linux
+      # bind-mounts do.
+      - name: Restart WP containers to clear realpath cache
+        working-directory: tests/e2e
+        run: |
+          docker compose restart vendor-wp client-wp
+          docker compose up -d --wait vendor-wp client-wp
+
       - name: Run Playwright tests
         working-directory: tests/e2e
         run: npm test
