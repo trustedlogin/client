@@ -211,25 +211,22 @@ test( 'failed login → standalone page (does not leak through /wp-login.php)', 
 } );
 
 test( 'revoke with tl_return=login → redirect uses wps-hide-login slug, NOT wp-login.php', async ( { browser } ) => {
-    // wps-hide-login filters site_url / login_url / wp_redirect to swap
-    // 'wp-login.php' for the configured slug. The SDK's revoke handler
-    // is the only place that uses wp_login_url() (Endpoint.php:592 in
-    // the tl_return=login branch — fired when an agent revokes from the
-    // popup); fail_login uses $referer instead, so this revoke flow is
-    // the only real test of "SDK respects wps-hide-login's wp_login_url
-    // filter".
+    // wps-hide-login filters site_url / login_url to swap 'wp-login.php'
+    // for the configured slug. The SDK's revoke handler is the ONLY
+    // place that uses wp_login_url() (Endpoint.php:592 in the
+    // tl_return=login branch — fired when an agent revokes from the
+    // popup). fail_login uses $referer instead, so this revoke flow is
+    // the only real test of "SDK respects wps-hide-login's filter".
     //
-    // Build the revoke URL fresh (admin_url() + revoke-tl + id + nonce)
-    // so we don't depend on the granted user state from the file's
-    // beforeAll, and so the nonce binds to the actual support user.
+    // Reuse sharedIdentifier from beforeAll (which granted before
+    // wps-hide-login was activated) so we don't have to log in via
+    // /wp-login.php (now 404) to mint a new user.
     const ctx = await browser.newContext();
-    // grantAndCaptureSecrets logs in internally; ctx.request inherits
-    // the admin session cookie that the revoke handler's
-    // current_user_can('delete_users') gate needs.
-    const { identifier } = await grantAndCaptureSecrets( ctx );
+    await loginClientAdmin( ctx, HIDE_LOGIN_SLUG );
+
     const nonce = wpCli(
         'wp-cli-client',
-        `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( identifier ) } );`,
+        `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( sharedIdentifier ) } );`,
         'create revoke nonce',
     ).trim();
 
@@ -238,7 +235,7 @@ test( 'revoke with tl_return=login → redirect uses wps-hide-login slug, NOT wp
     // nonce action 'revoke-tl|{identifier}' (Endpoint.php:523,
     // SupportUser.php:748). tl_return=login flips the post-revoke
     // redirect from home_url() to wp_login_url() (Endpoint.php:570).
-    const revokeUrl = `${ VENDOR_STATE.client_url }/wp-admin/?revoke-tl=${ encodeURIComponent( VENDOR_STATE.namespace ) }&tlid=${ encodeURIComponent( identifier ) }&_wpnonce=${ encodeURIComponent( nonce ) }&tl_return=login`;
+    const revokeUrl = `${ VENDOR_STATE.client_url }/wp-admin/?revoke-tl=${ encodeURIComponent( VENDOR_STATE.namespace ) }&tlid=${ encodeURIComponent( sharedIdentifier ) }&_wpnonce=${ encodeURIComponent( nonce ) }&tl_return=login`;
     const resp = await ctx.request.get( revokeUrl, { maxRedirects: 0 } );
 
     expect( resp.status(), 'revoke handler should 302 to wp_login_url() with revoked=1' ).toBe( 302 );
