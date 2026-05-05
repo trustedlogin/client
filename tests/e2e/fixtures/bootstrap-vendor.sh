@@ -256,6 +256,24 @@ wp_vendor eval '
     }
 '
 
+# Connector activates BEFORE team settings are seeded (the activation
+# happens during `wp plugin activate`, while teams come in via the
+# update_option above). Capabilities::migrate_approved_roles_to_caps()
+# fires from the activation hook against an empty teams option and grants
+# nothing. Re-run it now that approved_roles=[administrator,editor] exists
+# so the connector menu pages pass the MENU_ACCESS virtual cap for the
+# admin user — without this the React access-key-login screen 403s and
+# react-spa.spec.ts hits "Sorry, you are not allowed to access this page."
+bold "Re-running Capabilities::migrate_approved_roles_to_caps after team seed"
+wp_vendor eval '
+    if ( class_exists( "\\\\TrustedLogin\\\\Vendor\\\\Capabilities" ) ) {
+        \TrustedLogin\Vendor\Capabilities::migrate_approved_roles_to_caps();
+        echo "OK\n";
+    } else {
+        echo "SKIPPED (class not found on this branch)\n";
+    }
+'
+
 bold "Verifying team connection against fake-saas"
 wp_vendor eval '
     if ( function_exists( "trustedlogin_connector" ) ) {
