@@ -92,6 +92,12 @@ jobs:
           docker compose run --rm -T wp-cli-vendor wp eval 'echo isset( rest_get_server()->get_routes()["/trustedlogin/v1/public_key"] ) ? "REGISTERED\n" : "MISSING\n";' 2>&1 || true
           echo "=== same probe via rest_do_request from wp-cli ==="
           docker compose run --rm -T wp-cli-vendor wp eval '$r = rest_do_request( new WP_REST_Request( "GET", "/trustedlogin/v1/public_key" ) ); echo "status=" . $r->get_status() . " data=" . wp_json_encode( $r->get_data() ) . "\n";' 2>&1 || true
+          echo "=== admin user (uid=1) TL cap state ==="
+          docker compose run --rm -T wp-cli-vendor wp eval '$u = get_user_by("id", 1); if (!$u) { echo "no admin\n"; exit; } echo "user: " . $u->user_login . " roles: " . implode(",", $u->roles) . "\n"; foreach (["trustedlogin_decrypt_messages","trustedlogin_menu_access","read","manage_options"] as $c) { echo "  " . $c . " => " . ( user_can($u, $c) ? "yes" : "no" ) . "\n"; }' 2>&1 || true
+          echo "=== administrator role caps (just TL ones) ==="
+          docker compose run --rm -T wp-cli-vendor wp eval '$r = get_role("administrator"); if (!$r) { echo "no admin role\n"; exit; } foreach ($r->capabilities as $cap => $has) { if ($has && false !== stripos($cap, "trustedlogin")) { echo "  " . $cap . "\n"; } }' 2>&1 || true
+          echo "=== migration sentinel option ==="
+          docker compose run --rm -T wp-cli-vendor wp option get trustedlogin_connector_approved_roles_migrated 2>&1 || true
 
       - name: Dump fake-saas state on failure
         if: failure()
