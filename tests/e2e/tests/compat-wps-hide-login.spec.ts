@@ -195,6 +195,10 @@ test( 'failed login → feedback lands on the custom URL, not /wp-login.php', as
     const agentCtx = await browser.newContext();
     const resp = await agentCtx.request.post( VENDOR_STATE.client_url + '/', {
         maxRedirects: 0,
+        // resolve_safe_referer() requires a host on the SDK's allowlist
+        // (vendor/website, vendor/support_url, home_url) to authorize
+        // the 302; without it the SDK renders the standalone page (200).
+        headers: { Referer: VENDOR_STATE.client_url + '/wp-login.php' },
         form: { action: 'trustedlogin', endpoint: sharedEndpoint, identifier: unknownIdentifier },
     } );
     expect( resp.status() ).toBe( 302 );
