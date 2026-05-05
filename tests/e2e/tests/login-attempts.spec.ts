@@ -327,8 +327,14 @@ test( 'login_failed with untrusted referer → standalone page, NO redirect', as
 		form: { action: 'trustedlogin', endpoint, identifier },
 	} );
 
-	expect( resp.status() ).toBe( 200 );
-	expect( resp.headers()[ 'location' ] ?? '' ).not.toMatch( LPAT_REGEX );
+	// Security invariant: server MUST NOT redirect to anything when the
+	// Referer is untrusted. status=200 is the strongest possible "no
+	// redirect happened" check; the Location-header assertions below
+	// are belt-and-suspenders for clarity.
+	expect( resp.status(), 'must NOT redirect on untrusted referer' ).toBe( 200 );
+	const location = resp.headers()[ 'location' ] ?? '';
+	expect( location, 'no tl_attempt redirect' ).not.toMatch( LPAT_REGEX );
+	expect( location, 'no redirect to attacker-controlled host' ).not.toContain( 'attacker.example' );
 	const body = await resp.text();
 	expect( body, 'standalone page must include the wp_die heading' ).toContain( STANDALONE_HEADING );
 
