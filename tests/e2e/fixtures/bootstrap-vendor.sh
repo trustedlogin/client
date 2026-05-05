@@ -248,7 +248,7 @@ wp_vendor eval '
 
 bold "Marking onboarding as complete"
 wp_vendor eval '
-    if ( class_exists( "\\\\TrustedLogin\\\\Vendor\\\\Status\\\\Onboarding" ) ) {
+    if ( class_exists( "\\TrustedLogin\\Vendor\\Status\\Onboarding" ) ) {
         \TrustedLogin\Vendor\Status\Onboarding::setHasOnboarded();
         echo "OK\n";
     } else {
@@ -270,7 +270,7 @@ wp_vendor eval '
 # with "Sorry, you are not allowed to access this page" (react-spa.spec).
 bold "Re-running Capabilities::migrate_approved_roles_to_caps after team seed"
 wp_vendor eval '
-    if ( class_exists( "\\\\TrustedLogin\\\\Vendor\\\\Capabilities" ) ) {
+    if ( class_exists( "\\TrustedLogin\\Vendor\\Capabilities" ) ) {
         delete_option( \TrustedLogin\Vendor\Capabilities::APPROVED_ROLES_MIGRATION_OPTION );
         $granted = \TrustedLogin\Vendor\Capabilities::migrate_approved_roles_to_caps();
         echo "OK granted=" . (int) $granted . "\n";
