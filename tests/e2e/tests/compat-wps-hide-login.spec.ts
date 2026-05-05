@@ -224,9 +224,13 @@ test( 'revoke with tl_return=login → redirect uses wps-hide-login slug, NOT wp
     const ctx = await browser.newContext();
     await loginClientAdmin( ctx, HIDE_LOGIN_SLUG );
 
+    // wp_create_nonce binds to the CURRENT user id. wp eval defaults to
+    // user 0; the actual request lands as user 1 (admin). Set user 1
+    // before minting so wp_verify_nonce in the request context matches.
     const nonce = wpCli(
         'wp-cli-client',
-        `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( sharedIdentifier ) } );`,
+        `wp_set_current_user( get_user_by( "login", "admin" )->ID ); `
+        + `echo wp_create_nonce( "revoke-tl|" . ${ JSON.stringify( sharedIdentifier ) } );`,
         'create revoke nonce',
     ).trim();
 
