@@ -6,13 +6,13 @@
  * Why: compat-wordfence.spec.ts activates Wordfence in beforeAll and
  * deactivates it in afterAll. If a previous run was killed with
  * SIGKILL (e.g. `pkill -9 playwright` during debugging), afterAll
- * never executed and Wordfence remained network-active. With WAF
+ * never executed and Wordfence remained active. With WAF
  * intercepting every request, every page load against client-wp
  * grows from <1s to ~8s, blowing past the default 15s actionTimeout
  * on browser-driven flow specs and timing out logins, AJAX, etc.
  *
- * Running `wp plugin deactivate wordfence --network` here costs ~2s
- * once and is a no-op when Wordfence is already inactive.
+ * Running `wp plugin deactivate wordfence` here costs ~2s once and is
+ * a no-op when Wordfence is already inactive.
  *
  * Wired up in playwright.config.ts via globalSetup.
  */
@@ -25,7 +25,7 @@ const E2E_DIR = path.resolve( __dirname );
 export default async function globalSetup(): Promise<void> {
 	const result = spawnSync(
 		'docker',
-		[ 'compose', 'run', '--rm', '-T', 'wp-cli-client', 'wp', 'plugin', 'deactivate', 'wordfence', '--network' ],
+		[ 'compose', 'run', '--rm', '-T', 'wp-cli-client', 'wp', 'plugin', 'deactivate', 'wordfence' ],
 		{ cwd: E2E_DIR, encoding: 'utf8', timeout: 30_000, stdio: [ 'ignore', 'pipe', 'pipe' ] },
 	);
 

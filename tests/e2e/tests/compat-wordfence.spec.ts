@@ -216,12 +216,8 @@ function fireWebhook(): void {
 test.describe.configure( { mode: 'serial' } );
 
 test.beforeAll( async () => {
-    // --network: client-wp is multisite, and the suite's global-setup
-    // pre-deactivates wordfence with --network as a defensive measure
-    // (recovers state from a SIGKILLed previous run). Activating
-    // per-site here would leave it in `active` rather than the
-    // `active-network` state Wordfence expects on multisite — its
-    // WAF middleware paths key off the network-active install marker.
+    // The current e2e stack is single-site, so activate Wordfence at
+    // the site level and tear it down the same way in afterAll.
     wpCommand( 'wp-cli-client', 'plugin activate wordfence' );
 
     // Install the WAF auto-prepend (.user.ini + wordfence-waf.php at the
@@ -258,9 +254,8 @@ test.beforeAll( async () => {
 
 test.afterAll( async () => {
     // Return WAF to disabled so subsequent specs run against a vanilla WP.
-    // --network must match the beforeAll's --network activation —
-    // otherwise the deactivate is a no-op on the network-active install
-    // and Wordfence keeps adding ~7s WAF overhead to every request.
+    // Match the site-level activation above. If this deactivation misses,
+    // later browser-driven specs inherit Wordfence's WAF overhead.
     try { await wfHarness( 'disable' ); } catch ( _ ) { /* best-effort */ }
     dockerExec( 'client-wp', `: > /var/www/html/wp-content/wflogs/rules.php` );
     // Uninstall WAF auto-prepend so non-wordfence specs don't pay the
@@ -270,7 +265,7 @@ test.afterAll( async () => {
         `require_once ABSPATH . "wp-admin/includes/file.php"; WP_Filesystem(); global $wp_filesystem; $h = new wfWAFAutoPrependHelper( "apache-mod_php", null ); try { $h->uninstall(); echo "ok"; } catch ( Throwable $e ) { echo "FAIL:" . $e->getMessage(); }`,
         'uninstall Wordfence WAF auto-prepend',
     );
-    wpCommand( 'wp-cli-client', 'plugin deactivate wordfence --network' );
+    wpCommand( 'wp-cli-client', 'plugin deactivate wordfence' );
 } );
 
 test.beforeEach( () => {
