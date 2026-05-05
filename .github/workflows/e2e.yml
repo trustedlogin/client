@@ -55,36 +55,20 @@ jobs:
         run: |
           echo "=== paused_plugins option (HTTP-side WP fatal protection) ==="
           docker compose run --rm -T wp-cli-vendor wp option get paused_plugins --format=json 2>&1 || true
-          echo
-          echo "=== vendor wp-content/debug.log (last 200 lines) ==="
-          docker compose exec -T vendor-wp sh -lc 'test -f wp-content/debug.log && tail -n 200 wp-content/debug.log || echo "(no debug.log)"' || true
-          echo
-          echo "=== HTTP probe from inside vendor-wp via 127.0.0.1 ==="
-          docker compose exec -T vendor-wp sh -lc 'apt-get install -yqq curl >/dev/null 2>&1 || true; curl -si "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key" | head -40' || true
-          echo
-          echo "=== HTTP probe from inside vendor-wp via service hostname (Host: vendor-wp) ==="
-          docker compose exec -T vendor-wp sh -lc 'curl -si -H "Host: vendor-wp" "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key" | head -40' || true
-          echo
-          echo "=== HTTP probe via /wp-json pretty-permalink path ==="
-          docker compose exec -T vendor-wp sh -lc 'curl -si "http://127.0.0.1/wp-json/trustedlogin/v1/public_key" | head -40' || true
-          echo
-          echo "=== Route registered? (wp-cli view of \$wp_rest_server) ==="
-          docker compose run --rm -T wp-cli-vendor wp eval '$server = rest_get_server(); $routes = $server->get_routes(); echo isset( $routes["/trustedlogin/v1/public_key"] ) ? "REGISTERED\n" : "MISSING\n";' 2>&1 || true
-          echo
-          echo "=== Active plugins on vendor (HTTP load order) ==="
+          echo "=== active_plugins on vendor ==="
           docker compose run --rm -T wp-cli-vendor wp option get active_plugins --format=json 2>&1 || true
-          echo
-          echo "=== TrustedLoginGFField + GFForms class state during HTTP request ==="
-          docker compose exec -T vendor-wp sh -lc 'cat > /tmp/probe.php <<"PHPEOF"
-<?php
-$ch = curl_init( "http://127.0.0.1/wp-content/plugins/trustedlogin-connector/trustedlogin-connector.php" );
-curl_setopt( $ch, CURLOPT_NOBODY, true );
-curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-curl_exec( $ch );
-echo "direct plugin file HTTP code: " . curl_getinfo( $ch, CURLINFO_HTTP_CODE ) . "\n";
-curl_close( $ch );
-PHPEOF
-php /tmp/probe.php 2>&1 || true' || true
+          echo "=== vendor wp-content/debug.log (last 200 lines) ==="
+          docker compose exec -T vendor-wp bash -c 'test -f wp-content/debug.log && tail -n 200 wp-content/debug.log || echo "(no debug.log)"' || true
+          echo "=== install curl + probe vendor REST endpoint over HTTP ==="
+          docker compose exec -T vendor-wp bash -c 'command -v curl >/dev/null 2>&1 || (apt-get update -qq && apt-get install -yqq curl) >/dev/null 2>&1; curl -si "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key"' || true
+          echo "=== probe via Host: vendor-wp ==="
+          docker compose exec -T vendor-wp bash -c 'curl -si -H "Host: vendor-wp" "http://127.0.0.1/?rest_route=/trustedlogin/v1/public_key"' || true
+          echo "=== probe via pretty /wp-json path ==="
+          docker compose exec -T vendor-wp bash -c 'curl -si "http://127.0.0.1/wp-json/trustedlogin/v1/public_key"' || true
+          echo "=== route registered in wp-cli context? ==="
+          docker compose run --rm -T wp-cli-vendor wp eval 'echo isset( rest_get_server()->get_routes()["/trustedlogin/v1/public_key"] ) ? "REGISTERED\n" : "MISSING\n";' 2>&1 || true
+          echo "=== same probe via rest_do_request from wp-cli ==="
+          docker compose run --rm -T wp-cli-vendor wp eval '$r = rest_do_request( new WP_REST_Request( "GET", "/trustedlogin/v1/public_key" ) ); echo "status=" . $r->get_status() . " data=" . wp_json_encode( $r->get_data() ) . "\n";' 2>&1 || true
 
       - name: Dump fake-saas state on failure
         if: failure()
