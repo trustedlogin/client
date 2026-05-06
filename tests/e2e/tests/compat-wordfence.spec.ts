@@ -174,7 +174,14 @@ function readCapturedWebhook(): CapturedWebhook | null {
         'read captured webhook',
     );
     if ( raw === 'NONE' || raw === '' ) { return null; }
-    return JSON.parse( raw );
+    try {
+        return JSON.parse( raw );
+    } catch ( e ) {
+        // PHP notices/warnings can leak into wp-cli stdout and corrupt
+        // the JSON. Surface the raw output so the test failure points at
+        // the actual problem instead of a generic SyntaxError.
+        throw new Error( `readCapturedWebhook: invalid JSON from wp-cli (${ ( e as Error ).message }): ${ raw }` );
+    }
 }
 
 function clearCapturedWebhook(): void {
@@ -216,6 +223,23 @@ function fireWebhook(): void {
 test.describe.configure( { mode: 'serial' } );
 
 test.beforeAll( async () => {
+    // Defensive cleanup of any prior WAF auto-prepend state BEFORE
+    // installing fresh. The auto-prepend's .user.ini + wordfence-waf.php
+    // live in the client-wp-data named volume and persist across test
+    // runs. If a previous run was killed mid-flight (afterAll never
+    // ran, or ran partially), those files stay in place, and on the
+    // next run PHP loads the stale wordfence-waf.php BEFORE WP boots.
+    // A stale auto-prepend that references missing wflogs files / state
+    // can fail in ways that prevent the request from reaching WP's init
+    // hook — the tl-wf-harness mu-plugin then never runs and wfHarness
+    // calls below get an opaque "Page not found" 404. Wipe the auto-
+    // prepend artifacts directly so beforeAll always starts from a
+    // known-clean state regardless of how the prior run ended.
+    dockerExec(
+        'client-wp',
+        `rm -f /var/www/html/.user.ini /var/www/html/wordfence-waf.php && rm -rf /var/www/html/wp-content/wflogs/* || true`,
+    );
+
     // The current e2e stack is single-site, so activate Wordfence at
     // the site level and tear it down the same way in afterAll.
     wpCommand( 'wp-cli-client', 'plugin activate wordfence' );
@@ -254,18 +278,22 @@ test.beforeAll( async () => {
 
 test.afterAll( async () => {
     // Return WAF to disabled so subsequent specs run against a vanilla WP.
-    // Match the site-level activation above. If this deactivation misses,
-    // later browser-driven specs inherit Wordfence's WAF overhead.
+    // Match the site-level activation above. If any one cleanup step fails,
+    // the later steps must STILL run — otherwise Wordfence stays loaded
+    // and every browser-driven spec that follows pays the WAF overhead.
     try { await wfHarness( 'disable' ); } catch ( _ ) { /* best-effort */ }
-    dockerExec( 'client-wp', `: > /var/www/html/wp-content/wflogs/rules.php` );
+    try { dockerExec( 'client-wp', `: > /var/www/html/wp-content/wflogs/rules.php` ); } catch ( _ ) { /* best-effort */ }
     // Uninstall WAF auto-prepend so non-wordfence specs don't pay the
     // .user.ini hit on every request.
-    wpCli(
-        'wp-cli-client',
-        `require_once ABSPATH . "wp-admin/includes/file.php"; WP_Filesystem(); global $wp_filesystem; $h = new wfWAFAutoPrependHelper( "apache-mod_php", null ); try { $h->uninstall(); echo "ok"; } catch ( Throwable $e ) { echo "FAIL:" . $e->getMessage(); }`,
-        'uninstall Wordfence WAF auto-prepend',
-    );
-    wpCommand( 'wp-cli-client', 'plugin deactivate wordfence' );
+    try {
+        wpCli(
+            'wp-cli-client',
+            `require_once ABSPATH . "wp-admin/includes/file.php"; WP_Filesystem(); global $wp_filesystem; $h = new wfWAFAutoPrependHelper( "apache-mod_php", null ); try { $h->uninstall(); echo "ok"; } catch ( Throwable $e ) { echo "FAIL:" . $e->getMessage(); }`,
+            'uninstall Wordfence WAF auto-prepend',
+        );
+    } catch ( _ ) { /* best-effort */ }
+    // The plugin deactivation MUST run so subsequent specs see a clean WP.
+    try { wpCommand( 'wp-cli-client', 'plugin deactivate wordfence' ); } catch ( _ ) { /* best-effort */ }
 } );
 
 test.beforeEach( () => {

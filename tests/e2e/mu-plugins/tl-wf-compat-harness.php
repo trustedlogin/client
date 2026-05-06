@@ -37,6 +37,10 @@ add_action( 'init', function () {
 	header( 'Content-Type: text/plain' );
 
 	if ( ! class_exists( 'wfWAF' ) || ! wfWAF::getInstance() ) {
+		// Match the storage-engine-unavailable branch below: surface a
+		// 503 so the spec can rely on status codes rather than parsing
+		// body text to detect "WAF unavailable".
+		status_header( 503 );
 		echo "wfWAF not loaded\n";
 		exit;
 	}
