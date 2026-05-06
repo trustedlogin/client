@@ -161,7 +161,9 @@ function read_body(): array {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$path   = parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
+// parse_url() returns null on malformed URIs; coalesce to '' so subsequent
+// strpos / preg_match calls don't fire a PHP 8.1+ deprecation warning.
+$path   = (string) parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
 
 error_log( sprintf( '[fake-saas] %s %s', $method, $path ) );
 
@@ -483,12 +485,15 @@ if ( $method === 'DELETE' && preg_match( '#^sites/([a-f0-9]+)/?$#', $endpoint, $
 	with_state_locked( function ( $state ) use ( $secret_id ) {
 		$kept = array();
 		$found = false;
-		foreach ( $state['envelopes'] as $entry ) {
+		// Preserve the access_key keys; envelopes is keyed by access_key
+		// (see line ~337 where it's written) and downstream lookups via
+		// isset($state['envelopes'][$key]) depend on it.
+		foreach ( $state['envelopes'] as $access_key => $entry ) {
 			if ( $entry['secret_id'] === $secret_id ) {
 				$found = true;
 				continue;
 			}
-			$kept[] = $entry;
+			$kept[ $access_key ] = $entry;
 		}
 		$state['envelopes'] = $kept;
 		if ( ! $found ) {
