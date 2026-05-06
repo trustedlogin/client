@@ -264,6 +264,20 @@ if ( $method === 'POST' && $path === '/__toggle-signing' ) {
 	reply( 200, array( 'signing_enabled' => $enabled ) );
 }
 
+// TL-48 — set the `webhookUrl` value the fake-saas will include in the
+// next `POST /api/v1/sites/` response. Pass empty string or null to
+// clear, simulating an older SaaS that doesn't return the field yet.
+//
+// Body: { "url": "https://hooks.example.com/abc123" } | { "url": "" }
+if ( $method === 'POST' && $path === '/__set-webhook-url' ) {
+	$body = read_body();
+	$url  = isset( $body['url'] ) ? (string) $body['url'] : '';
+	with_state_locked( function ( $state ) use ( $url ) {
+		$state['webhook_url_for_sites_response'] = $url;
+		return array( $state, array( 'webhook_url' => $url ), 200 );
+	} );
+}
+
 // Strip the /api/v1/ prefix.
 if ( strpos( $path, '/api/v1/' ) !== 0 ) {
 	reply( 404, array( 'error' => 'Path must start with /api/v1/', 'path' => $path ) );
@@ -352,7 +366,18 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 			// Config::get_expiration_timestamp() returns false).
 			'expires_at'         => $expires_at,
 		);
-		return array( $state, array( 'success' => true, 'siteId' => $secret_id ), 201 );
+
+		$response = array( 'success' => true, 'siteId' => $secret_id );
+
+		// TL-48 — include `webhookUrl` if a test set it via POST /__set-webhook-url.
+		$webhook_url = isset( $state['webhook_url_for_sites_response'] )
+			? (string) $state['webhook_url_for_sites_response']
+			: '';
+		if ( $webhook_url !== '' ) {
+			$response['webhookUrl'] = $webhook_url;
+		}
+
+		return array( $state, $response, 201 );
 	} );
 }
 
