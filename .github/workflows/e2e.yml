@@ -92,7 +92,7 @@ jobs:
         working-directory: tests/e2e
         run: docker compose up -d --wait
 
-      - name: Bootstrap vendor (clones connector PR #184 + Gravity Forms)
+      - name: Bootstrap vendor (clones trustedlogin-connector branch + Gravity Forms)
         working-directory: tests/e2e
         env:
           # GITHUB_TOKEN from the workflow has repo: read on same-org private

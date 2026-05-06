@@ -96,10 +96,11 @@ You can visit:
 with `repo` scope. The repo is private; `public_repo` is not enough.
 
 **Bootstrap sanity check fails on `postMessage` or `gk-gravitycalendar`** —
-means the client-wp volume isn't mounting the PR #138 branch. Verify:
+means the client-wp volume isn't mounting the PR #138 branch. Verify the
+branch contains the expected changes:
 ```
-git -C ../../ branch --show-current   # must be feature/137-provide-data-within-popup
-git -C ../../ grep "gk-gravitycalendar" src/  # must be empty
+git -C ../../ grep "window.opener.postMessage" src/assets/trustedlogin.js  # must return results
+git -C ../../ grep "gk-gravitycalendar" src/                                # must be empty
 ```
 
 **Popup doesn't open in tests** — Playwright's `context.waitForEvent('page')`
