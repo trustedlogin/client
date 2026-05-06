@@ -1,4 +1,4 @@
-## 1.10.0 (April 29, 2026)
+## 1.10.0 (May 6, 2026)
 
 This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record (instead of on the customer's `wp-login.php` with a generic banner), overhauls the Grant Access screen's customer-facing error messages, and fixes several long-standing capability and multisite issues.
 
