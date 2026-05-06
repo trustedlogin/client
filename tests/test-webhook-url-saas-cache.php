@@ -1,6 +1,6 @@
 <?php
 /**
- * TL-48 — SaaS-cached webhook URL: cache-write behavior in
+ * SaaS-cached webhook URL: cache-write behavior in
  * {@see SiteAccess::sync_secret}.
  *
  * Stubs the SaaS HTTP response via MaliciousSaasResponseTrait so we

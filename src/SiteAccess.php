@@ -101,15 +101,15 @@ class SiteAccess {
 			return new \WP_Error( 'sync_error', __( 'Support access could not be registered. Please try again in a minute, or contact the plugin\'s support team.', 'trustedlogin' ) );
 		}
 
-		// TL-48: opportunistically cache the SaaS-supplied webhook URL.
-		// This decouples the webhook target from plugin source, removing
-		// the URL-scrape attack surface. Older SaaS without the field is
+		// Opportunistically cache the SaaS-supplied webhook URL. This
+		// decouples the webhook target from plugin source, removing the
+		// URL-scrape attack surface. Older SaaS without the field is
 		// fine — `webhookUrl` is intentionally NOT in handle_response()'s
 		// required-fields list, so absent/null/empty values silently
-		// preserve any existing cache (per the agreed reconciliation —
-		// SaaS-controlled response shape is not a deliberate clear
-		// signal; that requires an authenticated structured envelope
-		// that this design defers to a future minor).
+		// preserve any existing cache. SaaS-controlled response shape
+		// is not treated as a deliberate clear signal; that requires
+		// an authenticated structured envelope deferred to a future
+		// release.
 		if ( isset( $response_json['webhookUrl'] ) ) {
 			$candidate = $response_json['webhookUrl'];
 			$sanitized = Config::sanitize_webhook_url( $candidate );

@@ -14,7 +14,7 @@
  *   - read `getCapturedWebhooks()` to inspect what fired.
  *
  * @package TrustedLogin\Client
- * @since 1.11.0
+ * @since 1.10.0
  */
 
 namespace TrustedLogin\Tests\Helpers;

@@ -3,7 +3,7 @@
  * Stubs `pre_http_request` so SaaS calls return a controlled body
  * carrying an attacker-supplied `webhookUrl`.
  *
- * Used by every test in the TL-48 validation / sanitization /
+ * Used by every test in the webhook URL validation / sanitization /
  * disclosure suite to inject malicious or boundary-case values into
  * `SiteAccess::sync_secret()`'s SaaS round-trip without standing up
  * a real fake-saas process.
@@ -15,7 +15,7 @@
  *     the filter (otherwise it leaks across tests at priority 9).
  *
  * @package TrustedLogin\Client
- * @since 1.11.0
+ * @since 1.10.0
  */
 
 namespace TrustedLogin\Tests\Helpers;

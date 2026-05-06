@@ -1,6 +1,6 @@
 <?php
 /**
- * TL-48 — Log redaction regression suite (CI-gating).
+ * Log redaction regression suite for the SaaS-cached webhook URL (CI-gating).
  *
  * Pinned reconciliation decisions covered here (security-critical):
  *   - The 4 log lines in `Remote::maybe_send_webhook()` show host-only
@@ -13,7 +13,7 @@
  *     `webhookUrl` from the SaaS response body.
  *
  * Tagged `@group security-critical` so CI can fail-fast if any of these
- * regress — even one full-URL leak in a debug log defeats TL-48's
+ * regress — even one full-URL leak in a debug log defeats the SDK's
  * "URL is a bearer secret" model.
  */
 
@@ -28,6 +28,8 @@ require_once __DIR__ . '/Helpers/WebhookCaptureTrait.php';
 require_once __DIR__ . '/Helpers/LogCaptureTrait.php';
 require_once __DIR__ . '/Helpers/MaliciousSaasResponseTrait.php';
 
+// @group annotations are on the class so PHPUnit 9 honors --group filters
+// (file-header docblocks above the namespace declaration are not picked up).
 /**
  * @group integration
  * @group security-critical

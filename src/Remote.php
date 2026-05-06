@@ -65,8 +65,8 @@ final class Remote {
 	public function init() {
 
 		// If the webhook URL is not set anywhere — Config (current key
-		// or legacy alias) OR the SaaS-cached option (TL-48) — don't
-		// add the actions to speed up initialization.
+		// or legacy alias) OR the SaaS-cached option — don't add the
+		// actions to speed up initialization.
 		$has_config_url = $this->config->get_setting( 'webhook/url' ) || $this->config->get_setting( 'webhook_url' );
 		$has_cached_url = (bool) get_option(
 			sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ),
@@ -89,7 +89,7 @@ final class Remote {
 	 * of how many webhook actions fire. Reset between PHPUnit tests via
 	 * {@see Remote::reset_deprecation_flag}.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @var bool
 	 */
@@ -98,7 +98,7 @@ final class Remote {
 	/**
 	 * Resets {@see Remote::$deprecation_logged}. Test-only.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @return void
 	 */
@@ -109,11 +109,11 @@ final class Remote {
 	/**
 	 * Returns the host portion of a URL, or '[invalid-url]' on parse failure.
 	 *
-	 * Webhook URLs are bearer secrets post-TL-48. Log lines that previously
+	 * Webhook URLs are bearer secrets — log lines that previously
 	 * contained the full URL must redact to host-only — the path / query /
 	 * fragment is the secret-bearing portion.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @param string $url Candidate URL to redact.
 	 *
@@ -136,7 +136,7 @@ final class Remote {
 	 * — guards against a `http_request_host_is_external` filter set
 	 * permissively by an unrelated plugin.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @param string $ip IPv4 or IPv6 address (already resolved).
 	 *
@@ -193,7 +193,7 @@ final class Remote {
 		// 1. `webhook/url` from Config (deprecated, current key).
 		// 2. `webhook_url` from Config (deprecated, legacy alias).
 		// 3. `tl_{ns}_webhook_url` option cached by SiteAccess::sync_secret
-		// from the SaaS response (TL-48, the canonical post-1.11.0 path).
+		// from the SaaS response (the canonical 1.10.0+ path).
 		// When 1 OR 2 is set, fire a deprecation log (once per request).
 		// When BOTH a Config-level URL AND the cached SaaS URL exist,
 		// Config wins AND a distinct shadowing log line fires so
@@ -428,10 +428,10 @@ final class Remote {
 			return $error;
 		}
 
-		// TL-48: redact `webhookUrl` from the response body before
-		// logging. The SaaS sync_secret response contains it as a
-		// bearer-secret value; emitting the raw response into the
-		// debug log undoes the cache-write redaction work.
+		// Redact `webhookUrl` from the response body before logging.
+		// The SaaS sync_secret response contains it as a bearer-secret
+		// value; emitting the raw response into the debug log would
+		// undo the cache-write redaction work.
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 		$this->logging->log( sprintf( 'Response: %s', print_r( self::redact_response_for_log( $response ), true ) ), __METHOD__, 'debug' );
 
@@ -445,7 +445,7 @@ final class Remote {
 	 * Defense-in-depth alongside {@see Remote::redact_url} on the four
 	 * webhook-fire log lines in {@see Remote::maybe_send_webhook}.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @param mixed $response wp_remote_request() return value (array or WP_Error).
 	 *

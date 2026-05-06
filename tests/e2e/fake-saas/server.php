@@ -264,7 +264,7 @@ if ( $method === 'POST' && $path === '/__toggle-signing' ) {
 	reply( 200, array( 'signing_enabled' => $enabled ) );
 }
 
-// TL-48 — set the `webhookUrl` value the fake-saas will include in the
+// Test-only: set the `webhookUrl` value the fake-saas will include in the
 // next `POST /api/v1/sites/` response. Pass empty string or null to
 // clear, simulating an older SaaS that doesn't return the field yet.
 //
@@ -369,7 +369,7 @@ if ( $method === 'POST' && ( $endpoint === 'sites/' || $endpoint === 'sites' ) )
 
 		$response = array( 'success' => true, 'siteId' => $secret_id );
 
-		// TL-48 — include `webhookUrl` if a test set it via POST /__set-webhook-url.
+		// Include `webhookUrl` if a test set it via POST /__set-webhook-url.
 		$webhook_url = isset( $state['webhook_url_for_sites_response'] )
 			? (string) $state['webhook_url_for_sites_response']
 			: '';

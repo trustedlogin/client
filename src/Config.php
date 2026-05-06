@@ -127,7 +127,7 @@ final class Config {
 		// caches it in `wp_options` under {@see Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE}.
 		// Removed in 2.0.
 		'webhook'          => array(
-			'url'           => null, // @deprecated 1.11.0 — register via SaaS dashboard.
+			'url'           => null, // @deprecated 1.10.0 — register via SaaS dashboard.
 			'debug_data'    => false,
 			'create_ticket' => false,
 		),
@@ -138,10 +138,10 @@ final class Config {
 	 *
 	 * The SDK writes the SaaS-supplied webhook URL here during sync_secret.
 	 * `update_option` is called with `autoload=false` — the URL is treated
-	 * as a bearer secret in the TL-48 design and must not ship in the
+	 * as a bearer secret and must not ship in the
 	 * autoloaded options dump.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @var string
 	 */
@@ -153,7 +153,7 @@ final class Config {
 	 * Reasonable for any real webhook URL with a token; rejects memory-
 	 * abuse payloads.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @var int
 	 */
@@ -173,7 +173,7 @@ final class Config {
 	 * Pure-static for unit testability — no WordPress dependency, no DNS
 	 * unless the IP-check helper is exercised separately.
 	 *
-	 * @since 1.11.0
+	 * @since 1.10.0
 	 *
 	 * @param mixed $candidate Raw value as received from SaaS.
 	 *

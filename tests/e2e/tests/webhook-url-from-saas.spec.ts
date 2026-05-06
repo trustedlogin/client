@@ -1,5 +1,5 @@
 /**
- * Browser-driven E2E: TL-48 webhook URL cached from SaaS sync.
+ * Browser-driven E2E: webhook URL cached from SaaS sync.
  *
  * Pins the production wire path that PHPUnit cannot reach:
  *   1. fake-saas is told to include `webhookUrl` in the next /sites/
@@ -84,7 +84,7 @@ test.beforeEach( () => {
 } );
 
 test( 'SaaS-supplied webhookUrl is cached as option and autoload=off', async ( { page } ) => {
-	const expected = 'https://hooks.example.com/tl-48-' + Date.now().toString( 36 );
+	const expected = 'https://hooks.example.com/wh-' + Date.now().toString( 36 );
 	setSaasWebhookUrl( expected );
 
 	await loginAsAdmin( page );
@@ -101,7 +101,7 @@ test( 'SaaS-supplied webhookUrl is cached as option and autoload=off', async ( {
 	const stored = readOption( OPTION_KEY );
 	expect( stored, 'option must equal SaaS-supplied webhookUrl' ).toBe( expected );
 
-	// Autoload guard — TL-48 explicitly writes the option with autoload=false
+	// Autoload guard — the SDK explicitly writes the option with autoload=false
 	// so it never enters wp_load_alloptions(). WP 6.7 changed the on-disk
 	// representation from 'no' → 'off' / 'auto-off'. Accept any of those.
 	const autoload = readAutoload( OPTION_KEY );

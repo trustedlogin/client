@@ -196,7 +196,7 @@ if ( ! class_exists( '\WP_Error' ) ) {
 	}
 }
 
-// TL-48: stubs for the WP URL helpers used by Config::sanitize_webhook_url.
+// Stubs for the WP URL helpers used by Config::sanitize_webhook_url.
 if ( ! function_exists( 'wp_parse_url' ) ) {
 	function wp_parse_url( $url, $component = -1 ) {
 		// Match WP behavior closely enough for our sanitizer's needs.

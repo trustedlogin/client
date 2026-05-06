@@ -1,6 +1,6 @@
 <?php
 /**
- * TL-48 — Webhook URL read-chain priority + deprecation cardinality.
+ * Webhook URL read-chain priority + deprecation cardinality.
  *
  * Pinned reconciliation decisions covered here:
  *   - Config `webhook/url` wins over cached SaaS URL (back-compat).
@@ -233,7 +233,7 @@ class TrustedLoginWebhookUrlReadChainTest extends WP_UnitTestCase {
 	// ---------------------------------------------------------------
 
 	public function test_no_signature_header_added() {
-		// Pin: TL-48 explicitly does NOT add a signature header. Future
+		// Pin: this design explicitly does NOT add a signature header. Future
 		// Connector-mediated work will. This test exists so the absence
 		// is intentional — it must be inverted (not deleted) when
 		// signing lands.
@@ -271,7 +271,7 @@ class TrustedLoginWebhookUrlReadChainTest extends WP_UnitTestCase {
 			$this->assertContains(
 				$key,
 				$allowed,
-				sprintf( 'Unexpected webhook payload field "%s" — TL-48 pins payload shape; expand `$allowed` deliberately if adding.', $key )
+				sprintf( 'Unexpected webhook payload field "%s" — this test pins payload shape; expand `$allowed` deliberately if adding.', $key )
 			);
 		}
 	}

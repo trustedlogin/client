@@ -2,7 +2,7 @@
 /**
  * Pure-PHPUnit tests for {@see Config::sanitize_webhook_url}.
  *
- * Pinned by TL-48 design. The sanitizer is the bouncer at the cache
+ * The sanitizer is the bouncer at the cache
  * write — anything malformed, mis-schemed, or attacker-shaped that
  * gets past it ends up as a bearer secret in `wp_options` on a real
  * customer site.
