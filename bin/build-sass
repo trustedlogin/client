@@ -97,7 +97,13 @@ call_user_func( function ( $version ) use ( $argv ) {
 		$scss->setOutputStyle( ScssPhp\ScssPhp\OutputStyle::COMPRESSED );
 		$scssContent = file_get_contents( $inputFile );
 		$cssContent  = $scss->compileString( $scss_prefix . $scssContent );
-		$bytes_saved = file_put_contents( $outputFile, $cssContent->getCss() );
+
+		// Strip any leading UTF-8 BOM scssphp may emit. A BOM on a
+		// concatenated CSS file can break downstream tooling and is
+		// unnecessary for ASCII-prefixed content.
+		$css = preg_replace( '/^\xEF\xBB\xBF/', '', $cssContent->getCss() );
+
+		$bytes_saved = file_put_contents( $outputFile, $css );
 
 		if ( $bytes_saved ) {
 			echo "SCSS compiled to CSS successfully. Saved to $outputFile.\n";
