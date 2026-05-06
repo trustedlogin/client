@@ -24,11 +24,7 @@
 			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
 			border-radius: $border-radius-base;
 			overflow: hidden;
-			// Bottom padding bumped from `$gutter-width` (10px) so the
-			// Grant Access button + ToS line stop hugging the card's
-			// bottom edge. Top stays at 40px for the existing visual
-			// balance with the intro heading.
-			padding: 40px 5% ($vertical-spacing * 2);
+			padding: 40px 5% $gutter-width;
 			border-bottom: 1px solid $color-light-grey-900;
 
 			* {
