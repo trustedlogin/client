@@ -24,6 +24,7 @@
 
 import { test, expect } from '@playwright/test';
 import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
+import { loginAsAdmin } from './helpers/login';
 
 const NS = 'pro-block-builder';
 
@@ -243,14 +244,11 @@ test( 'pre-flight: Grant Access form is replaced by fallback when pubkey fetch f
     const ctx = await browser.newContext();
     const p = await ctx.newPage();
 
-    // Log in.
-    await p.goto( 'http://localhost:8002/wp-login.php', { waitUntil: 'domcontentloaded' } );
-    if ( p.url().includes( 'wp-login.php' ) ) {
-        await p.locator( '#user_login' ).fill( 'admin' );
-        await p.locator( '#user_pass' ).fill( 'admin' );
-        await p.locator( '#wp-submit' ).click( { noWaitAfter: true } );
-        await p.waitForURL( /\/wp-admin\//, { timeout: 30_000, waitUntil: 'commit' } );
-    }
+    // Log in via the canonical helper. Going through the inline
+    // wp-login.php POST exposed the password-strength-meter / zxcvbn
+    // race that wipes the password fill; loginAsAdmin retries until
+    // the value sticks before submitting.
+    await loginAsAdmin( p );
 
     // Navigate to the Grant Support Access admin page.
     await p.goto( `http://localhost:8002/wp-admin/admin.php?page=grant-${ NS }-access`, { waitUntil: 'domcontentloaded' } );
@@ -289,13 +287,7 @@ test( 'pre-flight: healthy pubkey fetch shows the normal form', async ( { browse
     const ctx = await browser.newContext();
     const p = await ctx.newPage();
 
-    await p.goto( 'http://localhost:8002/wp-login.php', { waitUntil: 'domcontentloaded' } );
-    if ( p.url().includes( 'wp-login.php' ) ) {
-        await p.locator( '#user_login' ).fill( 'admin' );
-        await p.locator( '#user_pass' ).fill( 'admin' );
-        await p.locator( '#wp-submit' ).click( { noWaitAfter: true } );
-        await p.waitForURL( /\/wp-admin\//, { timeout: 30_000, waitUntil: 'commit' } );
-    }
+    await loginAsAdmin( p );
 
     await p.goto( `http://localhost:8002/wp-admin/admin.php?page=grant-${ NS }-access`, { waitUntil: 'domcontentloaded' } );
 
