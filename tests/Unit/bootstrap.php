@@ -195,3 +195,48 @@ if ( ! class_exists( '\WP_Error' ) ) {
 		}
 	}
 }
+
+// TL-48: stubs for the WP URL helpers used by Config::sanitize_webhook_url.
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( $url, $component = -1 ) {
+		// Match WP behavior closely enough for our sanitizer's needs.
+		return -1 === $component ? parse_url( $url ) : parse_url( $url, $component );
+	}
+}
+if ( ! function_exists( 'esc_url_raw' ) ) {
+	function esc_url_raw( $url, $protocols = null ) {
+		$url = (string) $url;
+		if ( '' === $url ) {
+			return '';
+		}
+		$allowed = (array) ( $protocols ?: array( 'http', 'https' ) );
+		// Build a simple allowed-scheme regex.
+		$pattern = '#^(' . implode( '|', array_map( 'preg_quote', $allowed ) ) . ')://#i';
+		if ( ! preg_match( $pattern, $url ) ) {
+			return '';
+		}
+		// Strip control chars (matches WP's intent — though WP strips
+		// more aggressively; this keeps the unit test assertions stable).
+		$url = preg_replace( '/[\x00-\x1F\x7F]/', '', $url );
+		// Encode characters that would break attribute / header context.
+		return str_replace(
+			array( '"', "'", '<', '>', ' ' ),
+			array( '%22', '%27', '%3C', '%3E', '%20' ),
+			$url
+		);
+	}
+}
+if ( ! function_exists( 'wp_http_validate_url' ) ) {
+	function wp_http_validate_url( $url ) {
+		// Approximate WP's wp_http_validate_url for unit-test purposes:
+		// require absolute URL with http or https scheme and a host.
+		$parsed = parse_url( (string) $url );
+		if ( ! is_array( $parsed ) || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+			return false;
+		}
+		if ( ! in_array( strtolower( $parsed['scheme'] ), array( 'http', 'https' ), true ) ) {
+			return false;
+		}
+		return $url;
+	}
+}
