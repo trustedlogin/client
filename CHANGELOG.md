@@ -1,3 +1,26 @@
+## 1.11.0 (develop)
+
+This release lets vendors register a webhook URL in their TrustedLogin dashboard and have customer sites pick it up automatically — no Config-array rebuild, no plugin update on the customer side. Configuring webhooks moves out of the plugin's PHP and into the dashboard.
+
+#### 🚀 Added
+
+- The customer site now caches the webhook URL the SaaS returns in the `POST /api/v1/sites/` response (under the option `tl_{namespace}_webhook_url`, autoload off). On every grant / extend / login_in / revoke event, the SDK fires a webhook to that cached URL — no code change, no redeploy.
+- New strict sanitizer `Config::sanitize_webhook_url()` accepts only `https://` URLs, rejects URLs containing user/pass, ASCII control characters, or longer than 2,048 chars. The SaaS validates the same set at registration time so the SDK and dashboard agree on what's a valid URL.
+
+#### 🛠 Changed
+
+- The SDK's webhook delivery now goes through `wp_safe_remote_post` (was `wp_remote_post`), with an additional pre-flight that resolves the webhook host and refuses to deliver when it points at a private / loopback / link-local / AWS IMDS address — defense in depth against an unrelated plugin flipping `http_request_host_is_external` permissive.
+- Webhook URLs are treated as bearer secrets: the four log lines emitted by the webhook delivery path now redact to host-only (path / query / fragment never appears in logs), and the `Remote::send()` debug response dump scrubs `webhookUrl` from the SaaS response body before writing.
+- The `webhook/url` Config key (and its legacy `webhook_url` alias) still work but emit a one-time-per-request deprecation log encouraging integrators to remove the Config key and use the dashboard-registered URL instead. When both are set, Config wins (back-compat) and a distinct shadowing log fires so integrators can detect the override.
+
+#### 🛡️ Security
+
+- New CI-gating `@group security-critical` PHPUnit suite that fails fast if any of the webhook-URL log redactions regress.
+
+#### 👨‍💻 Developer Updates
+
+- New helper `Remote::redact_url()` returns the host portion of a URL (or `[invalid-url]` on parse failure) — useful for any integrator code that wants to surface a webhook URL in admin notices or logs without leaking the secret-bearing portion.
+
 ## 1.10.0 (May 6, 2026)
 
 This release rewrites the failed-login feedback flow so support agents land on **their** Connector with a per-attempt SaaS record (instead of on the customer's `wp-login.php` with a generic banner), overhauls the Grant Access screen's customer-facing error messages, and fixes several long-standing capability and multisite issues.
