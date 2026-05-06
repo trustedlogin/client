@@ -101,6 +101,34 @@ class SiteAccess {
 			return new \WP_Error( 'sync_error', __( 'Support access could not be registered. Please try again in a minute, or contact the plugin\'s support team.', 'trustedlogin' ) );
 		}
 
+		// TL-48: opportunistically cache the SaaS-supplied webhook URL.
+		// This decouples the webhook target from plugin source, removing
+		// the URL-scrape attack surface. Older SaaS without the field is
+		// fine — `webhookUrl` is intentionally NOT in handle_response()'s
+		// required-fields list, so absent/null/empty values silently
+		// preserve any existing cache (per the agreed reconciliation —
+		// SaaS-controlled response shape is not a deliberate clear
+		// signal; that requires an authenticated structured envelope
+		// that this design defers to a future minor).
+		if ( isset( $response_json['webhookUrl'] ) ) {
+			$candidate = $response_json['webhookUrl'];
+			$sanitized = Config::sanitize_webhook_url( $candidate );
+
+			if ( '' !== $sanitized ) {
+				$option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() );
+				update_option( $option_key, $sanitized, false );
+			} elseif ( is_string( $candidate ) && '' !== $candidate ) {
+				// Non-empty string that failed sanitization — log host
+				// only via {@see Remote::redact_url}.
+				$this->logging->log(
+					sprintf( 'TrustedLogin SaaS returned an invalid webhookUrl (rejected by sanitizer); host=%s', Remote::redact_url( $candidate ) ),
+					__METHOD__,
+					'warning'
+				);
+			}
+			// Silent on null / empty / type-mismatch — preserves cache.
+		}
+
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/secret/synced',
 			array(

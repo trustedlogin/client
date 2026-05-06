@@ -64,8 +64,15 @@ final class Remote {
 	 */
 	public function init() {
 
-		// If the webhook URL is not set, don't add the actions to speed up initialization.
-		if ( ! $this->config->get_setting( 'webhook/url' ) && ! $this->config->get_setting( 'webhook_url' ) ) {
+		// If the webhook URL is not set anywhere — Config (current key
+		// or legacy alias) OR the SaaS-cached option (TL-48) — don't
+		// add the actions to speed up initialization.
+		$has_config_url = $this->config->get_setting( 'webhook/url' ) || $this->config->get_setting( 'webhook_url' );
+		$has_cached_url = (bool) get_option(
+			sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ),
+			''
+		);
+		if ( ! $has_config_url && ! $has_cached_url ) {
 			return;
 		}
 
@@ -73,6 +80,91 @@ final class Remote {
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/logged_in', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
+	}
+
+	/**
+	 * Per-request flag — true once the deprecation log has fired.
+	 *
+	 * Bounds the deprecation log to AT MOST ONCE per request regardless
+	 * of how many webhook actions fire. Reset between PHPUnit tests via
+	 * {@see Remote::reset_deprecation_flag}.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @var bool
+	 */
+	private static $deprecation_logged = false;
+
+	/**
+	 * Resets {@see Remote::$deprecation_logged}. Test-only.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return void
+	 */
+	public static function reset_deprecation_flag() {
+		self::$deprecation_logged = false;
+	}
+
+	/**
+	 * Returns the host portion of a URL, or '[invalid-url]' on parse failure.
+	 *
+	 * Webhook URLs are bearer secrets post-TL-48. Log lines that previously
+	 * contained the full URL must redact to host-only — the path / query /
+	 * fragment is the secret-bearing portion.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param string $url Candidate URL to redact.
+	 *
+	 * @return string Host (or scheme://host), or '[invalid-url]' on parse failure.
+	 */
+	public static function redact_url( $url ) {
+		if ( ! is_string( $url ) || '' === $url ) {
+			return '[invalid-url]';
+		}
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		return is_string( $host ) && '' !== $host ? $host : '[invalid-url]';
+	}
+
+	/**
+	 * Determines whether an IP address is in an internal / link-local /
+	 * private range — covering loopback, RFC 1918, link-local (incl. AWS
+	 * IMDS at 169.254.169.254), and the IPv6 equivalents.
+	 *
+	 * Used as a defense-in-depth pre-flight before {@see wp_safe_remote_post}
+	 * — guards against a `http_request_host_is_external` filter set
+	 * permissively by an unrelated plugin.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param string $ip IPv4 or IPv6 address (already resolved).
+	 *
+	 * @return bool
+	 */
+	public static function is_internal_ip( $ip ) {
+		if ( ! is_string( $ip ) || '' === $ip ) {
+			return false;
+		}
+
+		// FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE rejects
+		// RFC1918 + reserved (loopback, link-local, IPv6 ULA, etc.).
+		// `filter_var(... FILTER_VALIDATE_IP, [flags])` returns the IP
+		// if PUBLIC, false if private/reserved/non-IP. We invert that.
+		$is_public = filter_var(
+			$ip,
+			FILTER_VALIDATE_IP,
+			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+		);
+
+		// Non-IP strings (e.g. when gethostbyname returns the original
+		// hostname after DNS failure) — treat as not-internal so the
+		// pre-flight doesn't false-positive.
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return false;
+		}
+
+		return false === $is_public;
 	}
 
 	/**
@@ -97,11 +189,44 @@ final class Remote {
 	 */
 	public function maybe_send_webhook( $data ) {
 
-		$webhook_url = $this->config->get_setting( 'webhook/url' );
+		// Read chain (priority order):
+		// 1. `webhook/url` from Config (deprecated, current key).
+		// 2. `webhook_url` from Config (deprecated, legacy alias).
+		// 3. `tl_{ns}_webhook_url` option cached by SiteAccess::sync_secret
+		// from the SaaS response (TL-48, the canonical post-1.11.0 path).
+		// When 1 OR 2 is set, fire a deprecation log (once per request).
+		// When BOTH a Config-level URL AND the cached SaaS URL exist,
+		// Config wins AND a distinct shadowing log line fires so
+		// integrators can detect shadowing without grep ambiguity.
+		$config_url = $this->config->get_setting( 'webhook/url' );
+		if ( ! $config_url ) {
+			$config_url = $this->config->get_setting( 'webhook_url' );
+		}
 
-		if ( ! $webhook_url ) {
-			// Back compatibility with v1–v1.3.4.
-			$webhook_url = $this->config->get_setting( 'webhook_url' );
+		$cached_option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() );
+		$cached_url        = (string) get_option( $cached_option_key, '' );
+
+		if ( $config_url ) {
+			$webhook_url = $config_url;
+
+			if ( ! self::$deprecation_logged ) {
+				$this->logging->log(
+					'The `webhook/url` config key is deprecated; register the URL in your TrustedLogin dashboard. See https://www.trustedlogin.com/docs/webhook-config-migration',
+					__METHOD__,
+					'warning'
+				);
+				self::$deprecation_logged = true;
+			}
+
+			if ( '' !== $cached_url ) {
+				$this->logging->log(
+					'`webhook/url` in Config is shadowing the URL registered in your TrustedLogin dashboard. Remove the Config key to use the dashboard value.',
+					__METHOD__,
+					'warning'
+				);
+			}
+		} else {
+			$webhook_url = $cached_url;
 		}
 
 		if ( ! $webhook_url ) {
@@ -109,11 +234,30 @@ final class Remote {
 		}
 
 		if ( ! wp_http_validate_url( $webhook_url ) ) {
-			$error = new \WP_Error( 'invalid_webhook_url', 'An invalid `webhook/url` setting was passed to the TrustedLogin Client: ' . esc_attr( $webhook_url ) );
+			$error = new \WP_Error( 'invalid_webhook_url', 'An invalid webhook URL was configured. host=' . self::redact_url( $webhook_url ) );
 
 			$this->logging->log( $error, __METHOD__, 'error' );
 
 			return $error;
+		}
+
+		// SSRF defense-in-depth: even with `wp_safe_remote_post` below,
+		// an unrelated plugin can flip `http_request_host_is_external`
+		// permissive. Resolve the host and reject internal/link-local
+		// targets explicitly.
+		$parsed_host = wp_parse_url( $webhook_url, PHP_URL_HOST );
+		if ( is_string( $parsed_host ) && '' !== $parsed_host ) {
+			$resolved = gethostbyname( $parsed_host );
+			if ( $resolved !== $parsed_host && self::is_internal_ip( $resolved ) ) {
+				$error = new \WP_Error(
+					'webhook_url_internal_ip',
+					'Webhook URL resolves to an internal IP; refusing to deliver. host=' . self::redact_url( $webhook_url )
+				);
+
+				$this->logging->log( $error, __METHOD__, 'error' );
+
+				return $error;
+			}
 		}
 
 		try {
@@ -168,19 +312,24 @@ final class Remote {
 				$data
 			);
 
-			$posted = wp_remote_post( $webhook_url, $args );
+			// `wp_safe_remote_post` (vs `wp_remote_post`) honors the
+			// host-allowlist, blocking outbound requests to internal
+			// hosts unless explicitly allowed. Combined with the IP
+			// pre-flight above, defends against SSRF via an attacker-
+			// controlled or accidentally-permissive webhook URL.
+			$posted = wp_safe_remote_post( $webhook_url, $args );
 
 			if ( is_wp_error( $posted ) ) {
-				$this->logging->log( 'An error encountered while sending a webhook to ' . esc_attr( $webhook_url ), __METHOD__, 'error', $posted );
+				$this->logging->log( 'An error encountered while sending a webhook. host=' . self::redact_url( $webhook_url ), __METHOD__, 'error', $posted );
 
 				return $posted;
 			}
 
-			$this->logging->log( 'Webhook was sent to ' . esc_attr( $webhook_url ), __METHOD__, 'debug', $data );
+			$this->logging->log( 'Webhook was sent. host=' . self::redact_url( $webhook_url ), __METHOD__, 'debug', $data );
 
 			return true;
 		} catch ( Exception $exception ) {
-			$this->logging->log( 'A fatal error was triggered while sending a webhook to ' . esc_attr( $webhook_url ) . ': ' . $exception->getMessage(), __METHOD__, 'error' );
+			$this->logging->log( 'A fatal error was triggered while sending a webhook. host=' . self::redact_url( $webhook_url ) . '; error=' . $exception->getMessage(), __METHOD__, 'error' );
 
 			return new \WP_Error( $exception->getCode(), $exception->getMessage() );
 		}
@@ -279,8 +428,48 @@ final class Remote {
 			return $error;
 		}
 
+		// TL-48: redact `webhookUrl` from the response body before
+		// logging. The SaaS sync_secret response contains it as a
+		// bearer-secret value; emitting the raw response into the
+		// debug log undoes the cache-write redaction work.
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-		$this->logging->log( sprintf( 'Response: %s', print_r( $response, true ) ), __METHOD__, 'debug' );
+		$this->logging->log( sprintf( 'Response: %s', print_r( self::redact_response_for_log( $response ), true ) ), __METHOD__, 'debug' );
+
+		return $response;
+	}
+
+	/**
+	 * Returns a copy of `$response` (as returned by wp_remote_request)
+	 * with the `webhookUrl` value scrubbed from a JSON body, if present.
+	 *
+	 * Defense-in-depth alongside {@see Remote::redact_url} on the four
+	 * webhook-fire log lines in {@see Remote::maybe_send_webhook}.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param mixed $response wp_remote_request() return value (array or WP_Error).
+	 *
+	 * @return mixed
+	 */
+	private static function redact_response_for_log( $response ) {
+		if ( ! is_array( $response ) || empty( $response['body'] ) || ! is_string( $response['body'] ) ) {
+			return $response;
+		}
+
+		// Quick path: if the body doesn't even contain `webhookUrl`,
+		// don't pay the json_decode cost.
+		if ( false === strpos( $response['body'], 'webhookUrl' ) ) {
+			return $response;
+		}
+
+		$decoded = json_decode( $response['body'], true );
+		if ( is_array( $decoded ) && array_key_exists( 'webhookUrl', $decoded ) ) {
+			$original              = $decoded['webhookUrl'];
+			$decoded['webhookUrl'] = is_string( $original ) && '' !== $original
+				? '[redacted-host=' . self::redact_url( $original ) . ']'
+				: '[redacted]';
+			$response['body']      = wp_json_encode( $decoded );
+		}
 
 		return $response;
 	}

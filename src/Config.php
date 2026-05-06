@@ -122,12 +122,123 @@ final class Config {
 			'logo_url'              => null,
 			'about_live_access_url' => null,
 		),
+		// `webhook/url` is deprecated. Register the URL in the TrustedLogin
+		// dashboard instead — the SDK fetches it from SaaS at grant time and
+		// caches it in `wp_options` under {@see Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE}.
+		// Removed in 2.0.
 		'webhook'          => array(
-			'url'           => null,
+			'url'           => null, // @deprecated 1.11.0 — register via SaaS dashboard.
 			'debug_data'    => false,
 			'create_ticket' => false,
 		),
 	);
+
+	/**
+	 * Sprintf template for the per-namespace cached webhook URL option.
+	 *
+	 * The SDK writes the SaaS-supplied webhook URL here during sync_secret.
+	 * `update_option` is called with `autoload=false` — the URL is treated
+	 * as a bearer secret in the TL-48 design and must not ship in the
+	 * autoloaded options dump.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @var string
+	 */
+	const WEBHOOK_URL_OPTION_KEY_TEMPLATE = 'tl_%s_webhook_url';
+
+	/**
+	 * Maximum accepted length for a SaaS-supplied webhook URL.
+	 *
+	 * Reasonable for any real webhook URL with a token; rejects memory-
+	 * abuse payloads.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @var int
+	 */
+	const WEBHOOK_URL_MAX_LENGTH = 2048;
+
+	/**
+	 * Validates and sanitizes a webhook URL candidate before caching.
+	 *
+	 * Rejects (returns empty string) on:
+	 *   - non-string
+	 *   - empty string
+	 *   - length > WEBHOOK_URL_MAX_LENGTH
+	 *   - non-https scheme (http/javascript/data/file/ftp/scheme-less/relative)
+	 *   - userinfo present (`https://user:pass@host/`)
+	 *   - host resolves to an internal IP (loopback, RFC1918, link-local — including AWS IMDS 169.254.169.254)
+	 *
+	 * Pure-static for unit testability — no WordPress dependency, no DNS
+	 * unless the IP-check helper is exercised separately.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param mixed $candidate Raw value as received from SaaS.
+	 *
+	 * @return string Sanitized HTTPS URL, or '' if rejected.
+	 */
+	public static function sanitize_webhook_url( $candidate ) {
+
+		if ( ! is_string( $candidate ) || '' === $candidate ) {
+			return '';
+		}
+
+		if ( strlen( $candidate ) > self::WEBHOOK_URL_MAX_LENGTH ) {
+			return '';
+		}
+
+		// Reject control characters / null bytes outright. esc_url_raw
+		// strips many but not all combinations; an explicit reject keeps
+		// the rule simple and documented.
+		if ( preg_match( '/[\x00-\x1F\x7F]/', $candidate ) ) {
+			return '';
+		}
+
+		$parsed = wp_parse_url( $candidate );
+		if ( ! is_array( $parsed ) || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+			return '';
+		}
+
+		// HTTPS-only. URL is a bearer secret; HTTP exposes it on every
+		// fire to any on-path observer.
+		if ( 'https' !== strtolower( $parsed['scheme'] ) ) {
+			return '';
+		}
+
+		// Reject userinfo. Webhook URLs with `user:pass@` invite
+		// credential confusion and break SaaS rotation guarantees.
+		if ( ! empty( $parsed['user'] ) || ! empty( $parsed['pass'] ) ) {
+			return '';
+		}
+
+		$sanitized = esc_url_raw( $candidate, array( 'https' ) );
+		if ( '' === $sanitized ) {
+			return '';
+		}
+
+		// Re-parse after esc_url_raw to defend against the sanitizer
+		// returning a value that no longer matches the validated parse
+		// (e.g. URL gained a host portion through escaping). We don't
+		// call wp_http_validate_url here because it consults
+		// `WP_HTTP_BLOCK_EXTERNAL` / `WP_ACCESSIBLE_HOSTS` — that's an
+		// outbound-request gate, not a URL-syntax validator. The earlier
+		// wp_parse_url + scheme + host + userinfo checks already pin
+		// the URL is well-formed; if a future external-block check is
+		// wanted, it belongs at the `wp_safe_remote_post` callsite, not
+		// the cache-write sanitizer.
+		$reparsed = wp_parse_url( $sanitized );
+		if ( ! is_array( $reparsed )
+			|| empty( $reparsed['scheme'] )
+			|| 'https' !== strtolower( $reparsed['scheme'] )
+			|| empty( $reparsed['host'] )
+		) {
+			return '';
+		}
+
+		return $sanitized;
+	}
 
 	/**
 	 * Holds the configuration array. These settings are not validated until {@see valididate()} is called.
