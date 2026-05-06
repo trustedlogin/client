@@ -95,8 +95,14 @@ node -e "require('http').get('http://localhost:$SAAS_PORT/api/status', r=>proces
 # stored verification public key.
 
 bold "Setting up envelope-signing keypair on the real SaaS"
+# Pass REINSTALL through to the container — the heredoc uses single-quoted
+# 'INNER' to prevent the outer shell from expanding the inner php -r block,
+# which means $REINSTALL inside the heredoc reads the container's env, not
+# the host's. `docker compose exec -e` propagates the host value explicitly.
 SAAS_PUBKEY=$(
-    docker compose -f "$SAAS_DIR/docker-compose.yml" exec -T --privileged laravel.test sh <<'INNER'
+    docker compose -f "$SAAS_DIR/docker-compose.yml" exec -T --privileged \
+        -e REINSTALL="${REINSTALL:-false}" \
+        laravel.test sh <<'INNER'
 set -e
 cur=$(grep -E '^TL_ENVELOPE_SIGNING_PUBLIC_KEY=' .env 2>/dev/null | head -1 | cut -d= -f2)
 if [ -z "$cur" ] || [ "${REINSTALL:-false}" = "true" ]; then
