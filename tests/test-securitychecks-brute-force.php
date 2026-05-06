@@ -171,32 +171,16 @@ class TrustedLoginSecurityChecksBruteForceTest extends WP_UnitTestCase {
 				. 'allowing botnet brute-force.' );
 	}
 
-	public function test_one_IP_can_be_locked_out_while_others_remain_unaffected() {
-		// Trip lockdown from IP X.
+	public function test_three_attempts_from_single_IP_trips_brute_force_check() {
+		// Three failed attempts from the same IP must return WP_Error
+		// from check_brute_force. The site-wide lockdown side-effect
+		// (do_lockdown setting the namespace-scoped transient) is
+		// covered separately by security-lockdown-during-attack.spec.ts.
 		$_SERVER['REMOTE_ADDR'] = '198.51.100.1';
 		$this->check( 'a' );
 		$this->check( 'b' );
 		$result_x = $this->check( 'c' );
 		$this->assertInstanceOf( WP_Error::class, $result_x,
-			'precondition: 3 attempts from IP X should trip' );
-
-		// IP X tripping IS supposed to lock down the SITE (the
-		// transient is namespace-scoped, not IP-scoped). Confirm
-		// that\'s what happens — this is the "DoS by 3 identifiers
-		// from one IP" trade-off the per-IP counter was meant to
-		// MITIGATE but doesn\'t fully solve.
-		//
-		// SecurityChecks::do_lockdown sets the lockdown transient
-		// on first WP_Error from check_brute_force. After that,
-		// in_lockdown() returns true regardless of caller IP.
-		// Trip it explicitly via verify() — that\'s where do_lockdown
-		// is called. The check_brute_force private method only
-		// returns the WP_Error; it doesn\'t set the lockdown.
-		//
-		// Skipping the do_lockdown side-effect assertion here keeps
-		// this test focused on the counter behavior. A separate spec
-		// (security-lockdown-during-attack.spec.ts) covers the
-		// site-wide lockdown effect.
-		$this->assertTrue( true, 'see security-lockdown-during-attack.spec.ts for the cross-IP lockdown effect' );
+			'3 distinct identifiers from one IP must trip the per-IP brute-force counter' );
 	}
 }

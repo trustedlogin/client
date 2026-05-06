@@ -37,6 +37,9 @@ class FormNamespaceIsolationTest extends WP_UnitTestCase {
 	private const NS_A = 'isolation-vendor-a';
 	private const NS_B = 'isolation-vendor-b';
 
+	/** @var \WP_Scripts|null */
+	private $original_wp_scripts;
+
 	public function setUp(): void {
 		parent::setUp();
 
@@ -54,12 +57,42 @@ class FormNamespaceIsolationTest extends WP_UnitTestCase {
 		$this->client_b = new Client( new Config( $this->minimal_config( self::NS_B, 'Vendor B' ) ) );
 
 		// Each test starts from a clean wp_scripts() state so inline
-		// data from a prior test doesn't bleed in.
+		// data from a prior test doesn't bleed in. Snapshot the current
+		// instance so tearDown() can restore it.
 		global $wp_scripts;
+		$this->original_wp_scripts = $wp_scripts;
 		$wp_scripts = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 
 		$this->form_a = $this->build_form_for( $this->client_a );
 		$this->form_b = $this->build_form_for( $this->client_b );
+	}
+
+	public function tearDown(): void {
+
+		// Restore the global $wp_scripts so subsequent tests don't see
+		// the wp_register_script + wp_add_inline_script side-effects we
+		// produced here.
+		global $wp_scripts;
+		$wp_scripts = $this->original_wp_scripts; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		// Client::__construct attaches namespaced action/filter callbacks
+		// (init, admin_enqueue_scripts, ajax_*, etc.). Strip every hook
+		// the two test instances may have registered so unrelated tests
+		// running after us don't fire our callbacks.
+		foreach ( array( self::NS_A, self::NS_B ) as $ns ) {
+			$prefix = 'trustedlogin/' . $ns . '/';
+			global $wp_filter;
+			if ( is_array( $wp_filter ) ) {
+				foreach ( array_keys( $wp_filter ) as $hook ) {
+					if ( 0 === strpos( $hook, $prefix ) ) {
+						remove_all_actions( $hook );
+						remove_all_filters( $hook );
+					}
+				}
+			}
+		}
+
+		parent::tearDown();
 	}
 
 	/**

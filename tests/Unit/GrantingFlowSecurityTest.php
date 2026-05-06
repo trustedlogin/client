@@ -44,7 +44,9 @@ class GrantingFlowSecurityTest extends TestCase {
 					'api_key'     => 'a1b2c3d4e5f6a1b2',
 					'license_key' => 'license-test',
 				),
-				'decay'          => 7 * DAY_IN_SECONDS,
+				// Inline the WordPress DAY_IN_SECONDS constant (86400) since
+				// this is a pure-PHPUnit test that runs without WP bootstrap.
+				'decay'          => 7 * 86400,
 				'vendor'         => array(
 					'namespace'   => 'testns',
 					'title'       => 'Test Vendor',

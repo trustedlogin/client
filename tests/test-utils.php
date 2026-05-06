@@ -227,7 +227,6 @@ class TrustedLoginUtilsTest extends WP_UnitTestCase {
 	 */
 	public function test_delete_transient_rejects_bad_input() {
 		$this->assertFalse( Utils::delete_transient( '' ) );
-		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict -- testing defensive behavior with mixed types
 		$this->assertFalse( Utils::delete_transient( 0 ) );
 		$this->assertFalse( Utils::delete_transient( null ) );
 		$this->assertFalse( Utils::delete_transient( array( 'not-a-string' ) ) );
