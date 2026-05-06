@@ -249,7 +249,7 @@ final class Remote {
 
 		$request_options = array(
 			'method'      => $method,
-			'timeout'     => null === $timeout ? 15 : (int) $timeout,
+			'timeout'     => null === $timeout ? 15 : max( 1, (int) $timeout ),
 			'httpversion' => '1.1',
 			'headers'     => $headers,
 		);

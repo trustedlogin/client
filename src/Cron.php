@@ -106,7 +106,7 @@ final class Cron {
 	 *
 	 * @since 1.10.0
 	 *
-	 * @param array<string, int> $queue Map of identifier => first-attempt unix timestamp.
+	 * @param array<string, int> $queue Map of secret_id => attempt_count.
 	 */
 	private function save_pending_saas_revoke_queue( array $queue ) {
 		if ( empty( $queue ) ) {

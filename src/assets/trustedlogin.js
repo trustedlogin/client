@@ -70,6 +70,7 @@
 			if ( anyDebug() ) {
 				console.warn( '[trustedlogin] postMessage failed:', e );
 			}
+			return false;
 		}
 		return true;
 	}

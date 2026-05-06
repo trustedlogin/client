@@ -413,7 +413,14 @@ final class LoginAttempts {
 	 */
 	private function scrub_secrets( $text ) {
 		foreach ( self::secret_scrub_patterns() as $pattern => $replacement ) {
-			$text = preg_replace( $pattern, $replacement, $text );
+			// preg_replace returns null on PCRE error (e.g., backtrack
+			// limit exceeded with crafted input). Preserve $text so the
+			// detailed_reason isn't silently zeroed out for one bad
+			// pattern — the remaining patterns still get their chance.
+			$replaced = preg_replace( $pattern, $replacement, $text );
+			if ( null !== $replaced ) {
+				$text = $replaced;
+			}
 		}
 
 		return (string) $text;
