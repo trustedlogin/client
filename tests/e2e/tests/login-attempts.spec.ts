@@ -231,15 +231,25 @@ async function submitTrustedLoginForm(
 ): Promise<void> {
 	await page.goto( 'about:blank' );
 
+	// Escape values for HTML attribute context. The endpoint/identifier
+	// are exercised with hostile inputs in some specs, and an unescaped
+	// quote would break out of the value="" attribute and corrupt the
+	// form before submit fires.
+	const attr = ( s: string ) =>
+		s.replace( /&/g, '&amp;' )
+			.replace( /"/g, '&quot;' )
+			.replace( /</g, '&lt;' )
+			.replace( />/g, '&gt;' );
+
 	// Wait for the navigation triggered by form.submit() so callers can
 	// reason about the post-submit DOM. Without this, waitForFunction
-	// against body.innerText polls about:blank's empty body and times out.
+	// against about:blank's empty body times out.
 	await Promise.all( [
 		page.waitForLoadState( 'load', { timeout: NAV_TIMEOUT_MS } ),
-		page.setContent( `<form id="f" method="POST" action="${ VENDOR_STATE.client_url }/">
+		page.setContent( `<form id="f" method="POST" action="${ attr( VENDOR_STATE.client_url ) }/">
 			<input name="action" value="trustedlogin">
-			<input name="endpoint" value="${ endpoint }">
-			<input name="identifier" value="${ identifier }">
+			<input name="endpoint" value="${ attr( endpoint ) }">
+			<input name="identifier" value="${ attr( identifier ) }">
 		</form><script>document.getElementById('f').submit();</script>` ),
 	] );
 }

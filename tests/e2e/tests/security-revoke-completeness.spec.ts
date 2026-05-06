@@ -78,7 +78,8 @@ test( 'revoke cleans up every artifact a magic-link could exploit', async ( { pa
 	const revokeHref = await form.revokeButton().getAttribute( 'href' );
 	expect( revokeHref ).toMatch( /revoke-tl=/ );
 	const navResponse = await page.goto( revokeHref!, { waitUntil: 'load' } );
-	expect( navResponse?.status() ).toBeGreaterThanOrEqual( 200 );
+	expect( navResponse, 'page.goto must return a Response for the revoke href' ).not.toBeNull();
+	expect( navResponse!.status() ).toBeGreaterThanOrEqual( 200 );
 	expect( navResponse!.status() ).toBeLessThan( 400 );
 
 	// 4. Audit each artifact. The audit reads via the same DB / wp-cli

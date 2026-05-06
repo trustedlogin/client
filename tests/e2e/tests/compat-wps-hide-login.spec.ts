@@ -73,8 +73,20 @@ async function grantAndCaptureSecrets( ctx: BrowserContext ): Promise<{
     await vp.locator( '.tl-grant-access input[type="submit"]' ).click();
     await popupPromise;
 
-    try { await popup!.waitForLoadState( 'domcontentloaded' ); } catch {}
-    try { await popup!.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click(); } catch {}
+    // Best-effort popup interactions: the popup may auto-grant and
+    // close before we touch it. Surface real errors via console
+    // warnings so a debug session shows them; the .tl-site-key
+    // assertion below is the authoritative pass/fail signal.
+    await popup!.waitForLoadState( 'domcontentloaded' ).catch( ( e: Error ) => {
+        console.warn( '[compat-wps-hide-login] popup load did not settle (likely auto-closed):', e.message );
+    } );
+    await popup!
+        .locator( '.button-trustedlogin-' + VENDOR_STATE.namespace )
+        .first()
+        .click()
+        .catch( ( e: Error ) => {
+            console.warn( '[compat-wps-hide-login] grant button click skipped (likely auto-granted):', e.message );
+        } );
 
     await vp.waitForFunction( () => {
         const el = document.querySelector( '.tl-site-key' );

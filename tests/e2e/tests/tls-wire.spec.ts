@@ -35,6 +35,9 @@ const VENDOR_STATE = JSON.parse(
 );
 
 const CLIENT_TLS_URL = VENDOR_STATE.client_url_tls as string;
+if ( ! CLIENT_TLS_URL || typeof CLIENT_TLS_URL !== 'string' ) {
+    throw new Error( 'tls-wire.spec.ts: fixtures/.cache-vendor-state.json missing `client_url_tls`. Re-run bootstrap-vendor.sh after the caddy sidecar is up.' );
+}
 
 async function loginWpAdmin( ctx: BrowserContext, base: string ): Promise<void> {
     const p = await ctx.newPage();

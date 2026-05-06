@@ -64,7 +64,7 @@ test( 'attacker-controlled tl_origin is filtered out of the redirect target', as
 	const attackerHref = `${ revokeHref }${ sep }tl_return=login&tl_origin=${ encodeURIComponent( 'https://attacker.example.com/popup' ) }`;
 
 	const navResponse = await page.goto( attackerHref, { waitUntil: 'load' } );
-	expect( navResponse?.status() ).toBeGreaterThanOrEqual( 200 );
+	expect( navResponse?.ok(), 'attacker href must resolve to a 2xx response' ).toBeTruthy();
 
 	// The final URL after redirects must contain the trustedlogin
 	// confirmation params (revoked=1 etc.) but MUST NOT carry the
@@ -97,7 +97,7 @@ test( 'tl_origin matching the customer site IS preserved (sanity that filter isn
 	const trustedHref = `${ revokeHref }${ sep }tl_return=login&tl_origin=${ encodeURIComponent( CLIENT_URL ) }`;
 
 	const navResponse = await page.goto( trustedHref, { waitUntil: 'load' } );
-	expect( navResponse?.status() ).toBeGreaterThanOrEqual( 200 );
+	expect( navResponse?.ok(), 'trusted href must resolve to a 2xx response' ).toBeTruthy();
 
 	// Resolve_safe_referer returns the matched URL when the host
 	// equals one of the trusted hosts. The redirect should preserve

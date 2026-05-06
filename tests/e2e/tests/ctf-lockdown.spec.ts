@@ -40,8 +40,20 @@ test( 'ctf: lockdown DoS via 3 bogus identifiers with valid endpoint', async ( {
     const popupPromise = grantCtx.waitForEvent( 'page' );
     await vp.locator( '.tl-grant-access input[type="submit"]' ).click();
     const popup: Page = await popupPromise;
-    try { await popup.waitForLoadState( 'domcontentloaded' ); } catch {}
-    try { await popup.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click(); } catch {}
+    // Both calls below are best-effort: the popup may auto-grant and
+    // close before we can interact. Surface real errors via console
+    // warnings so a debug session shows them, then let the assertion
+    // on `.tl-site-key` below give the authoritative pass/fail signal.
+    await popup.waitForLoadState( 'domcontentloaded' ).catch( ( e: Error ) => {
+        console.warn( '[ctf-lockdown] popup load did not settle (likely auto-closed):', e.message );
+    } );
+    await popup
+        .locator( '.button-trustedlogin-' + VENDOR_STATE.namespace )
+        .first()
+        .click()
+        .catch( ( e: Error ) => {
+            console.warn( '[ctf-lockdown] grant button click skipped (likely auto-granted):', e.message );
+        } );
     await vp.waitForFunction( () => {
         const el = document.querySelector( '.tl-site-key' );
         return el && el.textContent && el.textContent.length > 10;

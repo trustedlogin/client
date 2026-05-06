@@ -16,7 +16,7 @@
  * backend would surface here.
  */
 
-import { test, expect, BrowserContext } from '@playwright/test';
+import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { wpCli, resetClientState } from './_helpers';
@@ -62,13 +62,28 @@ async function grantAccessKey( ctx: BrowserContext ): Promise<string> {
     await vp.locator( '.tl-grant-access .tl-site-url' ).fill( VENDOR_STATE.client_url );
     await vp.locator( '.tl-grant-access .tl-site-url' ).press( 'Tab' );
 
-    let popup: any = null;
-    const popupPromise = ctx.waitForEvent( 'page' ).then( ( p ) => { popup = p; } );
+    const popupPromise: Promise<Page> = ctx.waitForEvent( 'page' );
     await vp.locator( '.tl-grant-access input[type="submit"]' ).click();
-    await popupPromise;
+    const popup: Page = await popupPromise;
 
-    try { await popup.waitForLoadState( 'domcontentloaded' ); } catch {}
-    try { await popup.locator( '.button-trustedlogin-' + VENDOR_STATE.namespace ).first().click(); } catch {}
+    // The React SPA on the popup may auto-grant the moment it boots if
+    // the URL already carries valid `ak` + `ak_account_id` params — in
+    // that case the popup closes before we can click the manual grant
+    // button. Both calls below are best-effort: if the popup closed,
+    // the auto-grant already ran and the access key will appear in
+    // `.tl-site-key` on the parent page (the assertion below). Only
+    // genuine failures will surface as a `.tl-site-key` waitForFunction
+    // timeout, which gives a clearer error than a swallowed click error.
+    await popup.waitForLoadState( 'domcontentloaded' ).catch( ( e: Error ) => {
+        console.warn( '[react-spa] popup load did not settle (likely auto-closed):', e.message );
+    } );
+    await popup
+        .locator( '.button-trustedlogin-' + VENDOR_STATE.namespace )
+        .first()
+        .click()
+        .catch( ( e: Error ) => {
+            console.warn( '[react-spa] grant button click skipped (likely auto-granted):', e.message );
+        } );
 
     await vp.waitForFunction( () => {
         const el = document.querySelector( '.tl-site-key' );
@@ -194,9 +209,13 @@ test( 'React SPA surfaces an error when the access key is invalid', async ( { br
 
     await page.goto( deepLink, { waitUntil: 'domcontentloaded' } );
 
-    // The React app should render — container mount point + at least
-    // one form field or an error UI. Give it time to settle.
-    await page.waitForTimeout( 3000 );
+    // Wait for the React app's API call to settle so the form or error
+    // UI has actually rendered. networkidle catches both the success
+    // path (form stays mounted, no further requests) and the error
+    // path (POST to /v1/access_key returns 4xx, React renders inline
+    // error). Strictly better than a fixed timeout — fast on local,
+    // not flaky on CI.
+    await page.waitForLoadState( 'networkidle', { timeout: 15_000 } );
 
     // The agent should NOT have been redirected away from the vendor.
     // (Either the form stayed on page, or React showed an error
