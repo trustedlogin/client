@@ -293,34 +293,6 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $user_identifier );
 
-		// Replay protection: rotate the endpoint hash so the URL the
-		// agent just used can't be re-played by an intercepting proxy
-		// or a captured-from-logs URL. The agent is now authenticated
-		// via wp_set_auth_cookie inside maybe_login() — the magic URL
-		// has served its purpose. Any subsequent request to the now-
-		// stale endpoint hash hits the silent no-op fall-through in
-		// get_trustedlogin_request() because the stored hash will not
-		// match.
-		//
-		// random_bytes is deliberate: we want a non-derivable value
-		// so the URL is truly one-shot. SupportUser cleanup at
-		// expiration time also calls Endpoint::delete(), so the
-		// rotated hash never lingers past the grant lifetime.
-		try {
-			$rotated_hash = bin2hex( random_bytes( 32 ) );
-			$this->update( $rotated_hash );
-		} catch ( \Throwable $e ) {
-			// random_bytes failure is exceedingly rare on PHP 7+;
-			// log and continue rather than blocking the login that
-			// otherwise just succeeded. The next access-grant cycle
-			// will re-mint the endpoint anyway.
-			$this->logging->log(
-				'Could not rotate endpoint hash after login: ' . $e->getMessage(),
-				__METHOD__,
-				'warning'
-			);
-		}
-
 		wp_safe_redirect( add_query_arg( 'tl_notice', 'logged_in', admin_url() ) );
 
 		exit();
