@@ -303,11 +303,19 @@ final class Form {
 			<h3>{{display_name}}</h3>
 			<span class="tl-{{ns}}-auth__meta">{{auth_meta}}</span>';
 
+		// Escape every value at the substitution site. prepare_output()
+		// is a raw str_replace template engine — wp_kses strips
+		// dangerous tags later but escape-at-source is the only
+		// reliable defense (an integrator-controlled vendor/display_name
+		// would otherwise reach the DOM via the Filament-style
+		// substitution map). get_logo_html() at line 971-973 already
+		// uses esc_attr() on the same vendor/title field; this is
+		// closing the same gap on the auth header path.
 		$content = array(
-			'display_name'         => $support_user->display_name,
-			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'display_name'         => esc_html( $support_user->display_name ),
+			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', esc_url( $revoke_url ), esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			// translators: %s is the display name of the user who granted access.
-			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ), $auth_meta ),
+			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ), esc_html( $auth_meta ) ),
 		);
 
 		return $this->prepare_output( $template, $content );
@@ -1055,20 +1063,68 @@ final class Form {
 		$remote     = new Remote( $this->config, $this->logging );
 		$encryption = new Encryption( $this->config, $remote, $this->logging );
 
+		// Build a safe log download URL. When ABSPATH is not a prefix
+		// of the resolved log path (logs symlinked outside the
+		// webroot, ABSPATH normalized differently on the host),
+		// suppress the URL entirely rather than leaking the raw
+		// filesystem path as a URL component to anyone screen-sharing
+		// this page.
+		$log_path     = (string) $this->logging->get_log_file_path();
+		$log_url      = str_starts_with( $log_path, ABSPATH )
+			? get_site_url() . '/' . substr( $log_path, strlen( ABSPATH ) )
+			: '';
+
+		// API and License keys are real secrets. The page is gated on
+		// manage_options, but admins screen-share the debug surface
+		// to support more often than is comfortable. Mask everything
+		// but the last 4 chars so a glance can confirm "yes, the
+		// expected key" without exposing the full credential.
+		$api_key     = (string) $this->config->get_setting( 'auth/api_key' );
+		$license_key = (string) $this->config->get_setting( 'auth/license_key' );
+		$mask        = function ( $value, $tail = 4 ) {
+			$value = (string) $value;
+			$len   = strlen( $value );
+			if ( $len <= $tail ) {
+				return str_repeat( '•', $len );
+			}
+			return str_repeat( '•', $len - $tail ) . substr( $value, -$tail );
+		};
+
 		$items = array(
-			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', 'https://status.trustedlogin.com', is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
-			esc_html__( 'API Key', 'trustedlogin' )     => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/api_key' ) ),
-			esc_html__( 'License Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/license_key' ) ),
-			esc_html__( 'Log URL', 'trustedlogin' )     => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', str_replace( ABSPATH, get_site_url() . '/', $this->logging->get_log_file_path() ), esc_html__( 'Download the log', 'trustedlogin' ) ),
-			esc_html__( 'Log Level', 'trustedlogin' )   => $this->config->get_setting( 'logging/threshold', esc_html__( '(Default)', 'trustedlogin' ) ),
-			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'webhook/url', '(Empty)' ) ),
-			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', $encryption->get_vendor_public_key(), $encryption->get_remote_encryption_key_url(), esc_html__( 'Verify key', 'trustedlogin' ) ),
+			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( 'https://status.trustedlogin.com' ), is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
+			esc_html__( 'API Key', 'trustedlogin' )     => sprintf( '<code>%s</code>', esc_html( $mask( $api_key ) ) ),
+			esc_html__( 'License Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', esc_html( $mask( $license_key ) ) ),
+			esc_html__( 'Log URL', 'trustedlogin' )     => '' === $log_url
+				? esc_html__( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' )
+				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html__( 'Download the log', 'trustedlogin' ) ),
+			esc_html__( 'Log Level', 'trustedlogin' )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', __( '(Default)', 'trustedlogin' ) ) ),
+			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
+			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html__( 'Verify key', 'trustedlogin' ) ),
 		);
 
 		$debugging_info = '';
 		foreach ( $items as $label => $value ) {
+			// $label was already wp-i18n'd through esc_html__; $value
+			// was escape-at-source above. The wrapping <p><strong>
+			// is the only added markup.
 			$debugging_info .= sprintf( '<p><strong>%s</strong>: %s</p>', $label, $value );
 		}
+
+		// Strip secrets from the raw config dump that follows. Even on
+		// a manage_options-gated screen, the print_r blob is the most
+		// likely thing to end up in a paste to support; replacing the
+		// known-secret keys' values keeps the structural debug value
+		// (which fields are set, which aren't) without leaking the
+		// secrets themselves.
+		$config_dump = $this->config->get_settings();
+		array_walk_recursive(
+			$config_dump,
+			function ( &$value, $key ) use ( $mask ) {
+				if ( in_array( $key, array( 'api_key', 'license_key', 'public_key', 'private_key', 'secret', 'password' ), true ) ) {
+					$value = $mask( $value );
+				}
+			}
+		);
 
 		$debugging_output = '<div class="tl-{{ns}}-auth__admin_debugging">
             <h3>{{debugging_label}}</h3>
@@ -1085,7 +1141,7 @@ final class Form {
 				'debugging_label' => esc_html__( 'Debugging Info', 'trustedlogin' ),
 				'debugging_info'  => $debugging_info,
 				'tl_config_label' => esc_html__( 'TrustedLogin Config', 'trustedlogin' ),
-				'tl_config'       => '<pre>' . print_r( $this->config->get_settings(), true ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+				'tl_config'       => '<pre>' . esc_html( print_r( $config_dump, true ) ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			)
 		);
 	}

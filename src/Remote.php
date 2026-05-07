@@ -243,9 +243,14 @@ final class Remote {
 
 		// SSRF defense-in-depth: even with `wp_safe_remote_post` below,
 		// an unrelated plugin can flip `http_request_host_is_external`
-		// permissive. Resolve the host and reject internal/link-local
-		// targets explicitly.
-		$parsed_host = wp_parse_url( $webhook_url, PHP_URL_HOST );
+		// permissive. Resolve the host once, validate, then pin the
+		// resolution all the way through to cURL so the TCP connect
+		// can't be DNS-rebinding'd into an internal IP between the
+		// pre-flight here and the connect inside wp_safe_remote_post.
+		$parsed_host   = wp_parse_url( $webhook_url, PHP_URL_HOST );
+		$parsed_scheme = wp_parse_url( $webhook_url, PHP_URL_SCHEME );
+		$parsed_port   = wp_parse_url( $webhook_url, PHP_URL_PORT );
+		$resolved_ip   = '';
 		if ( is_string( $parsed_host ) && '' !== $parsed_host ) {
 			$resolved = gethostbyname( $parsed_host );
 			if ( $resolved !== $parsed_host && self::is_internal_ip( $resolved ) ) {
@@ -257,6 +262,11 @@ final class Remote {
 				$this->logging->log( $error, __METHOD__, 'error' );
 
 				return $error;
+			}
+			// Only keep the resolution if gethostbyname actually
+			// resolved (returns input string verbatim on failure).
+			if ( $resolved !== $parsed_host && filter_var( $resolved, FILTER_VALIDATE_IP ) ) {
+				$resolved_ip = $resolved;
 			}
 		}
 
@@ -305,6 +315,15 @@ final class Remote {
 			 * @param string $webhook_url The URL being posted to.
 			 * @param array  $data        The original body payload.
 			 */
+			// Block redirects on webhook delivery. A vendor-controlled
+			// receiver could otherwise return 301 -> http://169.254.169.254/
+			// (AWS IMDS) and `wp_safe_remote_post` would happily follow
+			// because its built-in safe-host check only fires on the
+			// initial URL, not on hops in the redirect chain. Webhook
+			// fires are append-only side effects — there's no legit
+			// reason to follow a redirect.
+			$args['redirection'] = 0;
+
 			$args = apply_filters(
 				'trustedlogin/' . $this->config->ns() . '/webhook/request_args',
 				$args,
@@ -312,11 +331,33 @@ final class Remote {
 				$data
 			);
 
+			// Pin the cURL host->IP resolution to the IP we already
+			// validated above (gethostbyname). cURL would otherwise
+			// re-resolve when it actually opens the socket, and a
+			// vendor with TTL=1 DNS could flip the host to an
+			// internal IP between our pre-flight and that connect
+			// — the classic DNS rebinding window. Pinning closes
+			// it because cURL skips its own resolution and uses the
+			// IP we hand it.
+			//
+			// Only applies when (a) we got a valid IP from the
+			// pre-flight and (b) the integrator hasn't overridden
+			// the http_api_transport away from cURL. Falls through
+			// silently otherwise; the pre-flight + wp_safe_remote_post
+			// + redirection=0 still hold the residual.
+			if ( '' !== $resolved_ip && is_string( $parsed_host ) ) {
+				$port = $parsed_port ?: ( 'https' === $parsed_scheme ? 443 : 80 );
+				$existing_curl = isset( $args['curl'] ) && is_array( $args['curl'] ) ? $args['curl'] : array();
+				$existing_curl[ CURLOPT_RESOLVE ] = array( $parsed_host . ':' . $port . ':' . $resolved_ip );
+				$args['curl']                     = $existing_curl;
+			}
+
 			// `wp_safe_remote_post` (vs `wp_remote_post`) honors the
 			// host-allowlist, blocking outbound requests to internal
 			// hosts unless explicitly allowed. Combined with the IP
-			// pre-flight above, defends against SSRF via an attacker-
-			// controlled or accidentally-permissive webhook URL.
+			// pre-flight + cURL resolve-pin + redirection=0 above,
+			// defends against SSRF via an attacker-controlled or
+			// accidentally-permissive webhook URL.
 			$posted = wp_safe_remote_post( $webhook_url, $args );
 
 			if ( is_wp_error( $posted ) ) {

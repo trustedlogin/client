@@ -293,6 +293,34 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $user_identifier );
 
+		// Replay protection: rotate the endpoint hash so the URL the
+		// agent just used can't be re-played by an intercepting proxy
+		// or a captured-from-logs URL. The agent is now authenticated
+		// via wp_set_auth_cookie inside maybe_login() — the magic URL
+		// has served its purpose. Any subsequent request to the now-
+		// stale endpoint hash hits the silent no-op fall-through in
+		// get_trustedlogin_request() because the stored hash will not
+		// match.
+		//
+		// random_bytes is deliberate: we want a non-derivable value
+		// so the URL is truly one-shot. SupportUser cleanup at
+		// expiration time also calls Endpoint::delete(), so the
+		// rotated hash never lingers past the grant lifetime.
+		try {
+			$rotated_hash = bin2hex( random_bytes( 32 ) );
+			$this->update( $rotated_hash );
+		} catch ( \Throwable $e ) {
+			// random_bytes failure is exceedingly rare on PHP 7+;
+			// log and continue rather than blocking the login that
+			// otherwise just succeeded. The next access-grant cycle
+			// will re-mint the endpoint anyway.
+			$this->logging->log(
+				'Could not rotate endpoint hash after login: ' . $e->getMessage(),
+				__METHOD__,
+				'warning'
+			);
+		}
+
 		wp_safe_redirect( add_query_arg( 'tl_notice', 'logged_in', admin_url() ) );
 
 		exit();
@@ -581,6 +609,20 @@ class Endpoint {
 			// click a revoke URL with tl_origin=https://attacker.com can no
 			// longer coerce a {type:'revoked'} postMessage to their site.
 			$tl_origin_raw = Utils::get_request_param( 'tl_origin' );
+			if ( $tl_origin_raw ) {
+				// Reject percent-encoded control chars (%00..%1F, %7F)
+				// before rawurldecode. The host comparison inside
+				// resolve_safe_referer goes through wp_parse_url, and a
+				// payload like https://attacker.com%00.trustedvendor.com
+				// could be parsed differently by future PHP versions
+				// (host=attacker.com on truncate-at-NUL parsers,
+				// host=attacker.com%00.trustedvendor.com on
+				// strict parsers). Either parse can break the host
+				// allowlist comparison; reject the input outright.
+				if ( preg_match( '/%(?:0[0-9a-fA-F]|1[0-9a-fA-F]|7[fF])/', $tl_origin_raw ) === 1 ) {
+					$tl_origin_raw = '';
+				}
+			}
 			if ( $tl_origin_raw ) {
 				$tl_origin_raw  = rawurldecode( $tl_origin_raw );
 				$trusted_origin = $this->resolve_safe_referer( $tl_origin_raw );

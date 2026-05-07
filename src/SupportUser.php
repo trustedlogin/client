@@ -552,8 +552,20 @@ final class SupportUser {
 			$endpoint->delete();
 		}
 
-		// Re-run to make sure there were no race conditions.
-		return $this->delete( $user_identifier );
+		// Short-circuit the safety re-run when no row remains so the
+		// common (no race) case stays cheap. When a concurrent grant
+		// has re-created the user row between get() and
+		// wp_delete_user above, fall through to a single re-run
+		// that honours the caller's $delete_role / $delete_endpoint
+		// (so a delete($id, false, false) caller that explicitly
+		// asked NOT to drop the role / endpoint still gets that
+		// guarantee on the second pass).
+		$user_after_first_pass = $this->get( $user_identifier );
+		if ( null === $user_after_first_pass || empty( $user_after_first_pass ) ) {
+			return (bool) $deleted;
+		}
+
+		return $this->delete( $user_identifier, $delete_role, $delete_endpoint );
 	}
 
 	/**

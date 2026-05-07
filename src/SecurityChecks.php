@@ -219,7 +219,20 @@ final class SecurityChecks {
 		$transient_set = Utils::set_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
 
 		if ( ! $transient_set ) {
-			$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
+			// Fail closed. If the brute-force counter can't persist
+			// (DB write error, object cache eviction in shared
+			// hosting, transient table corruption), treat the host
+			// as unable to enforce the per-IP limit and lock down
+			// for the cooldown window. A misbehaving cache that
+			// flushes between probes would otherwise let an attacker
+			// run unlimited attempts because each attempt starts the
+			// counter over from zero.
+			$this->logging->log(
+				'Used access key transient could not be persisted; entering lockdown until storage recovers.',
+				__METHOD__,
+				'emergency'
+			);
+			$this->do_lockdown();
 		}
 
 		// Return only entries scoped to THIS IP so the caller's count
