@@ -655,4 +655,91 @@ class TrustedLoginGrantSecurityTest extends WP_UnitTestCase {
 			'Replayed identifier must not switch the current user to a freshly-resurrected support user.'
 		);
 	}
+
+	// -----------------------------------------------------------------
+	//  Item 11 — multi-login on the same grant must succeed.
+	//
+	//  The magic URL the customer admin sends to the support team is
+	//  intentionally re-usable for the duration of the grant. A typical
+	//  agent workflow:
+	//    Day 0: agent visits URL, gets logged in via wp_set_auth_cookie,
+	//           does some work, closes browser (auth cookie expires).
+	//    Day 2: agent re-visits the same URL, gets logged in again,
+	//           finishes the support ticket.
+	//  Both visits hit maybe_login_support → SupportUser::maybe_login.
+	//  The endpoint URL must NOT be consumed on first use, the support
+	//  user must NOT be deleted between calls, and the stored endpoint
+	//  hash on the site must NOT rotate (which would 404 the URL).
+	//
+	//  Pin this property in a forward-looking test so an over-eager
+	//  "consume the URL on first use" rewrite of the login path
+	//  (suggested by some replay-protection threat models, but
+	//  incompatible with the documented agent workflow) breaks loudly
+	//  in CI before it ships.
+	// -----------------------------------------------------------------
+
+	public function test_repeated_login_within_grant_succeeds_and_does_not_consume_endpoint_or_user(): void {
+		$this->become_admin();
+		$user = $this->seed_support_user( self::IDENT_HAPPY );
+
+		// seed_support_user creates the user but doesn't stamp the
+		// expiration meta — production stamps it via
+		// SupportUser::setup() at create-time. Stamp it in the future
+		// here so is_active() returns true and maybe_login can
+		// proceed past the expired-user branch.
+		$expires_meta_key = 'tl_' . $this->config->ns() . '_expires';
+		update_user_option( $user->ID, $expires_meta_key, time() + DAY_IN_SECONDS, true );
+
+		// Pin a known endpoint hash before any login activity. If
+		// anything in the maybe_login path rotates the endpoint, this
+		// asserts noisily — the integration would silently 404 every
+		// re-login attempt in production.
+		$known_endpoint_hash = 'pinned-endpoint-hash-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+		$this->endpoint->update( $known_endpoint_hash );
+		$this->assertSame(
+			$known_endpoint_hash,
+			$this->endpoint->get(),
+			'Sanity: endpoint hash starts at the pinned value.'
+		);
+
+		// First login — typical agent first visit.
+		$first = $this->support_user->maybe_login( self::IDENT_HAPPY );
+		$this->assertNotInstanceOf(
+			\WP_Error::class,
+			$first,
+			'First maybe_login must succeed for a freshly-seeded, non-expired support user.'
+		);
+
+		$this->assertSame(
+			$known_endpoint_hash,
+			$this->endpoint->get(),
+			'Endpoint hash must NOT change after a successful login. Rotating here would break the documented agent workflow where wp_auth_cookie expires (~2 days) before the access grant does and the agent re-uses the magic URL.'
+		);
+
+		$this->assertNotNull(
+			$this->support_user->get( self::IDENT_HAPPY ),
+			'Support user must still exist after the first login — it lives until the grant expires (or until an explicit revoke / cron sweep).'
+		);
+
+		// Second login on the same identifier — typical agent
+		// re-visit after wp_auth_cookie expires within the grant
+		// window.
+		$second = $this->support_user->maybe_login( self::IDENT_HAPPY );
+		$this->assertNotInstanceOf(
+			\WP_Error::class,
+			$second,
+			'Second maybe_login on the same identifier must also succeed. Returning WP_Error here would mean the agent is locked out of their grant after the first session expires.'
+		);
+
+		$this->assertSame(
+			$known_endpoint_hash,
+			$this->endpoint->get(),
+			'Endpoint hash must remain pinned after the second login.'
+		);
+
+		$this->assertNotNull(
+			$this->support_user->get( self::IDENT_HAPPY ),
+			'Support user must still exist after multiple logins.'
+		);
+	}
 }
