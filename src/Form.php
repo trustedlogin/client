@@ -1069,8 +1069,8 @@ final class Form {
 		// suppress the URL entirely rather than leaking the raw
 		// filesystem path as a URL component to anyone screen-sharing
 		// this page.
-		$log_path     = (string) $this->logging->get_log_file_path();
-		$log_url      = str_starts_with( $log_path, ABSPATH )
+		$log_path = (string) $this->logging->get_log_file_path();
+		$log_url  = str_starts_with( $log_path, ABSPATH )
 			? get_site_url() . '/' . substr( $log_path, strlen( ABSPATH ) )
 			: '';
 

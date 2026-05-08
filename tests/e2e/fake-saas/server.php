@@ -125,7 +125,7 @@ function with_state_locked( callable $fn ): void {
 	}
 	rewind( $fh );
 	$raw     = stream_get_contents( $fh );
-	$decoded = json_decode( $raw ?: '', true );
+	$decoded = json_decode( is_string( $raw ) ? $raw : '', true );
 	$state   = is_array( $decoded ) ? $decoded : array();
 	$state  += array( 'envelopes' => array(), 'messages' => array() );
 
@@ -170,7 +170,7 @@ error_log( sprintf( '[fake-saas] %s %s', $method, $path ) );
 // Optional shared-secret auth. When FAKE_SAAS_TOKEN is set, every non-debug
 // request must carry a matching X-Fake-Saas-Token header. Empty / unset env
 // disables the check so existing tests keep working until both sides wire it.
-$expected_token = getenv( 'FAKE_SAAS_TOKEN' ) ?: '';
+$expected_token = (string) getenv( 'FAKE_SAAS_TOKEN' );
 if ( $expected_token !== '' && strpos( $path, '/__' ) !== 0 ) {
 	$got_token = $_SERVER['HTTP_X_FAKE_SAAS_TOKEN'] ?? '';
 	if ( ! hash_equals( $expected_token, $got_token ) ) {

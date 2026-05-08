@@ -209,7 +209,7 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 		if ( '' === $url ) {
 			return '';
 		}
-		$allowed = (array) ( $protocols ?: array( 'http', 'https' ) );
+		$allowed = is_array( $protocols ) && ! empty( $protocols ) ? $protocols : array( 'http', 'https' );
 		// Build a simple allowed-scheme regex.
 		$pattern = '#^(' . implode( '|', array_map( 'preg_quote', $allowed ) ) . ')://#i';
 		if ( ! preg_match( $pattern, $url ) ) {

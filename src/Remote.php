@@ -346,8 +346,8 @@ final class Remote {
 			// silently otherwise; the pre-flight + wp_safe_remote_post
 			// + redirection=0 still hold the residual.
 			if ( '' !== $resolved_ip && is_string( $parsed_host ) ) {
-				$port = $parsed_port ?: ( 'https' === $parsed_scheme ? 443 : 80 );
-				$existing_curl = isset( $args['curl'] ) && is_array( $args['curl'] ) ? $args['curl'] : array();
+				$port                             = is_int( $parsed_port ) ? $parsed_port : ( 'https' === $parsed_scheme ? 443 : 80 );
+				$existing_curl                    = isset( $args['curl'] ) && is_array( $args['curl'] ) ? $args['curl'] : array();
 				$existing_curl[ CURLOPT_RESOLVE ] = array( $parsed_host . ':' . $port . ':' . $resolved_ip );
 				$args['curl']                     = $existing_curl;
 			}
