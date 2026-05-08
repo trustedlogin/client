@@ -51,6 +51,9 @@
     "phpstan": [
       "vendor/bin/phpstan analyse --memory-limit=2048M"
     ],
+    "pot": [
+      "wp i18n make-pot . languages/trustedlogin-client.pot --domain=trustedlogin --exclude=bin,node_modules,tests --package-name='TrustedLogin Client'"
+    ],
     "test": "phpunit",
     "test:unit": "phpunit --configuration=phpunit-unit.xml",
     "test:integration": "phpunit --configuration=phpunit.xml.dist"
