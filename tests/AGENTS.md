@@ -465,7 +465,7 @@ test( 'admin can revoke', async ( { page } ) => {
 
 `wpmu_delete_user` lives in `wp-admin/includes/ms.php` which is **not** auto-loaded outside network admin context. The SDK's `function_exists('wpmu_delete_user')` returns false during admin_init dispatches like the revoke-via-URL flow, and the user record leaks into the network table even though wp_delete_user removed it from the per-site usermeta.
 
-The fix (already applied in `SupportUser::delete()` and `Client::rollback_orphan_support_user()`):
+The fix (already applied in `SupportUser::delete()` and `Client::delete_unsynced_support_user()`):
 
 ```php
 if ( is_multisite() ) {

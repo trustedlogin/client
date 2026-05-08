@@ -267,17 +267,25 @@ final class Encryption {
 		// Optional pinning: if the integrator declared a SHA-256
 		// fingerprint in config (`vendor/public_key_fingerprint`),
 		// compare it before caching. Mismatch => refuse the key.
-		$expected_fingerprint = (string) $this->config->get_setting( 'vendor/public_key_fingerprint', '' );
+		$expected_fingerprint = strtolower( trim( (string) $this->config->get_setting( 'vendor/public_key_fingerprint', '' ) ) );
 
 		if ( '' !== $expected_fingerprint ) {
-			$actual_fingerprint = hash( 'sha256', $remote_key );
-			if ( ! hash_equals( strtolower( $expected_fingerprint ), $actual_fingerprint ) ) {
-				$this->logging->log( 'Fetched vendor public key failed fingerprint pin check.', __METHOD__, 'error' );
+			// Fingerprint must be a 64-char lowercase hex SHA-256 digest.
+			// A misconfigured value (whitespace, wrong length, non-hex)
+			// would silently fail the hash_equals comparison below and
+			// permanently reject every key — log + skip the pin instead.
+			if ( 64 !== strlen( $expected_fingerprint ) || ! ctype_xdigit( $expected_fingerprint ) ) {
+				$this->logging->log( 'vendor/public_key_fingerprint must be a 64-character hex SHA-256 digest; pin check skipped.', __METHOD__, 'error' );
+			} else {
+				$actual_fingerprint = hash( 'sha256', $remote_key );
+				if ( ! hash_equals( $expected_fingerprint, $actual_fingerprint ) ) {
+					$this->logging->log( 'Fetched vendor public key failed fingerprint pin check.', __METHOD__, 'error' );
 
-				return new WP_Error(
-					'public_key_fingerprint_mismatch',
-					esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
-				);
+					return new WP_Error(
+						'public_key_fingerprint_mismatch',
+						esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
+					);
+				}
 			}
 		}
 
@@ -356,10 +364,16 @@ final class Encryption {
 			'timeout'     => 45,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
-			// Force TLS verification. The only escape hatch is the
-			// TL_E2E_ALLOW_HTTP_VENDOR constant (e2e/dev only) which
-			// also permits plain http:// vendor URLs. Production
-			// code paths ALWAYS verify.
+			// Force TLS verification.
+			//
+			// The only escape hatch is the TL_E2E_ALLOW_HTTP_VENDOR
+			// constant, which exists ONLY for the e2e test stack
+			// where the fake vendor server is reached over plain
+			// http://. NEVER define this constant in a production
+			// install — defining it disables TLS verification on
+			// the vendor encryption-key fetch, which is equivalent
+			// to letting an on-path observer substitute their own
+			// public key and decrypt every credential exchange.
 			'sslverify'   => ! ( defined( 'TL_E2E_ALLOW_HTTP_VENDOR' ) && TL_E2E_ALLOW_HTTP_VENDOR ),
 		);
 

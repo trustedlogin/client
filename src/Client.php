@@ -287,7 +287,7 @@ final class Client {
 		$site_identifier_hash = Encryption::get_random_hash( $this->logging );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
-			$this->rollback_orphan_support_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
 
@@ -308,7 +308,7 @@ final class Client {
 		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
-			$this->rollback_orphan_support_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$did_setup->add_data( array( 'error_code' => 503 ) );
 
@@ -322,7 +322,7 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
-			$this->rollback_orphan_support_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
 
@@ -347,10 +347,6 @@ final class Client {
 				'remote' => null, // Updated later.
 			),
 		);
-
-		// SSL was already verified at the top of grant_access(); no
-		// second check needed here. The return_data is now ready for
-		// the SaaS sync below.
 
 		timer_start();
 
@@ -377,7 +373,7 @@ final class Client {
 
 			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
 
-			$this->rollback_orphan_support_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			return $exception_error;
 		}
@@ -391,7 +387,7 @@ final class Client {
 
 			$created->add_data( array( 'status_code' => 503 ) );
 
-			$this->rollback_orphan_support_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			return $created;
 		}
@@ -720,7 +716,7 @@ final class Client {
 	 *
 	 * @return void
 	 */
-	private function rollback_orphan_support_user( $support_user_id ) {
+	private function delete_unsynced_support_user( $support_user_id ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
 		// wpmu_delete_user lives in wp-admin/includes/ms.php which isn\'t

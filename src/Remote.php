@@ -272,27 +272,16 @@ final class Remote {
 
 		try {
 			// JSON-encode the webhook payload. A form-encoded body made up of
-			// `debug_data=<wp-core debug dump>` trips Wordfence's XSS rule
-			// because the dump contains `###` headings and %0A newlines that
-			// match the rule's signature. JSON with an explicit Content-Type
-			// avoids the false positive and is cleaner for any downstream
-			// receiver to parse. Both form-encoded and JSON requests are
-			// accepted by the Connector's REST endpoint (and by WordPress
-			// core REST endpoints in general), so this is drop-in compatible
-			// with the shipped Connector plugin.
-			//
-			// Integrators whose custom webhook receiver requires form
-			// encoding can revert to the legacy shape from the filter below:
-			//
-			// add_filter( 'trustedlogin/{ns}/webhook/request_args',
-			// function ( $args, $url, $data ) {
-			// return array( 'body' => $data );
-			// }, 10, 3 ); .
+			// JSON with an explicit Content-Type avoids the false-positive
+			// XSS rules that some firewalls match against form-encoded
+			// debug-data dumps. Both form-encoded and JSON are accepted
+			// by the Connector REST endpoint, so this is drop-in
+			// compatible. Integrators who need form encoding back can
+			// override via the `webhook/request_args` filter below.
 			$encoded = wp_json_encode( $data );
 			if ( false === $encoded ) {
-				// Falls through to form encoding only when JSON encoding
-				// can't represent the payload (e.g. non-UTF-8 bytes in
-				// $data). Preserves pre-1.9.1 behavior for those edge cases.
+				// Fall back to form encoding when JSON can't represent
+				// the payload (e.g. non-UTF-8 bytes in $data).
 				$args = array( 'body' => $data );
 			} else {
 				$args = array(
@@ -300,6 +289,12 @@ final class Remote {
 					'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
 				);
 			}
+
+			// Block redirects on webhook delivery. A receiver could
+			// otherwise return a 3xx pointing at an internal address,
+			// and `wp_safe_remote_post`'s safe-host check only fires
+			// on the initial URL, not on hops in the redirect chain.
+			$args['redirection'] = 0;
 
 			/**
 			 * Filter: request arguments passed to `wp_remote_post()` when
@@ -315,15 +310,6 @@ final class Remote {
 			 * @param string $webhook_url The URL being posted to.
 			 * @param array  $data        The original body payload.
 			 */
-			// Block redirects on webhook delivery. A vendor-controlled
-			// receiver could otherwise return 301 -> http://169.254.169.254/
-			// (AWS IMDS) and `wp_safe_remote_post` would happily follow
-			// because its built-in safe-host check only fires on the
-			// initial URL, not on hops in the redirect chain. Webhook
-			// fires are append-only side effects — there's no legit
-			// reason to follow a redirect.
-			$args['redirection'] = 0;
-
 			$args = apply_filters(
 				'trustedlogin/' . $this->config->ns() . '/webhook/request_args',
 				$args,
@@ -808,10 +794,6 @@ final class Remote {
 				$api_response
 			);
 		}
-
-		// HTML body check already ran at the top of this method before
-		// check_response_code() had a chance to map the status — see
-		// the early return above.
 
 		$response_json = json_decode( $response_body, true );
 

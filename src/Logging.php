@@ -84,9 +84,7 @@ class Logging {
 			$datetime = new \DateTime( '@' . time() );
 
 			// Use a persistent cryptographically random salt so the
-			// log filename isn't guessable from public info. Old
-			// scheme hashed (ns + home_url + day_of_year) — ~8 bits
-			// of effective entropy, trivially brute-forceable.
+			// log filename can't be derived from public information.
 			$salt = $this->get_log_filename_salt();
 
 			if ( $salt ) {

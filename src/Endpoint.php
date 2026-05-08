@@ -183,8 +183,7 @@ class Endpoint {
 		// The expected endpoint doesn't match the one in the request. Silent
 		// no-op: an attacker POSTing random data shouldn't learn the stored
 		// endpoint value or that their guess was close. Only log — no
-		// redirect, no transient, no leakage. hash_equals for constant-time
-		// compare so per-character timing can't leak the expected value.
+		// redirect, no transient, no leakage.
 		if ( ! hash_equals( (string) $endpoint, (string) $request[ self::POST_ENDPOINT_KEY ] ) ) {
 			$this->logging->log( 'TrustedLogin login-support: endpoint mismatch on incoming request (silent no-op).', __METHOD__, 'warning' );
 			return;

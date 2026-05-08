@@ -58,14 +58,14 @@ final class SecurityChecks {
 	 *
 	 * @var int
 	 */
-	const ACCESSKEY_LIMIT_EXPIRY = 600; // 10 * MINUTE_IN_SECONDS — was 36000 (10 hours) due to an off-by-60 typo.
+	const ACCESSKEY_LIMIT_EXPIRY = 600; // 10 * MINUTE_IN_SECONDS
 
 	/**
 	 * The number of seconds should block trustedlogin auto-logins for.
 	 *
 	 * @var int
 	 */
-	const LOCKDOWN_EXPIRY = 1200; // 20 * MINUTE_IN_SECONDS — was 72000 (20 hours) due to an off-by-60 typo.
+	const LOCKDOWN_EXPIRY = 1200; // 20 * MINUTE_IN_SECONDS
 
 	/**
 	 * TrustedLogin endpoint to notify brute-force activity.

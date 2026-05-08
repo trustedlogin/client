@@ -15,7 +15,7 @@
  * captures it via remote_error and renders the error banner.
  *
  * Critically, the test also asserts there\'s NO orphan support user
- * left behind — Client::rollback_orphan_support_user must have run.
+ * left behind — Client::delete_unsynced_support_user must have run.
  */
 
 import { test, expect } from '@playwright/test';
@@ -72,7 +72,7 @@ test( 'fake-saas returns 500 → form shows error banner, no orphan user is left
 		.toBeVisible( { timeout: 10_000 } );
 
 	// And the support user that grant_access started to provision
-	// must NOT remain — Client::rollback_orphan_support_user runs on
+	// must NOT remain — Client::delete_unsynced_support_user runs on
 	// the SaaS-error branch.
 	const orphanCount = wpCli(
 		'wp-cli-client',

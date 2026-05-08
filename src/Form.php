@@ -457,19 +457,11 @@ final class Form {
 		// minutes, so this is free on the hot path after the first
 		// success — and catches firewall / misconfigure failures
 		// up-front instead of after a wasted click + ajax round-trip.
-		//
-		// Only block for users who already have access (the `has-access`
-		// screen shows the revoke affordance and should always render)
-		// when the failure is NOT already in the cache — no support
-		// team's fault should prevent a customer from revoking existing
-		// access they've already granted.
-		// Pre-flight outcome. Only checked for not-yet-granted users —
-		// existing access needs to be revokable even if the support
-		// team's site is unreachable. On failure we stay inside the
-		// normal auth template but populate the existing error-response
-		// container and swap the grant button for a greyed-out version
-		// plus a Contact + Retry pair. Visual consistency with a failed
-		// AJAX grant submission; no separate template fork.
+		// Pre-flight outcome. Only checked for users who don't already
+		// have access — existing access must be revokable even if the
+		// support team's site is unreachable. On failure, the grant
+		// button is replaced by a greyed-out version with a Contact +
+		// Retry pair, inside the normal auth template (no template fork).
 		$preflight_error = null;
 		if ( ! $this->support_user->get_all() ) {
 			$preflight_error = $this->get_preflight_error();
