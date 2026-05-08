@@ -321,4 +321,67 @@ class TrustedLoginConfigTest extends WP_UnitTestCase {
 
 		$this->assertSame(true , $config->get_setting( 'webhook/create_ticket' ) );
 	}
+
+	/**
+	 * @covers \TrustedLogin\Config::validate
+	 *
+	 * When clone_role is false, the SDK uses the integrator's existing
+	 * role directly — caps/add and caps/remove are forbidden because
+	 * applying them would mutate the customer's actual role for every
+	 * non-support user with that role.
+	 */
+	public function test_clone_role_false_with_caps_add_throws_invalid_configuration() {
+		$config = new Config( array(
+			'role'       => 'editor',
+			'clone_role' => false,
+			'caps'       => array(
+				'add' => array( 'manage_options' => 'should fail' ),
+			),
+			'auth'       => array( 'api_key' => '0123456789abcdef' ),
+			'vendor'     => array(
+				'namespace'   => 'cnf-test',
+				'title'       => 'Clone Role False',
+				'email'       => 'cnf-test@example.test',
+				'website'     => 'https://example.test',
+				'support_url' => 'https://example.test/support',
+			),
+		) );
+
+		$this->expectException( \Exception::class );
+		$this->expectExceptionMessageMatches(
+			'/clone_role.*cannot add or remove capabilities|cannot add or remove capabilities.*clone_role/i'
+		);
+
+		// validate() is the throw site; Config::__construct does not auto-call it.
+		$config->validate();
+	}
+
+	/**
+	 * @covers \TrustedLogin\Config::validate
+	 *
+	 * caps/remove under clone_role:false is the same hazard as caps/add —
+	 * removing a cap would strip it from every user with that role.
+	 */
+	public function test_clone_role_false_with_caps_remove_throws_invalid_configuration() {
+		$config = new Config( array(
+			'role'       => 'editor',
+			'clone_role' => false,
+			'caps'       => array(
+				'remove' => array( 'edit_posts' => 'should fail' ),
+			),
+			'auth'       => array( 'api_key' => '0123456789abcdef' ),
+			'vendor'     => array(
+				'namespace'   => 'cnf-rem-test',
+				'title'       => 'Clone Role False Remove',
+				'email'       => 'cnf-rem-test@example.test',
+				'website'     => 'https://example.test',
+				'support_url' => 'https://example.test/support',
+			),
+		) );
+
+		$this->expectException( \Exception::class );
+		$this->expectExceptionMessageMatches( '/cannot add or remove capabilities/i' );
+
+		$config->validate();
+	}
 }

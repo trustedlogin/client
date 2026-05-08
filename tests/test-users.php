@@ -258,15 +258,28 @@ class TrustedLoginUsersTest extends WP_UnitTestCase {
 
 		$this->_reset_roles();
 
-		$TL_Support_User = new SupportUser( $this->config, $this->logging );
-		$support_user_id = $TL_Support_User->create();
-		$support_user_1 = get_userdata( $support_user_id );
-		$this->assertEquals( sanitize_user( $support_user_1->user_login ), $support_user_1->user_login );
+		// A support user with the (unhashed) vendor email was already
+		// created at the top of this test. A SECOND create() with
+		// the same unhashed vendor email must refuse — silently
+		// re-binding to the existing user is a real foot-gun: a
+		// fresh SDK call would inherit the original support user's
+		// caps and password hash. SupportUser::create's
+		// $allow_existing_user_match guard prevents that, surfacing
+		// email_exists so the integrator must rotate the address
+		// or use a {hash}-templated email.
+		$TL_Support_User_collision = new SupportUser( $this->config, $this->logging );
+		$result_on_collision       = $TL_Support_User_collision->create();
 
-		$TL_Support_User = new SupportUser( $this->config, $this->logging );
-		$support_user_id_2 = $TL_Support_User->create();
-		$support_user_2 = get_userdata( $support_user_id_2 );
-		#$this->assertEquals( sanitize_user( $support_user_1->user_login ) . ' 1', $support_user_2->user_login );
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$result_on_collision,
+			'Second create() with the same unhashed vendor email MUST return WP_Error(email_exists). Silent reuse would let an integrator inadvertently grant a fresh SDK call control over an existing support user.'
+		);
+		$this->assertSame(
+			'email_exists',
+			$result_on_collision->get_error_code(),
+			'The error code must be email_exists so callers can branch on it (e.g. surface a "reset your TrustedLogin email" prompt to the admin).'
+		);
 
 		$this->_reset_roles();
 

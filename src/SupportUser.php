@@ -211,10 +211,14 @@ final class SupportUser {
 		$user_email                = $this->config->get_setting( 'vendor/email' );
 		$allow_existing_user_match = false; // Fail if the user already exists and the email is unhashed.
 
-		if ( defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
+		// Only treat the email as opt-in to existing-user reuse when the
+		// integrator actually templated against the {hash} placeholder.
+		// Without that, a second create() call should refuse to silently
+		// re-bind to whatever WP user happens to share the address.
+		if ( is_string( $user_email ) && false !== strpos( $user_email, '{hash}' ) && defined( 'LOGGED_IN_KEY' ) && defined( 'NONCE_KEY' ) ) {
 			// The hash doesn't need to be secure, just persistent.
 			$user_email                = str_replace( '{hash}', sha1( LOGGED_IN_KEY . NONCE_KEY . get_current_blog_id() ), $user_email );
-			$allow_existing_user_match = true; // Don't fail if the user already exists and the email matches the hash.
+			$allow_existing_user_match = true;
 		}
 
 		$user_id_of_email = email_exists( $user_email );
@@ -268,10 +272,10 @@ final class SupportUser {
 			return $username;
 		}
 
-		$i            = 1;
+		$i            = 2;
 		$new_username = $username;
 		while ( username_exists( $new_username ) ) {
-			$new_username = sprintf( '%s %d', $username, $i + 1 );
+			$new_username = sprintf( '%s %d', $username, $i++ );
 		}
 
 		return $new_username;
@@ -317,9 +321,15 @@ final class SupportUser {
 		$support_user = $this->get( $user_identifier );
 
 		if ( empty( $support_user ) ) {
-			$this->logging->log( 'Support user not found at identifier ' . esc_attr( $user_identifier ), __METHOD__, 'notice' );
+			// Never log the raw identifier — attackers can POST arbitrary
+			// bytes as the identifier (including HTML payloads) hoping the
+			// operator opens the resulting .log file in a browser. Hash it.
+			$identifier_hash = Encryption::hash( (string) $user_identifier );
+			$loggable_hash   = is_wp_error( $identifier_hash ) ? '[hash-failed]' : $identifier_hash;
 
-			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier %s.', esc_attr( $user_identifier ) ) );
+			$this->logging->log( 'Support user not found at identifier hash ' . $loggable_hash, __METHOD__, 'notice' );
+
+			return new \WP_Error( 'user_not_found', sprintf( 'Support user not found at identifier hash %s.', $loggable_hash ) );
 		}
 
 		$is_active = $this->is_active( $support_user );
@@ -491,6 +501,17 @@ final class SupportUser {
 		// Needed to ensure wp_delete_user() exists.
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 
+		// Needed so wpmu_delete_user() is callable on multisite. Without
+		// this, deletion only clears per-site usermeta and the user
+		// record persists in the network wp_users table — the next
+		// grant attempt collides via email_exists() and the leaked
+		// network row is never cleaned up. The function is admin-only
+		// in WP\'s standard load order, but revoke-via-URL fires from
+		// admin_init before WP has loaded ms.php on its own.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
+
 		$user = $this->get( $user_identifier );
 
 		if ( empty( $user ) ) {
@@ -531,8 +552,20 @@ final class SupportUser {
 			$endpoint->delete();
 		}
 
-		// Re-run to make sure there were no race conditions.
-		return $this->delete( $user_identifier );
+		// Short-circuit the safety re-run when no row remains so the
+		// common (no race) case stays cheap. When a concurrent grant
+		// has re-created the user row between get() and
+		// wp_delete_user above, fall through to a single re-run
+		// that honours the caller's $delete_role / $delete_endpoint
+		// (so a delete($id, false, false) caller that explicitly
+		// asked NOT to drop the role / endpoint still gets that
+		// guarantee on the second pass).
+		$user_after_first_pass = $this->get( $user_identifier );
+		if ( null === $user_after_first_pass || empty( $user_after_first_pass ) ) {
+			return (bool) $deleted;
+		}
+
+		return $this->delete( $user_identifier, $delete_role, $delete_endpoint );
 	}
 
 	/**
@@ -722,7 +755,9 @@ final class SupportUser {
 			array(
 				Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns(),
 				self::ID_QUERY_PARAM                 => $user_identifier,
-				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM ),
+				// Bind nonce to the target identifier so a nonce for
+				// user A can't be swapped to revoke user B.
+				'_wpnonce'                           => wp_create_nonce( Endpoint::REVOKE_SUPPORT_QUERY_PARAM . '|' . $user_identifier ),
 			),
 			admin_url()
 		);

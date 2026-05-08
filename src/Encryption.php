@@ -252,6 +252,43 @@ final class Encryption {
 			return $remote_key;
 		}
 
+		// Shape-validate BEFORE caching. Sodium public keys are 32 raw
+		// bytes == 64 hex chars. Anything else is a MITM substitution
+		// attempt or a vendor-side misconfiguration — fail closed.
+		if ( ! is_string( $remote_key ) || 64 !== strlen( $remote_key ) || ! ctype_xdigit( $remote_key ) ) {
+			$this->logging->log( 'Fetched vendor public key failed shape validation (expect 64 hex chars).', __METHOD__, 'error' );
+
+			return new WP_Error(
+				'invalid_public_key_shape',
+				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' )
+			);
+		}
+
+		// Optional pinning: if the integrator declared a SHA-256
+		// fingerprint in config (`vendor/public_key_fingerprint`),
+		// compare it before caching. Mismatch => refuse the key.
+		$expected_fingerprint = strtolower( trim( (string) $this->config->get_setting( 'vendor/public_key_fingerprint', '' ) ) );
+
+		if ( '' !== $expected_fingerprint ) {
+			// Fingerprint must be a 64-char lowercase hex SHA-256 digest.
+			// A misconfigured value (whitespace, wrong length, non-hex)
+			// would silently fail the hash_equals comparison below and
+			// permanently reject every key — log + skip the pin instead.
+			if ( 64 !== strlen( $expected_fingerprint ) || ! ctype_xdigit( $expected_fingerprint ) ) {
+				$this->logging->log( 'vendor/public_key_fingerprint must be a 64-character hex SHA-256 digest; pin check skipped.', __METHOD__, 'error' );
+			} else {
+				$actual_fingerprint = hash( 'sha256', $remote_key );
+				if ( ! hash_equals( $expected_fingerprint, $actual_fingerprint ) ) {
+					$this->logging->log( 'Fetched vendor public key failed fingerprint pin check.', __METHOD__, 'error' );
+
+					return new WP_Error(
+						'public_key_fingerprint_mismatch',
+						esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
+					);
+				}
+			}
+		}
+
 		// Store Vendor public key in the DB for ten minutes.
 		$saved = Utils::set_transient( $this->vendor_public_key_option, $remote_key, self::VENDOR_PUBLIC_KEY_EXPIRY );
 
@@ -327,19 +364,64 @@ final class Encryption {
 			'timeout'     => 45,
 			'httpversion' => '1.1',
 			'headers'     => $headers,
+			// Force TLS verification.
+			//
+			// The only escape hatch is the TL_E2E_ALLOW_HTTP_VENDOR
+			// constant, which exists ONLY for the e2e test stack
+			// where the fake vendor server is reached over plain
+			// http://. NEVER define this constant in a production
+			// install — defining it disables TLS verification on
+			// the vendor encryption-key fetch, which is equivalent
+			// to letting an on-path observer substitute their own
+			// public key and decrypt every credential exchange.
+			'sslverify'   => ! ( defined( 'TL_E2E_ALLOW_HTTP_VENDOR' ) && TL_E2E_ALLOW_HTTP_VENDOR ),
 		);
 
 		$url = $this->get_remote_encryption_key_url();
 
 		$response = wp_remote_request( $url, $request_options );
 
+		// Log the outgoing URL + status/body preview BEFORE handing off to
+		// handle_response() so a field report with logging enabled has
+		// enough context to post-mortem a WAF intercept or a Connector
+		// misconfig without needing a reproduction.
+		if ( is_wp_error( $response ) ) {
+			// No HTTP response at all — DNS failure, connection refused,
+			// TLS error, timeout. Surface the underlying WP_Error code +
+			// message; "HTTP 0" would hide which failure mode it was.
+			$this->logging->log(
+				sprintf(
+					'Encryption key fetch from %s failed before any HTTP response: %s (%s)',
+					$url,
+					$response->get_error_message(),
+					$response->get_error_code()
+				),
+				__METHOD__,
+				'error'
+			);
+		} else {
+			$body    = (string) wp_remote_retrieve_body( $response );
+			$preview = mb_substr( $body, 0, 300, 'UTF-8' );
+			$this->logging->log(
+				sprintf(
+					'Fetched encryption key from %s (HTTP %d). Body preview: %s',
+					$url,
+					(int) wp_remote_retrieve_response_code( $response ),
+					'' === $preview ? '(empty)' : $preview
+				),
+				__METHOD__,
+				'debug'
+			);
+		}
+
 		$response_json = $this->remote->handle_response( $response, array( 'publicKey' ) );
 
 		if ( is_wp_error( $response_json ) ) {
-			if ( 'not_found' === $response_json->get_error_code() ) {
-				return new WP_Error( 'not_found', __( 'Encryption key could not be fetched, Vendor site returned 404.', 'trustedlogin' ) );
-			}
-
+			// handle_response() already returns customer-friendly copy for
+			// each known failure shape (HTML intercept, missing publicKey,
+			// generic invalid JSON, unexpected HTTP status). Passing it
+			// through untouched keeps the surface consistent regardless of
+			// which leg of the flow fetched the key.
 			return $response_json;
 		}
 
@@ -347,7 +429,7 @@ final class Encryption {
 	}
 
 	/**
-	 * Encrypts a string using the public bey provided by the plugin/theme developers' server.
+	 * Encrypts a string using the public key provided by the plugin/theme developers' server.
 	 *
 	 * @since 1.0.0
 	 * @uses \sodium_crypto_box_keypair_from_secretkey_and_publickey() to generate key.

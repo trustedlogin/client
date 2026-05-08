@@ -83,6 +83,11 @@
 		text-align: center;
 		margin-left: $gutter-width * 2;
 		margin-right: $gutter-width * 2;
+		// `<button>` has an intrinsic `width: max-content` under the
+		// UA stylesheet, so `display: block` alone won't stretch it
+		// the way it stretches an `<a class="button">`. Force the
+		// fill so the hero CTA spans the card minus its side margins.
+		width: calc(100% - #{$gutter-width * 4});
 
 		margin-bottom: $vertical-spacing; //39px; // 33px logo + 6px gap
 

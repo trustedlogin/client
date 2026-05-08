@@ -59,11 +59,32 @@ class Endpoint {
 	const POST_IDENTIFIER_KEY = 'identifier';
 
 	/**
+	 * Status code for the standalone fallback page rendered by
+	 * render_standalone_failure_page(). 200 (not 4xx/5xx) — some
+	 * browsers replace error statuses with their own chrome.
+	 */
+	const STANDALONE_PAGE_HTTP_STATUS = 200;
+
+	/**
 	 * Config instance.
 	 *
 	 * @var Config $config
 	 */
 	private $config;
+
+	/**
+	 * Reports a failed support-login attempt to the SaaS.
+	 *
+	 * @var LoginAttempts
+	 */
+	private $login_attempts;
+
+	/**
+	 * The support-user resolver, used to capture the site_hash for failed logins.
+	 *
+	 * @var SupportUser
+	 */
+	private $support_user;
 
 	/**
 	 * The namespaced setting name for storing part of the auto-login endpoint
@@ -84,13 +105,22 @@ class Endpoint {
 	/**
 	 * Endpoint constructor.
 	 *
-	 * @param Config  $config  Config instance.
-	 * @param Logging $logging Logging instance.
+	 * @param Config             $config         Config instance.
+	 * @param Logging            $logging        Logging instance.
+	 * @param LoginAttempts|null $login_attempts Reports failed support logins to SaaS. Optional —
+	 *                                            ad-hoc instantiations (SupportUser::get_secret_id,
+	 *                                            tests, etc.) only call utility methods like
+	 *                                            generate_secret_id() that don't depend on it.
+	 *                                            Required by maybe_login_support()'s fail_login path.
+	 * @param SupportUser|null   $support_user   Same rationale — only the maybe_login_support path
+	 *                                            needs it (to capture site_hash before maybe_login).
 	 */
-	public function __construct( Config $config, Logging $logging ) {
+	public function __construct( Config $config, Logging $logging, LoginAttempts $login_attempts = null, SupportUser $support_user = null ) {
 
-		$this->config  = $config;
-		$this->logging = $logging;
+		$this->config         = $config;
+		$this->logging        = $logging;
+		$this->login_attempts = $login_attempts;
+		$this->support_user   = $support_user;
 
 		/**
 		 * Filter: Set endpoint setting name
@@ -132,29 +162,40 @@ class Endpoint {
 	 */
 	public function maybe_login_support() {
 
-		// The user's already logged-in; don't override that login.
-		if ( is_user_logged_in() ) {
-			return;
-		}
-
 		$request = $this->get_trustedlogin_request();
 
-		// Not a TrustedLogin request.
+		// Not a TrustedLogin request — silent no-op. No info to leak.
 		if ( ! $request ) {
 			return;
 		}
 
+		// The user's already logged-in; don't override that login. Send them
+		// to wp-admin so they see where they landed. Safe to signal here:
+		// they're authenticated already, so they're not an anonymous probe.
+		if ( is_user_logged_in() ) {
+			$this->logging->log( 'TrustedLogin login-support: user is already logged in; redirecting to admin.', __METHOD__, 'notice' );
+			wp_safe_redirect( add_query_arg( 'tl_notice', 'already_logged_in', admin_url() ) );
+			exit();
+		}
+
 		$endpoint = $this->get();
 
-		// The expected endpoint doesn't match the one in the request.
-		if ( $endpoint !== $request[ self::POST_ENDPOINT_KEY ] ) {
+		// The expected endpoint doesn't match the one in the request. Silent
+		// no-op: an attacker POSTing random data shouldn't learn the stored
+		// endpoint value or that their guess was close. Only log — no
+		// redirect, no transient, no leakage.
+		if ( ! hash_equals( (string) $endpoint, (string) $request[ self::POST_ENDPOINT_KEY ] ) ) {
+			$this->logging->log( 'TrustedLogin login-support: endpoint mismatch on incoming request (silent no-op).', __METHOD__, 'warning' );
 			return;
 		}
 
 		// The sanitized, unhashed identifier for the support user.
 		$user_identifier = $request[ self::POST_IDENTIFIER_KEY ];
 
+		// Same logic: a legitimate flow always sends an identifier. Missing
+		// it means the request is malformed or probed; no feedback leaked.
 		if ( empty( $user_identifier ) ) {
+			$this->logging->log( 'TrustedLogin login-support: missing identifier (silent no-op).', __METHOD__, 'warning' );
 			return;
 		}
 
@@ -180,10 +221,44 @@ class Endpoint {
 			 */
 			do_action( 'trustedlogin/' . $this->config->ns() . '/login/refused', $user_identifier, $is_verified );
 
+			// Security check failures can legitimately happen when a valid
+			// support user is locked out (site in lockdown, identifier
+			// flagged). verify() ran BEFORE user resolution, so we have no
+			// $user object here. fail_login() will skip the SaaS POST and
+			// render the standalone page — this branch is best-effort
+			// reporting, by design.
+			//
+			// Pass error_code, NOT error_message, as the SaaS-bound
+			// reason. The SDK\'s WP_Error codes are a controlled vocabulary
+			// (`in_lockdown`, `brute_force_detected`, etc.); their
+			// messages are translated freeform text that may interpolate
+			// internal state. Keeping the wire field on error_code
+			// removes that data-leak surface; the full message stays in
+			// the local debug.log via Logging::log() inside fail_login.
+			$this->fail_login( LoginAttempts::CODE_SECURITY_CHECK_FAILED, (string) $is_verified->get_error_code(), null );
 			return;
 		}
 
-		$support_user = new SupportUser( $this->config, $this->logging );
+		// Prefer the injected SupportUser (so tests can swap it). Fall back
+		// to a fresh instance for legacy code paths that instantiated
+		// Endpoint without one (the older 2-arg constructor signature).
+		$support_user = $this->support_user instanceof SupportUser
+			? $this->support_user
+			: new SupportUser( $this->config, $this->logging );
+
+		// Capture the matched user + its site_identifier_hash BEFORE calling
+		// maybe_login(). The expired-user path inside maybe_login() deletes
+		// the user before returning WP_Error, taking its user-meta with it
+		// — so we'd lose the data needed to compute secret_id for fail_login.
+		// Capturing here keeps the data alive across the WP_Error return.
+		$pre_login_site_hash = null;
+		$matched_user        = $support_user->get( $user_identifier );
+		if ( $matched_user instanceof \WP_User ) {
+			$captured_hash = $support_user->get_site_hash( $matched_user );
+			if ( is_string( $captured_hash ) && '' !== $captured_hash ) {
+				$pre_login_site_hash = $captured_hash;
+			}
+		}
 
 		$is_logged_in = $support_user->maybe_login( $user_identifier );
 
@@ -197,6 +272,16 @@ class Endpoint {
 			 */
 			do_action( 'trustedlogin/' . $this->config->ns() . '/login/error', $user_identifier, $is_logged_in );
 
+			// Same reasoning: endpoint + identifier both matched the
+			// shape of a real grant. Pass the pre-captured site_hash so
+			// fail_login can compute secret_id even when maybe_login
+			// already deleted the user.
+			//
+			// error_code (controlled vocabulary), not error_message
+			// (freeform, may interpolate user identifiers / display
+			// names). The full message stays in local debug.log via
+			// Logging::log() inside fail_login.
+			$this->fail_login( LoginAttempts::CODE_LOGIN_FAILED, (string) $is_logged_in->get_error_code(), $pre_login_site_hash );
 			return;
 		}
 
@@ -207,11 +292,204 @@ class Endpoint {
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/login/after', $user_identifier );
 
-		wp_safe_redirect( admin_url() );
+		wp_safe_redirect( add_query_arg( 'tl_notice', 'logged_in', admin_url() ) );
 
 		exit();
 	}
 
+	/**
+	 * Record a failed support login, POST it to SaaS, and either
+	 * redirect the agent back to their Connector with an attempt id
+	 * or render a standalone fallback page on the customer site.
+	 * NEVER lands the agent on wp-login.php.
+	 *
+	 * Per-call-site behavior:
+	 *   - security_check_failed: verify() ran BEFORE user resolution,
+	 *     so $site_identifier_hash is null. We can't compute secret_id,
+	 *     so the SaaS POST is skipped and we fall through to the
+	 *     standalone page (best-effort reporting by design).
+	 *   - login_failed: caller pre-captures site_identifier_hash from
+	 *     the matched support user BEFORE maybe_login() runs (because
+	 *     the expired-user path inside maybe_login deletes the user),
+	 *     then passes it here. We derive secret_id, POST to SaaS, and
+	 *     on success redirect with ?tl_attempt=lpat_…
+	 *
+	 * @param string      $error_code           One of the documented enum codes.
+	 * @param string      $detailed_reason      Internal log + SaaS forensics; never shown to the user.
+	 * @param string|null $site_identifier_hash The original site_identifier_hash from user-meta
+	 *                                          (login_failed path only). NULL in security_check_failed.
+	 *
+	 * @return void Always exits.
+	 */
+	private function fail_login( $error_code, $detailed_reason, $site_identifier_hash = null ) {
+		$this->logging->log(
+			sprintf( 'TrustedLogin login-support failed [%s]: %s', $error_code, $detailed_reason ),
+			__METHOD__,
+			'error'
+		);
+
+		$attempt   = null;
+		$secret_id = null;
+
+		// Upstream contract: $site_identifier_hash arrived either NULL
+		// (security_check_failed branch — verify() ran before user
+		// resolution) or as a string captured from a matched WP_User\'s
+		// user-meta on the login_failed branch. The block below derives
+		// secret_id from that hash; it does NOT independently confirm
+		// the user still exists (maybe_login may have deleted them
+		// mid-flow), only that the hash format and hashing math are
+		// well-formed.
+		if ( is_string( $site_identifier_hash ) && '' !== $site_identifier_hash ) {
+			$derived = $this->generate_secret_id( $site_identifier_hash, $this->get_hash( $site_identifier_hash ) );
+			if ( ! is_wp_error( $derived ) && '' !== (string) $derived ) {
+				$secret_id = (string) $derived;
+			}
+		}
+
+		// $this->login_attempts is the optional 3rd constructor arg —
+		// it's null in legacy 2-arg instantiations like
+		// SupportUser::get_secret_id(). Skip the SaaS POST in that
+		// case so we never fatal on a null deref.
+		if ( null !== $secret_id && $this->login_attempts instanceof LoginAttempts ) {
+			$context = array(
+				'secret_id'         => $secret_id,
+				'code'              => sanitize_key( (string) $error_code ),
+				'detailed_reason'   => (string) $detailed_reason,
+				'client_site_url'   => home_url(),
+				'attempted_at'      => gmdate( 'c' ),
+				'client_user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] )
+					? substr( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ) ), 0, LoginAttempts::MAX_USER_AGENT_LENGTH )
+					: null,
+				'client_ip'         => $this->login_attempts->resolve_client_ip(),
+			);
+
+			// Pass the raw site_identifier_hash separately. report()
+			// owns the sha256 wrap so callers cannot accidentally place
+			// a plaintext identifier on the `identifier_hash` field of
+			// the wire payload.
+			$attempt = $this->login_attempts->report( $context, $site_identifier_hash );
+		}
+
+		$referer = $this->resolve_safe_referer(
+			isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_REFERER'] ) ) : ''
+		);
+
+		if ( ! is_wp_error( $attempt ) && ! empty( $attempt['id'] ) && '' !== $referer ) {
+			// Happy path — attempt recorded AND referer trusted.
+			// add_query_arg URL-encodes values; do not double-encode.
+			wp_safe_redirect( add_query_arg( 'tl_attempt', $attempt['id'], $referer ) );
+
+			exit();
+		}
+
+		$this->render_standalone_failure_page();
+
+		exit();
+	}
+
+	/**
+	 * Generic, branded-by-the-customer-site (NOT the integrator)
+	 * failure page. We deliberately don't surface the error_code —
+	 * without Connector context, the code is meaningless to the agent.
+	 *
+	 * Returns HTTP 200 (not 4xx/5xx) — some browsers replace 4xx/5xx
+	 * with their own error chrome.
+	 */
+	private function render_standalone_failure_page() {
+		$heading = __( 'Support login could not complete', 'trustedlogin' );
+		$body    = __( 'Return to your support tool to try again.', 'trustedlogin' );
+
+		wp_die(
+			'<p>' . esc_html( $body ) . '</p>',
+			esc_html( $heading ),
+			array(
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- self:: constant; not output.
+				'response'  => self::STANDALONE_PAGE_HTTP_STATUS,
+				'back_link' => false,
+			)
+		);
+	}
+
+
+	/**
+	 * Match a raw Referer URL against the integrator's trusted-URL list.
+	 *
+	 * Why this exists: the Referer captured at POST time feeds the
+	 * "Go back" link on the failure screen, but Referer is attacker-
+	 * controllable. Returning the matched TRUSTED URL (not the raw
+	 * Referer) means even if an attacker forges a Referer whose host
+	 * happens to match, they can't inject a path or query — the link
+	 * points at the canonical vendor URL the integrator declared.
+	 *
+	 * Extension point: vendors that operate from multiple surfaces
+	 * (main site + dedicated support portal + white-label domains +
+	 * staging) add URLs via the
+	 * `trustedlogin/{ns}/login_feedback/allowed_referer_urls` filter.
+	 * Only HOSTS in the returned list are accepted.
+	 *
+	 * @param string $raw_referer Raw HTTP_REFERER header value.
+	 * @return string Trusted URL to render as the back link, or '' if no match.
+	 */
+	private function resolve_safe_referer( $raw_referer ) {
+		if ( ! is_string( $raw_referer ) || '' === $raw_referer ) {
+			return '';
+		}
+		$referer_host = wp_parse_url( $raw_referer, PHP_URL_HOST );
+		if ( ! $referer_host ) {
+			return '';
+		}
+
+		// Default allowlist: integrator-declared vendor URLs + own host.
+		$default_urls = array(
+			(string) $this->config->get_setting( 'vendor/website' ),
+			(string) $this->config->get_setting( 'vendor/support_url' ),
+			(string) home_url(),
+		);
+
+		/**
+		 * Trusted URLs whose hosts are accepted as the Referer of a
+		 * failed support-login POST. A match renders the MATCHED URL
+		 * (not the raw Referer) as the "Go back" link on the feedback
+		 * screen, so an attacker who forges a matching host still can't
+		 * control the path.
+		 *
+		 * Vendors with multiple surfaces (marketing site, support portal,
+		 * white-label domains, staging) should add their additional URLs
+		 * here. Only the HOSTS of the returned URLs are compared; the
+		 * full URL is rendered as the link when its host matches.
+		 *
+		 * Return an empty array to disable the Go-back link entirely.
+		 *
+		 * @since 1.10.0
+		 *
+		 * @param string[] $default_urls Default trusted URLs (vendor/website, vendor/support_url, home_url()).
+		 * @param Config   $config       Client config, for namespace-aware extension.
+		 */
+		$allowed_urls = apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/login_feedback/allowed_referer_urls',
+			$default_urls,
+			$this->config
+		);
+
+		if ( ! is_array( $allowed_urls ) ) {
+			return '';
+		}
+
+		foreach ( $allowed_urls as $allowed_url ) {
+			$allowed_url = (string) $allowed_url;
+			if ( '' === $allowed_url ) {
+				continue;
+			}
+			$allowed_host = wp_parse_url( $allowed_url, PHP_URL_HOST );
+			if ( $allowed_host && strcasecmp( $allowed_host, $referer_host ) === 0 ) {
+				// Render the CONFIGURED URL (drops attacker-chosen
+				// path/query). esc_url_raw also gates scheme.
+				return (string) esc_url_raw( $allowed_url, array( 'http', 'https' ) );
+			}
+		}
+
+		return '';
+	}
 
 	/**
 	 * Hooked Action to maybe revoke support if the request SupportUser::ID_QUERY_PARAM equals the namespace.
@@ -233,8 +511,16 @@ class Endpoint {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM ) ) {
-			$this->logging->log( 'Removing user failed: Nonce expired.', __METHOD__, 'error' );
+		$user_identifier = Utils::get_request_param( SupportUser::ID_QUERY_PARAM );
+
+		if ( ! $user_identifier ) {
+			$user_identifier = 'all';
+		}
+
+		// Nonce is bound to the target identifier so a nonce for user A
+		// can't be swapped to revoke user B via tlid= parameter change.
+		if ( ! wp_verify_nonce( $nonce, self::REVOKE_SUPPORT_QUERY_PARAM . '|' . $user_identifier ) ) {
+			$this->logging->log( 'Removing user failed: Nonce expired or not scoped to this identifier.', __METHOD__, 'error' );
 			return;
 		}
 
@@ -249,12 +535,6 @@ class Endpoint {
 		if ( ! $support_team && ! $can_delete_users ) {
 			wp_safe_redirect( home_url() );
 			return;
-		}
-
-		$user_identifier = Utils::get_request_param( SupportUser::ID_QUERY_PARAM );
-
-		if ( ! $user_identifier ) {
-			$user_identifier = 'all';
 		}
 
 		/**
@@ -279,6 +559,53 @@ class Endpoint {
 		 * @param string $user_identifier Unique TrustedLogin ID for the Support User or "all"
 		 */
 		do_action( 'trustedlogin/' . $this->config->ns() . '/admin/access_revoked', $user_identifier );
+
+		// When the revoke link carried the `tl_return=login` marker, the user
+		// came from the trustedlogin login-screen flow (typically a popup).
+		// Redirect back there with ?revoked=1 so the client JS can fire a
+		// `revoked` postMessage to the opener, giving definitive confirmation
+		// instead of relying on a client-side timeout.
+		$tl_return = Utils::get_request_param( 'tl_return' );
+		if ( 'login' === $tl_return ) {
+			$redirect_args = array(
+				'action'  => 'trustedlogin',
+				'ns'      => $this->config->ns(),
+				'revoked' => '1',
+			);
+
+			// Preserve the original opener origin so the targeted postMessage
+			// in trustedlogin.js can reach the same opener after redirect.
+			// Route through resolve_safe_referer so only integrator-declared
+			// hosts pass through — an attacker who convinces an admin to
+			// click a revoke URL with tl_origin=https://attacker.com can no
+			// longer coerce a {type:'revoked'} postMessage to their site.
+			$tl_origin_raw = Utils::get_request_param( 'tl_origin' );
+			if ( $tl_origin_raw ) {
+				// Reject percent-encoded control chars (%00..%1F, %7F)
+				// before rawurldecode. The host comparison inside
+				// resolve_safe_referer goes through wp_parse_url, and a
+				// payload like https://attacker.com%00.trustedvendor.com
+				// could be parsed differently by future PHP versions
+				// (host=attacker.com on truncate-at-NUL parsers,
+				// host=attacker.com%00.trustedvendor.com on
+				// strict parsers). Either parse can break the host
+				// allowlist comparison; reject the input outright.
+				if ( preg_match( '/%(?:0[0-9a-fA-F]|1[0-9a-fA-F]|7[fF])/', $tl_origin_raw ) === 1 ) {
+					$tl_origin_raw = '';
+				}
+			}
+			if ( $tl_origin_raw ) {
+				$tl_origin_raw  = rawurldecode( $tl_origin_raw );
+				$trusted_origin = $this->resolve_safe_referer( $tl_origin_raw );
+				if ( '' !== $trusted_origin ) {
+					$redirect_args['origin'] = $trusted_origin;
+				}
+			}
+
+			$redirect = add_query_arg( $redirect_args, wp_login_url() );
+			wp_safe_redirect( $redirect );
+			exit;
+		}
 	}
 
 	/**

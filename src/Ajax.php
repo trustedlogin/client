@@ -34,6 +34,15 @@ final class Ajax {
 	private $logging;
 
 	/**
+	 * Live Client instance. Injected by {@see Client::__construct} so the ajax
+	 * handler can reuse the already-constructed object graph instead of
+	 * rebuilding it on every request.
+	 *
+	 * @var null|\TrustedLogin\Client
+	 */
+	private $client;
+
+	/**
 	 * Fields that may be included in the support data.
 	 *
 	 * @var string[]
@@ -49,14 +58,19 @@ final class Ajax {
 	);
 
 	/**
-	 * Cron constructor.
+	 * Ajax constructor.
 	 *
-	 * @param Config  $config Config instance.
-	 * @param Logging $logging Logging instance.
+	 * @param Config      $config  Config instance.
+	 * @param Logging     $logging Logging instance.
+	 * @param Client|null $client  (optional) Live Client. If provided, the ajax handler
+	 *                             reuses it instead of constructing a second one per request.
+	 *                             Untyped so PHP 5.3 can accept a nullable parameter without
+	 *                             triggering the PHP 8.4 implicit-nullable deprecation.
 	 */
-	public function __construct( Config $config, Logging $logging ) {
+	public function __construct( Config $config, Logging $logging, $client = null ) {
 		$this->config  = $config;
 		$this->logging = $logging;
+		$this->client  = $client instanceof Client ? $client : null;
 	}
 
 	/**
@@ -96,6 +110,10 @@ final class Ajax {
 			wp_send_json_error( array( 'message' => 'Nonce not sent in the request.' ) );
 		}
 
+		// Nonce is scoped to the current user id so it expires with the session.
+		// Unauth requests cannot reach this handler — the hook above registers
+		// `wp_ajax_…` only (no `wp_ajax_nopriv_…`), so `get_current_user_id()`
+		// is guaranteed non-zero here even though that isn't obvious in isolation.
 		if ( ! check_ajax_referer( 'tl_nonce-' . get_current_user_id(), '_nonce', false ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Verification issue: Request could not be verified. Please reload the page.', 'trustedlogin' ) ) );
 		}
@@ -106,7 +124,10 @@ final class Ajax {
 			wp_send_json_error( array( 'message' => esc_html__( 'You do not have the ability to create users.', 'trustedlogin' ) ) );
 		}
 
-		$client = new Client( $this->config, false );
+		// Reuse the injected Client if available (hooks already wired). Fall
+		// back to a fresh instance with $init=false for back-compat when an
+		// older caller constructs Ajax without passing a Client.
+		$client = $this->client ? $this->client : new Client( $this->config, false );
 
 		// Passed from grantAccess() in trustedlogin.js.
 		$include_debug_data = ! empty( $posted_data['debug_data_consent'] );

@@ -171,7 +171,14 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->_setRole('administrator' );
 		$this->_set_nonce();
 		$this->_catchHandleAjax();
-		$this->assertMatchesRegularExpression( '/TrustedLogin requires a secure connection using HTTPS\./', $this->_last_response, 'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true ) );
+		// Match the exact phrasing emitted by Client.php at the
+		// fails_ssl_requirement branch. The message was updated to
+		// be more agent-readable; this assertion was never resynced.
+		$this->assertMatchesRegularExpression(
+			'/Support access requires a secure \(HTTPS\) connection/',
+			$this->_last_response,
+			'When support_user_setup() returns an error. Dump of $_REQUEST: ' . print_r( $_REQUEST, true )
+		);
 		$this->_delete_all_support_users();
 		remove_filter( 'trustedlogin/' . $this->config->ns() . '/meets_ssl_requirement', '__return_false' );
 

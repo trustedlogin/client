@@ -58,14 +58,14 @@ final class SecurityChecks {
 	 *
 	 * @var int
 	 */
-	const ACCESSKEY_LIMIT_EXPIRY = 36000; // 10 * MINUTE_IN_SECONDS;
+	const ACCESSKEY_LIMIT_EXPIRY = 600; // 10 * MINUTE_IN_SECONDS
 
 	/**
 	 * The number of seconds should block trustedlogin auto-logins for.
 	 *
 	 * @var int
 	 */
-	const LOCKDOWN_EXPIRY = 72000; // 20 * MINUTE_IN_SECONDS;
+	const LOCKDOWN_EXPIRY = 1200; // 20 * MINUTE_IN_SECONDS
 
 	/**
 	 * TrustedLogin endpoint to notify brute-force activity.
@@ -112,7 +112,7 @@ final class SecurityChecks {
 		if ( $this->in_lockdown() ) {
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 
-			return new \WP_Error( 'in_lockdown', __( 'TrustedLogin temporarily disabled.', 'trustedlogin' ) );
+			return new \WP_Error( 'in_lockdown', __( 'Support access is temporarily disabled on this site after repeated failed attempts. Please try again later.', 'trustedlogin' ) );
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
@@ -139,7 +139,7 @@ final class SecurityChecks {
 			$this->logging->log(
 				sprintf(
 					// translators: %s is the error message.
-					__( 'There was an issue verifying the user identifier with TrustedLogin, aborting login. (%s)', 'trustedlogin' ),
+					__( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ),
 					$approved->get_error_message()
 				),
 				__METHOD__,
@@ -184,29 +184,67 @@ final class SecurityChecks {
 	/**
 	 * Adds new access keys to the stored list of used access keys.
 	 *
+	 * The stored distinctness key is "{ip-hash}|{identifier}" so three bad
+	 * guesses from one attacker IP still trip the per-IP counter, but a
+	 * different IP starts fresh — preventing cross-IP DoS (anyone who
+	 * knows the endpoint can otherwise lock legitimate support out of the
+	 * site by cycling 3 random identifiers).
+	 *
 	 * @param string $user_identifier The identifier provided via {@see Endpoint::maybe_login_support()}.
 	 *
-	 * @return array The list of used access keys.
+	 * @return array The list of used access keys scoped to the caller's IP.
 	 */
 	private function maybe_add_used_accesskey( $user_identifier = '' ) {
 
 		$used_accesskeys = (array) Utils::get_transient( $this->used_accesskey_transient );
 
-		// This is an existing access key.
-		if ( in_array( $user_identifier, $used_accesskeys, true ) ) {
-			return $used_accesskeys;
+		$ip_hash = hash( 'sha256', (string) Utils::get_ip() );
+		$scoped  = $ip_hash . '|' . $user_identifier;
+
+		// Already counted for this IP+identifier — don't double-bump.
+		if ( in_array( $scoped, $used_accesskeys, true ) ) {
+			return array_values(
+				array_filter(
+					$used_accesskeys,
+					function ( $entry ) use ( $ip_hash ) {
+						return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+					}
+				)
+			);
 		}
 
-		// Add the new access key to the list.
-		$used_accesskeys[] = $user_identifier;
+		// Add the new scoped access key to the global list.
+		$used_accesskeys[] = $scoped;
 
 		$transient_set = Utils::set_transient( $this->used_accesskey_transient, $used_accesskeys, self::ACCESSKEY_LIMIT_EXPIRY );
 
 		if ( ! $transient_set ) {
-			$this->logging->log( 'Used access key transient not properly set/updated.', __METHOD__, 'error' );
+			// Fail closed. If the brute-force counter can't persist
+			// (DB write error, object cache eviction in shared
+			// hosting, transient table corruption), treat the host
+			// as unable to enforce the per-IP limit and lock down
+			// for the cooldown window. A misbehaving cache that
+			// flushes between probes would otherwise let an attacker
+			// run unlimited attempts because each attempt starts the
+			// counter over from zero.
+			$this->logging->log(
+				'Used access key transient could not be persisted; entering lockdown until storage recovers.',
+				__METHOD__,
+				'emergency'
+			);
+			$this->do_lockdown();
 		}
 
-		return $used_accesskeys;
+		// Return only entries scoped to THIS IP so the caller's count
+		// is a per-IP counter, not a site-wide one.
+		return array_values(
+			array_filter(
+				$used_accesskeys,
+				function ( $entry ) use ( $ip_hash ) {
+					return is_string( $entry ) && 0 === strpos( $entry, $ip_hash . '|' );
+				}
+			)
+		);
 	}
 
 

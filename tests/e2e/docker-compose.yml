@@ -1,0 +1,213 @@
+# Local e2e stack for trustedlogin/client (PR #138 — postMessage popup).
+#
+# Brings up:
+#   - mariadb       (one instance, two databases)
+#   - vendor-wp     (trustedlogin-connector PR #184 + Gravity Forms), http://localhost:8001
+#   - client-wp     (THIS client repo, activated as a WP plugin via client.php), http://localhost:8002
+#   - fake-saas     (mock app.trustedlogin.com), http://localhost:8003
+#
+# The client library is loaded directly from the repo root (the client.php file
+# at the repo root is a runnable WP plugin with a test configuration). No
+# mozart/composer rebuild needed — PR #138's src/ files are used live.
+
+services:
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: vendor_wp
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./fixtures/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  fake-saas:
+    build: ./fake-saas
+    ports:
+      - "127.0.0.1:8003:8003"
+    volumes:
+      - fake-saas-state:/var/lib/fake-saas
+      - ./fake-saas/server.php:/app/server.php:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8003/__state"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  vendor-wp:
+    # Latest WordPress, pinned PHP + apache variant. `pull_policy: always` makes
+    # `docker-compose up` re-resolve the tag against Docker Hub so the stack tracks
+    # each WP release without manual version bumps. To force-refresh locally without
+    # re-running `up`: `docker-compose pull vendor-wp client-wp`.
+    image: wordpress:php8.2-apache
+    pull_policy: always
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      fake-saas:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8001:80"
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: vendor_wp
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_HOME', 'http://localhost:8001' );
+        define( 'WP_SITEURL', 'http://localhost:8001' );
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        define( 'TRUSTEDLOGIN_DEBUG', true );
+    volumes:
+      - vendor-wp-data:/var/www/html
+      # Connector PR #184 branch — cloned/built by bootstrap-vendor.sh into fixtures/.
+      - ./fixtures/trustedlogin-connector:/var/www/html/wp-content/plugins/trustedlogin-connector
+      # Gravity Forms — cloned by bootstrap-vendor.sh into fixtures/.
+      - ./fixtures/gravityforms:/var/www/html/wp-content/plugins/gravityforms
+      - ./mu-plugins/vendor-fake-saas.php:/var/www/html/wp-content/mu-plugins/vendor-fake-saas.php
+      - ./mu-plugins/vendor-real-saas.php:/var/www/html/wp-content/mu-plugins/vendor-real-saas.php
+      - ./mu-plugins/vendor-e2e-ak-nonce.php:/var/www/html/wp-content/mu-plugins/vendor-e2e-ak-nonce.php
+
+  client-wp:
+    image: wordpress:php8.2-apache
+    pull_policy: always
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      fake-saas:
+        condition: service_started
+      vendor-wp:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8002:80"
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: client_wp
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        // When the caddy TLS sidecar forwards a request, trust its
+        // X-Forwarded-Proto + Host headers so is_ssl() returns true,
+        // admin cookies get the Secure flag, and admin_url()/home_url()
+        // build URLs with the scheme+host the BROWSER sees. This is the
+        // standard WP-behind-a-TLS-terminator pattern.
+        if ( isset( $$_SERVER[ 'HTTP_X_FORWARDED_PROTO' ] ) && 'https' === $$_SERVER[ 'HTTP_X_FORWARDED_PROTO' ] ) {
+            $$_SERVER[ 'HTTPS' ] = 'on';
+            $$__host = isset( $$_SERVER[ 'HTTP_HOST' ] ) ? $$_SERVER[ 'HTTP_HOST' ] : 'localhost:8443';
+            define( 'WP_HOME',    'https://' . $$__host );
+            define( 'WP_SITEURL', 'https://' . $$__host );
+        } else {
+            define( 'WP_HOME',    'http://localhost:8002' );
+            define( 'WP_SITEURL', 'http://localhost:8002' );
+        }
+    volumes:
+      - client-wp-data:/var/www/html
+      # PHP override: user_ini.cache_ttl=0 so Wordfence WAF .user.ini
+      # changes are visible on the next request (compat-wordfence spec).
+      - ./php-conf/zz-tl-e2e-user-ini-no-cache.ini:/usr/local/etc/php/conf.d/zz-tl-e2e-user-ini-no-cache.ini:ro
+      # Bind-mount THIS client repo as a WordPress plugin. client.php is the
+      # plugin entry point and loads the library directly from src/ — so PR #138's
+      # changes are exercised without any build step.
+      - ../..:/var/www/html/wp-content/plugins/trustedlogin-client:ro
+      - ./mu-plugins/client-fake-saas.php:/var/www/html/wp-content/mu-plugins/client-fake-saas.php
+      - ./mu-plugins/tl-extra-referer.php:/var/www/html/wp-content/mu-plugins/tl-extra-referer.php
+      - ./mu-plugins/tl-webhook-capture.php:/var/www/html/wp-content/mu-plugins/tl-webhook-capture.php
+      - ./mu-plugins/tl-wf-compat-harness.php:/var/www/html/wp-content/mu-plugins/tl-wf-compat-harness.php
+      - ./mu-plugins/tl-response-injector.php:/var/www/html/wp-content/mu-plugins/tl-response-injector.php
+      - ./mu-plugins/tl-test-login.php:/var/www/html/wp-content/mu-plugins/tl-test-login.php
+      - ./mu-plugins/tl-test-harness.php:/var/www/html/wp-content/mu-plugins/tl-test-harness.php
+      - ./mu-plugins/tl-second-namespace.php:/var/www/html/wp-content/mu-plugins/tl-second-namespace.php
+      - ./mu-plugins/client-real-saas.php:/var/www/html/wp-content/mu-plugins/client-real-saas.php
+      - ./mu-plugins/tl-e2e-sdk-handle.php:/var/www/html/wp-content/mu-plugins/tl-e2e-sdk-handle.php
+
+  # TLS reverse-proxy for real-HTTPS e2e tests. Serves https://localhost:8443
+  # backed by caddy's self-signed local CA, proxying to client-wp. Tests that
+  # need the real TLS wire (protocol-mismatch.spec.ts) use this; the regular
+  # suite continues to hit http://localhost:8002 directly.
+  #
+  # Kept on a non-standard port (8443) so it doesn't conflict with Local by
+  # Flywheel or similar services already bound to the host's 443.
+  client-tls:
+    image: caddy:2
+    depends_on:
+      client-wp:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  wp-cli-vendor:
+    image: wordpress:cli-php8.2
+    profiles: ["cli"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: vendor_wp
+      # www-data (uid 33) has no home dir; wp-cli defaults HOME=/ and fails
+      # to create /.wp-cli/cache. Redirect HOME to /tmp so caching works and
+      # `plugin install` stops spewing the permission warning.
+      HOME: /tmp
+    volumes:
+      - vendor-wp-data:/var/www/html
+      - ./fixtures/trustedlogin-connector:/var/www/html/wp-content/plugins/trustedlogin-connector
+      - ./fixtures/gravityforms:/var/www/html/wp-content/plugins/gravityforms
+      - ./mu-plugins/vendor-fake-saas.php:/var/www/html/wp-content/mu-plugins/vendor-fake-saas.php
+    working_dir: /var/www/html
+    user: "33:33"
+
+  wp-cli-client:
+    image: wordpress:cli-php8.2
+    profiles: ["cli"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: client_wp
+      HOME: /tmp
+    volumes:
+      - client-wp-data:/var/www/html
+      - ../..:/var/www/html/wp-content/plugins/trustedlogin-client:ro
+      # Mirror the mu-plugins from client-wp so test harnesses (kill switches,
+      # cap-enforcement login, webhook capture) are present in wp-cli context too.
+      - ./mu-plugins/tl-test-login.php:/var/www/html/wp-content/mu-plugins/tl-test-login.php
+      - ./mu-plugins/tl-test-harness.php:/var/www/html/wp-content/mu-plugins/tl-test-harness.php
+      - ./mu-plugins/tl-second-namespace.php:/var/www/html/wp-content/mu-plugins/tl-second-namespace.php
+      - ./mu-plugins/client-fake-saas.php:/var/www/html/wp-content/mu-plugins/client-fake-saas.php
+      - ./mu-plugins/tl-extra-referer.php:/var/www/html/wp-content/mu-plugins/tl-extra-referer.php
+      - ./mu-plugins/tl-webhook-capture.php:/var/www/html/wp-content/mu-plugins/tl-webhook-capture.php
+      - ./mu-plugins/tl-wf-compat-harness.php:/var/www/html/wp-content/mu-plugins/tl-wf-compat-harness.php
+      - ./mu-plugins/tl-response-injector.php:/var/www/html/wp-content/mu-plugins/tl-response-injector.php
+      - ./mu-plugins/client-real-saas.php:/var/www/html/wp-content/mu-plugins/client-real-saas.php
+      - ./mu-plugins/tl-e2e-sdk-handle.php:/var/www/html/wp-content/mu-plugins/tl-e2e-sdk-handle.php
+    working_dir: /var/www/html
+    user: "33:33"
+
+volumes:
+  mariadb-data:
+  vendor-wp-data:
+  client-wp-data:
+  fake-saas-state:
+  caddy-data:
+  caddy-config:

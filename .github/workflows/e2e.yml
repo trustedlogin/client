@@ -1,0 +1,154 @@
+name: E2E
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Playwright (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout client repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Install npm deps
+        working-directory: tests/e2e
+        run: npm ci || npm install
+
+      # Playwright pins browser binary versions to its own version. Key
+      # the cache on package-lock.json so a Playwright bump invalidates.
+      - name: Read Playwright version
+        id: pw
+        working-directory: tests/e2e
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        working-directory: tests/e2e
+        # Skipped on cache hit. ubuntu-latest ships most Chromium runtime
+        # libs preinstalled; if a runner-image rotation drops one, the
+        # next test launch fails fast and we put `install-deps` back in.
+        run: npx playwright install --with-deps chromium
+
+      # Resolve + restore caches BEFORE `docker compose up`. The compose
+      # file bind-mounts ./fixtures/trustedlogin-connector and
+      # ./fixtures/gravityforms into vendor-wp's plugin dir; if those host
+      # dirs don't exist when the stack starts, Docker creates them
+      # ROOT-OWNED and tar's cache extraction then fails with Permission
+      # denied (every file becomes "Cannot open: Permission denied").
+      - name: Resolve connector + GF SHAs for cache key
+        id: refs
+        env:
+          GH_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          CONNECTOR_BRANCH: feature/183-form-plugins-login-field
+          GF_BRANCH: master
+        run: |
+          conn=$(gh api "repos/trustedlogin/trustedlogin-connector/commits/${CONNECTOR_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
+          gf=$(gh api "repos/gravityforms/gravityforms/commits/${GF_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
+          boot=$(sha256sum tests/e2e/fixtures/bootstrap-vendor.sh | cut -c1-12)
+          echo "conn=${conn:-${CONNECTOR_BRANCH//\//-}}" >> "$GITHUB_OUTPUT"
+          echo "gf=${gf:-$GF_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "boot=$boot" >> "$GITHUB_OUTPUT"
+
+      - name: Restore connector fixture
+        id: connector-cache
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/fixtures/trustedlogin-connector
+          key: connector-fixture-${{ runner.os }}-${{ steps.refs.outputs.conn }}-${{ steps.refs.outputs.boot }}
+          restore-keys: |
+            connector-fixture-${{ runner.os }}-
+
+      - name: Restore gravityforms fixture
+        id: gf-cache
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/fixtures/gravityforms
+          key: gravityforms-fixture-${{ runner.os }}-${{ steps.refs.outputs.gf }}-${{ steps.refs.outputs.boot }}
+          restore-keys: |
+            gravityforms-fixture-${{ runner.os }}-
+
+      - name: Start docker stack
+        working-directory: tests/e2e
+        run: docker compose up -d --wait
+
+      - name: Bootstrap vendor (clones trustedlogin-connector branch + Gravity Forms)
+        working-directory: tests/e2e
+        env:
+          # GITHUB_TOKEN from the workflow has repo: read on same-org private
+          # repos if the trustedlogin org gives the workflow runner that access.
+          # If not, override with a PAT in repo secrets as E2E_GITHUB_TOKEN.
+          GITHUB_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+        run: ./fixtures/bootstrap-vendor.sh
+
+      - name: Bootstrap client
+        working-directory: tests/e2e
+        run: ./fixtures/bootstrap-client.sh
+
+      # The vendor-wp + client-wp containers were started BEFORE the bootstraps
+      # cloned trustedlogin-connector / gravityforms / built the bind-mounted
+      # client plugin assets. On Linux (GH-Actions runners), the apache+mod_php
+      # workers in those long-lived containers primed PHP's realpath cache with
+      # the EMPTY bind-mount dirs that existed at start time. Even though the
+      # bind-mounts go live the moment the host dirs get populated, the cached
+      # "no such file" stat keeps wp_get_active_and_valid_plugins() skipping
+      # those plugins for the realpath_cache_ttl window (default 120s) — every
+      # HTTP request from Playwright then sees a vanilla WP with no connector
+      # and the e2e suite cascades into 404 hell.
+      #
+      # Restart kills the stale PHP workers + clears realpath_cache. wp-cli is
+      # unaffected because each call is a fresh PHP process. macOS Docker
+      # Desktop (FUSE-backed file sharing) does not exhibit this — pure-Linux
+      # bind-mounts do.
+      - name: Restart WP containers to clear realpath cache
+        working-directory: tests/e2e
+        run: |
+          docker compose restart vendor-wp client-wp
+          docker compose up -d --wait vendor-wp client-wp
+
+      - name: Run Playwright tests
+        working-directory: tests/e2e
+        run: npm test
+
+      - name: Dump fake-saas state on failure
+        if: failure()
+        working-directory: tests/e2e
+        run: |
+          curl -s http://localhost:8003/__state || true
+          docker compose logs --no-color > docker-compose.log || true
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: |
+            tests/e2e/test-results
+            tests/e2e/playwright-report
+            tests/e2e/docker-compose.log
+          retention-days: 14
+
+      - name: Tear down
+        if: always()
+        working-directory: tests/e2e
+        run: docker compose down -v || true

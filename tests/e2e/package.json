@@ -1,0 +1,15 @@
+{
+  "name": "trustedlogin-client-e2e",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "setup": "docker compose up -d && ./fixtures/bootstrap-vendor.sh && ./fixtures/bootstrap-client.sh",
+    "teardown": "docker compose down -v",
+    "reset": "curl -s -X POST http://localhost:8003/__reset > /dev/null && echo 'fake-saas state cleared'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

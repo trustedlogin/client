@@ -1,4 +1,60 @@
-# Changelog for TrustedLogin Client
+## 1.10.0 (May 7, 2026)
+
+When a support agent's access link doesn't work — expired, revoked, or blocked — they now see a clear explanation of what happened, and you see the failed attempt logged in the Connector plugin on your site. Previously, agents landed on the customer's login page without any signal why login failed.
+
+You can now register the webhook URL in your TrustedLogin dashboard and have customer sites pick it up automatically, without needing to update the configuration code. Plus a security hardening pass on webhook delivery, a new reachability check on the Grant Access screen, and several capability and multisite fixes.
+
+#### 🚀 Added
+
+- Failed support logins now post back to the TrustedLogin service so you get a record of failed logins.
+- A standalone "Support login could not complete" page that renders on the customer site when the round-trip can't complete — for example, the support service is unreachable, or the redirect target isn't a URL you've allowlisted. Includes a "Go back" link that safely returns the agent to the surface they came from.
+- A reachability check on the Grant Access screen — when the customer site can't reach your support site (firewall intercept, misconfigured installation, network failure), the grant button is replaced with a clear error banner, a "Contact support" button, and a "Try reconnecting" link.
+- Friendlier feedback after the redirect: agents who hit an expired, revoked, or blocked access key now see an explanation instead of a silent no-op landing page. A success banner appears in wp-admin on a successful grant, and an info notice (with display name) shows when an already-signed-in user hits their own access link.
+- Adds support for the new **Gravity Forms field integration in Connector 1.5.0**: the grant popup now posts `grant`/`extend`/`revoke` events back to its opener along with the support user's expiration date, so the field can update its displayed access status in real time without polling.
+- Customer sites can now pull the webhook URL from your TrustedLogin dashboard automatically — update it in the dashboard and customer sites use the new value on the next event, with no plugin update required.
+- Per-namespace audit-log opt-out so vendors managing multiple TrustedLogin integrations on the same site can disable the audit log for one without affecting the others. See the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks) for the constant name.
+- New optional `vendor/public_key_fingerprint` Config setting that lets you pin your encryption key, defending against substitution attacks if a customer site is tricked into talking to a different host.
+- New filter `trustedlogin/{namespace}/login_feedback/allowed_referer_urls` so support tools that span multiple domains (marketing site, help portal, white-label domains) can be added to the allowlist for the post-redirect "Go back" link. See the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks).
+- New filter `trustedlogin/{namespace}/webhook/request_args`, giving you full control over headers and body shape sent to the webhook URL.
+
+#### 🛠 Changed
+
+- Customer-facing error messages on the Grant Access screen have all been rewritten to drop internal product names and tell the customer what to do next instead.
+- The `caps/add` and `caps/remove` settings now accept both list (`['edit_posts']`) and associative (`['edit_posts' => 'reason']`) array shapes. Previously the list shape silently failed to add or remove the configured capability.
+- The support role is now reconciled against the current `caps` configuration on each grant. Previously, once the role had been created, subsequent changes to `caps/add` or `caps/remove` were ignored until the role was deleted.
+- Creating a second support user with the same `vendor/email` now returns `WP_Error('email_exists')` unless the email contains the `{hash}` placeholder. Prevents accidental session-rebind on email collision.
+- `Client::revoke_access()` returns `true` once the local cleanup completes, regardless of whether the support-side sync succeeded. Failed syncs are automatically retried with backoff so the support-side record eventually drops without blocking the admin's revoke action on transient errors.
+- On WordPress multisite, deleting a support user now removes them from the network user table as well as per-site usermeta. Previously the per-site delete ran but the network-level cleanup didn't, leaving an orphan record that collided with subsequent grants on the same email.
+- The grant button on the Grant Access screen now renders as a real `<button>` element so the browser's native `disabled` attribute prevents a rapid double-click from minting two support users.
+- Transient rows are no longer autoloaded by WordPress, so Client SDK transients no longer pay the cost of being loaded on every page request.
+- Webhook URLs are now treated as bearer secrets — validated on input, redacted to host-only in logs, and scrubbed from debug response dumps. Outbound delivery is hardened against internal-network targets.
+- The `webhook/url` Config key (and its legacy `webhook_url` alias) still work but emit a one-time-per-request deprecation log; the dashboard-registered URL takes precedence when both are set.
+
+#### 🐛 Fixed
+
+- Fixes webhook POST requests being blocked by security plugins (Wordfence, Cloudflare, Imunify360, Sucuri) as false-positive XSS. The webhook body is now sent as JSON by default, avoiding the pattern that tripped those rules. If your custom receiver needs form encoding, you can revert via the `webhook/request_args` filter.
+- Adding or removing capabilities with `caps/add` and `caps/remove` would fail if the capability arrays weren't associative with the capability as the key.
+- A site running two TrustedLogin-enabled plugins now correctly isolates each plugin's namespace. Previously, the second plugin's namespaced filters, hooks, options, menus, and role could collide with the first.
+- Tightens scoping of the lockdown counter to prevent a denial-of-service vector.
+- Fixes `Client::revoke_access( 'all' )` not returning `true` after a successful revoke loop.
+- Fixes a rare hang during support-user creation under specific username conditions.
+- Tightens per-user scoping of the revoke nonce.
+
+#### 🔒 Security
+
+- Hardens the post-redirect "Go back" link against phishing.
+- Tightens vendor public-key validation before caching.
+- Sensitive headers are now scrubbed from debug log output.
+- Log filenames are now derived with a per-site random salt.
+
+#### 💻 Developer Updates
+
+- New helper `Remote::redact_url()` returns the host portion of a URL (or `[invalid-url]` on parse failure) — useful if you want to surface a webhook URL in admin notices or logs without leaking the secret-bearing portion.
+- Adds `Utils::delete_transient( $transient )` as the counterpart to `Utils::set_transient()`. Previously callers had to reach past the abstraction.
+- Adds new error codes returned by `Remote::handle_response()`: `vendor_response_not_json` (firewall/CDN intercept detected), `missing_public_key` (your installation isn't fully configured yet), and `unexpected_response_code` (HTTP status preserved in the error data).
+- Replaces the `bool $sanitize` parameter on `Utils::get_request_param()` with a `callable $sanitize_callback` (default: `'sanitize_text_field'`). The old `bool` signature is still honored for back-compatibility.
+- `Remote::send()` gains an optional 5th `$timeout` argument (default `null` → existing 15-second behaviour, back-compat with all existing callers).
+- Adds a proper `require` block to `composer.json` pinning PHP 5.3+ and `ext-curl`/`ext-json`. Previously the PHP floor lived in `require-dev` and was not enforced at install time.
 
 ## 1.9.0 (August 25, 2024)
 

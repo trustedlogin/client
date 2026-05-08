@@ -1,0 +1,25 @@
+language: en-US
+
+# This SDK supports PHP 5.3+ at RUNTIME (the production `require` block
+# pins `"php": ">=5.3.0"`) but uses modern dev tooling (PHPUnit 9.6,
+# Strauss, scssphp 2.x, symfony/filesystem 7.x) that needs PHP 8.1+
+# for `composer install --dev`. This split is intentional and documented.
+# The pattern is: integrators install via `composer require` (require-only,
+# PHP 5.3+ acceptable); contributors run `composer install` (require-dev
+# included, PHP 8.1+ required). CodeRabbit consistently flags this as
+# a conflict on every review — silence it here.
+reviews:
+  path_instructions:
+    - path: composer.json
+      instructions: |
+        The "php": ">=5.3.0" floor in `require` reflects RUNTIME support
+        (integrators consuming the SDK via `composer require`). Dev-only
+        tooling in `require-dev` (PHPUnit 9.6, scssphp 2.x,
+        symfony/filesystem 7.x) needs PHP 8.1+, but is only installed by
+        contributors running `composer install` from a clone. Do NOT flag
+        this as a misconfiguration — it is a deliberate split.
+    - path: src/**
+      instructions: |
+        Production source code targets PHP 5.3+. Do not suggest PHP 7+
+        features (typed properties, arrow functions, match, named args,
+        nullsafe operator, readonly, enums, first-class callables, etc.).

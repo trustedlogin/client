@@ -62,7 +62,7 @@ final class Form {
 	private $logging;
 
 	/**
-	 * Admin constructor.
+	 * Form constructor.
 	 *
 	 * @param Config      $config Config object.
 	 * @param Logging     $logging Logging object.
@@ -208,6 +208,24 @@ final class Form {
 	 * @return string
 	 */
 	private function get_login_inline_css() {
+		// Skip the logo rule entirely when no URL is set so we don't
+		// emit a `background-image: url("")` rule. Run esc_url through
+		// the URL itself: the function URL-encodes any character that
+		// could break out of the CSS string context (notably `"`),
+		// and Config validation already rejects non-http(s) schemes.
+		$logo_url = (string) $this->config->get_setting( 'vendor/logo_url' );
+		$logo_css = '';
+
+		if ( '' !== $logo_url ) {
+			$logo_url = esc_url( $logo_url );
+			if ( '' !== $logo_url ) {
+				$logo_css = sprintf(
+					'.login h1 a { background-image: url("%s")!important; background-size: contain!important; }',
+					$logo_url
+				);
+			}
+		}
+
 		return '
 	#login {
 		width: auto;
@@ -218,10 +236,7 @@ final class Form {
 	.login h1 {
 		margin-top: 36px;
 	}
-	.login h1 a {
-		background-image: url("' . $this->config->get_setting( 'vendor/logo_url' ) . '")!important;
-		background-size: contain!important;
-	}
+	' . $logo_css . '
 	';
 	}
 
@@ -265,19 +280,146 @@ final class Form {
 
 		$revoke_url = $this->support_user->get_revoke_url( $support_user );
 
+		// When rendered on the login screen (popup flow), tell the revoke
+		// handler to redirect back here so the opener gets a definitive
+		// `revoked` postMessage instead of waiting for a timeout. Carry the
+		// original `origin` param through so the postMessage can be targeted
+		// at the correct opener origin after the redirect.
+		if ( $this->is_login_screen() ) {
+			$extra      = array( 'tl_return' => 'login' );
+			$req_origin = Utils::get_request_param( 'origin' );
+			if ( $req_origin ) {
+				// Validate: must be an absolute http(s) URL we can parse.
+				$parsed = wp_parse_url( $req_origin );
+				if ( $parsed && isset( $parsed['scheme'], $parsed['host'] ) && in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+					$extra['tl_origin'] = rawurlencode( $req_origin );
+				}
+			}
+			$revoke_url = add_query_arg( $extra, $revoke_url );
+		}
+
 		$template = '
 			{{revoke_access_button}}
 			<h3>{{display_name}}</h3>
 			<span class="tl-{{ns}}-auth__meta">{{auth_meta}}</span>';
 
+		// Escape every value at the substitution site. prepare_output()
+		// is a raw str_replace template engine — wp_kses strips
+		// dangerous tags later but escape-at-source is the only
+		// reliable defense (an integrator-controlled vendor/display_name
+		// would otherwise reach the DOM via the Filament-style
+		// substitution map). get_logo_html() at line 971-973 already
+		// uses esc_attr() on the same vendor/title field; this is
+		// closing the same gap on the auth header path.
 		$content = array(
-			'display_name'         => $support_user->display_name,
-			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', $revoke_url, esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'display_name'         => esc_html( $support_user->display_name ),
+			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', esc_url( $revoke_url ), esc_html__( 'Revoke Access', 'trustedlogin' ) ),
 			// translators: %s is the display name of the user who granted access.
-			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), human_time_diff( strtotime( $support_user->user_registered ) ), $auth_meta ),
+			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ), esc_html( $auth_meta ) ),
 		);
 
 		return $this->prepare_output( $template, $content );
+	}
+
+	/**
+	 * Runs the pre-flight pubkey check. Returns null when the plugin's
+	 * support team's site is reachable (so the Grant Access form can
+	 * render normally), or a WP_Error describing the failure (so the
+	 * fallback screen renders instead).
+	 *
+	 * Wraps {@see Encryption::get_vendor_public_key()} — which handles
+	 * its own 10-minute transient cache — and converts success (a key
+	 * string) into `null`. Cached hits cost a single option read.
+	 *
+	 * @since 1.10.0
+	 *
+	 * @return null|\WP_Error
+	 */
+	private function get_preflight_error() {
+		$remote     = new Remote( $this->config, $this->logging );
+		$encryption = new Encryption( $this->config, $remote, $this->logging );
+
+		$key = $encryption->get_vendor_public_key();
+
+		return is_wp_error( $key ) ? $key : null;
+	}
+
+	/**
+	 * Builds the contents that populate the normal auth template's
+	 * `.tl-{ns}-auth__response` container when pre-flight fails.
+	 *
+	 * Rather than diverging into a separate fallback template, we reuse
+	 * the existing error-response surface (same peach-bordered styling
+	 * used for a failed AJAX grant submission). Also builds:
+	 *   - A "Contact <vendor> support" primary CTA that replaces the
+	 *     greyed-out Grant Access button.
+	 *   - A muted "Try reconnecting" link underneath, which clears the
+	 *     10-minute pubkey transient and reloads.
+	 *
+	 * @since 1.10.0
+	 *
+	 * @param \WP_Error $error The pre-flight failure.
+	 *
+	 * @return array {
+	 *     @type string $response_html    HTML to inject into `.tl-{ns}-auth__response`.
+	 *     @type string $actions_html     HTML replacement for `.tl-{ns}-auth__actions`
+	 *                                    (contact CTA + retry link, no grant button).
+	 * }
+	 */
+	private function get_preflight_action_html( $error ) {
+		$ns           = $this->config->ns();
+		$vendor_title = (string) $this->config->get_setting( 'vendor/title' );
+		$vendor_email = (string) $this->config->get_setting( 'vendor/email' );
+		$support_url  = (string) $this->config->get_setting( 'vendor/support_url' );
+
+		// Prefer the support URL (usually a portal / ticket form); fall
+		// back to a mailto: on vendor/email — every integrator configures
+		// one, so we always have a surface.
+		$support_href = '' !== $support_url ? esc_url( $support_url ) : 'mailto:' . rawurlencode( $vendor_email );
+		$support_text = '' !== $support_url
+			? sprintf( /* translators: %s: the plugin's name */ esc_html__( 'Contact %s support', 'trustedlogin' ), esc_html( $vendor_title ) )
+			: sprintf( /* translators: %s: the support email address */ esc_html__( 'Email %s', 'trustedlogin' ), esc_html( $vendor_email ) );
+
+		$retry_url = add_query_arg(
+			array(
+				'tl-preflight-retry' => $ns,
+				'_wpnonce'           => wp_create_nonce( 'tl-preflight-retry-' . $ns ),
+			),
+			remove_query_arg( 'tl-preflight-retry' )
+		);
+
+		$message = $error->get_error_message();
+		if ( '' === $message ) {
+			$message = esc_html__( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' );
+		}
+
+		$response_html = sprintf(
+			'<div class="tl-%1$s-auth__response tl-%1$s-auth__response_error" role="alert" data-preflight-error="%2$s" aria-live="assertive">%3$s</div>',
+			esc_attr( $ns ),
+			esc_attr( $error->get_error_code() ),
+			esc_html( $message )
+		);
+
+		$contact_html = '' !== $support_href
+			? sprintf(
+				'<a class="tl-%1$s-auth__contact button button-primary button-hero" href="%2$s" target="_blank" rel="noopener noreferrer">%3$s</a>',
+				esc_attr( $ns ),
+				$support_href, // esc_url() already applied.
+				esc_html( $support_text )
+			)
+			: '';
+
+		$retry_html = sprintf(
+			'<p class="tl-%1$s-auth__retry-wrap"><a class="tl-%1$s-auth__retry" href="%2$s"><span class="dashicons dashicons-update" aria-hidden="true"></span> %3$s</a></p>',
+			esc_attr( $ns ),
+			esc_url( $retry_url ),
+			esc_html__( 'Try reconnecting', 'trustedlogin' )
+		);
+
+		return array(
+			'response_html' => $response_html,
+			'actions_html'  => $contact_html . $retry_html,
+		);
 	}
 
 	/**
@@ -292,6 +434,54 @@ final class Form {
 		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
+		// Handle the "Try again" link from a prior fallback screen — nonce
+		// verified, then clear the pubkey cache and let the pre-flight
+		// below re-fetch. Any admin can click the link; no capability
+		// gate because every code path that reaches get_auth_screen is
+		// already gated by the admin-menu registration.
+		$retry_ns = Utils::get_request_param( 'tl-preflight-retry' );
+		if ( $retry_ns === $this->config->ns()
+			&& wp_verify_nonce( (string) Utils::get_request_param( '_wpnonce' ), 'tl-preflight-retry-' . $this->config->ns() )
+		) {
+			$option_name = apply_filters(
+				'trustedlogin/' . $this->config->ns() . '/options/vendor_public_key',
+				'tl_' . $this->config->ns() . '_vendor_public_key',
+				$this->config
+			);
+			Utils::delete_transient( $option_name );
+		}
+
+		// Pre-flight check: make sure the plugin's support team's site is
+		// actually reachable BEFORE the customer types anything and clicks
+		// Grant Access. The pubkey fetch is transient-cached for 10
+		// minutes, so this is free on the hot path after the first
+		// success — and catches firewall / misconfigure failures
+		// up-front instead of after a wasted click + ajax round-trip.
+		// Pre-flight outcome. Only checked for users who don't already
+		// have access — existing access must be revokable even if the
+		// support team's site is unreachable. On failure, the grant
+		// button is replaced by a greyed-out version with a Contact +
+		// Retry pair, inside the normal auth template (no template fork).
+		$preflight_error = null;
+		if ( ! $this->support_user->get_all() ) {
+			$preflight_error = $this->get_preflight_error();
+		}
+
+		if ( is_wp_error( $preflight_error ) ) {
+			$preflight       = $this->get_preflight_action_html( $preflight_error );
+			$response_html   = $preflight['response_html'];
+			$actions_html    = $preflight['actions_html'];
+			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions tl-' . esc_attr( $this->config->ns() ) . '-auth__actions--unavailable';
+		} else {
+			$response_html = '<div class="tl-' . esc_attr( $this->config->ns() ) . '-auth__response" aria-live="assertive"></div>';
+			// tag=button: render as a real <button> so the browser\'s
+			// native disabled-attribute click suppression prevents
+			// double-submits during the in-flight AJAX (was: <a>
+			// styled as a button, which has no native disabled state).
+			$actions_html    = $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button&tag=button', false );
+			$grant_container = 'tl-' . esc_attr( $this->config->ns() ) . '-auth__actions';
+		}
+
 		$content = array(
 			'ns'                      => $this->config->ns(),
 			'has_access_class'        => $this->support_user->get_all() ? 'has-access' : 'grant-access',
@@ -300,7 +490,9 @@ final class Form {
 			'intro'                   => $this->get_intro(),
 			'auth_header'             => $this->get_auth_header_html(),
 			'details'                 => $this->get_details_html(),
-			'button'                  => $this->generate_button( 'size=hero&class=authlink button-primary tl-client-grant-button', false ),
+			'response'                => $response_html,
+			'actions'                 => $actions_html,
+			'actions_container_class' => $grant_container,
 			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
@@ -320,10 +512,10 @@ final class Form {
 						<div class="tl-{{ns}}-auth__details">
 							{{details}}
 						</div>
-						<div class="tl-{{ns}}-auth__response" aria-live="assertive"></div>
+						{{response}}
 						{{notices}}
-						<div class="tl-{{ns}}-auth__actions">
-							{{button}}
+						<div class="{{actions_container_class}}">
+							{{actions}}
 						</div>
 						{{terms_of_service}}
 					</div>
@@ -474,7 +666,7 @@ final class Form {
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week").
-				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . $this->config->get_setting( 'vendor/title' ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
+				$intro = sprintf( esc_html__( '%1$s has site access that expires in %2$s.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $this->config->get_setting( 'vendor/title' ) ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
 			}
 
 			return $intro;
@@ -482,10 +674,10 @@ final class Form {
 
 		if ( $this->is_login_screen() ) {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html__( '%1$s would like support access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
+			$intro = sprintf( esc_html__( '%1$s would like support access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		} else {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html__( 'Grant %1$s access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . $this->config->get_display_name() . '</a>' );
+			$intro = sprintf( esc_html__( 'Grant %1$s access to this site.', 'trustedlogin' ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		}
 
 		return $intro;
@@ -863,20 +1055,68 @@ final class Form {
 		$remote     = new Remote( $this->config, $this->logging );
 		$encryption = new Encryption( $this->config, $remote, $this->logging );
 
+		// Build a safe log download URL. When ABSPATH is not a prefix
+		// of the resolved log path (logs symlinked outside the
+		// webroot, ABSPATH normalized differently on the host),
+		// suppress the URL entirely rather than leaking the raw
+		// filesystem path as a URL component to anyone screen-sharing
+		// this page.
+		$log_path = (string) $this->logging->get_log_file_path();
+		$log_url  = str_starts_with( $log_path, ABSPATH )
+			? get_site_url() . '/' . substr( $log_path, strlen( ABSPATH ) )
+			: '';
+
+		// API and License keys are real secrets. The page is gated on
+		// manage_options, but admins screen-share the debug surface
+		// to support more often than is comfortable. Mask everything
+		// but the last 4 chars so a glance can confirm "yes, the
+		// expected key" without exposing the full credential.
+		$api_key     = (string) $this->config->get_setting( 'auth/api_key' );
+		$license_key = (string) $this->config->get_setting( 'auth/license_key' );
+		$mask        = function ( $value, $tail = 4 ) {
+			$value = (string) $value;
+			$len   = strlen( $value );
+			if ( $len <= $tail ) {
+				return str_repeat( '•', $len );
+			}
+			return str_repeat( '•', $len - $tail ) . substr( $value, -$tail );
+		};
+
 		$items = array(
-			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', 'https://status.trustedlogin.com', is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
-			esc_html__( 'API Key', 'trustedlogin' )     => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/api_key' ) ),
-			esc_html__( 'License Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'auth/license_key' ) ),
-			esc_html__( 'Log URL', 'trustedlogin' )     => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', str_replace( ABSPATH, get_site_url() . '/', $this->logging->get_log_file_path() ), esc_html__( 'Download the log', 'trustedlogin' ) ),
-			esc_html__( 'Log Level', 'trustedlogin' )   => $this->config->get_setting( 'logging/threshold', esc_html__( '(Default)', 'trustedlogin' ) ),
-			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', $this->config->get_setting( 'webhook/url', '(Empty)' ) ),
-			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', $encryption->get_vendor_public_key(), $encryption->get_remote_encryption_key_url(), esc_html__( 'Verify key', 'trustedlogin' ) ),
+			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( 'https://status.trustedlogin.com' ), is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
+			esc_html__( 'API Key', 'trustedlogin' )     => sprintf( '<code>%s</code>', esc_html( $mask( $api_key ) ) ),
+			esc_html__( 'License Key', 'trustedlogin' ) => sprintf( '<code>%s</code>', esc_html( $mask( $license_key ) ) ),
+			esc_html__( 'Log URL', 'trustedlogin' )     => '' === $log_url
+				? esc_html__( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' )
+				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html__( 'Download the log', 'trustedlogin' ) ),
+			esc_html__( 'Log Level', 'trustedlogin' )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', __( '(Default)', 'trustedlogin' ) ) ),
+			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
+			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html__( 'Verify key', 'trustedlogin' ) ),
 		);
 
 		$debugging_info = '';
 		foreach ( $items as $label => $value ) {
+			// $label was already wp-i18n'd through esc_html__; $value
+			// was escape-at-source above. The wrapping <p><strong>
+			// is the only added markup.
 			$debugging_info .= sprintf( '<p><strong>%s</strong>: %s</p>', $label, $value );
 		}
+
+		// Strip secrets from the raw config dump that follows. Even on
+		// a manage_options-gated screen, the print_r blob is the most
+		// likely thing to end up in a paste to support; replacing the
+		// known-secret keys' values keeps the structural debug value
+		// (which fields are set, which aren't) without leaking the
+		// secrets themselves.
+		$config_dump = $this->config->get_settings();
+		array_walk_recursive(
+			$config_dump,
+			function ( &$value, $key ) use ( $mask ) {
+				if ( in_array( $key, array( 'api_key', 'license_key', 'public_key', 'private_key', 'secret', 'password' ), true ) ) {
+					$value = $mask( $value );
+				}
+			}
+		);
 
 		$debugging_output = '<div class="tl-{{ns}}-auth__admin_debugging">
             <h3>{{debugging_label}}</h3>
@@ -893,7 +1133,7 @@ final class Form {
 				'debugging_label' => esc_html__( 'Debugging Info', 'trustedlogin' ),
 				'debugging_info'  => $debugging_info,
 				'tl_config_label' => esc_html__( 'TrustedLogin Config', 'trustedlogin' ),
-				'tl_config'       => '<pre>' . print_r( $this->config->get_settings(), true ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+				'tl_config'       => '<pre>' . esc_html( print_r( $config_dump, true ) ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			)
 		);
 	}
@@ -925,14 +1165,16 @@ final class Form {
 				$output_html,
 				array(
 					'a'        => array(
-						'class'       => array(),
-						'id'          => array(),
-						'href'        => array(),
-						'title'       => array(),
-						'rel'         => array(),
-						'target'      => array(),
-						'data-toggle' => array(),
-						'data-access' => array(),
+						'class'             => array(),
+						'id'                => array(),
+						'href'              => array(),
+						'title'             => array(),
+						'rel'               => array(),
+						'target'            => array(),
+						'aria-role'         => array(),
+						'data-toggle'       => array(),
+						'data-access'       => array(),
+						'data-tl-namespace' => array(),
 					),
 					'img'      => array(
 						'class' => array(),
@@ -1017,10 +1259,12 @@ final class Form {
 						'id'    => array(),
 					),
 					'div'      => array(
-						'class'     => array(),
-						'id'        => array(),
-						'aria-live' => array(),
-						'style'     => array(),
+						'class'                => array(),
+						'id'                   => array(),
+						'role'                 => array(),
+						'aria-live'            => array(),
+						'data-preflight-error' => array(),
+						'style'                => array(),
 					),
 					'small'    => array(
 						'class'       => array(),
@@ -1064,11 +1308,21 @@ final class Form {
 						'placeholder' => array(),
 					),
 					'button'   => array(
-						'class'     => array(),
-						'id'        => array(),
-						'aria-live' => array(),
-						'style'     => array(),
-						'title'     => array(),
+						'class'             => array(),
+						'id'                => array(),
+						'aria-live'         => array(),
+						'style'             => array(),
+						'title'             => array(),
+						// `type` is needed to keep the rendered `<button>`
+						// from defaulting to `submit` and breaking out of
+						// any wrapping form. `data-access` drives the
+						// extend-vs-grant copy in the JS click handler.
+						// `data-tl-namespace` lets the delegated handler
+						// resolve the right config when multiple TL plugins
+						// coexist on a single page.
+						'type'              => array( 'button' ),
+						'data-access'       => array(),
+						'data-tl-namespace' => array(),
 					),
 				),
 				$allowed_protocols
@@ -1124,8 +1378,21 @@ final class Form {
 			'create_ticket' => $this->is_create_ticket_enabled(),
 		);
 
-		// TODO: Add data to tl_obj when detecting that it's already been localized by another vendor.
-		wp_localize_script( 'trustedlogin-' . $this->config->ns(), 'tl_obj', $button_settings );
+		// Multi-namespace coexistence: when two TrustedLogin-using
+		// plugins render their buttons on the same page, the legacy
+		// wp_localize_script(..., 'tl_obj', ...) emits two competing
+		// `var tl_obj = {...};` blobs and the second one wins — so the
+		// first vendor's click handler dispatches to the wrong AJAX
+		// action. The fix is a single shared root, namespaced by ns.
+		// The companion JS reads window.trustedLogin[ns] and the
+		// rendered button carries `data-tl-namespace` so the delegated
+		// click handler can resolve the right config per click.
+		$inline = sprintf(
+			'window.trustedLogin = window.trustedLogin || {}; window.trustedLogin[%s] = %s;',
+			wp_json_encode( $this->config->ns() ),
+			wp_json_encode( $button_settings )
+		);
+		wp_add_inline_script( 'trustedlogin-' . $this->config->ns(), $inline, 'before' );
 
 		wp_enqueue_script( 'trustedlogin-' . $this->config->ns() );
 
@@ -1199,7 +1466,12 @@ final class Form {
 			$tag = 'a';
 		}
 
-		$data_atts = array();
+		// `tl-namespace` lets the delegated click handler look up the
+		// correct config under window.trustedLogin[ns] when more than
+		// one TrustedLogin-using plugin coexists on the page.
+		$data_atts = array(
+			'tl-namespace' => $this->config->ns(),
+		);
 
 		if ( $this->support_user->get_all() ) {
 			$text                = '<span class="dashicons dashicons-update-alt dashicons--small"></span> ' . esc_html( $atts['exists_text'] );
@@ -1228,6 +1500,27 @@ final class Form {
 		}
 
 		$anchor_html = $text . $powered_by;
+
+		// `<button>` is the right semantic when the click triggers
+		// JS (the AJAX grant flow) rather than navigation. As a
+		// real button, the browser natively blocks clicks once the
+		// JS sets `disabled` — no JS-side hasClass guard required to
+		// stop a rapid double-click from firing two AJAX requests.
+		// `<a>` is kept as the legacy/fallback tag for integrators
+		// that embed the grant button outside the auth screen.
+		if ( 'button' === $tag ) {
+			return sprintf(
+				'<button type="button" class="%1$s button-trustedlogin-%2$s" %3$s>%4$s</button>',
+				/* %1$s */
+				esc_attr( $css_class ),
+				/* %2$s */
+				$this->config->ns(),
+				/* %3$s */
+				$data_string,
+				/* %4$s */
+				$anchor_html
+			);
+		}
 
 		return sprintf(
 			'<%1$s href="%2$s" class="%3$s button-trustedlogin-%4$s" aria-role="button" %5$s>%6$s</%1$s>',
@@ -1277,7 +1570,7 @@ final class Form {
 		$query_args = apply_filters(
 			'trustedlogin/' . $this->config->ns() . '/support_url/query_args',
 			array(
-				'message' => __( 'Could not create TrustedLogin access.', 'trustedlogin' ),
+				'message' => __( 'Could not create support access.', 'trustedlogin' ),
 				'ref'     => Client::get_reference_id(),
 			)
 		);
@@ -1337,7 +1630,7 @@ final class Form {
 				),
 				'error'              => array(
 					// translators: %1$s is the vendor title.
-					'title'   => sprintf( __( 'Error syncing support user to %1$s', 'trustedlogin' ), $vendor_title ),
+					'title'   => sprintf( __( 'Couldn\'t register support access with %1$s', 'trustedlogin' ), $vendor_title ),
 					'content' => wp_kses(
 						$error_content,
 						array(
@@ -1365,17 +1658,20 @@ final class Form {
 				'failed_permissions' => array(
 					'content' => esc_html__( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ),
 				),
+				'timeout'            => array(
+					'content' => esc_html__( 'The request took too long to complete. Please try again.', 'trustedlogin' ),
+				),
 				'accesskey'          => array(
-					'title'       => esc_html__( 'TrustedLogin Key Created', 'trustedlogin' ),
+					'title'       => esc_html__( 'Support Access Key Created', 'trustedlogin' ),
 					'content'     => sprintf(
 					// translators: %1$s is the vendor title.
-						__( 'Share this TrustedLogin Key with %1$s to give them secure access:', 'trustedlogin' ),
+						__( 'Share this access key with %1$s to give them secure access:', 'trustedlogin' ),
 						$vendor_title
 					),
 					'revoke_link' => esc_url( add_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns() ), admin_url() ) ),
 				),
 				'error404'           => array(
-					'title'   => esc_html__( 'The TrustedLogin vendor could not be found.', 'trustedlogin' ),
+					'title'   => esc_html__( 'The support team\'s site could not be found.', 'trustedlogin' ),
 					'content' => '',
 				),
 				'error409'           => array(
@@ -1472,6 +1768,7 @@ EOD;
 
 		<div class="tl-%1\$s-auth__accesskey_wrapper">
 			<input id="tl-%1\$s-access-key" type="text" value="%4\$s" size="64" class="tl-%1\$s-auth__accesskey_field code" aria-label="%3\$s">
+			<input id="tl-%1\$s-access-expiration" type="hidden" value="%9\$s">
 			<button id="tl-%1\$s-copy" class="tl-%1\$s-auth__accesskey_copy button" aria-live="off" title="%7\$s"><span class="screen-reader-text">%5\$s</span></button>
 		</div>
 	</%6\$s>
@@ -1494,7 +1791,9 @@ EOD;
 				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
 				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) )
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) ),
+				/* %9$s */
+				esc_attr( $this->support_user->get_expiration( $this->support_user->get_first() ) )
 			);
 		}
 
@@ -1508,6 +1807,93 @@ EOD;
 		return $return;
 	}
 
+
+	/**
+	 * Notice shown after a support-login attempt completes.
+	 *
+	 * Triggered by `?tl_notice=logged_in` (successful support login) or
+	 * `?tl_notice=already_logged_in` (user was already authenticated and
+	 * the support-login was skipped). Both cases redirect here from
+	 * {@see Endpoint::maybe_login_support()} so the agent gets clear
+	 * feedback instead of landing on wp-admin with no context.
+	 *
+	 * @return void
+	 */
+	public function admin_notice_login_outcome() {
+		if ( empty( $_GET['tl_notice'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+
+		$notice = sanitize_key( wp_unslash( (string) $_GET['tl_notice'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		// Only show the notice to users actually holding the namespaced
+		// support role — otherwise an attacker sending a logged-in admin
+		// to `?tl_notice=logged_in` could confuse them. Matches the role
+		// check used by Endpoint::maybe_login_support() and the Admin
+		// support-user-list gates.
+		$has_support = current_user_can( $this->support_user->role->get_name() );
+
+		if ( 'logged_in' === $notice && $has_support ) {
+			$vendor_title = (string) $this->config->get_setting( 'vendor/title' );
+			$expiration   = '';
+			$support      = $this->support_user->get_first();
+			if ( $support ) {
+				$expires_ts = $this->support_user->get_expiration( $support );
+				if ( $expires_ts ) {
+					$expiration = human_time_diff( time(), (int) $expires_ts );
+				}
+			}
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<strong>
+					<?php
+					echo esc_html(
+						sprintf(
+						// translators: %s vendor title (e.g. Acme Widgets).
+							__( 'You are logged in as a %s support user.', 'trustedlogin' ),
+							$vendor_title
+						)
+					);
+					?>
+					</strong>
+					<?php if ( $expiration ) : ?>
+						<br>
+						<?php
+						echo esc_html(
+							sprintf(
+							// translators: %s human-readable duration like "1 week".
+								__( 'Access expires in %s.', 'trustedlogin' ),
+								$expiration
+							)
+						);
+						?>
+					<?php endif; ?>
+				</p>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( 'already_logged_in' === $notice ) {
+			// Only surface this to users who actually triggered the flow:
+			// they can land here while authenticated as themselves. Show a
+			// calm informational notice explaining what happened.
+			?>
+			<div class="notice notice-info is-dismissible">
+				<p>
+					<?php
+					printf(
+						/* translators: %s: the currently signed-in user's display name */
+						esc_html__( 'You were already signed in as %s, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ),
+						esc_html( wp_get_current_user()->display_name )
+					);
+					?>
+				</p>
+			</div>
+			<?php
+		}
+	}
 
 	/**
 	 * Notice: Shown when a support user is manually revoked by admin;

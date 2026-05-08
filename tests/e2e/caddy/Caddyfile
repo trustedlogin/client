@@ -1,0 +1,56 @@
+# Caddy config for the e2e TLS sidecar.
+#
+# Serves HTTPS on port 8443 with `tls internal` (caddy's self-signed
+# local CA). Proxies straight to client-wp's HTTP backend and adds the
+# X-Forwarded-* headers WordPress uses to recognise it's behind an
+# HTTPS terminator. Playwright's ignoreHTTPSErrors:true accepts the
+# self-signed cert without fuss.
+#
+# Note on ports and production parity
+# -----------------------------------
+# A real-world HSTS redirect chain is http://site.com (port 80) →
+# https://site.com (port 443). Browsers drop the default port from
+# URL.host so the origin match boils down to "site.com" on both
+# sides — which is the scheme-mismatch case our fix is designed for.
+#
+# This sidecar uses port 8443 because the developer's host machine
+# often has Local by Flywheel or similar bound to 80/443. As a
+# consequence URL.host includes ":8443" on the HTTPS side, and the
+# host-only comparison in tl-field.js correctly sees a DIFFERENT
+# origin from http://localhost:8002. So the e2e test that uses this
+# sidecar exercises "popup lands on TLS with a different port" not
+# "popup lands on TLS with default ports", which is the closest we
+# can get without taking over the host's 80/443.
+#
+# Coverage:
+#   - tl-field.test.js (Jest) exercises the host-comparison code
+#     directly for EVERY scheme/port permutation.
+#   - protocol-mismatch.spec.ts uses this sidecar to verify the real
+#     TLS wire: browser receives TLS-served HTML, runs the real
+#     client JS, fires a real postMessage cross-origin.
+
+{
+	# Disable only ACME/redirect behaviour. We still need caddy's
+	# internal cert-provisioning for `tls internal` — `auto_https off`
+	# would stop it from pre-issuing the localhost cert, so we use
+	# `disable_redirects` which only suppresses HTTP→HTTPS redirection.
+	auto_https disable_redirects
+	# Default ports so caddy doesn't try to bind 80 for ACME challenges.
+	http_port 8080
+	https_port 8443
+	log {
+		output stdout
+		level WARN
+	}
+}
+
+# Pre-issue a cert for "localhost" SNI on port 8443. No `on_demand` —
+# the hostnames we expect are known up-front, so we enumerate them and
+# caddy generates the cert at startup.
+localhost:8443 {
+	tls internal
+	reverse_proxy client-wp:80 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Port 8443
+	}
+}

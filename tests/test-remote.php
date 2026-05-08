@@ -253,4 +253,363 @@ class TrustedLoginRemoteTest extends WP_UnitTestCase {
 		$this->assertWPError( $handled_response );
 		$this->assertSame( 'missing_required_key', $handled_response->get_error_code() );
 	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::body_looks_like_html
+	 *
+	 * Data-driven: covers the shapes a hosting firewall / CDN returns in
+	 * the real world (Cloudflare 415 HTML, Wordfence block page, nginx
+	 * 502 Bad Gateway, bare `<html>` tag, etc.) plus negative cases
+	 * (JSON, empty body, plain text, JSON string value containing HTML).
+	 *
+	 * Motivated by the 150+ "trustedlogin - change to admin" support
+	 * tickets where the customer's vendor site returned HTML and the
+	 * Client silently converted that into "Invalid response. Missing
+	 * key: publicKey". The detector needs to catch all the real-world
+	 * shapes without false-positiving on legitimate JSON.
+	 */
+	public function test_body_looks_like_html_detects_firewall_shapes() {
+		$positive_cases = array(
+			'cloudflare_415'      => "<!DOCTYPE html>\n<html><head><title>415</title></head><body>Blocked</body></html>",
+			'wordfence_403'       => "<!DOCTYPE html>\n<html><head><title>Forbidden - Wordfence</title></head><body><h1>Your access to this site has been limited</h1></body></html>",
+			'nginx_502'           => "<html>\n<head><title>502 Bad Gateway</title></head>\n<body><center><h1>502 Bad Gateway</h1></center></body></html>",
+			'mixed_case_doctype'  => "<!doctype html><html>foo</html>",
+			'leading_whitespace'  => "  \n  <!DOCTYPE html><html></html>",
+			'just_html_tag'       => "<html></html>",
+			'just_head_tag'       => "<head></head>",
+			'just_body_tag'       => "<body>blocked</body>",
+		);
+
+		foreach ( $positive_cases as $label => $body ) {
+			$this->assertTrue(
+				Remote::body_looks_like_html( $body ),
+				"Expected '$label' to be detected as HTML"
+			);
+		}
+
+		$negative_cases = array(
+			'empty_string'         => '',
+			'whitespace_only'      => "   \n   ",
+			'plain_json_object'    => '{"publicKey":"abc123"}',
+			'plain_json_array'     => '[1,2,3]',
+			'plain_text'           => 'Could not connect',
+			'json_containing_html' => '{"message":"<html>not a real document</html>"}',
+			'xml'                  => '<?xml version="1.0"?><root/>',
+			'json_leading_space'   => '   {"ok":true}',
+			'html_fragment_no_tag' => 'This is <div>a fragment</div> inside text',
+		);
+
+		foreach ( $negative_cases as $label => $body ) {
+			$this->assertFalse(
+				Remote::body_looks_like_html( $body ),
+				"Expected '$label' to NOT be detected as HTML"
+			);
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * When the vendor site responds with HTML (regardless of HTTP
+	 * status), handle_response should return a `vendor_response_not_json`
+	 * WP_Error whose message mentions "firewall" and includes the HTTP
+	 * status. The customer-friendly copy is specifically the thing
+	 * motivated by the field tickets; regressing it would reintroduce
+	 * the "Invalid response. Missing key: publicKey" surface.
+	 */
+	public function test_handle_response_converts_html_body_to_firewall_error() {
+		$html_415 = array(
+			'headers'  => array( 'content-type' => 'text/html' ),
+			'body'     => "<!DOCTYPE html>\n<html><title>Cloudflare 415</title></html>",
+			'response' => array( 'code' => 415, 'message' => 'Unsupported Media Type' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $html_415, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'vendor_response_not_json', $result->get_error_code() );
+		$this->assertStringContainsString( 'firewall', strtolower( $result->get_error_message() ) );
+		$this->assertStringContainsString( '415', $result->get_error_message() );
+
+		// Must never leak the raw HTML into the customer-facing message.
+		$this->assertStringNotContainsString( '<html>', $result->get_error_message() );
+		$this->assertStringNotContainsString( 'DOCTYPE', $result->get_error_message() );
+
+		// Must not leak internal jargon to the customer.
+		$this->assertStringNotContainsStringIgnoringCase( 'publickey', $result->get_error_message() );
+		$this->assertStringNotContainsStringIgnoringCase( 'trustedlogin', $result->get_error_message() );
+
+		// Error data preserves the status + a sanitized preview for logs.
+		$data = $result->get_error_data();
+		$this->assertIsArray( $data );
+		$this->assertSame( 415, $data['status'] );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * JSON 200 without the required `publicKey` key should produce the
+	 * `missing_public_key` code (not the pre-fix generic
+	 * `missing_required_key`) with customer-friendly copy — the vendor's
+	 * Connector is misconfigured and the customer can't fix it.
+	 */
+	public function test_handle_response_missing_publickey_is_specific() {
+		$json_no_key = array(
+			'headers'  => array( 'content-type' => 'application/json' ),
+			'body'     => '{"somethingElse":"nope"}',
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $json_no_key, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'missing_public_key', $result->get_error_code() );
+		$this->assertStringContainsString( 'support team', strtolower( $result->get_error_message() ) );
+		$this->assertStringNotContainsStringIgnoringCase( 'publickey', $result->get_error_message() );
+		$this->assertStringNotContainsStringIgnoringCase( 'trustedlogin', $result->get_error_message() );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::handle_response
+	 *
+	 * JSON 200 with empty-string `publicKey` is treated the same as
+	 * missing — an empty key can't be used to encrypt anything.
+	 */
+	public function test_handle_response_empty_publickey_is_specific() {
+		$json_empty_key = array(
+			'headers'  => array( 'content-type' => 'application/json' ),
+			'body'     => '{"publicKey":""}',
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = $this->remote->handle_response( $json_empty_key, array( 'publicKey' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'missing_public_key', $result->get_error_code() );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::check_response_code
+	 *
+	 * Unmapped status codes used to fall through to a silent `return (int)`
+	 * which threw away the HTTP status. That's how the Cloudflare 415
+	 * tickets got "Invalid response." with no context. Now the default
+	 * branch returns a WP_Error that includes the status number.
+	 */
+	public function test_check_response_code_preserves_unmapped_status() {
+		$response_415 = array(
+			'headers'  => array(),
+			'body'     => '{"ok":false}',
+			'response' => array( 'code' => 415, 'message' => 'Unsupported Media Type' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$result = Remote::check_response_code( $response_415 );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'unexpected_response_code', $result->get_error_code() );
+		$this->assertStringContainsString( '415', $result->get_error_message() );
+		$data = $result->get_error_data();
+		$this->assertSame( 415, $data['status'] );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::check_response_code
+	 *
+	 * 2xx codes without an explicit case should still return the int
+	 * status (legacy contract — callers treat that as success).
+	 */
+	public function test_check_response_code_passes_through_unmapped_2xx() {
+		$response_206 = array(
+			'headers'  => array(),
+			'body'     => 'chunk',
+			'response' => array( 'code' => 206, 'message' => 'Partial Content' ),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+
+		$this->assertSame( 206, Remote::check_response_code( $response_206 ) );
+	}
+
+	// -----------------------------------------------------------------
+	//  maybe_send_webhook — payload shape, body encoding, content type,
+	//  filter override, no-URL short-circuit
+	// -----------------------------------------------------------------
+
+	/**
+	 * Captures the request_args passed to wp_remote_post via
+	 * pre_http_request, returns a 200 OK so the SDK treats the webhook
+	 * as delivered. Returns the cleanup callable + a reference to the
+	 * captured-args holder.
+	 *
+	 * @return array{0: callable, 1: \ArrayObject}
+	 */
+	private function _capture_webhook_args(): array {
+		$captured = new \ArrayObject();
+		$filter   = static function ( $preempt, $args, $url ) use ( $captured ) {
+			$captured['url']     = $url;
+			$captured['args']    = $args;
+			$captured['method']  = isset( $args['method'] ) ? $args['method'] : 'POST';
+			$captured['headers'] = isset( $args['headers'] ) ? $args['headers'] : array();
+			$captured['body']    = isset( $args['body'] ) ? $args['body'] : '';
+			return array(
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'body'     => '',
+				'headers'  => array(),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+		add_filter( 'pre_http_request', $filter, 9, 3 );
+
+		return array(
+			static function () use ( $filter ) {
+				remove_filter( 'pre_http_request', $filter, 9 );
+			},
+			$captured,
+		);
+	}
+
+	private function _normalize_headers( array $headers ): array {
+		$out = array();
+		foreach ( $headers as $k => $v ) {
+			$out[ strtolower( (string) $k ) ] = (string) $v;
+		}
+		return $out;
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::maybe_send_webhook
+	 *
+	 * Default payload shape: JSON-encoded body with
+	 * Content-Type: application/json. Pinned to defend the
+	 * compat-wordfence fix from regressing.
+	 */
+	public function test_maybe_send_webhook_emits_json_with_application_json_header() {
+		[ $cleanup, $captured ] = $this->_capture_webhook_args();
+
+		try {
+			$payload = array(
+				'url'    => 'https://example.com',
+				'ns'     => $this->config->ns(),
+				'action' => 'created',
+			);
+			$this->remote->maybe_send_webhook( $payload );
+
+			$this->assertSame( 'POST', $captured['method'] );
+
+			$this->assertIsString( $captured['body'], 'webhook body must be a JSON string, not an array' );
+			$decoded = json_decode( $captured['body'], true );
+			$this->assertIsArray( $decoded );
+			$this->assertSame( 'created', $decoded['action'] );
+			$this->assertSame( $this->config->ns(), $decoded['ns'] );
+
+			$headers = $this->_normalize_headers( $captured['headers'] );
+			$this->assertArrayHasKey( 'content-type', $headers );
+			$this->assertMatchesRegularExpression(
+				'~application/json~i',
+				$headers['content-type']
+			);
+		} finally {
+			$cleanup();
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::maybe_send_webhook
+	 *
+	 * The webhook/request_args filter lets integrators reshape the body
+	 * (e.g. revert to form-encoded for legacy receivers). Verifies the
+	 * filter actually overrides the default shape.
+	 */
+	public function test_webhook_request_args_filter_can_revert_to_form_encoded() {
+		[ $cleanup, $captured ] = $this->_capture_webhook_args();
+
+		$override = static function ( $args, $url, $data ) {
+			return array( 'body' => $data );
+		};
+		add_filter(
+			'trustedlogin/' . $this->config->ns() . '/webhook/request_args',
+			$override,
+			10,
+			3
+		);
+
+		try {
+			$this->remote->maybe_send_webhook(
+				array(
+					'url'    => 'https://example.com',
+					'action' => 'created',
+				)
+			);
+
+			$this->assertIsArray(
+				$captured['body'],
+				'with the legacy filter shape, body should be a PHP array (WP form-encodes on the wire)'
+			);
+		} finally {
+			remove_filter(
+				'trustedlogin/' . $this->config->ns() . '/webhook/request_args',
+				$override,
+				10
+			);
+			$cleanup();
+		}
+	}
+
+	/**
+	 * @covers \TrustedLogin\Remote::maybe_send_webhook
+	 *
+	 * No webhook URL configured → return false BEFORE any HTTP call.
+	 * If the SDK started attempting POSTs to empty URLs it would burn
+	 * cycles and potentially generate noise in error logs.
+	 */
+	public function test_maybe_send_webhook_with_empty_url_returns_false_without_http() {
+		// Build a fresh config with both webhook keys empty.
+		$settings = array(
+			'role'           => 'editor',
+			'webhook'        => array( 'url' => '' ),
+			'auth'           => array(
+				'api_key'     => '9946ca31be6aa948',
+				'license_key' => 'my custom key',
+			),
+			'decay'          => WEEK_IN_SECONDS,
+			'vendor'         => array(
+				'namespace'   => 'gravityview',
+				'title'       => 'GravityView',
+				'email'       => 'support@gravityview.co',
+				'website'     => 'https://gravityview.co',
+				'support_url' => 'https://gravityview.co/support/',
+				'logo_url'    => '',
+			),
+			'reassign_posts' => true,
+		);
+		$config   = new Config( $settings );
+		$remote   = new Remote( $config, new Logging( $config ) );
+
+		// Failing assert if any HTTP call escaped despite the empty URL.
+		$called = false;
+		$filter = static function ( $preempt, $args, $url ) use ( &$called ) {
+			$called = true;
+			return $preempt;
+		};
+		add_filter( 'pre_http_request', $filter, 9, 3 );
+
+		try {
+			$result = $remote->maybe_send_webhook( array( 'action' => 'created' ) );
+
+			$this->assertFalse( $result );
+			$this->assertFalse( $called, 'no HTTP call should be attempted when webhook URL is empty' );
+		} finally {
+			remove_filter( 'pre_http_request', $filter, 9 );
+		}
+	}
+
 }

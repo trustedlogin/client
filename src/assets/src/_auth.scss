@@ -4,7 +4,17 @@
 		min-width: $container-width-min;
 		max-width: $container-width-max;
 		display: block;
-		margin: ($gutter-width * 3) auto;
+		// Asymmetric block margin: tighter above so the card sits
+		// close to the wp-login `<h1>` logo (which already has its
+		// own bottom padding), and roomier below so the footer
+		// links don't crowd the viewport bottom. Side margin uses
+		// `max()` so wide viewports still auto-center the card AND
+		// narrow viewports get a fixed 24px inset — without this,
+		// the white section runs flush to the browser chrome below
+		// ~728px viewport width.
+		margin-block-start: ($vertical-spacing / 2);
+		margin-block-end: ($vertical-spacing * 2);
+		margin-inline: max(#{$vertical-spacing}, calc((100% - #{$container-width-max}) / 2));
 		font-size: 1em;
 		text-align: center;
 		zoom: 1;
@@ -462,6 +472,50 @@
 					padding: 0;
 				}
 			}
+		}
+	}
+
+	// Pre-flight fallback actions — reuses the existing
+	// .tl-{ns}-auth__response_error surface for the error message.
+	// The only net-new styling is the stacked "Contact support" CTA
+	// + muted retry link that replaces the greyed-out grant button.
+	.tl-#{$namespace}-auth__actions--unavailable {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: $vertical-spacing / 2;
+	}
+
+	.tl-#{$namespace}-auth__retry-wrap {
+		// p wrapper keeps the link aligned with paragraph typography
+		// without picking up button styling.
+		margin: 0;
+		padding: 0;
+	}
+
+	.tl-#{$namespace}-auth__retry {
+		// Muted secondary affordance — discoverable, not distracting.
+		display: inline-flex;
+		align-items: center;
+		gap: .25em;
+		color: lighten($color-555, 15%);
+		font-size: .95em;
+		text-decoration: none;
+		border-bottom: 1px dotted lighten($color-555, 25%);
+		padding-bottom: 1px;
+
+		&:hover,
+		&:focus {
+			color: $color-555;
+			border-bottom-style: solid;
+		}
+
+		.dashicons {
+			font-size: 18px;
+			width: 18px;
+			height: 18px;
+			line-height: 18px;
+			vertical-align: middle;
 		}
 	}
 }

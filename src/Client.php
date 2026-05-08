@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.9.0';
+	const VERSION = '1.10.0';
 
 	/**
 	 * Instance of Config
@@ -143,21 +143,26 @@ final class Client {
 
 		$this->logging = new Logging( $config );
 
-		$this->endpoint = new Endpoint( $this->config, $this->logging );
-
 		$this->cron = new Cron( $this->config, $this->logging );
 
 		$this->support_user = new SupportUser( $this->config, $this->logging );
 
 		$this->site_access = new SiteAccess( $this->config, $this->logging );
 
+		// Remote / LoginAttempts must be built BEFORE Endpoint —
+		// Endpoint::fail_login delegates to LoginAttempts on the
+		// login_failed branch, and LoginAttempts wraps Remote.
+		$this->remote = new Remote( $this->config, $this->logging );
+
+		$login_attempts = new LoginAttempts( $this->config, $this->remote, $this->logging );
+
+		$this->endpoint = new Endpoint( $this->config, $this->logging, $login_attempts, $this->support_user );
+
 		$form = new Form( $this->config, $this->logging, $this->support_user, $this->site_access );
 
 		$this->admin = new Admin( $this->config, $form, $this->support_user );
 
-		$this->ajax = new Ajax( $this->config, $this->logging );
-
-		$this->remote = new Remote( $this->config, $this->logging );
+		$this->ajax = new Ajax( $this->config, $this->logging, $this );
 
 		if ( $init ) {
 			$this->init();
@@ -227,7 +232,7 @@ final class Client {
 	}
 
 	/**
-	 * This creates a TrustedLogin user ✨
+	 * Creates a TrustedLogin support user.
 	 *
 	 * @since 1.5.0 Added $ticket_data parameter.
 	 *
@@ -253,6 +258,14 @@ final class Client {
 			return $this->extend_access( $user_id );
 		}
 
+		// Check SSL before creating a support user. Creating locally and
+		// then failing the SaaS sync on the SSL gate would orphan the
+		// user — it can never be used to log in because no envelope
+		// reached the vendor dashboard. Fail-fast keeps state clean.
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ), array( 'error_code' => 426 ) );
+		}
+
 		timer_start();
 
 		try {
@@ -274,7 +287,7 @@ final class Client {
 		$site_identifier_hash = Encryption::get_random_hash( $this->logging );
 
 		if ( is_wp_error( $site_identifier_hash ) ) {
-			wp_delete_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$this->logging->log( 'Could not generate a secure secret.', __METHOD__, 'error' );
 
@@ -295,7 +308,7 @@ final class Client {
 		$did_setup = $this->support_user->setup( $support_user_id, $site_identifier_hash, $expiration_timestamp, $this->cron );
 
 		if ( is_wp_error( $did_setup ) ) {
-			wp_delete_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$did_setup->add_data( array( 'error_code' => 503 ) );
 
@@ -309,7 +322,7 @@ final class Client {
 		$secret_id = $this->endpoint->generate_secret_id( $site_identifier_hash, $endpoint_hash );
 
 		if ( is_wp_error( $secret_id ) ) {
-			wp_delete_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			$secret_id->add_data( array( 'error_code' => 500 ) );
 
@@ -322,6 +335,7 @@ final class Client {
 
 		$return_data = array(
 			'type'         => 'new',
+			'key'          => $this->site_access->get_access_key(),
 			'site_url'     => get_site_url(),
 			'endpoint'     => $endpoint_hash,
 			'identifier'   => $site_identifier_hash,
@@ -333,10 +347,6 @@ final class Client {
 				'remote' => null, // Updated later.
 			),
 		);
-
-		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
-		}
 
 		timer_start();
 
@@ -363,7 +373,7 @@ final class Client {
 
 			$this->logging->log( 'There was an error creating a secret.', __METHOD__, 'error', $e );
 
-			wp_delete_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			return $exception_error;
 		}
@@ -377,7 +387,7 @@ final class Client {
 
 			$created->add_data( array( 'status_code' => 503 ) );
 
-			wp_delete_user( $support_user_id );
+			$this->delete_unsynced_support_user( $support_user_id );
 
 			return $created;
 		}
@@ -427,6 +437,16 @@ final class Client {
 	 */
 	private function extend_access( $user_id ) {
 
+		// Check SSL BEFORE any local mutation. If we extend the user's
+		// expiration first and only then notice we can't reach the SaaS,
+		// local + remote state diverge: the site believes the agent's
+		// access is extended, but the envelope the agent needs to log
+		// in via the vendor dashboard still reflects the old expiration.
+		// Fail fast so the customer is asked to enable HTTPS and retry.
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ), array( 'error_code' => 426 ) );
+		}
+
 		timer_start();
 
 		$expiration_timestamp = $this->config->get_expiration_timestamp();
@@ -468,10 +488,6 @@ final class Client {
 				'remote' => null, // Updated later.
 			),
 		);
-
-		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html__( 'TrustedLogin requires a secure connection using HTTPS.', 'trustedlogin' ) );
-		}
 
 		timer_start();
 
@@ -562,6 +578,12 @@ final class Client {
 
 				$this->revoke_access( $user_identifier );
 			}
+
+			// Terminal return for the aggregate "all" branch so the
+			// function doesn't fall through to $this->support_user->get( 'all' )
+			// which would (correctly) return null and cause a misleading
+			// "User does not exist" log + missing revoked webhook summary.
+			return true;
 		}
 
 		$user = $this->support_user->get( $identifier );
@@ -596,13 +618,18 @@ final class Client {
 			return $secret_id;
 		}
 
-		// Revoke site in SaaS.
+		// Revoke site in SaaS. The result is advisory — local cleanup
+		// continues regardless, and a failed sync gets queued for the
+		// SaaS-revoke retry cron so the site eventually drops from SaaS.
 		$site_revoked = $this->site_access->revoke( $secret_id, $this->remote );
 
-		// Couldn't sync to SaaS.
 		if ( is_wp_error( $site_revoked ) ) {
-			// TODO: Add a cron-task to try syncing revocation again later.
-			$this->logging->log( 'There was an issue syncing to SaaS. Failing silently.', __METHOD__, 'error' );
+			$this->logging->log(
+				'SaaS revoke sync failed (' . $site_revoked->get_error_code() . '). Queueing retry; local revoke will continue.',
+				__METHOD__,
+				'error'
+			);
+			$this->cron->queue_saas_revoke_retry( $secret_id );
 		}
 
 		$deleted_user = $this->support_user->delete( $identifier, true, true );
@@ -622,7 +649,8 @@ final class Client {
 		}
 
 		/**
-		 * Site was removed in SaaS, user was deleted.
+		 * Local cleanup succeeded. SaaS sync is either done already or
+		 * queued in the retry cron.
 		 */
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/access/revoked',
@@ -633,7 +661,27 @@ final class Client {
 			)
 		);
 
-		return $site_revoked;
+		return true;
+	}
+
+	/**
+	 * Retry an outstanding SaaS revoke for a single secret_id. Called from
+	 * {@see Cron::retry_saas_revoke()} when the initial sync failed.
+	 *
+	 * @since 1.10.0
+	 *
+	 * @param string $secret_id Site secret identifier.
+	 *
+	 * @return bool True on success, false if the SaaS sync still failed.
+	 */
+	public function retry_saas_revoke( $secret_id ) {
+		if ( ! is_string( $secret_id ) || '' === $secret_id ) {
+			return false;
+		}
+
+		$result = $this->site_access->revoke( $secret_id, $this->remote );
+
+		return ! is_wp_error( $result );
 	}
 
 	/**
@@ -654,6 +702,36 @@ final class Client {
 		}
 
 		return $metadata;
+	}
+
+	/**
+	 * Roll back a partially-created support user when the SaaS sync
+	 * fails mid-grant. Plain wp_delete_user() leaves the user record
+	 * in the network table on multisite — the user can no longer
+	 * log in, but a row remains in wp_users with the cloned
+	 * support-role caps in user_meta. wpmu_delete_user removes the
+	 * record from the network entirely.
+	 *
+	 * @param int $support_user_id The user id to remove.
+	 *
+	 * @return void
+	 */
+	private function delete_unsynced_support_user( $support_user_id ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		// wpmu_delete_user lives in wp-admin/includes/ms.php which isn\'t
+		// auto-loaded outside network admin context. Without this load
+		// the network user row leaks every time rollback fires from
+		// admin_init / template_redirect.
+		if ( is_multisite() ) {
+			require_once ABSPATH . 'wp-admin/includes/ms.php';
+		}
+
+		wp_delete_user( $support_user_id );
+
+		if ( is_multisite() && function_exists( 'wpmu_delete_user' ) ) {
+			wpmu_delete_user( $support_user_id );
+		}
 	}
 
 	/**

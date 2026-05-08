@@ -190,6 +190,60 @@ class TrustedLoginUtilsTest extends WP_UnitTestCase {
 	// Note: For brevity, I have not included the full details of each test case.
 	// You will need to adjust the specific expectations and return values as needed for your testing scenarios.
 
+	/**
+	 * @covers \TrustedLogin\Utils::delete_transient
+	 *
+	 * Round-trips: set a transient via Utils::set_transient, confirm it
+	 * reads back, delete via Utils::delete_transient, confirm it's gone.
+	 */
+	public function test_delete_transient_roundtrip() {
+		$key = 'tl_delete_transient_test_' . wp_generate_password( 12, false );
+
+		Utils::set_transient( $key, array( 'payload' => 'still-here' ), 3600 );
+
+		$this->assertSame(
+			array( 'payload' => 'still-here' ),
+			Utils::get_transient( $key ),
+			'Expected value to round-trip through set_transient → get_transient'
+		);
+
+		$this->assertTrue(
+			Utils::delete_transient( $key ),
+			'delete_transient should return true for an existing transient'
+		);
+
+		$this->assertFalse(
+			Utils::get_transient( $key ),
+			'get_transient should return false after delete_transient'
+		);
+	}
+
+	/**
+	 * @covers \TrustedLogin\Utils::delete_transient
+	 *
+	 * Guard rails: empty/non-string inputs return false without side
+	 * effects. Matches the defensive behavior of set_transient for the
+	 * same input types.
+	 */
+	public function test_delete_transient_rejects_bad_input() {
+		$this->assertFalse( Utils::delete_transient( '' ) );
+		$this->assertFalse( Utils::delete_transient( 0 ) );
+		$this->assertFalse( Utils::delete_transient( null ) );
+		$this->assertFalse( Utils::delete_transient( array( 'not-a-string' ) ) );
+	}
+
+	/**
+	 * @covers \TrustedLogin\Utils::delete_transient
+	 *
+	 * Deleting a transient that doesn't exist should return false
+	 * (matching WP's delete_option behavior) and not throw.
+	 */
+	public function test_delete_transient_missing_returns_false() {
+		$this->assertFalse(
+			Utils::delete_transient( 'tl_missing_transient_' . wp_generate_password( 12, false ) )
+		);
+	}
+
 	public function tearDown(): void {
 		parent::tearDown();
 	}
