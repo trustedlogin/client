@@ -1826,16 +1826,12 @@ EOD;
 
 		$notice = sanitize_key( wp_unslash( (string) $_GET['tl_notice'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
-		// Only show a notice when the current user actually holds the
-		// namespaced support role — otherwise an attacker sending a logged-in
-		// admin to `?tl_notice=logged_in` could confuse them. Same check
-		// as get_field_input(): only users with the support role see it.
-		$current_user    = wp_get_current_user();
-		$support_role    = (string) $this->config->get_setting( 'role' );
-		$support_user_ns = $this->support_user->role->get_name();
-		$has_support     = $current_user
-			&& ( in_array( $support_user_ns, (array) $current_user->roles, true )
-				|| in_array( $support_role, (array) $current_user->roles, true ) );
+		// Only show the notice to users actually holding the namespaced
+		// support role — otherwise an attacker sending a logged-in admin
+		// to `?tl_notice=logged_in` could confuse them. Matches the role
+		// check used by Endpoint::maybe_login_support() and the Admin
+		// support-user-list gates.
+		$has_support = current_user_can( $this->support_user->role->get_name() );
 
 		if ( 'logged_in' === $notice && $has_support ) {
 			$vendor_title = (string) $this->config->get_setting( 'vendor/title' );
