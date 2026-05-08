@@ -7,6 +7,26 @@
 **WordPress:** 5.2+ (4.1+ with sodium_compat)
 **Full project context:** `.claude/CLAUDE.md`
 
+## Branching (Git Flow)
+
+This repo uses Git Flow. Two long-lived branches:
+
+- `main` — released code only. Every commit on `main` corresponds to a tagged release (`v1.10.0`, `v1.9.0`, …). Never commit directly; never open feature PRs against it.
+- `develop` — integration branch. All ongoing work merges here.
+
+Short-lived branches:
+
+- `feature/<issue>-<slug>` — new features. Branch from `develop`, PR back into `develop`.
+- `fix/<slug>`, `chore/<slug>`, `refactor/<slug>`, `test/<slug>`, `docs/<slug>`, `build/<slug>` — non-feature work. Same flow: branch from `develop`, PR back into `develop`.
+- `release/<x.y.z>` — release prep (version bump, changelog finalization). Branch from `develop`, PR into `main`, tag `v<x.y.z>` on the merge commit, then fast-forward `develop` to match `main`.
+- `hotfix/<x.y.z>` — urgent fix against a released version. Branch from `main`, PR into `main`, tag, then merge back into `develop`.
+
+**Practical rules:**
+
+- Default PR target is `develop`. Targeting `main` is reserved for `release/*` and `hotfix/*` only.
+- After a release lands on `main` and is tagged, fast-forward-push `origin/main` → `origin/develop` (`git push origin origin/main:develop`) so the two branches converge.
+- The `Tests` / `PHP CI Tests` / `E2E` workflows run on PRs to both `main` and `develop`, so feature work is gated identically regardless of target.
+
 ## Security Commit & Comment Hygiene
 
 Git history, code comments, and PR descriptions are **public** — they ship in the plugin zip, land in `git log`, and get indexed by search engines. Treat them as attacker-readable.
