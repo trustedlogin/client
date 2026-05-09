@@ -787,6 +787,7 @@ final class Client {
 		try {
 			$info = \WP_Debug_Data::debug_data();
 		} catch ( \ImagickException $exception ) {
+			unset( $exception ); // Imagick failure inside WP_Debug_Data — surface as null, no detail needed.
 			return null;
 		}
 
