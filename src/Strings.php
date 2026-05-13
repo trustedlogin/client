@@ -531,13 +531,20 @@ class Strings {
 			 * @param array  $context Positional args if any (e.g. count for plurals).
 			 * @param Config $config  Active configuration.
 			 */
-			$value = (string) apply_filters(
-				'trustedlogin/' . self::$config->ns() . '/strings/' . $key,
-				$value,
-				$key,
-				$context,
-				self::$config
-			);
+			try {
+				$value = (string) apply_filters(
+					'trustedlogin/' . self::$config->ns() . '/strings/' . $key,
+					$value,
+					$key,
+					$context,
+					self::$config
+				);
+			} catch ( \Throwable $e ) {
+				// An integrator filter callback that throws should NOT
+				// fatal the SDK. Keep whatever resolve() produced and
+				// log so the integrator can diagnose.
+				self::log_closure_failure( $key, $e );
+			}
 		}
 
 		// Runtime sprintf safety net.
@@ -615,7 +622,20 @@ class Strings {
 			}
 
 			if ( is_callable( $override ) ) {
-				return (string) call_user_func_array( $override, array_values( $context ) );
+				// Catch \Throwable (covers Exception + Error in PHP 7+).
+				// An integrator closure that throws — null pointer,
+				// undefined variable in their callable, DB query
+				// timeout, etc. — would otherwise propagate out of
+				// the SDK as a fatal. Fall back to the SDK default
+				// so the consent screen stays alive.
+				try {
+					return (string) call_user_func_array( $override, array_values( $context ) );
+				} catch ( \Throwable $e ) {
+					// Best-effort log via the active Config's logger.
+					// If logging isn't wired (no init yet, no logging
+					// instance reachable), the SDK silently falls back.
+					self::log_closure_failure( $key, $e );
+				}
 			}
 
 			// Shape mismatch should have been caught by Config::validate_strings().
@@ -626,6 +646,40 @@ class Strings {
 		// against whichever textdomain the integrator routed our `.mo`
 		// files through. When no `.mo` is loaded under that domain,
 		// translate() returns the input verbatim — English fallback.
-		return (string) translate( (string) $default, self::$textdomain );
+		try {
+			return (string) translate( (string) $default, self::$textdomain );
+		} catch ( \Throwable $e ) {
+			// gettext-translations can theoretically throw on a
+			// malformed .mo file; treat as English fallback.
+			self::log_closure_failure( $key, $e );
+			return (string) $default;
+		}
+	}
+
+	/**
+	 * Best-effort log of an integrator-code failure inside Strings
+	 * resolution. Silent fallback if the Logging surface isn't
+	 * reachable — better than letting the exception propagate.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param string     $key The Strings constant being resolved.
+	 * @param \Throwable $e   The error.
+	 */
+	private static function log_closure_failure( $key, \Throwable $e ) {
+		if ( ! self::$config instanceof Config ) {
+			return;
+		}
+		// Use error_log() as the minimal sink. The SDK's Logging class
+		// has heavier deps; resolve() is too hot a path to construct
+		// one. The integrator can hook 'gettext'/php error-log to
+		// route as needed.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf(
+				'[TrustedLogin] Strings::%s resolution failed: %s',
+				$key,
+				$e->getMessage()
+			) );
+		}
 	}
 }

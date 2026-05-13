@@ -316,11 +316,11 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'default' ) );
 	}
 
-	public function test_throwing_closure_propagates_exception() {
-		// Documents the contract: Strings::resolve() does NOT catch
-		// exceptions from integrator closures. If this changes (e.g.
-		// to swallow + fall back to default), the test should be
-		// inverted, not deleted — make the decision explicit.
+	public function test_throwing_closure_falls_back_to_default() {
+		// An integrator closure that throws (DB error, null pointer,
+		// undefined variable) must NOT escape the SDK and fatal the
+		// customer's consent screen. resolve() catches \Throwable
+		// and falls back to the translated default.
 		$config = $this->build_config( array(
 			Strings::SECURED_BY_TRUSTEDLOGIN => static function () {
 				throw new \RuntimeException( 'integrator bug' );
@@ -328,8 +328,44 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		) );
 		Strings::init( $config );
 
-		$this->expectException( \RuntimeException::class );
-		Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'default' );
+		$this->assertSame(
+			'fallback default',
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'fallback default' )
+		);
+	}
+
+	public function test_throwing_filter_does_not_fatal_keeps_resolved_value() {
+		Strings::init( $this->build_config() );
+		$tag = 'trustedlogin/strings-test/strings/' . Strings::SECURED_BY_TRUSTEDLOGIN;
+
+		$thrower = static function () {
+			throw new \RuntimeException( 'integrator filter bug' );
+		};
+		add_filter( $tag, $thrower, 10, 1 );
+
+		try {
+			// Filter throws — get() catches and returns the
+			// pre-filter resolved value (the SDK default).
+			$resolved = Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'safe default' );
+			$this->assertSame( 'safe default', $resolved );
+		} finally {
+			remove_filter( $tag, $thrower, 10 );
+		}
+	}
+
+	public function test_closure_that_throws_error_not_exception_also_falls_back() {
+		// PHP Errors (e.g., calling method on null) extend \Error,
+		// not \Exception. Catch must be \Throwable to cover both.
+		$config = $this->build_config( array(
+			Strings::SECURED_BY_TRUSTEDLOGIN => static function () {
+				return ( (object) null )->method_that_does_not_exist();
+			},
+		) );
+		Strings::init( $config );
+
+		// Should NOT throw — catches Error subclass.
+		$resolved = Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'safe default' );
+		$this->assertSame( 'safe default', $resolved );
 	}
 
 	public function test_malformed_override_injected_post_validation_falls_back() {
