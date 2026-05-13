@@ -101,7 +101,12 @@ async function grantAndCaptureSecrets( ctx: BrowserContext ): Promise<{
         + `$parts = ( new \\TrustedLogin\\Vendor\\AccessKeyLogin() )->handle( array(`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCOUNT_ID_INPUT_NAME => "999",`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCESS_KEY_INPUT_NAME => ${ JSON.stringify( key ) },`
-        + `) );`
+        // Pass $trusted=true. Connector commit ca4e4b7 made the nonce
+        // check unconditional unless the caller explicitly attests that
+        // CSRF was verified upstream — this is a CLI invocation with no
+        // $_REQUEST nonce, so without the flag handle() rejects with
+        // no_access_key (now flowing through verifyGrantAccessRequest()).
+        + `), true );`
         + `if ( is_wp_error( $parts ) ) { echo "ERR:" . $parts->get_error_code() . ":" . $parts->get_error_message(); exit; }`
         + `$first = reset( $parts );`
         + `echo $first["endpoint"] . "|" . $first["identifier"];`,

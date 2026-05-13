@@ -498,8 +498,14 @@ test( 'signing: hard mode rejects unsigned envelopes', async ( { page, context }
 
         const vendorLogTail = readTrustedLoginLogTail();
 
+        // Connector commit bbc88e2 made unsigned envelopes always reject
+        // when a pubkey is configured (the $enforce / require-signature
+        // filter no longer gates this branch) — and the log line was
+        // shortened to "Envelope is missing a signature; refusing to
+        // process." The regex now anchors on the stable part of the
+        // message so both pre- and post-bbc88e2 connectors pass.
         expect(
-            /envelope_signature_missing|missing a signature and hard-mode/i.test( vendorLogTail ),
+            /envelope_signature_missing|envelope is missing a signature/i.test( vendorLogTail ),
             `Expected TrustedLogin log to mention missing signature. Tail:\n${ vendorLogTail.slice( -3000 ) }`,
         ).toBeTruthy();
     } finally {
