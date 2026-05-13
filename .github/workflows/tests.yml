@@ -2,10 +2,13 @@ name: Tests
 
 # Run on
 on:
+  # `**` matches every branch including paths with slashes
+  # (e.g. `chore/foo`); plain `*` would silently skip those.
   push:
-    # any branch
     branches:
-      - '*'
+      - '**'
+  pull_request:
+  workflow_dispatch:
 jobs:
   tests:
     name: Run PHP unit tests
