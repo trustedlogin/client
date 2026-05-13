@@ -590,7 +590,7 @@ final class Remote {
 
 			case 400:
 			case 423:
-				return new \WP_Error( 'unable_to_verify', esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_979c0f, __( 'Support access could not be set up right now. Please try again in a few minutes, or contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
+				return new \WP_Error( 'unable_to_verify', esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_979C0F, __( 'Support access could not be set up right now. Please try again in a few minutes, or contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
 
 			case 401:
 				return new \WP_Error( 'unauthenticated', esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED, __( 'Support access could not be verified. Please contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
@@ -615,7 +615,7 @@ final class Remote {
 			case 500:
 			case 503:
 			case 'http_request_failed':
-				return new \WP_Error( 'unavailable', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_IS_6d0ab1, __( 'The support team\'s site is temporarily unreachable. Please try again in a few minutes.', 'trustedlogin' ) ) ), $api_response );
+				return new \WP_Error( 'unavailable', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_IS_6D0AB1, __( 'The support team\'s site is temporarily unreachable. Please try again in a few minutes.', 'trustedlogin' ) ) ), $api_response );
 
 			// Vendor returned a 501/502/522 — server-side error on their
 			// end. Retrying likely won't help until they fix it.
@@ -646,7 +646,7 @@ final class Remote {
 					'unexpected_response_code',
 					sprintf(
 						/* translators: %d: the HTTP status code returned by the vendor site */
-						esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_084a44, __( 'Support access could not be set up (HTTP %d). Please contact the plugin\'s support team and share this number.', 'trustedlogin' ) ) ),
+						esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_084A44, __( 'Support access could not be set up (HTTP %d). Please contact the plugin\'s support team and share this number.', 'trustedlogin' ) ) ),
 						$status
 					),
 					array(

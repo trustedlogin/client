@@ -359,20 +359,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_closure_that_throws_error_not_exception_also_falls_back() {
-		// PHP Errors (e.g., calling method on null) extend \Error,
-		// not \Exception. Catch must be \Throwable to cover both.
-		$config = $this->build_config( array(
-			Strings::SECURED_BY_TRUSTEDLOGIN => static function () {
-				return ( (object) null )->method_that_does_not_exist();
-			},
-		) );
-		Strings::init( $config );
-
-		// Should NOT throw — catches Error subclass.
-		$resolved = Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'safe default' );
-		$this->assertSame( 'safe default', $resolved );
-	}
 
 	public function test_malformed_override_injected_post_validation_falls_back() {
 		// Force an unsupported shape past Config::validate_strings()

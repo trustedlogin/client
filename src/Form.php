@@ -815,7 +815,7 @@ final class Form {
 		} else {
 
 			// translators: %s is replaced with the name of the role (e.g. "Administrator").
-			$roles_summary = sprintf( esc_html( Strings::get( Strings::CREATE_A_USER_WITH_A_ROLE_60602c, __( 'Create a user with a role of %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
+			$roles_summary = sprintf( esc_html( Strings::get( Strings::CREATE_A_USER_WITH_A_ROLE_60602C, __( 'Create a user with a role of %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
 		}
 
 		$content = array(
@@ -972,14 +972,16 @@ final class Form {
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%3$s" alt="%4$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
-				esc_attr( sprintf(
-					Strings::get(
-						Strings::VISIT_VENDOR_WEBSITE,
-						/* translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets"). */
-						__( 'Visit the %s website (opens in a new tab)', 'trustedlogin' )
-					),
-					$this->config->get_setting( 'vendor/title' )
-				) ),
+				esc_attr(
+					sprintf(
+						Strings::get(
+							Strings::VISIT_VENDOR_WEBSITE,
+							/* translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets"). */
+							__( 'Visit the %s website (opens in a new tab)', 'trustedlogin' )
+						),
+						$this->config->get_setting( 'vendor/title' )
+					)
+				),
 				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
 				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
@@ -1100,7 +1102,7 @@ final class Form {
 			esc_html( Strings::get( Strings::LOG_URL, __( 'Log URL', 'trustedlogin' ) ) )     => '' === $log_url
 				? esc_html( Strings::get( Strings::LOG_PATH_IS_OUTSIDE_ABSPATH_NOT, __( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' ) ) )
 				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html( Strings::get( Strings::DOWNLOAD_THE_LOG, __( 'Download the log', 'trustedlogin' ) ) ) ),
-			esc_html( Strings::get( Strings::LOG_LEVEL, __( 'Log Level', 'trustedlogin' ) ) )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', Strings::get( Strings::DEFAULT, __( '(Default)', 'trustedlogin' ) ) ) ),
+			esc_html( Strings::get( Strings::LOG_LEVEL, __( 'Log Level', 'trustedlogin' ) ) )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', Strings::get( Strings::DEFAULT_LEVEL, __( '(Default)', 'trustedlogin' ) ) ) ),
 			esc_html( Strings::get( Strings::WEBHOOK_URL, __( 'Webhook URL', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
 			esc_html( Strings::get( Strings::VENDOR_PUBLIC_KEY, __( 'Vendor Public Key', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html( Strings::get( Strings::VERIFY_KEY, __( 'Verify key', 'trustedlogin' ) ) ) ),
 		);
@@ -1871,7 +1873,7 @@ EOD;
 					echo esc_html(
 						sprintf(
 						// translators: %s vendor title (e.g. Acme Widgets).
-							Strings::get( Strings::YOU_ARE_LOGGED_IN_AS_A_4eed50, __( 'You are logged in as a %s support user.', 'trustedlogin' ) ),
+							Strings::get( Strings::YOU_ARE_LOGGED_IN_AS_A_4EED50, __( 'You are logged in as a %s support user.', 'trustedlogin' ) ),
 							$vendor_title
 						)
 					);

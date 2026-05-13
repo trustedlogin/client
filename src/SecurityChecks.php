@@ -139,7 +139,7 @@ final class SecurityChecks {
 			$this->logging->log(
 				sprintf(
 					// translators: %s is the error message.
-					Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED_35c1b9, __( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ) ),
+					Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED_35C1B9, __( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ) ),
 					$approved->get_error_message()
 				),
 				__METHOD__,

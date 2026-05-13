@@ -431,7 +431,6 @@ final class Config {
 		$validated = array();
 
 		foreach ( $this->settings['strings'] as $key => $override ) {
-
 			if ( ! is_string( $key ) || ! isset( $registry[ $key ] ) ) {
 				continue;
 			}
@@ -478,7 +477,7 @@ final class Config {
 	 *
 	 * @since 1.11.0
 	 *
-	 * @param string $template
+	 * @param string $template  Override candidate to test (string from integrator config).
 	 * @param int    $arg_count Number of positional args the SDK default requires.
 	 *
 	 * @return bool True if the template renders cleanly with $arg_count args.
@@ -494,14 +493,21 @@ final class Config {
 			$sentinels[] = '__TLPLACEHOLDER' . $i . '__';
 		}
 
-		set_error_handler( static function () { return true; }, E_WARNING ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
+		set_error_handler(
+			function () {
+				return true;
+			},
+			E_WARNING
+		);
+
+		$result = false;
 		try {
 			$result = vsprintf( (string) $template, $sentinels );
-		} catch ( \Throwable $_ ) {
+		} catch ( \Exception $_ ) {
 			$result = false;
-		} finally {
-			restore_error_handler();
 		}
+		restore_error_handler();
 
 		if ( false === $result || ! is_string( $result ) ) {
 			return false;
