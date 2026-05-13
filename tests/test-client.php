@@ -264,7 +264,26 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 	 */
 	private function _stub_saas_sites_post(): callable {
 		$filter = static function ( $preempt, $args, $url ) {
-			if ( false !== strpos( (string) $url, '/api/v1/sites' )
+			$url_string = (string) $url;
+
+			// Vendor pubkey fetch. The envelope build path calls
+			// Encryption::get_vendor_public_key() which hits the
+			// vendor site over HTTPS — the test's vendor.website
+			// is the live gravityview.co URL, so without this
+			// stub the call goes to the network.
+			if ( false !== strpos( $url_string, 'public_key' ) ) {
+				return array(
+					'response' => array( 'code' => 200, 'message' => 'OK' ),
+					'body'     => wp_json_encode(
+						array( 'publicKey' => 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899' )
+					),
+					'headers'  => array( 'content-type' => 'application/json' ),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			}
+
+			if ( false !== strpos( $url_string, '/api/v1/sites' )
 				&& ( ! isset( $args['method'] ) || 'POST' === strtoupper( (string) $args['method'] ) ) ) {
 				return array(
 					'response' => array( 'code' => 201, 'message' => 'Created' ),

@@ -1062,7 +1062,7 @@ final class Form {
 		// filesystem path as a URL component to anyone screen-sharing
 		// this page.
 		$log_path = (string) $this->logging->get_log_file_path();
-		$log_url  = str_starts_with( $log_path, ABSPATH )
+		$log_url  = 0 === strpos( $log_path, ABSPATH )
 			? get_site_url() . '/' . substr( $log_path, strlen( ABSPATH ) )
 			: '';
 
