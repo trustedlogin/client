@@ -187,19 +187,12 @@ class Strings {
 	private static $overrides = array();
 
 	/**
-	 * Bind the SDK's Strings utility to the active Config.
-	 *
-	 * Must be called once during SDK bootstrap — `Client::__construct()`
-	 * does this. Subsequent `Strings::get()` calls read the integrator's
-	 * override map and the namespace for the runtime filter from the
-	 * Config bound here.
-	 *
-	 * Calling `init()` again replaces the bound Config (useful in tests
-	 * that exercise multiple Configs in sequence; pair with reset()).
+	 * Bind the active Config. Subsequent `get()` calls read overrides
+	 * and the runtime filter namespace from it.
 	 *
 	 * @since 1.11.0
 	 *
-	 * @param Config $config Active configuration.
+	 * @param Config $config
 	 */
 	public static function init( Config $config ) {
 		self::$config    = $config;
@@ -207,9 +200,7 @@ class Strings {
 	}
 
 	/**
-	 * Test seam: clear all bound state so the next `init()` starts fresh.
-	 *
-	 * Used by PHPUnit tearDown to prevent override leaks between tests.
+	 * Clear all bound state.
 	 *
 	 * @since 1.11.0
 	 */
@@ -220,11 +211,6 @@ class Strings {
 		self::$translations_loaded = false;
 	}
 
-	// -----------------------------------------------------------------
-	//  Registry — declared shape of every overrideable key. Used by
-	//  Config::validate_strings() to reject malformed overrides before
-	//  they reach sprintf.
-	// -----------------------------------------------------------------
 
 	/**
 	 * @return array<string, array{placeholders:int}>
@@ -375,24 +361,12 @@ class Strings {
 	/**
 	 * Load the SDK's bundled translations against the integrator's textdomain.
 	 *
-	 * Call once from `plugins_loaded` or `init` in your plugin:
-	 *
 	 *     add_action( 'init', function () {
 	 *         \Acme\Vendor\TrustedLogin\Strings::load_translations( 'acme-plugin' );
 	 *     } );
 	 *
-	 * The SDK ships `.mo` files in `src/languages/`. Routing them through
-	 * YOUR textdomain (which Strauss renamed to your plugin's unique
-	 * prefix at build time) sidesteps the multi-SDK textdomain collision
-	 * that would otherwise occur when two TL-using plugins are active on
-	 * the same site.
-	 *
-	 * Hooked on `change_locale` to reload after `switch_to_locale()` /
-	 * `restore_previous_locale()` — fires for emails, REST, multilingual
-	 * plugins.
-	 *
-	 * Skips silently when called before `init` (WP 6.7+ rule against
-	 * early `__()` calls; we honor it for textdomain loading too).
+	 * Defers automatically when called before `init` (avoids the WP 6.7+
+	 * early-translation deprecation notice).
 	 *
 	 * @since 1.11.0
 	 *
@@ -405,8 +379,6 @@ class Strings {
 			return;
 		}
 
-		// WP 6.7+ emits a deprecation notice when translation work
-		// happens before `init`. Defer if we got here too early.
 		if ( ! did_action( 'init' ) ) {
 			add_action(
 				'init',
@@ -425,11 +397,8 @@ class Strings {
 		}
 
 		if ( ! self::$translations_loaded ) {
-			// Read self::$textdomain at fire time (not captured by
-			// value). If load_translations() is called again with a
-			// different domain BEFORE this hook fires, the second
-			// call's textdomain wins for the reload — matching the
-			// most recent `self::$textdomain` write at line 418.
+			// Reads self::$textdomain at fire time so a later load_translations()
+			// call wins for subsequent locale switches.
 			add_action(
 				'change_locale',
 				static function ( $new_locale ) {
@@ -540,28 +509,14 @@ class Strings {
 					self::$config
 				);
 			} catch ( \Throwable $e ) {
-				// An integrator filter callback that throws should NOT
-				// fatal the SDK. Keep whatever resolve() produced and
-				// log so the integrator can diagnose.
 				self::log_closure_failure( $key, $e );
 			}
 		}
 
-		// Runtime sprintf safety net.
-		//
-		// Static-string overrides are placeholder-validated at Config-
-		// load time, but closures (which return arbitrary strings) and
-		// the runtime filter (which can mutate $value to anything) both
-		// bypass that gate. If their result has MORE placeholders than
-		// the SDK call site is about to sprintf into, PHP 8 throws
-		// ValueError "Too few arguments" — an uncaught fatal that
-		// blows up the consent screen on the customer's site.
-		//
-		// Defense: count placeholders in the resolved value. If it
-		// exceeds the registry-declared count, fall back to a fresh
-		// translation of the default — which we know has exactly the
-		// expected placeholder count because every SDK call site is
-		// hand-authored against it.
+		// PHP 8 fatals on `sprintf` "too few args". If a closure or
+		// filter produced more placeholders than the registry declares,
+		// fall back to the default rather than let it reach the
+		// caller's sprintf.
 		$registry = self::registry();
 		if ( isset( $registry[ $key ]['placeholders'] ) ) {
 			$expected = (int) $registry[ $key ]['placeholders'];
@@ -622,64 +577,43 @@ class Strings {
 			}
 
 			if ( is_callable( $override ) ) {
-				// Catch \Throwable (covers Exception + Error in PHP 7+).
-				// An integrator closure that throws — null pointer,
-				// undefined variable in their callable, DB query
-				// timeout, etc. — would otherwise propagate out of
-				// the SDK as a fatal. Fall back to the SDK default
-				// so the consent screen stays alive.
 				try {
 					return (string) call_user_func_array( $override, array_values( $context ) );
 				} catch ( \Throwable $e ) {
-					// Best-effort log via the active Config's logger.
-					// If logging isn't wired (no init yet, no logging
-					// instance reachable), the SDK silently falls back.
 					self::log_closure_failure( $key, $e );
 				}
 			}
-
-			// Shape mismatch should have been caught by Config::validate_strings().
-			// Belt-and-suspenders fallback to default.
 		}
 
-		// No override (or malformed). Translate the SDK's English default
-		// against whichever textdomain the integrator routed our `.mo`
-		// files through. When no `.mo` is loaded under that domain,
-		// translate() returns the input verbatim — English fallback.
 		try {
 			return (string) translate( (string) $default, self::$textdomain );
 		} catch ( \Throwable $e ) {
-			// gettext-translations can theoretically throw on a
-			// malformed .mo file; treat as English fallback.
 			self::log_closure_failure( $key, $e );
 			return (string) $default;
 		}
 	}
 
 	/**
-	 * Best-effort log of an integrator-code failure inside Strings
-	 * resolution. Silent fallback if the Logging surface isn't
-	 * reachable — better than letting the exception propagate.
+	 * Log an integrator-code failure through the SDK's logging surface.
+	 *
+	 * Routes through {@see Logging} so messages share the namespaced
+	 * log file and the `logging/enabled` gate with the rest of the SDK.
+	 * No-op when `init()` hasn't been called yet (no Config bound).
 	 *
 	 * @since 1.11.0
 	 *
-	 * @param string     $key The Strings constant being resolved.
-	 * @param \Throwable $e   The error.
+	 * @param string     $key The Strings constant whose resolution failed.
+	 * @param \Throwable $e   The exception or error from the integrator callback.
 	 */
 	private static function log_closure_failure( $key, \Throwable $e ) {
 		if ( ! self::$config instanceof Config ) {
 			return;
 		}
-		// Use error_log() as the minimal sink. The SDK's Logging class
-		// has heavier deps; resolve() is too hot a path to construct
-		// one. The integrator can hook 'gettext'/php error-log to
-		// route as needed.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf(
-				'[TrustedLogin] Strings::%s resolution failed: %s',
-				$key,
-				$e->getMessage()
-			) );
-		}
+		$logging = new Logging( self::$config );
+		$logging->log(
+			sprintf( 'Strings::%s resolution failed: %s', $key, $e->getMessage() ),
+			__METHOD__,
+			'error'
+		);
 	}
 }

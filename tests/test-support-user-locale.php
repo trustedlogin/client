@@ -118,9 +118,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 		$this->assertSame( '', (string) get_user_meta( (int) $new_user_id, 'locale', true ) );
 	}
 
-	// -----------------------------------------------------------------
-	//  Format-only validation accepts unusual but real locales.
-	// -----------------------------------------------------------------
 
 	/**
 	 * @dataProvider valid_locales
@@ -152,11 +149,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  WP locale-resolution behavior: get_user_locale() honors the
-	//  per-user value the SDK wrote. switch_to_user_locale() flips
-	//  the runtime locale to it.
-	// -----------------------------------------------------------------
 
 	public function test_get_user_locale_returns_configured_value() {
 		$user_id = $this->grant_support_user_with_locale( 'fr_FR' );
@@ -240,11 +232,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 			'The user-locale row should survive cache eviction between sessions.' );
 	}
 
-	// -----------------------------------------------------------------
-	//  Defensive re-assert: when a wp_pre_insert_user_data filter
-	//  strips the `locale` arg before wp_insert_user writes it, the
-	//  SDK still ends up with the requested locale in usermeta.
-	// -----------------------------------------------------------------
 
 	public function test_pre_insert_user_data_filter_stripping_locale_triggers_reassert() {
 		$strip_locale = static function ( $data ) {
@@ -307,10 +294,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 		}
 	}
 
-	// -----------------------------------------------------------------
-	//  Locale variants WordPress.org actually ships with — these
-	//  should all be accepted by resolve_support_user_locale().
-	// -----------------------------------------------------------------
 
 	/**
 	 * @dataProvider invalid_locales
@@ -341,9 +324,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  Helpers
-	// -----------------------------------------------------------------
 
 	/**
 	 * Grant a support user, optionally with a configured locale, and
@@ -367,9 +347,6 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 		return (int) $new_user_id;
 	}
 
-	// =================================================================
-	//  Coverage gaps from the audit pass
-	// =================================================================
 
 	public function test_get_user_locale_does_not_leak_across_current_user_switches() {
 		$id_a = $this->grant_support_user_with_locale( 'de_DE' );

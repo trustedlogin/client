@@ -141,10 +141,6 @@ final class Client {
 
 		$this->config = $config;
 
-		// Bind the Strings utility AFTER validate() — which prunes any
-		// malformed entries in the integrator's `strings` override map.
-		// All subsequent Strings::get() calls inside the SDK read from
-		// this binding.
 		Strings::init( $config );
 
 		$this->logging = new Logging( $config );

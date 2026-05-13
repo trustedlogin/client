@@ -405,12 +405,13 @@ final class Config {
 	}
 
 	/**
-	 * Walk `$this->settings['strings']` and prune anything that wouldn't
-	 * survive `sprintf` or doesn't match a known overrideable key.
+	 * Validate the optional `strings` config setting in place.
 	 *
-	 * Discarded entries are removed in place; the rest of the array is
-	 * preserved. Validation is best-effort, not strict — typos shouldn't
-	 * fail the whole Config.
+	 * Drops the whole entry if not an array; otherwise prunes
+	 * malformed individual overrides while keeping valid ones.
+	 * Closures pass through untouched; strings are checked against
+	 * the placeholder count declared in {@see Strings::registry()};
+	 * empty strings are accepted as "render nothing".
 	 *
 	 * @since 1.11.0
 	 *
@@ -422,7 +423,6 @@ final class Config {
 		}
 
 		if ( ! is_array( $this->settings['strings'] ) ) {
-			// Unusable shape — drop entirely so Strings doesn't choke.
 			unset( $this->settings['strings'] );
 			return;
 		}
@@ -433,8 +433,6 @@ final class Config {
 		foreach ( $this->settings['strings'] as $key => $override ) {
 
 			if ( ! is_string( $key ) || ! isset( $registry[ $key ] ) ) {
-				// Unknown key — log + drop. Likely a typo or an SDK
-				// version mismatch (key removed in a later release).
 				continue;
 			}
 
@@ -442,28 +440,20 @@ final class Config {
 				? (int) $registry[ $key ]['placeholders']
 				: 0;
 
-			// Closures are trusted — the integrator is asserting they
-			// produce a renderable string. Plural-resolution closures
-			// in particular can't be statically verified.
 			if ( is_callable( $override ) ) {
 				$validated[ $key ] = $override;
 				continue;
 			}
 
-			// Explicit empty string ("render nothing") is allowed.
 			if ( '' === $override ) {
 				$validated[ $key ] = '';
 				continue;
 			}
 
 			if ( ! is_string( $override ) ) {
-				// Unsupported shape (object, array without expected
-				// keys, etc.). Drop.
 				continue;
 			}
 
-			// Behavioural sprintf check: does the override survive
-			// being passed N args, where N matches the registry?
 			if ( ! self::placeholders_safe( $override, $placeholders ) ) {
 				continue;
 			}
@@ -473,61 +463,37 @@ final class Config {
 
 		$this->settings['strings'] = $validated;
 
-		// Defense-in-depth: drop any cached read of `strings` from
-		// before validation pruned the override array. The current
-		// call order in Client::__construct is safe (validate → init
-		// reads fresh), but get_setting() is a long-lived per-key
-		// cache and a future refactor could call get_setting('strings')
-		// here. Without this unset, that future read would hit the
-		// stale pre-validation cache.
+		// Drop the cached pre-validation read; subsequent get_setting()
+		// calls must hit the pruned array.
 		unset( $this->settings_cache['strings'] );
 	}
 
 	/**
 	 * Does $template survive `vsprintf` against $arg_count placeholder args?
 	 *
-	 * Cheaper and more accurate than re-implementing the sprintf grammar
-	 * with a regex (which has to cover `%d`, `%s`, `%f`, `%x`, `%05d`,
-	 * positional `%1$s`, escaped `%%`, etc.). We just try the operation
-	 * and trap PHP's warning on mismatch.
+	 * Sentinel-based behavioural test: each arg slot is given a unique
+	 * marker and the rendered output must contain every marker. Catches
+	 * too-few-args, missing slots, and wrong-conversion-type in one shot
+	 * without re-implementing the sprintf grammar.
 	 *
 	 * @since 1.11.0
 	 *
 	 * @param string $template
-	 * @param int    $arg_count Number of positional args the SDK default
-	 *                          requires.
+	 * @param int    $arg_count Number of positional args the SDK default requires.
 	 *
-	 * @return bool True if the template renders cleanly, false otherwise.
+	 * @return bool True if the template renders cleanly with $arg_count args.
 	 */
 	private static function placeholders_safe( $template, $arg_count ) {
 		if ( $arg_count <= 0 ) {
-			// No placeholders required. Reject overrides that smuggle
-			// any in (other than escaped %%), which would print the
-			// raw `%d` to the customer's screen.
 			$stripped = str_replace( '%%', '', (string) $template );
 			return ! (bool) preg_match( '/%[+\-0-9.\'$]*[a-zA-Z]/', $stripped );
 		}
 
-		// Sentinel-based behavioural check. Each arg slot gets a unique
-		// marker; the override must reference EVERY slot in the rendered
-		// output. Catches three classes of bad override at once:
-		//
-		//   1. vsprintf returns false on too-few-args / bad conversion.
-		//   2. Missing a slot (e.g., default uses %1$s and %2$s but
-		//      override only references %1$s) → sentinel not present
-		//      in the output, so the slot's information is lost.
-		//   3. Wrong conversion type (%d where %s expected) raises
-		//      a warning and vsprintf returns the partial output —
-		//      the sentinel sub-string won't match cleanly.
 		$sentinels = array();
 		for ( $i = 0; $i < $arg_count; $i++ ) {
 			$sentinels[] = '__TLPLACEHOLDER' . $i . '__';
 		}
 
-		// Suppress vsprintf's "too few arguments" warning — we want
-		// false-return semantics, not log noise. Returning true tells
-		// PHP we've handled it (don't fall through to the default
-		// handler / error_log).
 		set_error_handler( static function () { return true; }, E_WARNING ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		try {
 			$result = vsprintf( (string) $template, $sentinels );

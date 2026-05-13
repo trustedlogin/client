@@ -245,11 +245,9 @@ final class SupportUser {
 			'user_registered' => gmdate( 'Y-m-d H:i:s' ),
 		);
 
-		// Optional locale for the support user. Setting it via
-		// wp_insert_user's `locale` arg (stable since WP 4.7) ensures
-		// the welcome email + first-render of wp-admin both honor it —
-		// a post-create update_user_meta() runs after those have
-		// already fired with the site default locale.
+		// Setting `locale` via wp_insert_user args (vs. a post-create
+		// update_user_meta) ensures the welcome email + first wp-admin
+		// render honor it. Stable since WP 4.7.
 		$locale = $this->resolve_support_user_locale();
 		if ( '' !== $locale ) {
 			$user_data['locale'] = $locale;
@@ -263,9 +261,7 @@ final class SupportUser {
 			return $new_user_id;
 		}
 
-		// Defensive re-assert in case a `wp_pre_insert_user_data` filter
-		// (e.g. a security plugin stripping unknown fields) dropped the
-		// locale before wp_insert_user wrote it.
+		// Re-assert in case a `wp_pre_insert_user_data` filter dropped it.
 		if ( '' !== $locale && get_user_meta( $new_user_id, 'locale', true ) !== $locale ) {
 			update_user_meta( $new_user_id, 'locale', $locale );
 		}
@@ -278,10 +274,10 @@ final class SupportUser {
 	/**
 	 * Resolve the locale to assign to a newly created support user.
 	 *
-	 * Reads `support_user/locale` from Config, runs through a
-	 * namespaced filter, then format-checks. Returns an empty string
-	 * when no locale is requested or the requested locale fails the
-	 * format check — letting WordPress fall back to the site default.
+	 * Reads `support_user/locale` from Config, runs through the
+	 * `trustedlogin/{namespace}/support_user/locale` filter, and
+	 * format-checks. Returns an empty string for "no locale set" —
+	 * WordPress then falls back to the site default.
 	 *
 	 * @since 1.11.0
 	 *
@@ -309,10 +305,7 @@ final class SupportUser {
 			return '';
 		}
 
-		// Format-only validation. Covers `de_DE`, `pt_BR`, `de_DE_formal`,
-		// `pt_PT_ao90` (digits in variant), `cmn` / `ckb` (3-letter language
-		// codes). Variant is nested INSIDE the region group so `de_de`
-		// doesn't slip through as "lang + variant".
+		// Variant nested inside region so `de_de` doesn't parse as "lang + variant".
 		if ( ! preg_match( '/^[a-z]{2,3}(_[A-Z]{2}(_[a-z0-9]+)?)?$/', $locale ) ) {
 			$this->logging->log(
 				'Ignoring malformed support_user/locale setting: ' . esc_attr( $locale ),

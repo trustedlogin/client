@@ -41,9 +41,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		return $config;
 	}
 
-	// -----------------------------------------------------------------
-	//  No override → SDK default flows through.
-	// -----------------------------------------------------------------
 
 	public function test_no_override_returns_sdk_default() {
 		Strings::init( $this->build_config() );
@@ -53,9 +50,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  Verbatim string override (the branding case).
-	// -----------------------------------------------------------------
 
 	public function test_string_override_replaces_default() {
 		$config = $this->build_config( array(
@@ -69,9 +63,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  Explicit empty string = render nothing (distinct from no override).
-	// -----------------------------------------------------------------
 
 	public function test_explicit_empty_override_renders_empty() {
 		$config = $this->build_config( array(
@@ -85,9 +76,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  Closure overrides receive $context positional args.
-	// -----------------------------------------------------------------
 
 	public function test_closure_override_receives_context() {
 		$config = $this->build_config( array(
@@ -106,13 +94,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		$this->assertSame( 'Acme created 5 minutes ago by admin', $resolved );
 	}
 
-	// -----------------------------------------------------------------
-	//  Placeholder schema enforcement (#66 critical):
-	//
-	//  CREATED_TIME_AGO expects 2 placeholders. A bad override that
-	//  loses a placeholder must be DISCARDED at validate_strings() time
-	//  so we never sprintf-crash at render.
-	// -----------------------------------------------------------------
 
 	public function test_override_with_missing_placeholder_is_discarded() {
 		$config = $this->build_config( array(
@@ -162,10 +143,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  Unknown keys are silently dropped (forward-compat with future
-	//  SDK versions adding/removing keys).
-	// -----------------------------------------------------------------
 
 	public function test_unknown_key_is_dropped_silently() {
 		$config = $this->build_config( array(
@@ -178,9 +155,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'no_such_key', $strings_setting );
 	}
 
-	// -----------------------------------------------------------------
-	//  Filter fires AFTER override decision, sees the final candidate.
-	// -----------------------------------------------------------------
 
 	public function test_runtime_filter_can_rewrite_resolved_value() {
 		$config  = $this->build_config();
@@ -203,9 +177,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		}
 	}
 
-	// -----------------------------------------------------------------
-	//  Wrong-shape overrides (objects, mixed arrays) → discarded.
-	// -----------------------------------------------------------------
 
 	public function test_object_override_is_discarded() {
 		$config = $this->build_config( array(
@@ -219,9 +190,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		);
 	}
 
-	// -----------------------------------------------------------------
-	//  registry() exposes the public contract.
-	// -----------------------------------------------------------------
 
 	public function test_registry_includes_every_class_constant() {
 		$registry = Strings::registry();
@@ -236,9 +204,6 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		$this->assertSame( 2, $registry[ Strings::CREATED_1_S_AGO_BY_2 ]['placeholders'] );
 	}
 
-	// =================================================================
-	//  Coverage gaps from the audit pass
-	// =================================================================
 
 	// ---- init() / reset() lifecycle --------------------------------
 
@@ -350,6 +315,47 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			$this->assertSame( 'safe default', $resolved );
 		} finally {
 			remove_filter( $tag, $thrower, 10 );
+		}
+	}
+
+	public function test_throwing_closure_logs_through_sdk_logging() {
+		// Build a config with logging enabled so the SDK's Logging
+		// surface actually fires its actions.
+		$config = new Config( array(
+			'auth'    => array( 'api_key' => '9946ca31be6aa948' ),
+			'logging' => array( 'enabled' => true ),
+			'vendor'  => array(
+				'namespace'   => 'strings-test',
+				'title'       => 'Strings Test',
+				'email'       => 'support@example.com',
+				'website'     => 'https://vendor.example.com',
+				'support_url' => 'https://vendor.example.com/support',
+			),
+			'strings' => array(
+				Strings::SECURED_BY_TRUSTEDLOGIN => static function () {
+					throw new \RuntimeException( 'integrator bug here' );
+				},
+			),
+		) );
+		$config->validate();
+		Strings::init( $config );
+
+		$captured = array();
+		$spy      = static function ( $message ) use ( &$captured ) {
+			$captured[] = $message;
+		};
+		add_action( 'trustedlogin/strings-test/logging/log_error', $spy, 10, 1 );
+
+		try {
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'safe default' );
+
+			$this->assertNotEmpty( $captured,
+				'A closure that throws must log through the SDK Logging surface.' );
+			$joined = implode( "\n", $captured );
+			$this->assertStringContainsString( 'integrator bug here', $joined );
+			$this->assertStringContainsString( Strings::SECURED_BY_TRUSTEDLOGIN, $joined );
+		} finally {
+			remove_action( 'trustedlogin/strings-test/logging/log_error', $spy, 10 );
 		}
 	}
 

@@ -83,9 +83,6 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		};
 	}
 
-	// =================================================================
-	//  load_translations() runtime behavior
-	// =================================================================
 
 	public function test_default_runtime_textdomain_is_trustedlogin() {
 		$rc       = new ReflectionProperty( Strings::class, 'textdomain' );
@@ -137,9 +134,6 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		);
 	}
 
-	// =================================================================
-	//  change_locale hook reloads under switch_to_locale()
-	// =================================================================
 
 	public function test_load_translations_registers_change_locale_hook() {
 		Strings::load_translations( 'acme-plugin' );
@@ -182,9 +176,6 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		}
 	}
 
-	// =================================================================
-	//  Override + translation interaction
-	// =================================================================
 
 	public function test_static_override_preempts_translation() {
 		$this->inject_translation( 'acme-plugin', array(
@@ -266,9 +257,6 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		}
 	}
 
-	// =================================================================
-	//  Hook timing: load_translations() before init defers safely
-	// =================================================================
 
 	public function test_load_translations_before_init_defers() {
 		// We can't actually un-fire `init` once it's done in the test
@@ -291,9 +279,6 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 			'After init, load should run immediately.' );
 	}
 
-	// =================================================================
-	//  Coverage gaps from the audit pass
-	// =================================================================
 
 	public function test_repeated_load_translations_registers_change_locale_once() {
 		// Count change_locale callbacks at priority 10 before & after.
