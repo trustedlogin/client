@@ -245,6 +245,16 @@ final class SupportUser {
 			'user_registered' => gmdate( 'Y-m-d H:i:s' ),
 		);
 
+		// Optional locale for the support user. Setting it via
+		// wp_insert_user's `locale` arg (stable since WP 4.7) ensures
+		// the welcome email + first-render of wp-admin both honor it —
+		// a post-create update_user_meta() runs after those have
+		// already fired with the site default locale.
+		$locale = $this->resolve_support_user_locale();
+		if ( '' !== $locale ) {
+			$user_data['locale'] = $locale;
+		}
+
 		$new_user_id = wp_insert_user( $user_data );
 
 		if ( is_wp_error( $new_user_id ) ) {
@@ -253,9 +263,81 @@ final class SupportUser {
 			return $new_user_id;
 		}
 
+		// Defensive re-assert in case a `wp_pre_insert_user_data` filter
+		// (e.g. a security plugin stripping unknown fields) dropped the
+		// locale before wp_insert_user wrote it.
+		if ( '' !== $locale && get_user_meta( $new_user_id, 'locale', true ) !== $locale ) {
+			update_user_meta( $new_user_id, 'locale', $locale );
+		}
+
 		$this->logging->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
 
 		return $new_user_id;
+	}
+
+	/**
+	 * Resolve the locale to assign to a newly created support user.
+	 *
+	 * Reads `support_user/locale` from Config, runs through a
+	 * namespaced filter, then format-checks. Returns an empty string
+	 * when no locale is requested or the requested locale fails the
+	 * format check — letting WordPress fall back to the site default.
+	 *
+	 * Deliberately does NOT gate on `get_available_languages()`:
+	 *
+	 *   - It excludes `en_US` (the default is always available but
+	 *     never listed), so checking against it silently rejects a
+	 *     legitimate value.
+	 *   - It misses WPML / Polylang custom locales.
+	 *   - It misses translations bundled by other plugins under their
+	 *     own paths.
+	 *
+	 * WordPress's translation machinery already falls back to English
+	 * for any locale whose `.mo` files aren't installed, so a format-
+	 * only gate is both safer and more inclusive.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return string Locale code, or empty string for "site default".
+	 */
+	private function resolve_support_user_locale() {
+
+		$configured = (string) $this->config->get_setting( 'support_user/locale', '' );
+
+		/**
+		 * Filter the locale assigned to a newly created support user.
+		 *
+		 * @since 1.11.0
+		 *
+		 * @param string $locale Locale code, or '' for site default.
+		 * @param Config $config Active configuration.
+		 */
+		$locale = (string) apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/support_user/locale',
+			$configured,
+			$this->config
+		);
+
+		if ( '' === $locale ) {
+			return '';
+		}
+
+		// Format-only validation. Covers `de_DE`, `pt_BR`, `de_DE_formal`,
+		// `pt_PT_ao90` (digits in variant — real WP.org locale), `cmn` /
+		// `ckb` (3-letter language codes). Rejects obvious garbage so a
+		// typo doesn't get written to wp_usermeta. The variant suffix
+		// is nested INSIDE the region group so a malformed
+		// "lang_lowercase" doesn't slip through as "lang + variant".
+		if ( ! preg_match( '/^[a-z]{2,3}(_[A-Z]{2}(_[a-z0-9]+)?)?$/', $locale ) ) {
+			$this->logging->log(
+				'Ignoring malformed support_user/locale setting: ' . esc_attr( $locale ),
+				__METHOD__,
+				'warning'
+			);
+			return '';
+		}
+
+		return $locale;
 	}
 
 	/**

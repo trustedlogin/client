@@ -62,6 +62,11 @@ final class Form {
 	private $logging;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Form constructor.
 	 *
 	 * @param Config      $config Config object.
@@ -74,6 +79,7 @@ final class Form {
 		$this->logging      = $logging;
 		$this->support_user = $support_user;
 		$this->site_access  = $site_access;
+		$this->strings      = new Strings( $config );
 	}
 
 	/**
@@ -313,9 +319,18 @@ final class Form {
 		// closing the same gap on the auth header path.
 		$content = array(
 			'display_name'         => esc_html( $support_user->display_name ),
-			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', esc_url( $revoke_url ), esc_html__( 'Revoke Access', 'trustedlogin' ) ),
+			'revoke_access_button' => sprintf(
+				'<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>',
+				esc_url( $revoke_url ),
+				esc_html( $this->strings->get( Strings::REVOKE_ACCESS_BUTTON, __( 'Revoke Access', 'trustedlogin' ) ) )
+			),
 			// translators: %s is the display name of the user who granted access.
-			'auth_meta'            => sprintf( esc_html__( 'Created %1$s ago by %2$s', 'trustedlogin' ), esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ), esc_html( $auth_meta ) ),
+			'auth_meta'            => sprintf(
+				/* translators: %1$s: human-readable time ago; %2$s: display name of the user who granted access */
+				esc_html( $this->strings->get( Strings::CREATED_TIME_AGO, __( 'Created %1$s ago by %2$s', 'trustedlogin' ) ) ),
+				esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ),
+				esc_html( $auth_meta )
+			),
 		);
 
 		return $this->prepare_output( $template, $content );
@@ -390,7 +405,12 @@ final class Form {
 
 		$message = $error->get_error_message();
 		if ( '' === $message ) {
-			$message = esc_html__( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' );
+			$message = esc_html(
+				$this->strings->get(
+					Strings::SUPPORT_TEMPORARILY_UNAVAILABLE,
+					__( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' )
+				)
+			);
 		}
 
 		$response_html = sprintf(
@@ -413,7 +433,7 @@ final class Form {
 			'<p class="tl-%1$s-auth__retry-wrap"><a class="tl-%1$s-auth__retry" href="%2$s"><span class="dashicons dashicons-update" aria-hidden="true"></span> %3$s</a></p>',
 			esc_attr( $ns ),
 			esc_url( $retry_url ),
-			esc_html__( 'Try reconnecting', 'trustedlogin' )
+			esc_html( $this->strings->get( Strings::TRY_RECONNECTING, __( 'Try reconnecting', 'trustedlogin' ) ) )
 		);
 
 		return array(
@@ -493,7 +513,9 @@ final class Form {
 			'response'                => $response_html,
 			'actions'                 => $actions_html,
 			'actions_container_class' => $grant_container,
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html(
+				$this->strings->get( Strings::SECURED_BY, __( 'Secured by TrustedLogin', 'trustedlogin' ) )
+			),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
