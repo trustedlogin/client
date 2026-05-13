@@ -1,3 +1,15 @@
+## 1.10.1 (May 12, 2026)
+
+A small patch release. The customer-facing change is a fix for a fatal error on PHP 7.4 sites when viewing the SDK's debug-log admin page.
+
+#### 🛠 Fixed
+
+- Fix `Call to undefined function str_starts_with()` fatal on PHP 7.4 when the SDK debug log admin page builds its log download URL. `str_starts_with()` is a PHP 8.0 function; replaced with the 7.4-compatible equivalent.
+
+#### 🚀 Added
+
+- New `trustedlogin/{namespace}/in_local_development` filter for advanced testing scenarios where the SDK's lockdown / brute-force checks need to fire even though `WP_ENVIRONMENT_TYPE` reports `local` or `development`. Documented in the [Client hooks reference](https://docs.trustedlogin.com/Client/hooks) under "Advanced Internal Use Only".
+
 ## 1.10.0 (May 7, 2026)
 
 When a support agent's access link doesn't work — expired, revoked, or blocked — they now see a clear explanation of what happened, and you see the failed attempt logged in the Connector plugin on your site. Previously, agents landed on the customer's login page without any signal why login failed.

@@ -37,6 +37,13 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 	 */
 	private $_real_error_level;
 
+	/**
+	 * @var callable|null pre_http_request filter that stubs the
+	 * vendor pubkey + SaaS sites endpoints so create_access can
+	 * run end-to-end in PHPUnit.
+	 */
+	private $_http_stub;
+
 	public function setUp(): void {
 
 		$this->_real_error_level = error_reporting();
@@ -80,9 +87,49 @@ class TrustedLoginAJAXTest extends WP_Ajax_UnitTestCase {
 		$this->logging = new \TrustedLogin\Logging( $this->config );
 
 		$this->endpoint = new \TrustedLogin\Endpoint( $this->config, $this->logging );
+
+		// The "success" branch of test_ajax_generate_support runs
+		// create_access(), which fans out to two HTTPS calls:
+		// 1) the vendor pubkey endpoint at vendor.website
+		// 2) the TrustedLogin SaaS at app.trustedlogin.com/api/v1/sites
+		// Without these stubs the calls hit the live internet and a
+		// 503/404/redirect tanks the response with a WP_Error.
+		$this->_http_stub = static function ( $preempt, $args, $url ) {
+			$url_string = (string) $url;
+
+			if ( false !== strpos( $url_string, 'public_key' ) ) {
+				return array(
+					'response' => array( 'code' => 200, 'message' => 'OK' ),
+					'body'     => wp_json_encode(
+						array( 'publicKey' => 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899' )
+					),
+					'headers'  => array( 'content-type' => 'application/json' ),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			}
+
+			if ( false !== strpos( $url_string, '/api/v1/sites' ) ) {
+				return array(
+					'response' => array( 'code' => 201, 'message' => 'Created' ),
+					'body'     => '{"success":true,"siteId":"abcd"}',
+					'headers'  => array( 'content-type' => 'application/json' ),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			}
+
+			return $preempt;
+		};
+		add_filter( 'pre_http_request', $this->_http_stub, 9, 3 );
 	}
 
 	public function tearDown(): void {
+
+		if ( isset( $this->_http_stub ) ) {
+			remove_filter( 'pre_http_request', $this->_http_stub, 9 );
+			$this->_http_stub = null;
+		}
 
 		parent::tearDown();
 

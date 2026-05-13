@@ -232,7 +232,7 @@ if ( $method === 'GET' && $path === '/__login-attempts' ) {
 }
 
 if ( $method === 'POST' && $path === '/__reset' ) {
-	with_state_locked( fn( $state ) => array(
+	with_state_locked( fn() => array(
 		array( 'envelopes' => array(), 'messages' => array() ),
 		array( 'reset' => true ),
 		200,

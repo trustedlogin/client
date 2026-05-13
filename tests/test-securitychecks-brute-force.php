@@ -60,6 +60,12 @@ class TrustedLoginSecurityChecksBruteForceTest extends WP_UnitTestCase {
 			),
 		) );
 
+		// wp-env hard-codes WP_ENVIRONMENT_TYPE=local, which makes
+		// SecurityChecks::in_local_development() return true and the
+		// brute-force counter short-circuit to `true`. Force the SDK
+		// to treat this run as production so the real check fires.
+		add_filter( 'trustedlogin/brute-force-test/in_local_development', '__return_false' );
+
 		$this->logging = new Logging( $this->config );
 		$this->checks  = new SecurityChecks( $this->config, $this->logging );
 
@@ -74,6 +80,7 @@ class TrustedLoginSecurityChecksBruteForceTest extends WP_UnitTestCase {
 	}
 
 	public function tearDown(): void {
+		remove_filter( 'trustedlogin/brute-force-test/in_local_development', '__return_false' );
 		Utils::delete_transient( 'tl-' . $this->config->ns() . '-used_accesskeys' );
 		Utils::delete_transient( 'tl-' . $this->config->ns() . '-in_lockdown' );
 		unset( $_SERVER['REMOTE_ADDR'] );

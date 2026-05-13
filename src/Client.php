@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.10.0';
+	const VERSION = '1.10.1';
 
 	/**
 	 * Instance of Config
@@ -787,6 +787,7 @@ final class Client {
 		try {
 			$info = \WP_Debug_Data::debug_data();
 		} catch ( \ImagickException $exception ) {
+			unset( $exception ); // Imagick failure inside WP_Debug_Data — surface as null, no detail needed.
 			return null;
 		}
 

@@ -23,14 +23,13 @@ Make sure to install [wp-env](https://developer.wordpress.org/block-editor/refer
 	- `wp-env start`
 - Stop local dev
 	- `wp-env stop`
-- Run the PHP tests in container
-	- `npm run test:php`
 
 ### Running linting and tests
 
 - `composer lint` Checks for any linting errors
 - `composer format` Fixes any code that is able to be automatically fixed
 - `composer test` Runs PHPUnit tests
+- `composer phpstan` Runs PHPStan static analysis
 
 #### WordPress 4.1+ support
 

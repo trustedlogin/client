@@ -16,6 +16,20 @@ class TrustedLoginEnvelopeShapeTest extends WP_UnitTestCase {
 	 */
 	private $config;
 
+	/**
+	 * Cleanup callback returned by the pubkey HTTP injector.
+	 *
+	 * @var callable|null
+	 */
+	private $pubkey_cleanup;
+
+	/**
+	 * A fixed 64-hex (32-byte) value standing in for the vendor's
+	 * sodium public key. The SDK shape-validates before using it,
+	 * so any 64 hex chars satisfies Encryption::get_vendor_public_key().
+	 */
+	const FAKE_VENDOR_PUBKEY = 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+
 	public function setUp(): void {
 		parent::setUp();
 
@@ -35,6 +49,40 @@ class TrustedLoginEnvelopeShapeTest extends WP_UnitTestCase {
 				),
 			)
 		);
+
+		// The envelope path fetches the vendor pubkey over HTTPS.
+		// Intercept that call so the test never depends on the live
+		// vendor site being reachable.
+		$injector = static function ( $preempt, $args, $url ) {
+			if ( ! is_string( $url ) || false === strpos( $url, 'public_key' ) ) {
+				return $preempt;
+			}
+
+			return array(
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'headers'  => array( 'content-type' => 'application/json' ),
+				'body'     => wp_json_encode( array( 'publicKey' => self::FAKE_VENDOR_PUBKEY ) ),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+		add_filter( 'pre_http_request', $injector, 10, 3 );
+		$this->pubkey_cleanup = static function () use ( $injector ) {
+			remove_filter( 'pre_http_request', $injector, 10 );
+		};
+
+		// Avoid a stale transient short-circuiting the injector.
+		Utils::delete_transient( 'tl_' . $this->config->ns() . '_vendor_public_key' );
+	}
+
+	public function tearDown(): void {
+		if ( is_callable( $this->pubkey_cleanup ) ) {
+			( $this->pubkey_cleanup )();
+			$this->pubkey_cleanup = null;
+		}
+		Utils::delete_transient( 'tl_' . $this->config->ns() . '_vendor_public_key' );
+
+		parent::tearDown();
 	}
 
 	/**
