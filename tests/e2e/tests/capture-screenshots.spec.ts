@@ -153,7 +153,9 @@ async function grantAndCaptureSecrets( ctx: BrowserContext, captureForm = false 
         + `$parts = ( new \\TrustedLogin\\Vendor\\AccessKeyLogin() )->handle( array(`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCOUNT_ID_INPUT_NAME => "999",`
         + `  \\TrustedLogin\\Vendor\\AccessKeyLogin::ACCESS_KEY_INPUT_NAME => ${ JSON.stringify( key ) },`
-        + `) );`
+        // $trusted=true — CLI invocation has no $_REQUEST nonce.
+        // Connector commit ca4e4b7 made nonce-check unconditional.
+        + `), true );`
         + `if ( is_wp_error( $parts ) ) { echo "ERR:" . $parts->get_error_code() . ":" . $parts->get_error_message(); exit; }`
         + `$first = reset( $parts );`
         + `echo $first["endpoint"] . "|" . $first["identifier"];`,

@@ -1,0 +1,46 @@
+name: Tests
+
+# Run on
+on:
+  push:
+    # any branch
+    branches:
+      - '*'
+jobs:
+  tests:
+    name: Run PHP unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Node is only here so we can `npm -g i @wordpress/env` below.
+      # No root package.json / package-lock.json / .nvmrc anymore
+      # (dropped in PR #141 along with the Grunt toolchain), so we
+      # pin the version inline instead of reading .nvmrc, and we
+      # skip the cache: 'npm' setting (nothing to cache).
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Setup PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Install wp-env
+        run: npm -g i @wordpress/env
+
+      - name: Start wp-env
+        run: wp-env start
+
+      - name: Install Composer dependencies
+        run: composer install
+
+      # Inlines what the old `npm run test:php` script ran. We
+      # dropped package.json with the Grunt toolchain, so the
+      # workflow can't `npm run` anything anymore.
+      - name: Run PHP unit tests
+        run: wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpunit

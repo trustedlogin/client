@@ -373,22 +373,39 @@ final class SecurityChecks {
 		$constant_name = 'TRUSTEDLOGIN_TESTING_' . strtoupper( $this->config->ns() );
 
 		if ( defined( $constant_name ) && constant( $constant_name ) ) {
-			return true;
+			$is_local = true;
+		} elseif ( ! function_exists( 'wp_get_environment_type' ) ) {
+			$is_local = false;
+		} else {
+			switch ( wp_get_environment_type() ) {
+				case 'local':
+				case 'development':
+					$is_local = true;
+					break;
+				case 'staging':
+				case 'production':
+				default:
+					$is_local = false;
+					break;
+			}
 		}
 
-		if ( ! function_exists( 'wp_get_environment_type' ) ) {
-			return false;
-		}
-
-		switch ( wp_get_environment_type() ) {
-			case 'local':
-			case 'development':
-				return true;
-			case 'staging':
-			case 'production':
-			default:
-				return false;
-		}
+		/**
+		 * Filters whether the SDK should treat the current site as a local-development
+		 * environment (which bypasses lockdown and brute-force enforcement).
+		 *
+		 * Primarily intended for the SDK's own PHPUnit suite, where wp-env hard-codes
+		 * `WP_ENVIRONMENT_TYPE=local` and the brute-force tests need the real check
+		 * to fire. Production code should not need to flip this.
+		 *
+		 * @param bool   $is_local True if the SDK considers this a local/dev env.
+		 * @param Config $config   The active Config instance.
+		 */
+		return (bool) apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/in_local_development',
+			$is_local,
+			$this->config
+		);
 	}
 
 	/**

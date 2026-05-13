@@ -4,7 +4,6 @@
   "port": 8888,
   "testsPort": 8889,
   "config": {
-    "WP_DEBUG_DISPLAY": true,
-    "TL_DOING_TESTS": true
+    "WP_DEBUG_DISPLAY": true
   }
 }
