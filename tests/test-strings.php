@@ -497,6 +497,116 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	// ---- Client constructor wires Strings::init -------------------
 
+	// ---- Runtime sprintf safety: closures + filters that produce
+	//      strings with TOO MANY placeholders must NOT crash the SDK
+	//      call site that's about to sprintf with a fixed arg count.
+	//      PHP 8 throws ValueError on "too few arguments" — uncaught
+	//      that's a fatal on the customer's consent screen.
+
+	public function test_closure_returning_too_many_placeholders_falls_back_to_default() {
+		// CREATED_1_S_AGO_BY_2 → SDK call site sprintfs with 2 args.
+		// A closure that returns a string requiring 3 placeholders
+		// would crash sprintf in PHP 8 → must fall back instead.
+		$config = $this->build_config( array(
+			Strings::CREATED_1_S_AGO_BY_2 => static function () {
+				return 'Bad: %s %s %s'; // 3 placeholders, only 2 args supplied
+			},
+		) );
+		Strings::init( $config );
+
+		$resolved = Strings::get(
+			Strings::CREATED_1_S_AGO_BY_2,
+			'Created %1$s ago by %2$s',
+			array( '5min', 'admin' )
+		);
+
+		$this->assertSame(
+			'Created %1$s ago by %2$s',
+			$resolved,
+			'Closure with too many placeholders must fall back to the default; never let sprintf-fatal-producing strings reach the caller.'
+		);
+	}
+
+	public function test_filter_introducing_too_many_placeholders_falls_back_to_default() {
+		Strings::init( $this->build_config() );
+		$tag = 'trustedlogin/strings-test/strings/' . Strings::SECURED_BY_TRUSTEDLOGIN;
+
+		$malicious_filter = static function () {
+			return 'gotcha %s %s %s'; // smuggles placeholders into a 0-placeholder key
+		};
+		add_filter( $tag, $malicious_filter, 10, 1 );
+
+		try {
+			$this->assertSame(
+				'Secured by TrustedLogin',
+				Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			);
+		} finally {
+			remove_filter( $tag, $malicious_filter, 10 );
+		}
+	}
+
+	public function test_closure_returning_fewer_placeholders_is_allowed() {
+		// Returning a fully-formatted string (0 placeholders) for a
+		// 2-placeholder key is the COMMON case — closures usually do
+		// their own sprintf. sprintf with extra args is silent. Allow.
+		$config = $this->build_config( array(
+			Strings::CREATED_1_S_AGO_BY_2 => static function ( $time_ago, $by ) {
+				return "Acme created {$time_ago} ago by {$by}"; // no placeholders left
+			},
+		) );
+		Strings::init( $config );
+
+		$this->assertSame(
+			'Acme created 5min ago by admin',
+			Strings::get(
+				Strings::CREATED_1_S_AGO_BY_2,
+				'Created %1$s ago by %2$s',
+				array( '5min', 'admin' )
+			)
+		);
+	}
+
+	public function test_filter_calling_sprintf_inline_is_allowed() {
+		// Filter can fully format the string itself — should pass
+		// through even though it has 0 placeholders for a placeholder-
+		// having key (caller's sprintf with extra args is silent).
+		Strings::init( $this->build_config() );
+		$tag = 'trustedlogin/strings-test/strings/' . Strings::CREATED_1_S_AGO_BY_2;
+
+		$inline_formatter = static function ( $value, $key, $context ) {
+			return sprintf( $value, $context[0], $context[1] );
+		};
+		add_filter( $tag, $inline_formatter, 10, 4 );
+
+		try {
+			$resolved = Strings::get(
+				Strings::CREATED_1_S_AGO_BY_2,
+				'Created %1$s ago by %2$s',
+				array( '5min', 'admin' )
+			);
+			$this->assertSame( 'Created 5min ago by admin', $resolved );
+		} finally {
+			remove_filter( $tag, $inline_formatter, 10 );
+		}
+	}
+
+	public function test_count_placeholders_handles_format_flags_and_positionals() {
+		// Sanity: count_placeholders should recognize all the common forms.
+		$this->assertSame( 0, Strings::count_placeholders( 'no placeholders here' ) );
+		$this->assertSame( 0, Strings::count_placeholders( 'literal 100%% percent' ) );
+		$this->assertSame( 1, Strings::count_placeholders( '%s alone' ) );
+		$this->assertSame( 2, Strings::count_placeholders( '%s and %d' ) );
+		$this->assertSame( 2, Strings::count_placeholders( '%1$s ... %2$s' ) );
+		$this->assertSame( 3, Strings::count_placeholders( '%1$s ... %3$s (skip %2$s in the middle)' ) );
+		$this->assertSame( 1, Strings::count_placeholders( 'pct %05d' ) );
+		$this->assertSame( 1, Strings::count_placeholders( 'float %.2f' ) );
+		$this->assertSame( 1, Strings::count_placeholders( 'name %-10s' ) );
+		$this->assertSame( 1, Strings::count_placeholders( '100%% real and 1 fake: %s' ) );
+		$this->assertSame( 0, Strings::count_placeholders( null ) );
+		$this->assertSame( 0, Strings::count_placeholders( 42 ) );
+	}
+
 	public function test_client_constructor_initializes_strings() {
 		$client_config_data = array(
 			'auth'   => array( 'api_key' => 'aaaa11112222bbbb' ),

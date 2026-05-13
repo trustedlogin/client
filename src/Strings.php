@@ -517,30 +517,82 @@ class Strings {
 		// Without an `init()` call the filter has no namespace to attach
 		// to. Return the resolved value without filtering — same English
 		// fallback behavior as if a filter was registered but did nothing.
-		if ( ! self::$config instanceof Config ) {
-			return $value;
+		if ( self::$config instanceof Config ) {
+			/**
+			 * Filter the resolved value of a TrustedLogin SDK string.
+			 *
+			 * Fires AFTER override and default fallback so the filter always
+			 * sees the final candidate, regardless of which layer produced it.
+			 *
+			 * @since 1.11.0
+			 *
+			 * @param string $value   The resolved string.
+			 * @param string $key     The {@see Strings} constant being resolved.
+			 * @param array  $context Positional args if any (e.g. count for plurals).
+			 * @param Config $config  Active configuration.
+			 */
+			$value = (string) apply_filters(
+				'trustedlogin/' . self::$config->ns() . '/strings/' . $key,
+				$value,
+				$key,
+				$context,
+				self::$config
+			);
 		}
 
-		/**
-		 * Filter the resolved value of a TrustedLogin SDK string.
-		 *
-		 * Fires AFTER override and default fallback so the filter always
-		 * sees the final candidate, regardless of which layer produced it.
-		 *
-		 * @since 1.11.0
-		 *
-		 * @param string $value   The resolved string.
-		 * @param string $key     The {@see Strings} constant being resolved.
-		 * @param array  $context Positional args if any (e.g. count for plurals).
-		 * @param Config $config  Active configuration.
-		 */
-		return (string) apply_filters(
-			'trustedlogin/' . self::$config->ns() . '/strings/' . $key,
-			$value,
-			$key,
-			$context,
-			self::$config
-		);
+		// Runtime sprintf safety net.
+		//
+		// Static-string overrides are placeholder-validated at Config-
+		// load time, but closures (which return arbitrary strings) and
+		// the runtime filter (which can mutate $value to anything) both
+		// bypass that gate. If their result has MORE placeholders than
+		// the SDK call site is about to sprintf into, PHP 8 throws
+		// ValueError "Too few arguments" — an uncaught fatal that
+		// blows up the consent screen on the customer's site.
+		//
+		// Defense: count placeholders in the resolved value. If it
+		// exceeds the registry-declared count, fall back to a fresh
+		// translation of the default — which we know has exactly the
+		// expected placeholder count because every SDK call site is
+		// hand-authored against it.
+		$registry = self::registry();
+		if ( isset( $registry[ $key ]['placeholders'] ) ) {
+			$expected = (int) $registry[ $key ]['placeholders'];
+			if ( self::count_placeholders( $value ) > $expected ) {
+				return (string) translate( (string) $default, self::$textdomain );
+			}
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Count sprintf-style placeholders in a string. Escaped percents
+	 * (`%%`) are not counted. Recognizes positional form (`%1$s`),
+	 * flag/width/precision modifiers (`%05d`, `%.2f`, `%-10s`), and
+	 * all standard conversion types.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param mixed $s
+	 *
+	 * @return int Number of distinct args the string consumes.
+	 */
+	public static function count_placeholders( $s ) {
+		if ( ! is_string( $s ) ) {
+			return 0;
+		}
+		$stripped = str_replace( '%%', '', $s );
+		preg_match_all( '/%(?:\d+\$)?[+\-0-9.\']*[a-zA-Z]/', $stripped, $m );
+		$simple = count( $m[0] );
+
+		// Positional placeholders may reuse slots — `%1$s ... %1$s`
+		// only needs 1 arg, but %1$s + %3$s needs 3 args even with
+		// %2$s missing. Count by max positional index.
+		preg_match_all( '/%(\d+)\$/', $stripped, $pm );
+		$max_pos = empty( $pm[1] ) ? 0 : max( array_map( 'intval', $pm[1] ) );
+
+		return max( $simple, $max_pos );
 	}
 
 	/**
