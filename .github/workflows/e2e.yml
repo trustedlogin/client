@@ -6,12 +6,24 @@ on:
   push:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      connector_sha:
+        description: 'trustedlogin-connector SHA or branch to test against (default: develop)'
+        type: string
+        default: develop
 
 jobs:
   e2e:
     name: Playwright (Docker)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Hoist to job level so both the cache-key SHA resolution and
+    # bootstrap-vendor.sh see the same branch — otherwise the cache
+    # could pin to the dispatched SHA while the bootstrap fetched a
+    # different one (e.g. the script's default).
+    env:
+      CONNECTOR_BRANCH: ${{ inputs.connector_sha || 'develop' }}
+      GF_BRANCH: master
 
     steps:
       - name: Checkout client repo
@@ -60,8 +72,7 @@ jobs:
         id: refs
         env:
           GH_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-          CONNECTOR_BRANCH: develop
-          GF_BRANCH: master
+          # CONNECTOR_BRANCH + GF_BRANCH come from job-level env.
         run: |
           # gh api prints its JSON error body to stdout on failure
           # (404 / auth / network). Validate the result is a real
