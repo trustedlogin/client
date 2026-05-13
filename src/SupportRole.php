@@ -34,6 +34,11 @@ final class SupportRole {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Logging instance.
 	 *
 	 * @var Logging $logging
@@ -96,6 +101,7 @@ final class SupportRole {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config    = $config;
+		$this->strings = new Strings( $config );
 		$this->logging   = $logging;
 		$this->role_name = $this->set_name();
 	}
@@ -273,7 +279,7 @@ final class SupportRole {
 		$role_display_name = apply_filters(
 			'trustedlogin/' . $this->config->ns() . '/support_role/display_name',
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) ),
+			sprintf( esc_html( $this->strings->get( Strings::S_SUPPORT, __( '%s Support', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) ),
 			$this
 		);
 

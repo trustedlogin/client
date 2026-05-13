@@ -39,7 +39,7 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		$strings = new Strings( $this->build_config() );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -49,13 +49,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_string_override_replaces_default() {
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => 'Powered by Acme Support',
+			Strings::SECURED_BY_TRUSTEDLOGIN => 'Powered by Acme Support',
 		) );
 
 		$strings = new Strings( $config );
 		$this->assertSame(
 			'Powered by Acme Support',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -65,13 +65,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_explicit_empty_override_renders_empty() {
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => '',
+			Strings::SECURED_BY_TRUSTEDLOGIN => '',
 		) );
 
 		$strings = new Strings( $config );
 		$this->assertSame(
 			'',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -81,14 +81,14 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_closure_override_receives_context() {
 		$config = $this->build_config( array(
-			Strings::CREATED_TIME_AGO => static function ( $time_ago, $by ) {
+			Strings::CREATED_1_S_AGO_BY_2 => static function ( $time_ago, $by ) {
 				return "Acme created {$time_ago} ago by {$by}";
 			},
 		) );
 
 		$strings = new Strings( $config );
 		$resolved = $strings->get(
-			Strings::CREATED_TIME_AGO,
+			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
 		);
@@ -106,14 +106,14 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_override_with_missing_placeholder_is_discarded() {
 		$config = $this->build_config( array(
-			Strings::CREATED_TIME_AGO => 'Created at unknown time', // no %1$s %2$s
+			Strings::CREATED_1_S_AGO_BY_2 => 'Created at unknown time', // no %1$s %2$s
 		) );
 
 		$strings = new Strings( $config );
 
 		// Override was malformed → discarded → falls through to SDK default.
 		$resolved = $strings->get(
-			Strings::CREATED_TIME_AGO,
+			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
 		);
@@ -128,13 +128,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		// SECURED_BY expects 0 placeholders. Override that smuggles
 		// a %d should be dropped — would print "%d" raw to customers.
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => 'Secured by TL (%d sites protected)',
+			Strings::SECURED_BY_TRUSTEDLOGIN => 'Secured by TL (%d sites protected)',
 		) );
 
 		$strings = new Strings( $config );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -142,13 +142,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		// `%%` is the literal percent sign — not a real placeholder.
 		// Must pass the safety check.
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => 'Secured by 100%% you',
+			Strings::SECURED_BY_TRUSTEDLOGIN => 'Secured by 100%% you',
 		) );
 
 		$strings = new Strings( $config );
 		$this->assertSame(
 			'Secured by 100%% you',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -176,7 +176,7 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		$config  = $this->build_config();
 		$strings = new Strings( $config );
 
-		$tag = 'trustedlogin/strings-test/strings/' . Strings::SECURED_BY;
+		$tag = 'trustedlogin/strings-test/strings/' . Strings::SECURED_BY_TRUSTEDLOGIN;
 
 		$rewriter = static function ( $value ) {
 			return strtoupper( $value );
@@ -186,7 +186,7 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		try {
 			$this->assertSame(
 				'SECURED BY TRUSTEDLOGIN',
-				$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+				$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 			);
 		} finally {
 			remove_filter( $tag, $rewriter, 10 );
@@ -199,13 +199,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_object_override_is_discarded() {
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => new \stdClass(),
+			Strings::SECURED_BY_TRUSTEDLOGIN => new \stdClass(),
 		) );
 
 		$strings = new Strings( $config );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -216,13 +216,13 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 	public function test_registry_includes_every_class_constant() {
 		$registry = Strings::registry();
 
-		$this->assertArrayHasKey( Strings::SECURED_BY, $registry );
-		$this->assertArrayHasKey( Strings::REVOKE_ACCESS_BUTTON, $registry );
-		$this->assertArrayHasKey( Strings::SUPPORT_TEMPORARILY_UNAVAILABLE, $registry );
+		$this->assertArrayHasKey( Strings::SECURED_BY_TRUSTEDLOGIN, $registry );
+		$this->assertArrayHasKey( Strings::REVOKE_ACCESS, $registry );
+		$this->assertArrayHasKey( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_UNAVAILABLE_PLEASE, $registry );
 		$this->assertArrayHasKey( Strings::TRY_RECONNECTING, $registry );
-		$this->assertArrayHasKey( Strings::CREATED_TIME_AGO, $registry );
+		$this->assertArrayHasKey( Strings::CREATED_1_S_AGO_BY_2, $registry );
 
-		$this->assertSame( 0, $registry[ Strings::SECURED_BY ]['placeholders'] );
-		$this->assertSame( 2, $registry[ Strings::CREATED_TIME_AGO ]['placeholders'] );
+		$this->assertSame( 0, $registry[ Strings::SECURED_BY_TRUSTEDLOGIN ]['placeholders'] );
+		$this->assertSame( 2, $registry[ Strings::CREATED_1_S_AGO_BY_2 ]['placeholders'] );
 	}
 }

@@ -130,7 +130,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		$strings = new Strings( $this->build_config() );
 		$this->assertSame(
 			'Abgesichert durch Acme Support',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -141,7 +141,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		$strings = new Strings( $this->build_config() );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -202,14 +202,14 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		Strings::load_translations( 'acme-plugin' );
 
 		$config = $this->build_config( array(
-			Strings::SECURED_BY => 'Powered by Acme', // verbatim brand
+			Strings::SECURED_BY_TRUSTEDLOGIN => 'Powered by Acme', // verbatim brand
 		) );
 		$strings = new Strings( $config );
 
 		// Override wins. Translation never runs for this key.
 		$this->assertSame(
 			'Powered by Acme',
-			$strings->get( Strings::SECURED_BY, 'Secured by TrustedLogin' )
+			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -221,7 +221,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		) );
 
 		$config = $this->build_config( array(
-			Strings::CREATED_TIME_AGO => static function ( $time_ago, $by ) {
+			Strings::CREATED_1_S_AGO_BY_2 => static function ( $time_ago, $by ) {
 				// The integrator does whatever they want here. They
 				// could call _n(), __(), sprintf(), pull from a
 				// database — the SDK doesn't care.
@@ -232,7 +232,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 
 		$strings  = new Strings( $config );
 		$resolved = $strings->get(
-			Strings::CREATED_TIME_AGO,
+			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
 		);

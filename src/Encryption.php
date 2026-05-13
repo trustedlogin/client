@@ -29,6 +29,11 @@ final class Encryption {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Remote instance.
 	 *
 	 * @var Remote $remote
@@ -77,6 +82,7 @@ final class Encryption {
 	public function __construct( Config $config, Remote $remote, Logging $logging ) {
 
 		$this->config  = $config;
+		$this->strings = new Strings( $config );
 		$this->remote  = $remote;
 		$this->logging = $logging;
 
@@ -260,7 +266,7 @@ final class Encryption {
 
 			return new WP_Error(
 				'invalid_public_key_shape',
-				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' )
+				esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET, __( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' ) ) )
 			);
 		}
 
@@ -283,7 +289,7 @@ final class Encryption {
 
 					return new WP_Error(
 						'public_key_fingerprint_mismatch',
-						esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
+						esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_799354, __( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' ) ) )
 					);
 				}
 			}

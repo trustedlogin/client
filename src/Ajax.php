@@ -27,6 +27,11 @@ final class Ajax {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Logging instance.
 	 *
 	 * @var null|\TrustedLogin\Logging $logging
@@ -69,6 +74,7 @@ final class Ajax {
 	 */
 	public function __construct( Config $config, Logging $logging, $client = null ) {
 		$this->config  = $config;
+		$this->strings = new Strings( $config );
 		$this->logging = $logging;
 		$this->client  = $client instanceof Client ? $client : null;
 	}
@@ -115,13 +121,13 @@ final class Ajax {
 		// `wp_ajax_…` only (no `wp_ajax_nopriv_…`), so `get_current_user_id()`
 		// is guaranteed non-zero here even though that isn't obvious in isolation.
 		if ( ! check_ajax_referer( 'tl_nonce-' . get_current_user_id(), '_nonce', false ) ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Verification issue: Request could not be verified. Please reload the page.', 'trustedlogin' ) ) );
+			wp_send_json_error( array( 'message' => esc_html( $this->strings->get( Strings::VERIFICATION_ISSUE_REQUEST_COULD_NOT_BE, __( 'Verification issue: Request could not be verified. Please reload the page.', 'trustedlogin' ) ) ) ) );
 		}
 
 		if ( ! current_user_can( 'create_users' ) ) {
 			$this->logging->log( 'Current user does not have `create_users` capability when trying to grant access.', __METHOD__, 'error' );
 
-			wp_send_json_error( array( 'message' => esc_html__( 'You do not have the ability to create users.', 'trustedlogin' ) ) );
+			wp_send_json_error( array( 'message' => esc_html( $this->strings->get( Strings::YOU_DO_NOT_HAVE_THE_ABILITY, __( 'You do not have the ability to create users.', 'trustedlogin' ) ) ) ) );
 		}
 
 		// Reuse the injected Client if available (hooks already wired). Fall

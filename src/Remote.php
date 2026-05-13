@@ -38,6 +38,11 @@ final class Remote {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Logging object.
 	 *
 	 * @var Logging $logging
@@ -52,6 +57,7 @@ final class Remote {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
+		$this->strings = new Strings( $config );
 		$this->logging = $logging;
 	}
 
@@ -728,7 +734,7 @@ final class Remote {
 			'vendor_response_not_json',
 			sprintf(
 				/* translators: %d: the HTTP status code returned by the support team's site */
-				esc_html__( 'Support access could not be set up. A firewall on the plugin\'s support team\'s site blocked the request (HTTP %d). Please contact them and let them know — they\'ll need to allowlist this site or check their firewall logs.', 'trustedlogin' ),
+				esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_829416, __( 'Support access could not be set up. A firewall on the plugin\'s support team\'s site blocked the request (HTTP %d). Please contact them and let them know — they\'ll need to allowlist this site or check their firewall logs.', 'trustedlogin' ) ) ),
 				$status
 			),
 			array(
@@ -788,7 +794,7 @@ final class Remote {
 
 			return new \WP_Error(
 				'missing_response_body',
-				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s site returned nothing — a firewall on their side may have blocked the request. Please contact them and share this error.', 'trustedlogin' ),
+				esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_VENDOR_RETURNED_NOTHING, __( 'Support access could not be set up. The plugin\'s support team\'s site returned nothing — a firewall on their side may have blocked the request. Please contact them and share this error.', 'trustedlogin' ) ) ),
 				$api_response
 			);
 		}
@@ -810,7 +816,7 @@ final class Remote {
 				'invalid_response',
 				sprintf(
 					/* translators: %d: the HTTP status code returned by the support team's site */
-					esc_html__( 'Support access could not be set up — the plugin\'s support team\'s site returned an unexpected response (HTTP %d). Please contact them and share this error.', 'trustedlogin' ),
+					esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_343150, __( 'Support access could not be set up — the plugin\'s support team\'s site returned an unexpected response (HTTP %d). Please contact them and share this error.', 'trustedlogin' ) ) ),
 					$response_http
 				),
 				$api_response
@@ -849,14 +855,14 @@ final class Remote {
 
 					return new \WP_Error(
 						'missing_public_key',
-						esc_html__( 'Support access could not be set up. The plugin\'s support team needs to finish configuring their end — please contact them and let them know.', 'trustedlogin' ),
+						esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_VENDOR_NOT_CONFIGURED, __( 'Support access could not be set up. The plugin\'s support team needs to finish configuring their end — please contact them and let them know.', 'trustedlogin' ) ) ),
 						$response_body
 					);
 				}
 
 				return new \WP_Error(
 					'missing_required_key',
-					esc_html__( 'Support access could not be set up. The plugin\'s support team\'s response was incomplete — please contact them and share this error.', 'trustedlogin' ),
+					esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_VENDOR_RESPONSE_INCOMPLETE, __( 'Support access could not be set up. The plugin\'s support team\'s response was incomplete — please contact them and share this error.', 'trustedlogin' ) ) ),
 					$response_body
 				);
 			}

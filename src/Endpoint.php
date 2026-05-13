@@ -73,6 +73,11 @@ class Endpoint {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Reports a failed support-login attempt to the SaaS.
 	 *
 	 * @var LoginAttempts
@@ -118,6 +123,7 @@ class Endpoint {
 	public function __construct( Config $config, Logging $logging, LoginAttempts $login_attempts = null, SupportUser $support_user = null ) {
 
 		$this->config         = $config;
+		$this->strings = new Strings( $config );
 		$this->logging        = $logging;
 		$this->login_attempts = $login_attempts;
 		$this->support_user   = $support_user;
@@ -396,8 +402,8 @@ class Endpoint {
 	 * with their own error chrome.
 	 */
 	private function render_standalone_failure_page() {
-		$heading = __( 'Support login could not complete', 'trustedlogin' );
-		$body    = __( 'Return to your support tool to try again.', 'trustedlogin' );
+		$heading = $this->strings->get( Strings::SUPPORT_LOGIN_COULD_NOT_COMPLETE, __( 'Support login could not complete', 'trustedlogin' ) );
+		$body    = $this->strings->get( Strings::RETURN_TO_YOUR_SUPPORT_TOOL_TO, __( 'Return to your support tool to try again.', 'trustedlogin' ) );
 
 		wp_die(
 			'<p>' . esc_html( $body ) . '</p>',

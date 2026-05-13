@@ -39,6 +39,11 @@ final class SupportUser {
 	private $config;
 
 	/**
+	 * @var Strings
+	 */
+	private $strings;
+
+	/**
 	 * Logging instance.
 	 *
 	 * @var Logging $logging
@@ -95,6 +100,7 @@ final class SupportUser {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
+		$this->strings = new Strings( $config );
 		$this->logging = $logging;
 		$this->role    = new SupportRole( $config, $logging );
 
@@ -229,7 +235,7 @@ final class SupportUser {
 			// Only allow the user to be created if the email is not hashed; that way, it's not possible to accidentally
 			// create a user with the same email as an existing user.
 			if ( ! $allow_existing_user_match ) {
-				return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+				return new \WP_Error( 'email_exists', esc_html( $this->strings->get( Strings::USER_NOT_CREATED_USER_WITH_THAT, __( 'User not created; User with that email already exists', 'trustedlogin' ) ) ) );
 			}
 
 			// If the user already exists and the email matches the hash, use that user.
@@ -283,19 +289,6 @@ final class SupportUser {
 	 * when no locale is requested or the requested locale fails the
 	 * format check — letting WordPress fall back to the site default.
 	 *
-	 * Deliberately does NOT gate on `get_available_languages()`:
-	 *
-	 *   - It excludes `en_US` (the default is always available but
-	 *     never listed), so checking against it silently rejects a
-	 *     legitimate value.
-	 *   - It misses WPML / Polylang custom locales.
-	 *   - It misses translations bundled by other plugins under their
-	 *     own paths.
-	 *
-	 * WordPress's translation machinery already falls back to English
-	 * for any locale whose `.mo` files aren't installed, so a format-
-	 * only gate is both safer and more inclusive.
-	 *
 	 * @since 1.11.0
 	 *
 	 * @return string Locale code, or empty string for "site default".
@@ -323,11 +316,9 @@ final class SupportUser {
 		}
 
 		// Format-only validation. Covers `de_DE`, `pt_BR`, `de_DE_formal`,
-		// `pt_PT_ao90` (digits in variant — real WP.org locale), `cmn` /
-		// `ckb` (3-letter language codes). Rejects obvious garbage so a
-		// typo doesn't get written to wp_usermeta. The variant suffix
-		// is nested INSIDE the region group so a malformed
-		// "lang_lowercase" doesn't slip through as "lang + variant".
+		// `pt_PT_ao90` (digits in variant), `cmn` / `ckb` (3-letter language
+		// codes). Variant is nested INSIDE the region group so `de_de`
+		// doesn't slip through as "lang + variant".
 		if ( ! preg_match( '/^[a-z]{2,3}(_[A-Z]{2}(_[a-z0-9]+)?)?$/', $locale ) ) {
 			$this->logging->log(
 				'Ignoring malformed support_user/locale setting: ' . esc_attr( $locale ),
@@ -348,7 +339,7 @@ final class SupportUser {
 	private function generate_unique_username() {
 
 		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+		$username = sprintf( esc_html( $this->strings->get( Strings::S_SUPPORT, __( '%s Support', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( ! username_exists( $username ) ) {
 			return $username;
