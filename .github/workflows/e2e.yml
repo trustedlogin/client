@@ -60,14 +60,30 @@ jobs:
         id: refs
         env:
           GH_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-          CONNECTOR_BRANCH: feature/183-form-plugins-login-field
+          CONNECTOR_BRANCH: develop
           GF_BRANCH: master
         run: |
-          conn=$(gh api "repos/trustedlogin/trustedlogin-connector/commits/${CONNECTOR_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
-          gf=$(gh api "repos/gravityforms/gravityforms/commits/${GF_BRANCH}" --jq '.sha' 2>/dev/null || echo "")
+          # gh api prints its JSON error body to stdout on failure
+          # (404 / auth / network). Validate the result is a real
+          # 40-hex SHA before accepting it — otherwise the JSON
+          # ends up baked into the cache key and actions/cache
+          # rejects with "key cannot contain commas".
+          resolve_sha() {
+            local repo="$1" ref="$2" out
+            out=$(gh api "repos/${repo}/commits/${ref}" --jq '.sha' 2>/dev/null || true)
+            if [[ "$out" =~ ^[0-9a-f]{40}$ ]]; then
+              printf '%s' "$out"
+            else
+              # Slashes are invalid in cache keys; normalize.
+              printf '%s' "${ref//\//-}"
+            fi
+          }
+
+          conn=$(resolve_sha "trustedlogin/trustedlogin-connector" "$CONNECTOR_BRANCH")
+          gf=$(resolve_sha "gravityforms/gravityforms" "$GF_BRANCH")
           boot=$(sha256sum tests/e2e/fixtures/bootstrap-vendor.sh | cut -c1-12)
-          echo "conn=${conn:-${CONNECTOR_BRANCH//\//-}}" >> "$GITHUB_OUTPUT"
-          echo "gf=${gf:-$GF_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "conn=$conn" >> "$GITHUB_OUTPUT"
+          echo "gf=$gf" >> "$GITHUB_OUTPUT"
           echo "boot=$boot" >> "$GITHUB_OUTPUT"
 
       - name: Restore connector fixture

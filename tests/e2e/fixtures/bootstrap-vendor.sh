@@ -2,8 +2,9 @@
 #
 # Bootstrap the vendor WordPress site for trustedlogin/client e2e.
 #
-#   - clone trustedlogin-connector at feature/183-form-plugins-login-field
-#     (PR #184 — adds the Gravity Forms TrustedLogin field)
+#   - clone trustedlogin-connector at develop
+#     (the PR #184 / feature/183 work — Gravity Forms TrustedLogin
+#     field, envelope signature verification — merged via PR #194)
 #   - clone gravityforms/gravityforms (private; needs GITHUB_TOKEN with repo scope)
 #   - wp core install
 #   - activate both plugins
@@ -22,7 +23,7 @@ cd "$(dirname "$0")/.."
 
 REINSTALL="${REINSTALL:-false}"
 REFRESH_PLUGINS="${REFRESH_PLUGINS:-false}"
-CONNECTOR_BRANCH="${CONNECTOR_BRANCH:-feature/183-form-plugins-login-field}"
+CONNECTOR_BRANCH="${CONNECTOR_BRANCH:-develop}"
 GF_BRANCH="${GF_BRANCH:-master}"
 
 bold()  { printf "\033[1m→\033[0m %s\n" "$*"; }
@@ -79,7 +80,7 @@ clone_with_token() {
 
 # ----- Clone plugins ----------------------------------------------------------
 
-bold "Staging trustedlogin-connector (PR #184 branch)"
+bold "Staging trustedlogin-connector ($CONNECTOR_BRANCH branch)"
 # Candidate local checkouts — if one exists and has the target branch, we'll
 # fetch from it directly so unpushed local commits land in the e2e stack.
 LOCAL_CONNECTOR="${LOCAL_CONNECTOR:-$HOME/Local/dev/app/public/wp-content/plugins/trustedlogin-connector}"
