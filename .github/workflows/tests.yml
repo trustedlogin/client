@@ -2,10 +2,13 @@ name: Tests
 
 # Run on
 on:
+  # `**` matches every branch including paths with slashes
+  # (e.g. `chore/foo`); plain `*` would silently skip those.
   push:
-    # any branch
     branches:
-      - '*'
+      - '**'
+  pull_request:
+  workflow_dispatch:
 jobs:
   tests:
     name: Run PHP unit tests
@@ -14,11 +17,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # Node is only here so we can `npm -g i @wordpress/env` below.
+      # No root package.json / package-lock.json / .nvmrc anymore
+      # (dropped in PR #141 along with the Grunt toolchain), so we
+      # pin the version inline instead of reading .nvmrc, and we
+      # skip the cache: 'npm' setting (nothing to cache).
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          cache: 'npm'
-          node-version-file: '.nvmrc'
+          node-version: '20'
 
       - name: Setup PHP and Composer
         uses: shivammathur/setup-php@v2
@@ -35,8 +42,8 @@ jobs:
       - name: Install Composer dependencies
         run: composer install
 
-      - name: Install Node dependencies
-        run: npm install
-
+      # Inlines what the old `npm run test:php` script ran. We
+      # dropped package.json with the Grunt toolchain, so the
+      # workflow can't `npm run` anything anymore.
       - name: Run PHP unit tests
-        run: npm run test:php
+        run: wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpunit

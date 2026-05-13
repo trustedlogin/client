@@ -16,8 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Exception;
 use WP_Error;
-use WP_User;
-use WP_Admin_Bar;
 
 /**
  * The TrustedLogin all-in-one drop-in class.
@@ -823,7 +821,7 @@ final class Remote {
 			$errors = '';
 
 			// Multi-dimensional; we flatten.
-			foreach ( $response_json['errors'] as $key => $error ) {
+			foreach ( $response_json['errors'] as $error ) {
 				$error   = is_array( $error ) ? reset( $error ) : $error;
 				$errors .= $error;
 			}

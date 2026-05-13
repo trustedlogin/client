@@ -1,14 +1,12 @@
 name: PHP CI Tests
 
 on:
+  # Cheap (<1 min): run on every branch push and every PR so feature
+  # work gets lint + static-analysis feedback before opening a PR.
   push:
     branches:
-      - main
-      - develop
+      - '**'
   pull_request:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 jobs:
