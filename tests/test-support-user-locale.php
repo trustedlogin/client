@@ -366,4 +366,99 @@ class TrustedLoginSupportUserLocaleTest extends WP_UnitTestCase {
 
 		return (int) $new_user_id;
 	}
+
+	// =================================================================
+	//  Coverage gaps from the audit pass
+	// =================================================================
+
+	public function test_get_user_locale_does_not_leak_across_current_user_switches() {
+		$id_a = $this->grant_support_user_with_locale( 'de_DE' );
+
+		// Create a second namespace + user with NO locale set.
+		$config_b = new Config( array(
+			'auth'   => array( 'api_key' => 'b146ca31be6aa948' ),
+			'role'   => 'editor',
+			'vendor' => array(
+				'namespace'   => 'locale-test-no-locale',
+				'title'       => 'Locale Test (no locale)',
+				'email'       => 'support+nl+{hash}@example.com',
+				'website'     => 'https://vendor.example.com',
+				'support_url' => 'https://vendor.example.com/support',
+			),
+		) );
+		$config_b->validate();
+		$logging_b = new Logging( $config_b );
+		( new SupportRole( $config_b, $logging_b ) )->create();
+		$id_b = ( new SupportUser( $config_b, $logging_b ) )->create();
+		$this->assertNotInstanceOf( \WP_Error::class, $id_b );
+
+		// Switch current user to B (no locale) and verify A's locale
+		// is still de_DE — user-locale-per-user is fully independent
+		// of `get_user_locale()` for the current user.
+		wp_set_current_user( (int) $id_b );
+
+		$this->assertSame( 'de_DE', get_user_locale( $id_a ) );
+		$this->assertSame( get_locale(), get_user_locale( (int) $id_b ),
+			'User with no locale meta falls through to site locale, not user A\'s locale.' );
+	}
+
+	public function test_locale_format_check_does_not_consult_get_available_languages() {
+		// Pick a locale that almost certainly isn't installed on the
+		// test box: zz_ZZ. If format-check is the gate (correct), the
+		// locale lands in usermeta. If the SDK consulted
+		// get_available_languages(), the locale would be rejected.
+		$user_id = $this->grant_support_user_with_locale( 'zz_ZZ' );
+
+		$this->assertSame( 'zz_ZZ', (string) get_user_meta( $user_id, 'locale', true ),
+			'Format-only validation must accept unlisted locales — WordPress falls back to English on lookup.' );
+	}
+
+	public function test_en_US_is_accepted_despite_being_absent_from_get_available_languages() {
+		// en_US is never in get_available_languages() (it IS the
+		// default WP installs without a translation pack), but the
+		// SDK must accept it as a legitimate locale request.
+		$user_id = $this->grant_support_user_with_locale( 'en_US' );
+
+		$this->assertSame( 'en_US', (string) get_user_meta( $user_id, 'locale', true ) );
+	}
+
+	public function test_strings_overrides_and_support_user_locale_coexist() {
+		// Cross-feature smoke test: both #66 (strings overrides) and
+		// #140 (support_user/locale) configured in one Config; both
+		// active for the same Client.
+		$config = new Config( array(
+			'auth'         => array( 'api_key' => 'cross1234aabbccdd' ),
+			'role'         => 'editor',
+			'vendor'       => array(
+				'namespace'   => 'cross-feature-test',
+				'title'       => 'Cross Feature Test',
+				'email'       => 'support+cross+{hash}@example.com',
+				'website'     => 'https://vendor.example.com',
+				'support_url' => 'https://vendor.example.com/support',
+			),
+			'support_user' => array( 'locale' => 'fr_FR' ),
+			'strings'      => array(
+				Strings::SECURED_BY_TRUSTEDLOGIN => 'Cross-feature branding',
+			),
+		) );
+		$config->validate();
+		Strings::init( $config );
+
+		// Create the user.
+		$logging = new Logging( $config );
+		( new SupportRole( $config, $logging ) )->create();
+		$user_id = ( new SupportUser( $config, $logging ) )->create();
+
+		// Locale landed.
+		$this->assertNotInstanceOf( \WP_Error::class, $user_id );
+		$this->assertSame( 'fr_FR', get_user_locale( (int) $user_id ) );
+
+		// Override still applies.
+		$this->assertSame(
+			'Cross-feature branding',
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+		);
+
+		Strings::reset();
+	}
 }

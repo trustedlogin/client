@@ -377,8 +377,8 @@ final class Form {
 		// one, so we always have a surface.
 		$support_href = '' !== $support_url ? esc_url( $support_url ) : 'mailto:' . rawurlencode( $vendor_email );
 		$support_text = '' !== $support_url
-			? sprintf( /* translators: %s: the plugin's name */ esc_html( Strings::get( Strings::CONTACT_S_SUPPORT, __( 'Contact %s support', 'trustedlogin' ) ) ), esc_html( $vendor_title ) )
-			: sprintf( /* translators: %s: the support email address */ esc_html( Strings::get( Strings::EMAIL_S, __( 'Email %s', 'trustedlogin' ) ) ), esc_html( $vendor_email ) );
+			? sprintf( esc_html( Strings::get( Strings::CONTACT_S_SUPPORT, /* translators: %s: the plugin's name */ __( 'Contact %s support', 'trustedlogin' ) ) ), esc_html( $vendor_title ) )
+			: sprintf( esc_html( Strings::get( Strings::EMAIL_S, /* translators: %s: the support email address */ __( 'Email %s', 'trustedlogin' ) ) ), esc_html( $vendor_email ) );
 
 		$retry_url = add_query_arg(
 			array(
@@ -842,11 +842,16 @@ final class Form {
 	 */
 	private function get_debug_data_consent_html() {
 
-		// translators: [link] and [/link] are replaced with a link to the Site Health page. Do not translate.
 		$output = sprintf(
 			'<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>',
 			strtr(
-				esc_html( Strings::get( Strings::INCLUDE_THE_LINK_SITE_HEALTH_LINK, __( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ) ) ),
+				esc_html(
+					Strings::get(
+						Strings::INCLUDE_THE_LINK_SITE_HEALTH_LINK,
+						/* translators: [link] and [/link] are replaced with a link to the Site Health page. Do not translate. */
+						__( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' )
+					)
+				),
 				array(
 					'[link]'  => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
 					'[/link]' => '</a>',
@@ -967,8 +972,14 @@ final class Form {
 			$logo_output = sprintf(
 				'<a href="%1$s" title="%2$s" target="_blank" rel="noreferrer noopener"><img src="%3$s" alt="%4$s" /></a>',
 				esc_url( $this->config->get_setting( 'vendor/website' ) ),
-				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-				sprintf( 'Visit the %s website (opens in a new tab)', $this->config->get_setting( 'vendor/title' ) ),
+				esc_attr( sprintf(
+					Strings::get(
+						Strings::VISIT_VENDOR_WEBSITE,
+						/* translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets"). */
+						__( 'Visit the %s website (opens in a new tab)', 'trustedlogin' )
+					),
+					$this->config->get_setting( 'vendor/title' )
+				) ),
 				esc_attr( $this->config->get_setting( 'vendor/logo_url' ) ),
 				esc_attr( $this->config->get_setting( 'vendor/title' ) )
 			);
@@ -1430,8 +1441,17 @@ final class Form {
 		$defaults = array(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
 			'text'        => sprintf( esc_html( Strings::get( Strings::GRANT_S_ACCESS, __( 'Grant %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name() ),
-			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			'exists_text' => sprintf( esc_html( Strings::get( Strings::EXTEND_S_ACCESS, __( 'Extend %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ) ),
+			'exists_text' => sprintf(
+				esc_html(
+					Strings::get(
+						Strings::EXTEND_VENDOR_ACCESS_FOR_DURATION,
+						/* translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"); %2$s is the human-readable duration of granted access (e.g. "1 week"). */
+						__( 'Extend %1$s Access for %2$s', 'trustedlogin' )
+					)
+				),
+				$this->config->get_display_name(),
+				ucwords( human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) )
+			),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // Inline tags only.

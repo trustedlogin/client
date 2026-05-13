@@ -62,6 +62,7 @@ class Strings {
 	const BY_GRANTING_ACCESS_YOU_AGREE_TO = 'by_granting_access_you_agree_to';
 	const REFERENCE_S = 'reference_s';
 	const VENDOR_HAS_SITE_ACCESS_THAT = '1_s_has_site_access_that';
+	const VISIT_VENDOR_WEBSITE         = 'visit_vendor_website';
 	const VENDOR_WOULD_LIKE_SUPPORT_ACCESS = '1_s_would_like_support_access';
 	const GRANT_1_S_ACCESS_TO_THIS = 'grant_1_s_access_to_this';
 	const INCLUDE_A_MESSAGE_FOR_SUPPORT = 'include_a_message_for_support';
@@ -94,7 +95,7 @@ class Strings {
 	const DEBUGGING_INFO = 'debugging_info';
 	const TRUSTEDLOGIN_CONFIG = 'trustedlogin_config';
 	const GRANT_S_ACCESS = 'grant_s_access';
-	const EXTEND_S_ACCESS = 'extend_s_access';
+	const EXTEND_VENDOR_ACCESS_FOR_DURATION = 'extend_vendor_access_for_duration';
 	const COULD_NOT_CREATE_SUPPORT_ACCESS = 'could_not_create_support_access';
 	const THE_USER_DETAILS_COULD_NOT_BE = 'the_user_details_could_not_be';
 	const PLEASE_A_HREF_1_S_TARGET = 'please_a_href_1_s_target';
@@ -257,6 +258,7 @@ class Strings {
 			self::BY_GRANTING_ACCESS_YOU_AGREE_TO => array( 'placeholders' => 0 ), // By granting access, you agree to the {{tos_link}}.
 			self::REFERENCE_S => array( 'placeholders' => 1 ), // Reference #%s
 			self::VENDOR_HAS_SITE_ACCESS_THAT => array( 'placeholders' => 2 ), // %1$s has site access that expires in %2$s.
+			self::VISIT_VENDOR_WEBSITE        => array( 'placeholders' => 1 ), // Visit the %s website (opens in a new tab)
 			self::VENDOR_WOULD_LIKE_SUPPORT_ACCESS => array( 'placeholders' => 1 ), // %1$s would like support access to this site.
 			self::GRANT_1_S_ACCESS_TO_THIS => array( 'placeholders' => 1 ), // Grant %1$s access to this site.
 			self::INCLUDE_A_MESSAGE_FOR_SUPPORT => array( 'placeholders' => 0 ), // Include a message for support?
@@ -289,7 +291,7 @@ class Strings {
 			self::DEBUGGING_INFO => array( 'placeholders' => 0 ), // Debugging Info
 			self::TRUSTEDLOGIN_CONFIG => array( 'placeholders' => 0 ), // TrustedLogin Config
 			self::GRANT_S_ACCESS => array( 'placeholders' => 1 ), // Grant %s Access
-			self::EXTEND_S_ACCESS => array( 'placeholders' => 1 ), // Extend %s Access
+			self::EXTEND_VENDOR_ACCESS_FOR_DURATION => array( 'placeholders' => 2 ), // Extend %1$s Access for %2$s
 			self::COULD_NOT_CREATE_SUPPORT_ACCESS => array( 'placeholders' => 0 ), // Could not create support access.
 			self::THE_USER_DETAILS_COULD_NOT_BE => array( 'placeholders' => 1 ), // The user details could not be sent to %1$s automatically.
 			self::PLEASE_A_HREF_1_S_TARGET => array( 'placeholders' => 2 ), // Please <a href="%1$s" target="_blank">click here</a> to go t
@@ -423,12 +425,17 @@ class Strings {
 		}
 
 		if ( ! self::$translations_loaded ) {
+			// Read self::$textdomain at fire time (not captured by
+			// value). If load_translations() is called again with a
+			// different domain BEFORE this hook fires, the second
+			// call's textdomain wins for the reload — matching the
+			// most recent `self::$textdomain` write at line 418.
 			add_action(
 				'change_locale',
-				static function ( $new_locale ) use ( $textdomain ) {
+				static function ( $new_locale ) {
 					$mo = self::mo_path_for( $new_locale );
 					if ( $mo && is_readable( $mo ) ) {
-						load_textdomain( $textdomain, $mo );
+						load_textdomain( self::$textdomain, $mo );
 					}
 				}
 			);

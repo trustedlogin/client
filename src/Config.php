@@ -472,6 +472,15 @@ final class Config {
 		}
 
 		$this->settings['strings'] = $validated;
+
+		// Defense-in-depth: drop any cached read of `strings` from
+		// before validation pruned the override array. The current
+		// call order in Client::__construct is safe (validate → init
+		// reads fresh), but get_setting() is a long-lived per-key
+		// cache and a future refactor could call get_setting('strings')
+		// here. Without this unset, that future read would hit the
+		// stale pre-validation cache.
+		unset( $this->settings_cache['strings'] );
 	}
 
 	/**

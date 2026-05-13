@@ -290,4 +290,103 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		$this->assertSame( 'acme-plugin', $rc->getValue( null ),
 			'After init, load should run immediately.' );
 	}
+
+	// =================================================================
+	//  Coverage gaps from the audit pass
+	// =================================================================
+
+	public function test_repeated_load_translations_registers_change_locale_once() {
+		// Count change_locale callbacks at priority 10 before & after.
+		global $wp_filter;
+		$before = isset( $wp_filter['change_locale'] )
+			? count( $wp_filter['change_locale']->callbacks[10] ?? array() )
+			: 0;
+
+		Strings::load_translations( 'acme-plugin' );
+		Strings::load_translations( 'other-plugin' );
+		Strings::load_translations( 'third-plugin' );
+
+		$after = count( $wp_filter['change_locale']->callbacks[10] );
+		$this->assertSame( $before + 1, $after,
+			'Repeated load_translations calls must add exactly one change_locale callback total.' );
+	}
+
+	public function test_second_load_translations_overrides_textdomain() {
+		Strings::load_translations( 'acme-plugin' );
+		Strings::load_translations( 'beta-plugin' );
+
+		$rc = new ReflectionProperty( Strings::class, 'textdomain' );
+		$rc->setAccessible( true );
+		$this->assertSame( 'beta-plugin', $rc->getValue( null ),
+			'The most recent load_translations call wins.' );
+	}
+
+	public function test_change_locale_callback_reads_latest_textdomain_after_second_load() {
+		// The closure's load_textdomain() call is gated on
+		// is_readable() of the .mo path, so we need a real file at
+		// that location to make the spy fire. Build a 0-byte placeholder.
+		$rc          = new \ReflectionClass( Strings::class );
+		$languages   = dirname( $rc->getFileName() ) . '/languages';
+		if ( ! is_dir( $languages ) ) {
+			mkdir( $languages, 0755, true );
+		}
+		$fake_mo = $languages . '/trustedlogin-fr_FR.mo';
+		file_put_contents( $fake_mo, '' );
+		$this->cleanups[] = static function () use ( $fake_mo, $languages ) {
+			if ( is_file( $fake_mo ) ) {
+				unlink( $fake_mo );
+			}
+			// Best-effort dir cleanup; ignore if not empty.
+			@rmdir( $languages );
+		};
+
+		$attempts = array();
+		$spy      = static function ( $override, $domain ) use ( &$attempts ) {
+			unset( $override );
+			$attempts[] = $domain;
+			return true;
+		};
+		add_filter( 'override_load_textdomain', $spy, 10, 2 );
+
+		try {
+			Strings::load_translations( 'acme-plugin' );
+			Strings::load_translations( 'beta-plugin' );
+			$attempts = array(); // ignore the immediate loads
+
+			do_action( 'change_locale', 'fr_FR' );
+
+			$this->assertContains( 'beta-plugin', $attempts,
+				'change_locale must load .mo against the LATEST textdomain, not the captured-at-registration one.' );
+			$this->assertNotContains( 'acme-plugin', $attempts,
+				'Stale textdomain must NOT be referenced after second load.' );
+		} finally {
+			remove_filter( 'override_load_textdomain', $spy, 10 );
+		}
+	}
+
+	public function test_mo_path_resolves_relative_to_strings_file() {
+		// mo_path_for is private; reach via reflection. The path must
+		// be anchored to the Strings.php directory (so Strauss-vendored
+		// layouts resolve correctly), NOT to WP_PLUGIN_DIR.
+		$rc     = new \ReflectionClass( Strings::class );
+		$method = $rc->getMethod( 'mo_path_for' );
+		$method->setAccessible( true );
+
+		$path = $method->invoke( null, 'de_DE' );
+		$strings_dir = dirname( $rc->getFileName() );
+
+		$this->assertSame(
+			$strings_dir . '/languages/trustedlogin-de_DE.mo',
+			$path,
+			'mo_path_for must be relative to the Strings.php source file.'
+		);
+	}
+
+	public function test_load_translations_with_non_string_argument_is_noop() {
+		Strings::load_translations( '' );
+
+		$rc = new ReflectionProperty( Strings::class, 'textdomain' );
+		$rc->setAccessible( true );
+		$this->assertSame( 'trustedlogin', $rc->getValue( null ) );
+	}
 }
