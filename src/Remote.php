@@ -590,22 +590,22 @@ final class Remote {
 
 			case 400:
 			case 423:
-				return new \WP_Error( 'unable_to_verify', esc_html__( 'Support access could not be set up right now. Please try again in a few minutes, or contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unable_to_verify', esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_979C0F, __( 'Support access could not be set up right now. Please try again in a few minutes, or contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
 
 			case 401:
-				return new \WP_Error( 'unauthenticated', esc_html__( 'Support access could not be verified. Please contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unauthenticated', esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED, __( 'Support access could not be verified. Please contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
 
 			case 402:
-				return new \WP_Error( 'account_error', esc_html__( 'The support team\'s account has an issue that\'s preventing access. Please contact them directly.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'account_error', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_ACCOUNT_HAS, __( 'The support team\'s account has an issue that\'s preventing access. Please contact them directly.', 'trustedlogin' ) ) ), $api_response );
 
 			case 403:
-				return new \WP_Error( 'invalid_token', esc_html__( 'Support access was refused. Please contact the plugin\'s support team.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_token', esc_html( Strings::get( Strings::SUPPORT_ACCESS_WAS_REFUSED_PLEASE_CONTACT, __( 'Support access was refused. Please contact the plugin\'s support team.', 'trustedlogin' ) ) ), $api_response );
 
 			// The vendor-side endpoint returned 404. Most often: Connector
 			// not installed on the vendor site, or the REST route is
 			// disabled by a security plugin on the vendor.
 			case 404:
-				return new \WP_Error( 'not_found', esc_html__( 'The support team\'s site is not ready to receive access requests. Please contact their support team and let them know.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'not_found', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_IS, __( 'The support team\'s site is not ready to receive access requests. Please contact their support team and let them know.', 'trustedlogin' ) ) ), $api_response );
 
 			case 418:
 				return new \WP_Error( 'teapot', '🫖', $api_response );
@@ -615,19 +615,19 @@ final class Remote {
 			case 500:
 			case 503:
 			case 'http_request_failed':
-				return new \WP_Error( 'unavailable', esc_html__( 'The support team\'s site is temporarily unreachable. Please try again in a few minutes.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'unavailable', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_IS_6D0AB1, __( 'The support team\'s site is temporarily unreachable. Please try again in a few minutes.', 'trustedlogin' ) ) ), $api_response );
 
 			// Vendor returned a 501/502/522 — server-side error on their
 			// end. Retrying likely won't help until they fix it.
 			case 501:
 			case 502:
 			case 522:
-				return new \WP_Error( 'server_error', esc_html__( 'The support team\'s site returned an error. Please contact their support team directly.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'server_error', esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_RETURNED, __( 'The support team\'s site returned an error. Please contact their support team directly.', 'trustedlogin' ) ) ), $api_response );
 
 			// wp_remote_retrieve_response_code() couldn't parse the
 			// response at all — network layer failure.
 			case '':
-				return new \WP_Error( 'invalid_response', esc_html__( 'Could not reach the support team\'s site. Please check your internet connection and try again.', 'trustedlogin' ), $api_response );
+				return new \WP_Error( 'invalid_response', esc_html( Strings::get( Strings::COULD_NOT_REACH_THE_SUPPORT_TEAM, __( 'Could not reach the support team\'s site. Please check your internet connection and try again.', 'trustedlogin' ) ) ), $api_response );
 
 			// Any response code we don't explicitly map. Preserve the
 			// HTTP status in the returned WP_Error so the UI / logs can
@@ -646,7 +646,7 @@ final class Remote {
 					'unexpected_response_code',
 					sprintf(
 						/* translators: %d: the HTTP status code returned by the vendor site */
-						esc_html__( 'Support access could not be set up (HTTP %d). Please contact the plugin\'s support team and share this number.', 'trustedlogin' ),
+						esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_084A44, __( 'Support access could not be set up (HTTP %d). Please contact the plugin\'s support team and share this number.', 'trustedlogin' ) ) ),
 						$status
 					),
 					array(
@@ -728,7 +728,7 @@ final class Remote {
 			'vendor_response_not_json',
 			sprintf(
 				/* translators: %d: the HTTP status code returned by the support team's site */
-				esc_html__( 'Support access could not be set up. A firewall on the plugin\'s support team\'s site blocked the request (HTTP %d). Please contact them and let them know — they\'ll need to allowlist this site or check their firewall logs.', 'trustedlogin' ),
+				esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_829416, __( 'Support access could not be set up. A firewall on the plugin\'s support team\'s site blocked the request (HTTP %d). Please contact them and let them know — they\'ll need to allowlist this site or check their firewall logs.', 'trustedlogin' ) ) ),
 				$status
 			),
 			array(
@@ -788,7 +788,7 @@ final class Remote {
 
 			return new \WP_Error(
 				'missing_response_body',
-				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s site returned nothing — a firewall on their side may have blocked the request. Please contact them and share this error.', 'trustedlogin' ),
+				esc_html( Strings::get( Strings::SUPPORT_ACCESS_VENDOR_RETURNED_NOTHING, __( 'Support access could not be set up. The plugin\'s support team\'s site returned nothing — a firewall on their side may have blocked the request. Please contact them and share this error.', 'trustedlogin' ) ) ),
 				$api_response
 			);
 		}
@@ -810,7 +810,7 @@ final class Remote {
 				'invalid_response',
 				sprintf(
 					/* translators: %d: the HTTP status code returned by the support team's site */
-					esc_html__( 'Support access could not be set up — the plugin\'s support team\'s site returned an unexpected response (HTTP %d). Please contact them and share this error.', 'trustedlogin' ),
+					esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_343150, __( 'Support access could not be set up — the plugin\'s support team\'s site returned an unexpected response (HTTP %d). Please contact them and share this error.', 'trustedlogin' ) ) ),
 					$response_http
 				),
 				$api_response
@@ -849,14 +849,14 @@ final class Remote {
 
 					return new \WP_Error(
 						'missing_public_key',
-						esc_html__( 'Support access could not be set up. The plugin\'s support team needs to finish configuring their end — please contact them and let them know.', 'trustedlogin' ),
+						esc_html( Strings::get( Strings::SUPPORT_ACCESS_VENDOR_NOT_CONFIGURED, __( 'Support access could not be set up. The plugin\'s support team needs to finish configuring their end — please contact them and let them know.', 'trustedlogin' ) ) ),
 						$response_body
 					);
 				}
 
 				return new \WP_Error(
 					'missing_required_key',
-					esc_html__( 'Support access could not be set up. The plugin\'s support team\'s response was incomplete — please contact them and share this error.', 'trustedlogin' ),
+					esc_html( Strings::get( Strings::SUPPORT_ACCESS_VENDOR_RESPONSE_INCOMPLETE, __( 'Support access could not be set up. The plugin\'s support team\'s response was incomplete — please contact them and share this error.', 'trustedlogin' ) ) ),
 					$response_body
 				);
 			}

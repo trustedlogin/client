@@ -67,7 +67,7 @@ class SiteAccess {
 		$encryption = new Encryption( $this->config, $remote, $logging );
 
 		if ( ! in_array( $action, self::$sync_actions, true ) ) {
-			return new \WP_Error( 'param_error', __( 'Unexpected action value', 'trustedlogin' ) );
+			return new \WP_Error( 'param_error', Strings::get( Strings::UNEXPECTED_ACTION_VALUE, __( 'Unexpected action value', 'trustedlogin' ) ) );
 		}
 
 		$access_key = $this->get_access_key();
@@ -98,7 +98,7 @@ class SiteAccess {
 		}
 
 		if ( empty( $response_json['success'] ) ) {
-			return new \WP_Error( 'sync_error', __( 'Support access could not be registered. Please try again in a minute, or contact the plugin\'s support team.', 'trustedlogin' ) );
+			return new \WP_Error( 'sync_error', Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_REGISTERED, __( 'Support access could not be registered. Please try again in a minute, or contact the plugin\'s support team.', 'trustedlogin' ) ) );
 		}
 
 		// Opportunistically cache the SaaS-supplied webhook URL. This

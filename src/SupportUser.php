@@ -229,7 +229,7 @@ final class SupportUser {
 			// Only allow the user to be created if the email is not hashed; that way, it's not possible to accidentally
 			// create a user with the same email as an existing user.
 			if ( ! $allow_existing_user_match ) {
-				return new \WP_Error( 'email_exists', esc_html__( 'User not created; User with that email already exists', 'trustedlogin' ) );
+				return new \WP_Error( 'email_exists', esc_html( Strings::get( Strings::USER_NOT_CREATED_USER_WITH_THAT, __( 'User not created; User with that email already exists', 'trustedlogin' ) ) ) );
 			}
 
 			// If the user already exists and the email matches the hash, use that user.
@@ -245,6 +245,14 @@ final class SupportUser {
 			'user_registered' => gmdate( 'Y-m-d H:i:s' ),
 		);
 
+		// Setting `locale` via wp_insert_user args (vs. a post-create
+		// update_user_meta) ensures the welcome email + first wp-admin
+		// render honor it. Stable since WP 4.7.
+		$locale = $this->resolve_support_user_locale();
+		if ( '' !== $locale ) {
+			$user_data['locale'] = $locale;
+		}
+
 		$new_user_id = wp_insert_user( $user_data );
 
 		if ( is_wp_error( $new_user_id ) ) {
@@ -253,9 +261,61 @@ final class SupportUser {
 			return $new_user_id;
 		}
 
+		// Re-assert in case a `wp_pre_insert_user_data` filter dropped it.
+		if ( '' !== $locale && get_user_meta( $new_user_id, 'locale', true ) !== $locale ) {
+			update_user_meta( $new_user_id, 'locale', $locale );
+		}
+
 		$this->logging->log( 'Support User #' . $new_user_id, __METHOD__, 'info' );
 
 		return $new_user_id;
+	}
+
+	/**
+	 * Resolve the locale to assign to a newly created support user.
+	 *
+	 * Reads `support_user/locale` from Config, runs through the
+	 * `trustedlogin/{namespace}/support_user/locale` filter, and
+	 * format-checks. Returns an empty string for "no locale set" —
+	 * WordPress then falls back to the site default.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return string Locale code, or empty string for "site default".
+	 */
+	private function resolve_support_user_locale() {
+
+		$configured = (string) $this->config->get_setting( 'support_user/locale', '' );
+
+		/**
+		 * Filter the locale assigned to a newly created support user.
+		 *
+		 * @since 1.11.0
+		 *
+		 * @param string $locale Locale code, or '' for site default.
+		 * @param Config $config Active configuration.
+		 */
+		$locale = (string) apply_filters(
+			'trustedlogin/' . $this->config->ns() . '/support_user/locale',
+			$configured,
+			$this->config
+		);
+
+		if ( '' === $locale ) {
+			return '';
+		}
+
+		// Variant nested inside region so `de_de` doesn't parse as "lang + variant".
+		if ( ! preg_match( '/^[a-z]{2,3}(_[A-Z]{2}(_[a-z0-9]+)?)?$/', $locale ) ) {
+			$this->logging->log(
+				'Ignoring malformed support_user/locale setting: ' . esc_attr( $locale ),
+				__METHOD__,
+				'warning'
+			);
+			return '';
+		}
+
+		return $locale;
 	}
 
 	/**
@@ -266,7 +326,7 @@ final class SupportUser {
 	private function generate_unique_username() {
 
 		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-		$username = sprintf( esc_html__( '%s Support', 'trustedlogin' ), $this->config->get_setting( 'vendor/title' ) );
+		$username = sprintf( esc_html( Strings::get( Strings::S_SUPPORT, __( '%s Support', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( ! username_exists( $username ) ) {
 			return $username;

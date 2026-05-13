@@ -90,3 +90,21 @@ Sensitive areas in this codebase where hygiene matters most:
 - `src/SiteAccess.php`, `src/Remote.php` — SaaS envelope exchange, auth tokens
 - `src/SupportUser.php`, `src/SupportRole.php` — privilege boundary, capability grants
 - `src/Form.php` — user-facing rendering, escaping
+
+## Comment Discipline
+
+Default to writing no comments. A well-named identifier and the code that follows it should carry the meaning. Add a comment only when the *why* is non-obvious to a future reader.
+
+**Don't write meta-narrative.** Comments that explain the developer's reasoning — "Defense in depth:", "Belt-and-suspenders:", "Cheaper than the alternative because…", "We do this instead of X because Y" — are narrative *about* the code, not part of it. PR descriptions and commit messages are the right home for that voice. Comments that survive in source become stale signal that rots faster than the code does.
+
+**Don't restate the obvious.** A comment immediately above `update_user_meta(...)` saying "Update the user meta" wastes everyone's time. If the call doesn't read clearly, fix the names — don't paper over with prose.
+
+**Don't reference the task, PR, or audit that prompted the code.** No "added for issue #66", "per review feedback", "this was the fix in PR #142". Those handles rot the moment the PR is closed. The thing the comment cared about is in `git blame` and in the PR body — leave it there.
+
+**Don't narrate version-target trade-offs at the call site.** A comment like "we duplicate the cleanup here because the SDK targets PHP 5.3 (no `finally` until 5.5)" is meta narrative about *why the file looks this way*. A reader can see it looks that way; the *why* belongs in this file, not at every call site.
+
+**Do keep comments** that describe a hidden constraint, a subtle invariant, a workaround for a specific bug, or a surprising behavior — things a reader would otherwise have to discover the hard way. These earn their place.
+
+### PHP version target
+
+The SDK runtime supports **PHP 5.3+** (per `composer.json` and `.phpcs.xml.dist`'s `testVersion`). New code must run on 5.3 — no `\Throwable`, no `finally`, no `static function () {}`, no `??` null coalesce, no return-type hints, no arrow functions. Build/test environments are PHP 7.4+ (PHPStan `phpVersion: 70400`, PHPUnit on 8.2), but anything the SDK actually ships has to clear the 5.3 bar.

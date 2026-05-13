@@ -112,7 +112,7 @@ final class SecurityChecks {
 		if ( $this->in_lockdown() ) {
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 
-			return new \WP_Error( 'in_lockdown', __( 'Support access is temporarily disabled on this site after repeated failed attempts. Please try again later.', 'trustedlogin' ) );
+			return new \WP_Error( 'in_lockdown', Strings::get( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_DISABLED_ON, __( 'Support access is temporarily disabled on this site after repeated failed attempts. Please try again later.', 'trustedlogin' ) ) );
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
@@ -139,7 +139,7 @@ final class SecurityChecks {
 			$this->logging->log(
 				sprintf(
 					// translators: %s is the error message.
-					__( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ),
+					Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED_35C1B9, __( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ) ),
 					$approved->get_error_message()
 				),
 				__METHOD__,

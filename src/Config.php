@@ -378,6 +378,13 @@ final class Config {
 			}
 		}
 
+		// Walk the optional `strings` array and discard malformed
+		// overrides individually. Bad entries log a warning and fall
+		// back to the SDK default; well-formed entries remain. We
+		// don't push these to $errors because a typo in one string
+		// shouldn't refuse to instantiate the SDK.
+		$this->validate_strings();
+
 		if ( $errors ) {
 			$error_text = array();
 			foreach ( $errors as $error ) {
@@ -394,6 +401,123 @@ final class Config {
 			throw new Exception( esc_html( $exception_text ), 406 );
 		}
 
+		return true;
+	}
+
+	/**
+	 * Validate the optional `strings` config setting in place.
+	 *
+	 * Drops the whole entry if not an array; otherwise prunes
+	 * malformed individual overrides while keeping valid ones.
+	 * Closures pass through untouched; strings are checked against
+	 * the placeholder count declared in {@see Strings::registry()};
+	 * empty strings are accepted as "render nothing".
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return void
+	 */
+	private function validate_strings() {
+		if ( ! isset( $this->settings['strings'] ) ) {
+			return;
+		}
+
+		if ( ! is_array( $this->settings['strings'] ) ) {
+			unset( $this->settings['strings'] );
+			return;
+		}
+
+		$registry  = Strings::registry();
+		$validated = array();
+
+		foreach ( $this->settings['strings'] as $key => $override ) {
+			if ( ! is_string( $key ) || ! isset( $registry[ $key ] ) ) {
+				continue;
+			}
+
+			$placeholders = isset( $registry[ $key ]['placeholders'] )
+				? (int) $registry[ $key ]['placeholders']
+				: 0;
+
+			if ( is_callable( $override ) ) {
+				$validated[ $key ] = $override;
+				continue;
+			}
+
+			if ( '' === $override ) {
+				$validated[ $key ] = '';
+				continue;
+			}
+
+			if ( ! is_string( $override ) ) {
+				continue;
+			}
+
+			if ( ! self::placeholders_safe( $override, $placeholders ) ) {
+				continue;
+			}
+
+			$validated[ $key ] = $override;
+		}
+
+		$this->settings['strings'] = $validated;
+
+		// Drop the cached pre-validation read; subsequent get_setting()
+		// calls must hit the pruned array.
+		unset( $this->settings_cache['strings'] );
+	}
+
+	/**
+	 * Does $template survive `vsprintf` against $arg_count placeholder args?
+	 *
+	 * Sentinel-based behavioural test: each arg slot is given a unique
+	 * marker and the rendered output must contain every marker. Catches
+	 * too-few-args, missing slots, and wrong-conversion-type in one shot
+	 * without re-implementing the sprintf grammar.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param string $template  Override candidate to test (string from integrator config).
+	 * @param int    $arg_count Number of positional args the SDK default requires.
+	 *
+	 * @return bool True if the template renders cleanly with $arg_count args.
+	 */
+	private static function placeholders_safe( $template, $arg_count ) {
+		if ( $arg_count <= 0 ) {
+			$stripped = str_replace( '%%', '', (string) $template );
+			return ! (bool) preg_match( '/%[+\-0-9.\'$]*[a-zA-Z]/', $stripped );
+		}
+
+		$sentinels = array();
+		for ( $i = 0; $i < $arg_count; $i++ ) {
+			$sentinels[] = '__TLPLACEHOLDER' . $i . '__';
+		}
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
+		set_error_handler(
+			function () {
+				return true;
+			},
+			E_WARNING
+		);
+
+		$result = false;
+		try {
+			$result = vsprintf( (string) $template, $sentinels );
+		} catch ( \Exception $_ ) {
+			$result = false;
+		}
+		restore_error_handler();
+
+		if ( false === $result || ! is_string( $result ) ) {
+			return false;
+		}
+
+		foreach ( $sentinels as $sentinel ) {
+			if ( false === strpos( $result, $sentinel ) ) {
+				return false;
+			}
+		}
 		return true;
 	}
 

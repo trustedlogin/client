@@ -260,7 +260,7 @@ final class Encryption {
 
 			return new WP_Error(
 				'invalid_public_key_shape',
-				esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' )
+				esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET, __( 'Support access could not be set up. The plugin\'s support team\'s encryption key has an unexpected format — please contact them and let them know.', 'trustedlogin' ) ) )
 			);
 		}
 
@@ -283,7 +283,7 @@ final class Encryption {
 
 					return new WP_Error(
 						'public_key_fingerprint_mismatch',
-						esc_html__( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' )
+						esc_html( Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_SET_799354, __( 'Support access could not be set up. The plugin\'s support team\'s encryption key didn\'t match the configured fingerprint — please contact them.', 'trustedlogin' ) ) )
 					);
 				}
 			}

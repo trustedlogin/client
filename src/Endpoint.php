@@ -396,8 +396,8 @@ class Endpoint {
 	 * with their own error chrome.
 	 */
 	private function render_standalone_failure_page() {
-		$heading = __( 'Support login could not complete', 'trustedlogin' );
-		$body    = __( 'Return to your support tool to try again.', 'trustedlogin' );
+		$heading = Strings::get( Strings::SUPPORT_LOGIN_COULD_NOT_COMPLETE, __( 'Support login could not complete', 'trustedlogin' ) );
+		$body    = Strings::get( Strings::RETURN_TO_YOUR_SUPPORT_TOOL_TO, __( 'Return to your support tool to try again.', 'trustedlogin' ) );
 
 		wp_die(
 			'<p>' . esc_html( $body ) . '</p>',
