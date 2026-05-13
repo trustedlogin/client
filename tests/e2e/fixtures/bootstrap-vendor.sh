@@ -67,10 +67,17 @@ clone_with_token() {
     fi
 
     if [[ -d "$dest/.git" && "$REFRESH_PLUGINS" != "true" ]]; then
-        bold "  $dest already cloned — fetching + resetting to origin/$branch"
+        bold "  $dest already cloned — fetching + resetting to $branch"
         git -C "$dest" remote set-url origin "$url"
+        # FETCH_HEAD (not origin/$branch) because the cached clone may
+        # have been created with --branch X --depth=1, which writes a
+        # single-branch refspec (`+refs/heads/X:refs/remotes/origin/X`).
+        # Subsequent `fetch origin $branch` for a DIFFERENT branch
+        # downloads the objects but doesn't update refs/remotes/origin/
+        # $branch — so `reset --hard origin/$branch` then errors with
+        # "unknown revision". FETCH_HEAD is always populated.
         git -C "$dest" fetch origin "$branch" --depth=1 --quiet
-        git -C "$dest" reset --hard "origin/$branch" --quiet
+        git -C "$dest" reset --hard FETCH_HEAD --quiet
         return
     fi
     rm -rf "$dest"
@@ -144,10 +151,13 @@ else
 fi
 
 bold "Staging gravityforms"
-# Explicit empty 4th arg (local_source) for consistency with the other
-# clone_with_token call site. gravityforms has no local checkout we
-# can copy from, so we always fall through to git clone.
-clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms" ""
+# Mirror the LOCAL_CONNECTOR pattern so local-dev runs (and `act`
+# under wp-content/plugins layouts) can satisfy the gravityforms
+# clone without a PAT that has access to the private
+# gravityforms/gravityforms repo. Falls through to git clone when
+# the local checkout isn't present.
+LOCAL_GF="${LOCAL_GF:-$HOME/Local/dev/app/public/wp-content/plugins/gravityforms}"
+clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms" "$LOCAL_GF"
 
 # Gravity Forms's dev branch ships source JS/CSS that only resolves after a
 # build. Without this step, assets 404 (theme-foundation.min.css, etc.) and
