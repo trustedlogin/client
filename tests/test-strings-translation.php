@@ -38,20 +38,12 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Reset Strings' static $textdomain and $translations_loaded so
-	 * tests don't leak state through each other. The runtime textdomain
-	 * is private-static, so we poke it via reflection.
+	 * Reset Strings' static state so tests don't leak through each other.
+	 * Strings::reset() clears $config, $overrides, $textdomain, and
+	 * $translations_loaded in one shot.
 	 */
 	private function reset_strings_state(): void {
-		$rc = new \ReflectionClass( Strings::class );
-
-		$domain = $rc->getProperty( 'textdomain' );
-		$domain->setAccessible( true );
-		$domain->setValue( null, 'trustedlogin' );
-
-		$loaded = $rc->getProperty( 'translations_loaded' );
-		$loaded->setAccessible( true );
-		$loaded->setValue( null, false );
+		Strings::reset();
 	}
 
 	private function build_config( array $overrides = array() ): Config {
@@ -127,10 +119,10 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 
 		Strings::load_translations( 'acme-plugin' );
 
-		$strings = new Strings( $this->build_config() );
+		Strings::init( $this->build_config() );
 		$this->assertSame(
 			'Abgesichert durch Acme Support',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -138,10 +130,10 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		// No load_translations() call — runtime textdomain stays
 		// 'trustedlogin', which has no translations registered. The
 		// SDK's English default flows through.
-		$strings = new Strings( $this->build_config() );
+		Strings::init( $this->build_config() );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -180,10 +172,10 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		switch_to_locale( 'fr_FR' );
 
 		try {
-			$strings = new Strings( $this->build_config() );
+			Strings::init( $this->build_config() );
 			$this->assertSame(
 				'Réessayer la connexion',
-				$strings->get( Strings::TRY_RECONNECTING, __( 'Try reconnecting', 'trustedlogin' ) )
+				Strings::get( Strings::TRY_RECONNECTING, __( 'Try reconnecting', 'trustedlogin' ) )
 			);
 		} finally {
 			restore_previous_locale();
@@ -204,12 +196,12 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 		$config = $this->build_config( array(
 			Strings::SECURED_BY_TRUSTEDLOGIN => 'Powered by Acme', // verbatim brand
 		) );
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 
 		// Override wins. Translation never runs for this key.
 		$this->assertSame(
 			'Powered by Acme',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -230,8 +222,8 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 			},
 		) );
 
-		$strings  = new Strings( $config );
-		$resolved = $strings->get(
+		Strings::init( $config  );
+		$resolved = Strings::get(
 			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
@@ -250,7 +242,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 
 		try {
 			$config  = $this->build_config();
-			$strings = new Strings( $config );
+			Strings::init( $config  );
 
 			$tag = 'trustedlogin/translation-test/strings/' . Strings::TRY_RECONNECTING;
 
@@ -264,7 +256,7 @@ class TrustedLoginStringsTranslationTest extends WP_UnitTestCase {
 			try {
 				$this->assertSame(
 					'Erneut verbinden',
-					$strings->get( Strings::TRY_RECONNECTING, 'Try reconnecting' )
+					Strings::get( Strings::TRY_RECONNECTING, 'Try reconnecting' )
 				);
 			} finally {
 				remove_filter( $tag, $contextual, 10 );

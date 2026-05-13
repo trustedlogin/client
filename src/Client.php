@@ -49,11 +49,6 @@ final class Client {
 	private $config;
 
 	/**
-	 * @var Strings
-	 */
-	private $strings;
-
-	/**
 	 * Whether the configuration is valid.
 	 *
 	 * @var bool True if the configuration is valid; false if not.
@@ -145,7 +140,12 @@ final class Client {
 		}
 
 		$this->config = $config;
-		$this->strings = new Strings( $config );
+
+		// Bind the Strings utility AFTER validate() — which prunes any
+		// malformed entries in the integrator's `strings` override map.
+		// All subsequent Strings::get() calls inside the SDK read from
+		// this binding.
+		Strings::init( $config );
 
 		$this->logging = new Logging( $config );
 
@@ -269,7 +269,7 @@ final class Client {
 		// user — it can never be used to log in because no envelope
 		// reached the vendor dashboard. Fail-fast keeps state clean.
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_REQUIRES_A_SECURE_HTTPS, __( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) ) ), array( 'error_code' => 426 ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html( Strings::get( Strings::SUPPORT_ACCESS_REQUIRES_A_SECURE_HTTPS, __( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) ) ), array( 'error_code' => 426 ) );
 		}
 
 		timer_start();
@@ -450,7 +450,7 @@ final class Client {
 		// in via the vendor dashboard still reflects the old expiration.
 		// Fail fast so the customer is asked to enable HTTPS and retry.
 		if ( ! $this->config->meets_ssl_requirement() ) {
-			return new WP_Error( 'fails_ssl_requirement', esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_REQUIRES_A_SECURE_HTTPS, __( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) ) ), array( 'error_code' => 426 ) );
+			return new WP_Error( 'fails_ssl_requirement', esc_html( Strings::get( Strings::SUPPORT_ACCESS_REQUIRES_A_SECURE_HTTPS, __( 'Support access requires a secure (HTTPS) connection. Please enable HTTPS on this site and try again.', 'trustedlogin' ) ) ), array( 'error_code' => 426 ) );
 		}
 
 		timer_start();
@@ -651,7 +651,7 @@ final class Client {
 		if ( ! empty( $should_be_deleted ) ) {
 			$this->logging->log( 'User #' . $should_be_deleted->ID . ' was not removed', __METHOD__, 'error' );
 
-			return new WP_Error( 'support_user_not_deleted', esc_html( $this->strings->get( Strings::THE_SUPPORT_USER_WAS_NOT_DELETED, __( 'The support user was not deleted.', 'trustedlogin' ) ) ) );
+			return new WP_Error( 'support_user_not_deleted', esc_html( Strings::get( Strings::THE_SUPPORT_USER_WAS_NOT_DELETED, __( 'The support user was not deleted.', 'trustedlogin' ) ) ) );
 		}
 
 		/**

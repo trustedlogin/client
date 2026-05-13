@@ -37,11 +37,6 @@ final class Admin {
 	private $config;
 
 	/**
-	 * @var Strings
-	 */
-	private $strings;
-
-	/**
 	 * SupportUser object.
 	 *
 	 * @var SupportUser $support_user
@@ -64,7 +59,6 @@ final class Admin {
 	 */
 	public function __construct( Config $config, Form $form, SupportUser $support_user ) {
 		$this->config       = $config;
-		$this->strings = new Strings( $config );
 		$this->form         = $form;
 		$this->support_user = $support_user;
 	}
@@ -232,7 +226,7 @@ final class Admin {
 		}
 
 		return array(
-			'revoke' => "<a class='trustedlogin tl-revoke submitdelete' href='" . esc_url( $revoke_url ) . "'>" . esc_html( $this->strings->get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ) . '</a>',
+			'revoke' => "<a class='trustedlogin tl-revoke submitdelete' href='" . esc_url( $revoke_url ) . "'>" . esc_html( Strings::get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ) . '</a>',
 		);
 	}
 
@@ -273,12 +267,12 @@ final class Admin {
 		$admin_bar->add_menu(
 			array(
 				'id'     => 'tl-' . $this->config->ns() . '-revoke',
-				'title'  => $icon . esc_html( $this->strings->get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ),
+				'title'  => $icon . esc_html( Strings::get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ),
 				'href'   => $this->support_user->get_revoke_url( 'all' ),
 				'parent' => 'top-secondary',
 				'meta'   => array(
 					'class' => 'tl-destroy-session',
-					'title' => esc_html( $this->strings->get( Strings::YOU_ARE_LOGGED_IN_AS_A, __( 'You are logged in as a support user. Click to permanently revoke access.', 'trustedlogin' ) ) ),
+					'title' => esc_html( Strings::get( Strings::YOU_ARE_LOGGED_IN_AS_A, __( 'You are logged in as a support user. Click to permanently revoke access.', 'trustedlogin' ) ) ),
 				),
 			)
 		);
@@ -311,7 +305,7 @@ final class Admin {
 
 		$menu_slug = apply_filters( 'trustedlogin/' . $this->config->ns() . '/admin/menu/menu_slug', 'grant-' . $ns . '-access' );
 
-		$menu_title = $this->config->get_setting( 'menu/title', esc_html( $this->strings->get( Strings::GRANT_SUPPORT_ACCESS, __( 'Grant Support Access', 'trustedlogin' ) ) ) );
+		$menu_title = $this->config->get_setting( 'menu/title', esc_html( Strings::get( Strings::GRANT_SUPPORT_ACCESS, __( 'Grant Support Access', 'trustedlogin' ) ) ) );
 
 		$menu_position = $this->config->get_setting( 'menu/position', null );
 		$menu_position = is_null( $menu_position ) ? null : (float) $menu_position;

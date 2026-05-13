@@ -36,10 +36,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 	// -----------------------------------------------------------------
 
 	public function test_no_override_returns_sdk_default() {
-		$strings = new Strings( $this->build_config() );
+		Strings::init( $this->build_config() );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -52,10 +52,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::SECURED_BY_TRUSTEDLOGIN => 'Powered by Acme Support',
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 		$this->assertSame(
 			'Powered by Acme Support',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -68,10 +68,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::SECURED_BY_TRUSTEDLOGIN => '',
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 		$this->assertSame(
 			'',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -86,8 +86,8 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			},
 		) );
 
-		$strings = new Strings( $config );
-		$resolved = $strings->get(
+		Strings::init( $config  );
+		$resolved = Strings::get(
 			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
@@ -109,10 +109,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::CREATED_1_S_AGO_BY_2 => 'Created at unknown time', // no %1$s %2$s
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 
 		// Override was malformed → discarded → falls through to SDK default.
-		$resolved = $strings->get(
+		$resolved = Strings::get(
 			Strings::CREATED_1_S_AGO_BY_2,
 			'Created %1$s ago by %2$s',
 			array( '5 minutes', 'admin' )
@@ -131,10 +131,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::SECURED_BY_TRUSTEDLOGIN => 'Secured by TL (%d sites protected)',
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -145,10 +145,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::SECURED_BY_TRUSTEDLOGIN => 'Secured by 100%% you',
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 		$this->assertSame(
 			'Secured by 100%% you',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 
@@ -174,7 +174,7 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 
 	public function test_runtime_filter_can_rewrite_resolved_value() {
 		$config  = $this->build_config();
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 
 		$tag = 'trustedlogin/strings-test/strings/' . Strings::SECURED_BY_TRUSTEDLOGIN;
 
@@ -186,7 +186,7 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 		try {
 			$this->assertSame(
 				'SECURED BY TRUSTEDLOGIN',
-				$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+				Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 			);
 		} finally {
 			remove_filter( $tag, $rewriter, 10 );
@@ -202,10 +202,10 @@ class TrustedLoginStringsTest extends WP_UnitTestCase {
 			Strings::SECURED_BY_TRUSTEDLOGIN => new \stdClass(),
 		) );
 
-		$strings = new Strings( $config );
+		Strings::init( $config  );
 		$this->assertSame(
 			'Secured by TrustedLogin',
-			$strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
+			Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, 'Secured by TrustedLogin' )
 		);
 	}
 

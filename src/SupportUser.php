@@ -39,11 +39,6 @@ final class SupportUser {
 	private $config;
 
 	/**
-	 * @var Strings
-	 */
-	private $strings;
-
-	/**
 	 * Logging instance.
 	 *
 	 * @var Logging $logging
@@ -100,7 +95,6 @@ final class SupportUser {
 	 */
 	public function __construct( Config $config, Logging $logging ) {
 		$this->config  = $config;
-		$this->strings = new Strings( $config );
 		$this->logging = $logging;
 		$this->role    = new SupportRole( $config, $logging );
 
@@ -235,7 +229,7 @@ final class SupportUser {
 			// Only allow the user to be created if the email is not hashed; that way, it's not possible to accidentally
 			// create a user with the same email as an existing user.
 			if ( ! $allow_existing_user_match ) {
-				return new \WP_Error( 'email_exists', esc_html( $this->strings->get( Strings::USER_NOT_CREATED_USER_WITH_THAT, __( 'User not created; User with that email already exists', 'trustedlogin' ) ) ) );
+				return new \WP_Error( 'email_exists', esc_html( Strings::get( Strings::USER_NOT_CREATED_USER_WITH_THAT, __( 'User not created; User with that email already exists', 'trustedlogin' ) ) ) );
 			}
 
 			// If the user already exists and the email matches the hash, use that user.
@@ -339,7 +333,7 @@ final class SupportUser {
 	private function generate_unique_username() {
 
 		// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-		$username = sprintf( esc_html( $this->strings->get( Strings::S_SUPPORT, __( '%s Support', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) );
+		$username = sprintf( esc_html( Strings::get( Strings::S_SUPPORT, __( '%s Support', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) );
 
 		if ( ! username_exists( $username ) ) {
 			return $username;

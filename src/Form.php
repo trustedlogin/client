@@ -41,11 +41,6 @@ final class Form {
 	private $config;
 
 	/**
-	 * @var Strings
-	 */
-	private $strings;
-
-	/**
 	 * SiteAccess object.
 	 *
 	 * @var SiteAccess $site_access
@@ -76,7 +71,6 @@ final class Form {
 	 */
 	public function __construct( Config $config, Logging $logging, SupportUser $support_user, SiteAccess $site_access ) {
 		$this->config       = $config;
-		$this->strings = new Strings( $config );
 		$this->logging      = $logging;
 		$this->support_user = $support_user;
 		$this->site_access  = $site_access;
@@ -280,7 +274,7 @@ final class Form {
 		$_user_creator    = $_user_creator_id ? get_user_by( 'id', $_user_creator_id ) : false;
 
 		// translators: %s is the ID of the user who created the support session. The user can't be found; only the User ID is known.
-		$unknown_user_text = sprintf( esc_html( $this->strings->get( Strings::UNKNOWN_USER_D, __( 'Unknown (User #%d)', 'trustedlogin' ) ) ), $_user_creator_id );
+		$unknown_user_text = sprintf( esc_html( Strings::get( Strings::UNKNOWN_USER_D, __( 'Unknown (User #%d)', 'trustedlogin' ) ) ), $_user_creator_id );
 
 		$auth_meta = ( $_user_creator && $_user_creator->exists() ) ? esc_html( $_user_creator->display_name ) : $unknown_user_text;
 
@@ -319,9 +313,9 @@ final class Form {
 		// closing the same gap on the auth header path.
 		$content = array(
 			'display_name'         => esc_html( $support_user->display_name ),
-			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', esc_url( $revoke_url ), esc_html( $this->strings->get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ) ),
+			'revoke_access_button' => sprintf( '<a href="%1$s" class="button button-danger alignright tl-client-revoke-button">%2$s</a>', esc_url( $revoke_url ), esc_html( Strings::get( Strings::REVOKE_ACCESS, __( 'Revoke Access', 'trustedlogin' ) ) ) ),
 			// translators: %s is the display name of the user who granted access.
-			'auth_meta'            => sprintf( esc_html( $this->strings->get( Strings::CREATED_1_S_AGO_BY_2, __( 'Created %1$s ago by %2$s', 'trustedlogin' ) ) ), esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ), esc_html( $auth_meta ) ),
+			'auth_meta'            => sprintf( esc_html( Strings::get( Strings::CREATED_1_S_AGO_BY_2, __( 'Created %1$s ago by %2$s', 'trustedlogin' ) ) ), esc_html( human_time_diff( strtotime( $support_user->user_registered ) ) ), esc_html( $auth_meta ) ),
 		);
 
 		return $this->prepare_output( $template, $content );
@@ -383,8 +377,8 @@ final class Form {
 		// one, so we always have a surface.
 		$support_href = '' !== $support_url ? esc_url( $support_url ) : 'mailto:' . rawurlencode( $vendor_email );
 		$support_text = '' !== $support_url
-			? sprintf( /* translators: %s: the plugin's name */ esc_html( $this->strings->get( Strings::CONTACT_S_SUPPORT, __( 'Contact %s support', 'trustedlogin' ) ) ), esc_html( $vendor_title ) )
-			: sprintf( /* translators: %s: the support email address */ esc_html( $this->strings->get( Strings::EMAIL_S, __( 'Email %s', 'trustedlogin' ) ) ), esc_html( $vendor_email ) );
+			? sprintf( /* translators: %s: the plugin's name */ esc_html( Strings::get( Strings::CONTACT_S_SUPPORT, __( 'Contact %s support', 'trustedlogin' ) ) ), esc_html( $vendor_title ) )
+			: sprintf( /* translators: %s: the support email address */ esc_html( Strings::get( Strings::EMAIL_S, __( 'Email %s', 'trustedlogin' ) ) ), esc_html( $vendor_email ) );
 
 		$retry_url = add_query_arg(
 			array(
@@ -396,7 +390,7 @@ final class Form {
 
 		$message = $error->get_error_message();
 		if ( '' === $message ) {
-			$message = esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_UNAVAILABLE_PLEASE, __( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' ) ) );
+			$message = esc_html( Strings::get( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_UNAVAILABLE_PLEASE, __( 'Support access is temporarily unavailable. Please try again in a few minutes.', 'trustedlogin' ) ) );
 		}
 
 		$response_html = sprintf(
@@ -419,7 +413,7 @@ final class Form {
 			'<p class="tl-%1$s-auth__retry-wrap"><a class="tl-%1$s-auth__retry" href="%2$s"><span class="dashicons dashicons-update" aria-hidden="true"></span> %3$s</a></p>',
 			esc_attr( $ns ),
 			esc_url( $retry_url ),
-			esc_html( $this->strings->get( Strings::TRY_RECONNECTING, __( 'Try reconnecting', 'trustedlogin' ) ) )
+			esc_html( Strings::get( Strings::TRY_RECONNECTING, __( 'Try reconnecting', 'trustedlogin' ) ) )
 		);
 
 		return array(
@@ -499,7 +493,7 @@ final class Form {
 			'response'                => $response_html,
 			'actions'                 => $actions_html,
 			'actions_container_class' => $grant_container,
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html( $this->strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, __( 'Secured by TrustedLogin', 'trustedlogin' ) ) ),
+			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html( Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, __( 'Secured by TrustedLogin', 'trustedlogin' ) ) ),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
@@ -593,7 +587,7 @@ final class Form {
 		 * @since 1.6.0
 		 * @param string $tos_anchor The text of the link to the Terms of Service.
 		 */
-		$tos_anchor = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/terms_of_service/anchor', esc_html( $this->strings->get( Strings::TERMS_OF_SERVICE, __( 'Terms of Service', 'trustedlogin' ) ) ) );
+		$tos_anchor = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth/terms_of_service/anchor', esc_html( Strings::get( Strings::TERMS_OF_SERVICE, __( 'Terms of Service', 'trustedlogin' ) ) ) );
 
 		$tos_link_template = '<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{anchor}}</a>';
 
@@ -609,7 +603,7 @@ final class Form {
 
 		$variables = array(
 			'ns'       => $this->config->ns(),
-			'tos_text' => esc_html( $this->strings->get( Strings::BY_GRANTING_ACCESS_YOU_AGREE_TO, __( 'By granting access, you agree to the {{tos_link}}.', 'trustedlogin' ) ) ),
+			'tos_text' => esc_html( Strings::get( Strings::BY_GRANTING_ACCESS_YOU_AGREE_TO, __( 'By granting access, you agree to the {{tos_link}}.', 'trustedlogin' ) ) ),
 			'tos_link' => $this->prepare_output( $tos_link_template, $tos_link_variables ),
 		);
 
@@ -650,7 +644,7 @@ final class Form {
 
 		$content = array(
 			// translators: %s is the reference ID.
-			'reference_text' => sprintf( esc_html( $this->strings->get( Strings::REFERENCE_S, __( 'Reference #%s', 'trustedlogin' ) ) ), $reference_id ),
+			'reference_text' => sprintf( esc_html( Strings::get( Strings::REFERENCE_S, __( 'Reference #%s', 'trustedlogin' ) ) ), $reference_id ),
 			'ns'             => $this->config->ns(),
 			'site_url'       => esc_html( str_replace( array( 'https://', 'http://' ), '', get_site_url() ) ),
 		);
@@ -672,7 +666,7 @@ final class Form {
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
 				// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets"). %2$s is the amount of time remaining for access ("1 week").
-				$intro = sprintf( esc_html( $this->strings->get( Strings::VENDOR_HAS_SITE_ACCESS_THAT, __( '%1$s has site access that expires in %2$s.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $this->config->get_setting( 'vendor/title' ) ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
+				$intro = sprintf( esc_html( Strings::get( Strings::VENDOR_HAS_SITE_ACCESS_THAT, __( '%1$s has site access that expires in %2$s.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $this->config->get_setting( 'vendor/title' ) ) . '</a>', str_replace( ' ', '&nbsp;', $this->support_user->get_expiration( $access, true, false ) ) );
 			}
 
 			return $intro;
@@ -680,10 +674,10 @@ final class Form {
 
 		if ( $this->is_login_screen() ) {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html( $this->strings->get( Strings::VENDOR_WOULD_LIKE_SUPPORT_ACCESS, __( '%1$s would like support access to this site.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
+			$intro = sprintf( esc_html( Strings::get( Strings::VENDOR_WOULD_LIKE_SUPPORT_ACCESS, __( '%1$s would like support access to this site.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		} else {
 			// translators: %1$s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$intro = sprintf( esc_html( $this->strings->get( Strings::GRANT_1_S_ACCESS_TO_THIS, __( 'Grant %1$s access to this site.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
+			$intro = sprintf( esc_html( Strings::get( Strings::GRANT_1_S_ACCESS_TO_THIS, __( 'Grant %1$s access to this site.', 'trustedlogin' ) ) ), '<a href="' . esc_url( $this->config->get_setting( 'vendor/website' ) ) . '">' . esc_html( $this->config->get_display_name() ) . '</a>' );
 		}
 
 		return $intro;
@@ -761,7 +755,7 @@ final class Form {
 					data-toggle=".tl-{{ns}}-ticket__fields">
 						%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span>
 				</span>',
-				esc_html( $this->strings->get( Strings::INCLUDE_A_MESSAGE_FOR_SUPPORT, __( 'Include a message for support?', 'trustedlogin' ) ) )
+				esc_html( Strings::get( Strings::INCLUDE_A_MESSAGE_FOR_SUPPORT, __( 'Include a message for support?', 'trustedlogin' ) ) )
 			);
 
 			$message_fields = sprintf(
@@ -776,7 +770,7 @@ final class Form {
 					></textarea>
 				</fieldset>
 			',
-				esc_html( $this->strings->get( Strings::PLEASE_DESCRIBE_THE_ISSUE_YOU_ARE, __( 'Please describe the issue you are having.', 'trustedlogin' ) ) )
+				esc_html( Strings::get( Strings::PLEASE_DESCRIBE_THE_ISSUE_YOU_ARE, __( 'Please describe the issue you are having.', 'trustedlogin' ) ) )
 			);
 
 			$output_template .= $this->prepare_output(
@@ -803,25 +797,25 @@ final class Form {
 		}
 
 		// translators: %s is replaced with the of time that the login will be active for (e.g. "1 week").
-		$expire_summary = sprintf( esc_html( $this->strings->get( Strings::ACCESS_THIS_SITE_FOR_S, __( 'Access this site for %s.', 'trustedlogin' ) ) ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
+		$expire_summary = sprintf( esc_html( Strings::get( Strings::ACCESS_THIS_SITE_FOR_S, __( 'Access this site for %s.', 'trustedlogin' ) ) ), '<strong>' . human_time_diff( 0, $this->config->get_setting( 'decay' ) ) . '</strong>' );
 
 		// translators: %s is replaced by the amount of time that the login will be active for (e.g. "1 week").
-		$expire_desc = '<small>' . sprintf( esc_html( $this->strings->get( Strings::ACCESS_AUTO_EXPIRES_IN_S_YOU, __( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ) ) ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
+		$expire_desc = '<small>' . sprintf( esc_html( Strings::get( Strings::ACCESS_AUTO_EXPIRES_IN_S_YOU, __( 'Access auto-expires in %s. You may revoke access at any time.', 'trustedlogin' ) ) ), human_time_diff( 0, $this->config->get_setting( 'decay' ) ) ) . '</small>';
 
 		$cloned_role = translate_user_role( ucfirst( $this->config->get_setting( 'role' ) ) );
 
 		if ( $this->config->get_setting( 'clone_role' ) ) {
 
 			// translators: %s is replaced with the name of the role (e.g. "Administrator").
-			$roles_summary = sprintf( esc_html( $this->strings->get( Strings::CREATE_A_USER_WITH_A_ROLE, __( 'Create a user with a role based on %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
+			$roles_summary = sprintf( esc_html( Strings::get( Strings::CREATE_A_USER_WITH_A_ROLE, __( 'Create a user with a role based on %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
 
 			if ( $this->config->get_setting( 'caps/add' ) || $this->config->get_setting( 'caps/remove' ) ) {
-				$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html( $this->strings->get( Strings::VIEW_MODIFIED_ROLE_CAPABILITIES, __( 'View modified role capabilities', 'trustedlogin' ) ) ) );
+				$roles_summary .= sprintf( '<small class="tl-' . $ns . '-toggle" data-toggle=".tl-' . $ns . '-auth__role-container">%s <span class="dashicons dashicons--small dashicons-arrow-down-alt2"></span></small>', esc_html( Strings::get( Strings::VIEW_MODIFIED_ROLE_CAPABILITIES, __( 'View modified role capabilities', 'trustedlogin' ) ) ) );
 			}
 		} else {
 
 			// translators: %s is replaced with the name of the role (e.g. "Administrator").
-			$roles_summary = sprintf( esc_html( $this->strings->get( Strings::CREATE_A_USER_WITH_A_ROLE_60602c, __( 'Create a user with a role of %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
+			$roles_summary = sprintf( esc_html( Strings::get( Strings::CREATE_A_USER_WITH_A_ROLE_60602c, __( 'Create a user with a role of %s.', 'trustedlogin' ) ) ), '<strong>' . $cloned_role . '</strong>' );
 		}
 
 		$content = array(
@@ -852,7 +846,7 @@ final class Form {
 		$output = sprintf(
 			'<h2><label><input type="checkbox" id="tl-{{ns}}-debug-data-consent" class="tl-{{ns}}-auth__checkbox--large" /> %s</label></h2>',
 			strtr(
-				esc_html( $this->strings->get( Strings::INCLUDE_THE_LINK_SITE_HEALTH_LINK, __( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::INCLUDE_THE_LINK_SITE_HEALTH_LINK, __( 'Include the [link]Site Health[/link] troubleshooting report', 'trustedlogin' ) ) ),
 				array(
 					'[link]'  => '<a href="' . esc_url( admin_url( 'site-health.php?tab=debug' ) ) . '">',
 					'[/link]' => '</a>',
@@ -878,8 +872,8 @@ final class Form {
 		$removed = $this->config->get_setting( 'caps/remove' );
 
 		$caps  = '';
-		$caps .= $this->get_caps_section( $added, $this->strings->get( Strings::ADDITIONAL_CAPABILITIES, __( 'Additional capabilities:', 'trustedlogin' ) ), 'dashicons-yes-alt' );
-		$caps .= $this->get_caps_section( $removed, $this->strings->get( Strings::REMOVED_CAPABILITIES, __( 'Removed capabilities:', 'trustedlogin' ) ), 'dashicons-dismiss' );
+		$caps .= $this->get_caps_section( $added, Strings::get( Strings::ADDITIONAL_CAPABILITIES, __( 'Additional capabilities:', 'trustedlogin' ) ), 'dashicons-yes-alt' );
+		$caps .= $this->get_caps_section( $removed, Strings::get( Strings::REMOVED_CAPABILITIES, __( 'Removed capabilities:', 'trustedlogin' ) ), 'dashicons-dismiss' );
 
 		if ( empty( $caps ) ) {
 			return $caps;
@@ -949,10 +943,10 @@ final class Form {
 
 		$content = array(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			'local_site'            => sprintf( esc_html( $this->strings->get( Strings::S_SUPPORT_MAY_NOT_BE_ABLE, __( '%s support may not be able to access this site.', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) ),
-			'need_access'           => esc_html( $this->strings->get( Strings::THIS_WEBSITE_IS_RUNNING_IN_A, __( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ) ) ),
+			'local_site'            => sprintf( esc_html( Strings::get( Strings::S_SUPPORT_MAY_NOT_BE_ABLE, __( '%s support may not be able to access this site.', 'trustedlogin' ) ) ), $this->config->get_setting( 'vendor/title' ) ),
+			'need_access'           => esc_html( Strings::get( Strings::THIS_WEBSITE_IS_RUNNING_IN_A, __( 'This website is running in a local development environment. To provide support, we must be able to access your site using a publicly-accessible URL.', 'trustedlogin' ) ) ),
 			'about_live_access_url' => esc_url( $this->config->get_setting( 'vendor/about_live_access_url', self::ABOUT_LIVE_ACCESS_URL ) ),
-			'learn_more'            => esc_html( $this->strings->get( Strings::LEARN_MORE, __( 'Learn more.', 'trustedlogin' ) ) ),
+			'learn_more'            => esc_html( Strings::get( Strings::LEARN_MORE, __( 'Learn more.', 'trustedlogin' ) ) ),
 		);
 
 		return $this->prepare_output( $notice_template, $content );
@@ -1005,7 +999,7 @@ final class Form {
 		}
 
 		$footer_links = array(
-			esc_html( $this->strings->get( Strings::LEARN_ABOUT_TRUSTEDLOGIN, __( 'Learn about TrustedLogin', 'trustedlogin' ) ) )                    => self::ABOUT_TL_URL,
+			esc_html( Strings::get( Strings::LEARN_ABOUT_TRUSTEDLOGIN, __( 'Learn about TrustedLogin', 'trustedlogin' ) ) )                    => self::ABOUT_TL_URL,
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
 			sprintf( 'Visit %s support', $this->config->get_setting( 'vendor/title' ) ) => $support_url,
 		);
@@ -1089,15 +1083,15 @@ final class Form {
 		};
 
 		$items = array(
-			esc_html( $this->strings->get( Strings::TRUSTEDLOGIN_STATUS, __( 'TrustedLogin Status', 'trustedlogin' ) ) ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( 'https://status.trustedlogin.com' ), is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html( $this->strings->get( Strings::OFFLINE, __( 'Offline', 'trustedlogin' ) ) ) : esc_html( $this->strings->get( Strings::ONLINE, __( 'Online', 'trustedlogin' ) ) ) ),
-			esc_html( $this->strings->get( Strings::API_KEY, __( 'API Key', 'trustedlogin' ) ) )     => sprintf( '<code>%s</code>', esc_html( $mask( $api_key ) ) ),
-			esc_html( $this->strings->get( Strings::LICENSE_KEY, __( 'License Key', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code>', esc_html( $mask( $license_key ) ) ),
-			esc_html( $this->strings->get( Strings::LOG_URL, __( 'Log URL', 'trustedlogin' ) ) )     => '' === $log_url
-				? esc_html( $this->strings->get( Strings::LOG_PATH_IS_OUTSIDE_ABSPATH_NOT, __( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' ) ) )
-				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html( $this->strings->get( Strings::DOWNLOAD_THE_LOG, __( 'Download the log', 'trustedlogin' ) ) ) ),
-			esc_html( $this->strings->get( Strings::LOG_LEVEL, __( 'Log Level', 'trustedlogin' ) ) )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', $this->strings->get( Strings::DEFAULT, __( '(Default)', 'trustedlogin' ) ) ) ),
-			esc_html( $this->strings->get( Strings::WEBHOOK_URL, __( 'Webhook URL', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
-			esc_html( $this->strings->get( Strings::VENDOR_PUBLIC_KEY, __( 'Vendor Public Key', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html( $this->strings->get( Strings::VERIFY_KEY, __( 'Verify key', 'trustedlogin' ) ) ) ),
+			esc_html( Strings::get( Strings::TRUSTEDLOGIN_STATUS, __( 'TrustedLogin Status', 'trustedlogin' ) ) ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( 'https://status.trustedlogin.com' ), is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html( Strings::get( Strings::OFFLINE, __( 'Offline', 'trustedlogin' ) ) ) : esc_html( Strings::get( Strings::ONLINE, __( 'Online', 'trustedlogin' ) ) ) ),
+			esc_html( Strings::get( Strings::API_KEY, __( 'API Key', 'trustedlogin' ) ) )     => sprintf( '<code>%s</code>', esc_html( $mask( $api_key ) ) ),
+			esc_html( Strings::get( Strings::LICENSE_KEY, __( 'License Key', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code>', esc_html( $mask( $license_key ) ) ),
+			esc_html( Strings::get( Strings::LOG_URL, __( 'Log URL', 'trustedlogin' ) ) )     => '' === $log_url
+				? esc_html( Strings::get( Strings::LOG_PATH_IS_OUTSIDE_ABSPATH_NOT, __( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' ) ) )
+				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html( Strings::get( Strings::DOWNLOAD_THE_LOG, __( 'Download the log', 'trustedlogin' ) ) ) ),
+			esc_html( Strings::get( Strings::LOG_LEVEL, __( 'Log Level', 'trustedlogin' ) ) )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', Strings::get( Strings::DEFAULT, __( '(Default)', 'trustedlogin' ) ) ) ),
+			esc_html( Strings::get( Strings::WEBHOOK_URL, __( 'Webhook URL', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
+			esc_html( Strings::get( Strings::VENDOR_PUBLIC_KEY, __( 'Vendor Public Key', 'trustedlogin' ) ) ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html( Strings::get( Strings::VERIFY_KEY, __( 'Verify key', 'trustedlogin' ) ) ) ),
 		);
 
 		$debugging_info = '';
@@ -1136,9 +1130,9 @@ final class Form {
 			$debugging_output,
 			array(
 				'ns'              => $this->config->ns(),
-				'debugging_label' => esc_html( $this->strings->get( Strings::DEBUGGING_INFO, __( 'Debugging Info', 'trustedlogin' ) ) ),
+				'debugging_label' => esc_html( Strings::get( Strings::DEBUGGING_INFO, __( 'Debugging Info', 'trustedlogin' ) ) ),
 				'debugging_info'  => $debugging_info,
-				'tl_config_label' => esc_html( $this->strings->get( Strings::TRUSTEDLOGIN_CONFIG, __( 'TrustedLogin Config', 'trustedlogin' ) ) ),
+				'tl_config_label' => esc_html( Strings::get( Strings::TRUSTEDLOGIN_CONFIG, __( 'TrustedLogin Config', 'trustedlogin' ) ) ),
 				'tl_config'       => '<pre>' . esc_html( print_r( $config_dump, true ) ) . '</pre>', // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 			)
 		);
@@ -1435,9 +1429,9 @@ final class Form {
 
 		$defaults = array(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			'text'        => sprintf( esc_html( $this->strings->get( Strings::GRANT_S_ACCESS, __( 'Grant %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name() ),
+			'text'        => sprintf( esc_html( Strings::get( Strings::GRANT_S_ACCESS, __( 'Grant %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name() ),
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			'exists_text' => sprintf( esc_html( $this->strings->get( Strings::EXTEND_S_ACCESS, __( 'Extend %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ) ),
+			'exists_text' => sprintf( esc_html( Strings::get( Strings::EXTEND_S_ACCESS, __( 'Extend %s Access', 'trustedlogin' ) ) ), $this->config->get_display_name(), ucwords( human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ) ),
 			'size'        => 'hero',
 			'class'       => 'button-primary',
 			'tag'         => 'a', // Inline tags only.
@@ -1501,7 +1495,7 @@ final class Form {
 		if ( $atts['powered_by'] ) {
 			$powered_by = sprintf(
 				'<small><span class="trustedlogin-logo"></span>%s</small>',
-				esc_html( $this->strings->get( Strings::SECURED_BY_TRUSTEDLOGIN, __( 'Secured by TrustedLogin', 'trustedlogin' ) ) )
+				esc_html( Strings::get( Strings::SECURED_BY_TRUSTEDLOGIN, __( 'Secured by TrustedLogin', 'trustedlogin' ) ) )
 			);
 		}
 
@@ -1576,7 +1570,7 @@ final class Form {
 		$query_args = apply_filters(
 			'trustedlogin/' . $this->config->ns() . '/support_url/query_args',
 			array(
-				'message' => $this->strings->get( Strings::COULD_NOT_CREATE_SUPPORT_ACCESS, __( 'Could not create support access.', 'trustedlogin' ) ),
+				'message' => Strings::get( Strings::COULD_NOT_CREATE_SUPPORT_ACCESS, __( 'Could not create support access.', 'trustedlogin' ) ),
 				'ref'     => Client::get_reference_id(),
 			)
 		);
@@ -1585,12 +1579,12 @@ final class Form {
 			'<p>%s</p><p>%s</p>',
 			sprintf(
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-				esc_html( $this->strings->get( Strings::THE_USER_DETAILS_COULD_NOT_BE, __( 'The user details could not be sent to %1$s automatically.', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::THE_USER_DETAILS_COULD_NOT_BE, __( 'The user details could not be sent to %1$s automatically.', 'trustedlogin' ) ) ),
 				$vendor_title
 			),
 			sprintf(
 			// translators: %1$s is the vendor support url and %2$s is the vendor title.
-				$this->strings->get( Strings::PLEASE_A_HREF_1_S_TARGET, __( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin' ) ),
+				Strings::get( Strings::PLEASE_A_HREF_1_S_TARGET, __( 'Please <a href="%1$s" target="_blank">click here</a> to go to the %2$s support site', 'trustedlogin' ) ),
 				esc_url( add_query_arg( $query_args, $this->config->get_setting( 'vendor/support_url' ) ) ),
 				$vendor_title
 			)
@@ -1598,45 +1592,45 @@ final class Form {
 
 		$translations = array(
 			'buttons' => array(
-				'confirm'    => esc_html( $this->strings->get( Strings::CONFIRM, __( 'Confirm', 'trustedlogin' ) ) ),
-				'ok'         => esc_html( $this->strings->get( Strings::OK, __( 'Ok', 'trustedlogin' ) ) ),
+				'confirm'    => esc_html( Strings::get( Strings::CONFIRM, __( 'Confirm', 'trustedlogin' ) ) ),
+				'ok'         => esc_html( Strings::get( Strings::OK, __( 'Ok', 'trustedlogin' ) ) ),
 				// translators: %1$s is the vendor title.
-				'go_to_site' => sprintf( $this->strings->get( Strings::GO_TO_1_S_SUPPORT_SITE, __( 'Go to %1$s support site', 'trustedlogin' ) ), $vendor_title ),
-				'close'      => esc_html( $this->strings->get( Strings::CLOSE, __( 'Close', 'trustedlogin' ) ) ),
-				'cancel'     => esc_html( $this->strings->get( Strings::CANCEL, __( 'Cancel', 'trustedlogin' ) ) ),
+				'go_to_site' => sprintf( Strings::get( Strings::GO_TO_1_S_SUPPORT_SITE, __( 'Go to %1$s support site', 'trustedlogin' ) ), $vendor_title ),
+				'close'      => esc_html( Strings::get( Strings::CLOSE, __( 'Close', 'trustedlogin' ) ) ),
+				'cancel'     => esc_html( Strings::get( Strings::CANCEL, __( 'Cancel', 'trustedlogin' ) ) ),
 				// translators: %1$s is the vendor title.
-				'revoke'     => sprintf( esc_html( $this->strings->get( Strings::REVOKE_1_S_SUPPORT_ACCESS, __( 'Revoke %1$s support access', 'trustedlogin' ) ) ), $vendor_title ),
-				'copy'       => esc_html( $this->strings->get( Strings::COPY, __( 'Copy', 'trustedlogin' ) ) ),
-				'copied'     => esc_html( $this->strings->get( Strings::COPIED, __( 'Copied!', 'trustedlogin' ) ) ),
+				'revoke'     => sprintf( esc_html( Strings::get( Strings::REVOKE_1_S_SUPPORT_ACCESS, __( 'Revoke %1$s support access', 'trustedlogin' ) ) ), $vendor_title ),
+				'copy'       => esc_html( Strings::get( Strings::COPY, __( 'Copy', 'trustedlogin' ) ) ),
+				'copied'     => esc_html( Strings::get( Strings::COPIED, __( 'Copied!', 'trustedlogin' ) ) ),
 			),
 			'a11y'    => array(
-				'opens_new_window' => esc_attr( $this->strings->get( Strings::THIS_LINK_OPENS_IN_A_NEW, __( '(This link opens in a new window.)', 'trustedlogin' ) ) ),
-				'copied_text'      => esc_html( $this->strings->get( Strings::THE_ACCESS_KEY_HAS_BEEN_COPIED, __( 'The access key has been copied to your clipboard.', 'trustedlogin' ) ) ),
+				'opens_new_window' => esc_attr( Strings::get( Strings::THIS_LINK_OPENS_IN_A_NEW, __( '(This link opens in a new window.)', 'trustedlogin' ) ) ),
+				'copied_text'      => esc_html( Strings::get( Strings::THE_ACCESS_KEY_HAS_BEEN_COPIED, __( 'The access key has been copied to your clipboard.', 'trustedlogin' ) ) ),
 			),
 			'status'  => array(
 				'synced'             => array(
-					'title'   => esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_GRANTED, __( 'Support access granted', 'trustedlogin' ) ) ),
+					'title'   => esc_html( Strings::get( Strings::SUPPORT_ACCESS_GRANTED, __( 'Support access granted', 'trustedlogin' ) ) ),
 					'content' => sprintf(
 					// translators: %1$s is the vendor title.
-						$this->strings->get( Strings::A_TEMPORARY_SUPPORT_USER_HAS_BEEN, __( 'A temporary support user has been created, and sent to %1$s support.', 'trustedlogin' ) ),
+						Strings::get( Strings::A_TEMPORARY_SUPPORT_USER_HAS_BEEN, __( 'A temporary support user has been created, and sent to %1$s support.', 'trustedlogin' ) ),
 						$vendor_title
 					),
 				),
 				'pending'            => array(
 					// translators: %1$s is the vendor title.
-					'content' => sprintf( $this->strings->get( Strings::GENERATING_ENCRYPTING_SECURE_SUPPORT_ACCESS_FOR, __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin' ) ), $vendor_title ),
+					'content' => sprintf( Strings::get( Strings::GENERATING_ENCRYPTING_SECURE_SUPPORT_ACCESS_FOR, __( 'Generating & encrypting secure support access for %1$s', 'trustedlogin' ) ), $vendor_title ),
 				),
 				'extending'          => array(
 					// translators: %1$s is the vendor title and %2$s is the human-readable expiration time (for example, "1 week").
-					'content' => sprintf( $this->strings->get( Strings::EXTENDING_SUPPORT_ACCESS_FOR_1_S, __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ) ), $vendor_title, human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ),
+					'content' => sprintf( Strings::get( Strings::EXTENDING_SUPPORT_ACCESS_FOR_1_S, __( 'Extending support access for %1$s by %2$s', 'trustedlogin' ) ), $vendor_title, human_time_diff( time(), time() + (int) $this->config->get_setting( 'decay' ) ) ),
 				),
 				'syncing'            => array(
 					// translators: %1$s is the vendor title.
-					'content' => sprintf( $this->strings->get( Strings::SENDING_ENCRYPTED_ACCESS_TO_1_S, __( 'Sending encrypted access to %1$s.', 'trustedlogin' ) ), $vendor_title ),
+					'content' => sprintf( Strings::get( Strings::SENDING_ENCRYPTED_ACCESS_TO_1_S, __( 'Sending encrypted access to %1$s.', 'trustedlogin' ) ), $vendor_title ),
 				),
 				'error'              => array(
 					// translators: %1$s is the vendor title.
-					'title'   => sprintf( $this->strings->get( Strings::COULDN_T_REGISTER_SUPPORT_ACCESS_WITH, __( 'Couldn\'t register support access with %1$s', 'trustedlogin' ) ), $vendor_title ),
+					'title'   => sprintf( Strings::get( Strings::COULDN_T_REGISTER_SUPPORT_ACCESS_WITH, __( 'Couldn\'t register support access with %1$s', 'trustedlogin' ) ), $vendor_title ),
 					'content' => wp_kses(
 						$error_content,
 						array(
@@ -1650,46 +1644,46 @@ final class Form {
 					),
 				),
 				'cancel'             => array(
-					'title'   => esc_html( $this->strings->get( Strings::ACTION_CANCELLED, __( 'Action Cancelled', 'trustedlogin' ) ) ),
+					'title'   => esc_html( Strings::get( Strings::ACTION_CANCELLED, __( 'Action Cancelled', 'trustedlogin' ) ) ),
 					'content' => sprintf(
 					// translators: %1$s is the vendor title.
-						$this->strings->get( Strings::A_SUPPORT_ACCOUNT_FOR_1_S, __( 'A support account for %1$s was not created.', 'trustedlogin' ) ),
+						Strings::get( Strings::A_SUPPORT_ACCOUNT_FOR_1_S, __( 'A support account for %1$s was not created.', 'trustedlogin' ) ),
 						$vendor_title
 					),
 				),
 				'failed'             => array(
-					'title'   => esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_WAS_NOT_GRANTED, __( 'Support Access Was Not Granted', 'trustedlogin' ) ) ),
-					'content' => esc_html( $this->strings->get( Strings::THERE_WAS_AN_ERROR_GRANTING_ACCESS, __( 'There was an error granting access: ', 'trustedlogin' ) ) ),
+					'title'   => esc_html( Strings::get( Strings::SUPPORT_ACCESS_WAS_NOT_GRANTED, __( 'Support Access Was Not Granted', 'trustedlogin' ) ) ),
+					'content' => esc_html( Strings::get( Strings::THERE_WAS_AN_ERROR_GRANTING_ACCESS, __( 'There was an error granting access: ', 'trustedlogin' ) ) ),
 				),
 				'failed_permissions' => array(
-					'content' => esc_html( $this->strings->get( Strings::YOUR_AUTHORIZED_SESSION_HAS_EXPIRED_PLEASE, __( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ) ) ),
+					'content' => esc_html( Strings::get( Strings::YOUR_AUTHORIZED_SESSION_HAS_EXPIRED_PLEASE, __( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ) ) ),
 				),
 				'timeout'            => array(
-					'content' => esc_html( $this->strings->get( Strings::THE_REQUEST_TOOK_TOO_LONG_TO, __( 'The request took too long to complete. Please try again.', 'trustedlogin' ) ) ),
+					'content' => esc_html( Strings::get( Strings::THE_REQUEST_TOOK_TOO_LONG_TO, __( 'The request took too long to complete. Please try again.', 'trustedlogin' ) ) ),
 				),
 				'accesskey'          => array(
-					'title'       => esc_html( $this->strings->get( Strings::SUPPORT_ACCESS_KEY_CREATED, __( 'Support Access Key Created', 'trustedlogin' ) ) ),
+					'title'       => esc_html( Strings::get( Strings::SUPPORT_ACCESS_KEY_CREATED, __( 'Support Access Key Created', 'trustedlogin' ) ) ),
 					'content'     => sprintf(
 					// translators: %1$s is the vendor title.
-						$this->strings->get( Strings::SHARE_THIS_ACCESS_KEY_WITH_1, __( 'Share this access key with %1$s to give them secure access:', 'trustedlogin' ) ),
+						Strings::get( Strings::SHARE_THIS_ACCESS_KEY_WITH_1, __( 'Share this access key with %1$s to give them secure access:', 'trustedlogin' ) ),
 						$vendor_title
 					),
 					'revoke_link' => esc_url( add_query_arg( array( Endpoint::REVOKE_SUPPORT_QUERY_PARAM => $this->config->ns() ), admin_url() ) ),
 				),
 				'error404'           => array(
-					'title'   => esc_html( $this->strings->get( Strings::THE_SUPPORT_TEAM_S_SITE_COULD, __( 'The support team\'s site could not be found.', 'trustedlogin' ) ) ),
+					'title'   => esc_html( Strings::get( Strings::THE_SUPPORT_TEAM_S_SITE_COULD, __( 'The support team\'s site could not be found.', 'trustedlogin' ) ) ),
 					'content' => '',
 				),
 				'error409'           => array(
 					'title'   => sprintf(
 					// translators: %1$s is the vendor title.
-						$this->strings->get( Strings::VENDOR_SUPPORT_USER_ALREADY_EXISTS, __( '%1$s Support user already exists', 'trustedlogin' ) ),
+						Strings::get( Strings::VENDOR_SUPPORT_USER_ALREADY_EXISTS, __( '%1$s Support user already exists', 'trustedlogin' ) ),
 						$vendor_title
 					),
 					'content' => sprintf(
 						wp_kses(
 						// translators: %1$s is the vendor title, %2$s is the URL to the users list page.
-							$this->strings->get( Strings::A_SUPPORT_USER_FOR_1_S, __( 'A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ) ),
+							Strings::get( Strings::A_SUPPORT_USER_FOR_1_S, __( 'A support user for %1$s already exists. You may revoke this support access from your <a href="%2$s" target="_blank">Users list</a>.', 'trustedlogin' ) ),
 							array(
 								'a' => array(
 									'href'   => array(),
@@ -1732,7 +1726,7 @@ final class Form {
 		if ( empty( $support_users ) ) {
 
 			// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-			$return = '<h3>' . sprintf( esc_html( $this->strings->get( Strings::NO_S_USERS_EXIST, __( 'No %s users exist.', 'trustedlogin' ) ) ), esc_html( $this->config->get_setting( 'vendor/title' ) ) ) . '</h3>';
+			$return = '<h3>' . sprintf( esc_html( Strings::get( Strings::NO_S_USERS_EXIST, __( 'No %s users exist.', 'trustedlogin' ) ) ), esc_html( $this->config->get_setting( 'vendor/title' ) ) ) . '</h3>';
 
 			if ( $print_and_return ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -1758,11 +1752,11 @@ EOD;
 				/* %1$s */
 				sanitize_title( $this->config->ns() ),
 				/* %2$s */
-				esc_html( $this->strings->get( Strings::ERROR, __( 'Error', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::ERROR, __( 'Error', 'trustedlogin' ) ) ),
 				/* %3$s */
 				'div',
 				/* %4$s */
-				esc_html( $this->strings->get( Strings::THERE_WAS_AN_ERROR_RETURNING_THE, __( 'There was an error returning the access key.', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::THERE_WAS_AN_ERROR_RETURNING_THE, __( 'There was an error returning the access key.', 'trustedlogin' ) ) ),
 				/* %5$s */
 				esc_html( $access_key->get_error_message() )
 			);
@@ -1784,20 +1778,20 @@ EOD;
 				/* %1$s */
 				sanitize_title( $this->config->ns() ),
 				/* %2$s */
-				esc_html( $this->strings->get( Strings::SITE_ACCESS_KEY, __( 'Site access key:', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::SITE_ACCESS_KEY, __( 'Site access key:', 'trustedlogin' ) ) ),
 				/* %3$s */
-				esc_html( $this->strings->get( Strings::ACCESS_KEY, __( 'Access Key', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::ACCESS_KEY, __( 'Access Key', 'trustedlogin' ) ) ),
 				/* %4$s */
 				esc_attr( $access_key ),
 				/* %5$s */
-				esc_html( $this->strings->get( Strings::COPY, __( 'Copy', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::COPY, __( 'Copy', 'trustedlogin' ) ) ),
 				/* %6$s */
 				'div',
 				/* %7$s */
-				esc_html( $this->strings->get( Strings::COPY_THE_ACCESS_KEY_TO_YOUR, __( 'Copy the access key to your clipboard', 'trustedlogin' ) ) ),
+				esc_html( Strings::get( Strings::COPY_THE_ACCESS_KEY_TO_YOUR, __( 'Copy the access key to your clipboard', 'trustedlogin' ) ) ),
 				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				sprintf( esc_html( $this->strings->get( Strings::THE_ACCESS_KEY_IS_NOT_A, __( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ) ) ), esc_html( $this->support_user->get_first()->display_name ) ),
+				sprintf( esc_html( Strings::get( Strings::THE_ACCESS_KEY_IS_NOT_A, __( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ) ) ), esc_html( $this->support_user->get_first()->display_name ) ),
 				/* %9$s */
 				esc_attr( $this->support_user->get_expiration( $this->support_user->get_first() ) )
 			);
@@ -1857,7 +1851,7 @@ EOD;
 					echo esc_html(
 						sprintf(
 						// translators: %s vendor title (e.g. Acme Widgets).
-							$this->strings->get( Strings::YOU_ARE_LOGGED_IN_AS_A_4eed50, __( 'You are logged in as a %s support user.', 'trustedlogin' ) ),
+							Strings::get( Strings::YOU_ARE_LOGGED_IN_AS_A_4eed50, __( 'You are logged in as a %s support user.', 'trustedlogin' ) ),
 							$vendor_title
 						)
 					);
@@ -1869,7 +1863,7 @@ EOD;
 						echo esc_html(
 							sprintf(
 							// translators: %s human-readable duration like "1 week".
-								$this->strings->get( Strings::ACCESS_EXPIRES_IN_S, __( 'Access expires in %s.', 'trustedlogin' ) ),
+								Strings::get( Strings::ACCESS_EXPIRES_IN_S, __( 'Access expires in %s.', 'trustedlogin' ) ),
 								$expiration
 							)
 						);
@@ -1891,7 +1885,7 @@ EOD;
 					<?php
 					printf(
 						/* translators: %s: the currently signed-in user's display name */
-						esc_html( $this->strings->get( Strings::YOU_WERE_ALREADY_SIGNED_IN_AS, __( 'You were already signed in as %s, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ) ) ),
+						esc_html( Strings::get( Strings::YOU_WERE_ALREADY_SIGNED_IN_AS, __( 'You were already signed in as %s, so the support login was skipped. You can grant or revoke access as usual.', 'trustedlogin' ) ) ),
 						esc_html( wp_get_current_user()->display_name )
 					);
 					?>
@@ -1920,11 +1914,11 @@ EOD;
 			<h3>
 			<?php
 				// translators: %s is replaced with the name of the software developer (e.g. "Acme Widgets").
-				echo esc_html( sprintf( $this->strings->get( Strings::S_ACCESS_REVOKED, __( '%s access revoked.', 'trustedlogin' ) ), $this->config->get_setting( 'vendor/title' ) ) );
+				echo esc_html( sprintf( Strings::get( Strings::S_ACCESS_REVOKED, __( '%s access revoked.', 'trustedlogin' ) ), $this->config->get_setting( 'vendor/title' ) ) );
 			?>
 				</h3>
 			<?php if ( ! current_user_can( 'delete_users' ) ) { ?>
-				<p><?php echo esc_html( $this->strings->get( Strings::YOU_MAY_SAFELY_CLOSE_THIS_WINDOW, __( 'You may safely close this window.', 'trustedlogin' ) ) ); ?></p>
+				<p><?php echo esc_html( Strings::get( Strings::YOU_MAY_SAFELY_CLOSE_THIS_WINDOW, __( 'You may safely close this window.', 'trustedlogin' ) ) ); ?></p>
 			<?php } ?>
 		</div>
 		<?php

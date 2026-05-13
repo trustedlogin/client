@@ -176,21 +176,47 @@ class Strings {
 	private static $translations_loaded = false;
 
 	/**
-	 * @var Config
+	 * @var Config|null
 	 */
-	private $config;
+	private static $config;
 
 	/**
 	 * @var array<string, string|callable> Validated overrides keyed by constant value.
 	 */
-	private $overrides;
+	private static $overrides = array();
 
 	/**
-	 * @param Config $config
+	 * Bind the SDK's Strings utility to the active Config.
+	 *
+	 * Must be called once during SDK bootstrap — `Client::__construct()`
+	 * does this. Subsequent `Strings::get()` calls read the integrator's
+	 * override map and the namespace for the runtime filter from the
+	 * Config bound here.
+	 *
+	 * Calling `init()` again replaces the bound Config (useful in tests
+	 * that exercise multiple Configs in sequence; pair with reset()).
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Active configuration.
 	 */
-	public function __construct( Config $config ) {
-		$this->config    = $config;
-		$this->overrides = (array) $config->get_setting( 'strings', array() );
+	public static function init( Config $config ) {
+		self::$config    = $config;
+		self::$overrides = (array) $config->get_setting( 'strings', array() );
+	}
+
+	/**
+	 * Test seam: clear all bound state so the next `init()` starts fresh.
+	 *
+	 * Used by PHPUnit tearDown to prevent override leaks between tests.
+	 *
+	 * @since 1.11.0
+	 */
+	public static function reset() {
+		self::$config              = null;
+		self::$overrides           = array();
+		self::$textdomain          = 'trustedlogin';
+		self::$translations_loaded = false;
 	}
 
 	// -----------------------------------------------------------------
@@ -478,8 +504,15 @@ class Strings {
 	 *
 	 * @return string
 	 */
-	public function get( $key, $default, array $context = array() ) {
-		$value = $this->resolve( $key, $default, $context );
+	public static function get( $key, $default, array $context = array() ) {
+		$value = self::resolve( $key, $default, $context );
+
+		// Without an `init()` call the filter has no namespace to attach
+		// to. Return the resolved value without filtering — same English
+		// fallback behavior as if a filter was registered but did nothing.
+		if ( ! self::$config instanceof Config ) {
+			return $value;
+		}
 
 		/**
 		 * Filter the resolved value of a TrustedLogin SDK string.
@@ -495,11 +528,11 @@ class Strings {
 		 * @param Config $config  Active configuration.
 		 */
 		return (string) apply_filters(
-			'trustedlogin/' . $this->config->ns() . '/strings/' . $key,
+			'trustedlogin/' . self::$config->ns() . '/strings/' . $key,
 			$value,
 			$key,
 			$context,
-			$this->config
+			self::$config
 		);
 	}
 
@@ -510,9 +543,9 @@ class Strings {
 	 *
 	 * @return string
 	 */
-	private function resolve( $key, $default, array $context ) {
-		if ( array_key_exists( $key, $this->overrides ) ) {
-			$override = $this->overrides[ $key ];
+	private static function resolve( $key, $default, array $context ) {
+		if ( array_key_exists( $key, self::$overrides ) ) {
+			$override = self::$overrides[ $key ];
 
 			if ( '' === $override ) {
 				return '';

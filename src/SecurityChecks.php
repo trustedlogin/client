@@ -33,11 +33,6 @@ final class SecurityChecks {
 	private $config;
 
 	/**
-	 * @var Strings
-	 */
-	private $strings;
-
-	/**
 	 * The transient slug used for storing used accesskeys.
 	 *
 	 * @var string
@@ -96,7 +91,6 @@ final class SecurityChecks {
 
 		$this->logging = $logging;
 		$this->config  = $config;
-		$this->strings = new Strings( $config );
 
 		$this->used_accesskey_transient = 'tl-' . $this->config->ns() . '-used_accesskeys';
 		$this->in_lockdown_transient    = 'tl-' . $this->config->ns() . '-in_lockdown';
@@ -118,7 +112,7 @@ final class SecurityChecks {
 		if ( $this->in_lockdown() ) {
 			$this->logging->log( 'Site is in lockdown mode, aborting login.', __METHOD__, 'error' );
 
-			return new \WP_Error( 'in_lockdown', $this->strings->get( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_DISABLED_ON, __( 'Support access is temporarily disabled on this site after repeated failed attempts. Please try again later.', 'trustedlogin' ) ) );
+			return new \WP_Error( 'in_lockdown', Strings::get( Strings::SUPPORT_ACCESS_IS_TEMPORARILY_DISABLED_ON, __( 'Support access is temporarily disabled on this site after repeated failed attempts. Please try again later.', 'trustedlogin' ) ) );
 		}
 
 		// When passed in the endpoint URL, the unique ID will be the raw value, not the hash.
@@ -145,7 +139,7 @@ final class SecurityChecks {
 			$this->logging->log(
 				sprintf(
 					// translators: %s is the error message.
-					$this->strings->get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED_35c1b9, __( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ) ),
+					Strings::get( Strings::SUPPORT_ACCESS_COULD_NOT_BE_VERIFIED_35c1b9, __( 'Support access could not be verified — login aborted. (%s)', 'trustedlogin' ) ),
 					$approved->get_error_message()
 				),
 				__METHOD__,
