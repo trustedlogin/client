@@ -82,7 +82,16 @@ clone_with_token() {
     fi
     rm -rf "$dest"
     bold "  cloning $repo @ $branch → $dest"
-    git clone --branch "$branch" --depth=1 --quiet "$url" "$dest"
+    # init + fetch (instead of `git clone --branch "$branch"`) so $branch
+    # can be a branch name, tag, OR raw commit SHA. The connector-side
+    # cross-repo gate dispatches the PR head SHA, which `git clone
+    # --branch` rejects with "Remote branch <sha> not found". GitHub
+    # serves arbitrary SHAs over fetch (uploadpack.allowAnySHA1InWant
+    # is on by default) and writes them to FETCH_HEAD.
+    git init --quiet "$dest"
+    git -C "$dest" remote add origin "$url"
+    git -C "$dest" fetch origin "$branch" --depth=1 --quiet
+    git -C "$dest" reset --hard FETCH_HEAD --quiet
 }
 
 # ----- Clone plugins ----------------------------------------------------------
