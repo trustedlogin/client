@@ -34,6 +34,11 @@ final class Form {
 	const ABOUT_LIVE_ACCESS_URL = 'https://www.trustedlogin.com/about/live-access/';
 
 	/**
+	 * URL the "Secured by TrustedLogin" badge on the Grant Access screen links to.
+	 */
+	const SECURED_BY_EXPLAINER_URL = 'https://www.trustedlogin.com/what-is-this/?utm_source=grant-screen&utm_medium=badge';
+
+	/**
 	 * Config object.
 	 *
 	 * @var Config $config
@@ -493,7 +498,12 @@ final class Form {
 			'response'                => $response_html,
 			'actions'                 => $actions_html,
 			'actions_container_class' => $grant_container,
-			'secured_by_trustedlogin' => '<span class="trustedlogin-logo-medium"></span>' . esc_html__( 'Secured by TrustedLogin', 'trustedlogin' ),
+			'secured_by_trustedlogin' => sprintf(
+				'<a href="%1$s" target="_blank" rel="noopener" aria-label="%2$s"><span class="trustedlogin-logo-medium"></span>%3$s</a>',
+				esc_url( self::SECURED_BY_EXPLAINER_URL ),
+				esc_attr__( 'What is TrustedLogin?', 'trustedlogin' ),
+				esc_html__( 'Secured by TrustedLogin', 'trustedlogin' )
+			),
 			'footer'                  => $this->get_footer_html(),
 			'reference'               => $this->get_reference_html(),
 			'admin_debug'             => $this->get_admin_debug_html(),
@@ -1172,6 +1182,7 @@ final class Form {
 						'rel'               => array(),
 						'target'            => array(),
 						'aria-role'         => array(),
+						'aria-label'        => array(),
 						'data-toggle'       => array(),
 						'data-access'       => array(),
 						'data-tl-namespace' => array(),

@@ -338,6 +338,12 @@
 			margin: ($vertical-spacing / 2) auto $vertical-spacing;
 			line-height: 36px; // Height of the medium TL logo
 			color: $color-555;
+
+			// Badge is a link now; keep it looking like the plain text it replaces.
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
 		}
 
 		.tl-#{$namespace}-auth__accesskey_wrapper {
