@@ -1,3 +1,9 @@
+## Unreleased
+
+#### 🛠 Changed
+
+- The "Secured by TrustedLogin" badge on the Grant Access screen now links to a plain end-customer explainer of what TrustedLogin is. Same icon, same text, same styling — it just opens in a new tab.
+
 ## 1.10.1 (May 12, 2026)
 
 A small patch release. The customer-facing change is a fix for a fatal error on PHP 7.4 sites when viewing the SDK's debug-log admin page.
