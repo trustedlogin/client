@@ -168,6 +168,19 @@ bold "Staging gravityforms"
 LOCAL_GF="${LOCAL_GF:-$HOME/Local/dev/app/public/wp-content/plugins/gravityforms}"
 clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms" "$LOCAL_GF"
 
+# Gravity Forms loads the Jetpack Autoloader on line 161 of gravityforms.php,
+# and `/vendor` is gitignored in that repo — the release zip ships it, a clone
+# does not. Without this, `wp plugin activate gravityforms` dies with
+# "Failed opening required '.../vendor/autoload_packages.php'" and the whole
+# bootstrap step exits 255. jetpack-autoloader is already in GF's
+# config.allow-plugins, so a plain install generates the file.
+if [[ ! -f "fixtures/gravityforms/vendor/autoload_packages.php" || "$REFRESH_PLUGINS" == "true" ]]; then
+    bold "  composer install inside gravityforms"
+    docker run --rm -v "$(pwd)/fixtures/gravityforms:/app" -w /app \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+        composer:2 install --no-dev --no-progress --no-interaction --prefer-dist
+fi
+
 # Gravity Forms's dev branch ships source JS/CSS that only resolves after a
 # build. Without this step, assets 404 (theme-foundation.min.css, etc.) and
 # the front-end renders unstyled. Run `npm run dev` inside the clone once;
