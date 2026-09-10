@@ -229,6 +229,40 @@ final class Client {
 	}
 
 	/**
+	 * Deletes everything the SDK stored for one namespace. Call it from
+	 * the vendor plugin's `uninstall.php`; nothing else deletes these rows.
+	 *
+	 * Runs without constructing a Client, so it works when
+	 * `TRUSTEDLOGIN_DISABLE` or `TRUSTEDLOGIN_DISABLE_{NS}` is set and
+	 * when the site lacks sodium. Deletes only rows keyed by this
+	 * namespace. Idempotent. Not for deactivation: it deletes the cached
+	 * webhook URL, which is only re-cached at the next grant, so a
+	 * reactivated plugin would send no webhooks until then. See
+	 * {@see Uninstaller} for the full list of what is removed and kept.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config|string $config_or_namespace The Config the plugin boots with, or its `vendor/namespace` value.
+	 *                                           Pass the Config when it sets `clone_role`, `role`,
+	 *                                           `logging/directory`, or the role / endpoint option names are filtered.
+	 * @param array         $args {
+	 *     Optional run options.
+	 *
+	 *     @type bool|null $network     Multisite: null (default) cleans every site unless wp_is_large_network()
+	 *                                  is true, true cleans every site regardless, false cleans the current site only.
+	 *     @type bool      $delete_logs Whether to delete this namespace's log files. Default true.
+	 * }
+	 *
+	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool}
+	 *               What was deleted. See {@see Uninstaller::run()}.
+	 *
+	 * @throws Exception When the namespace is empty.
+	 */
+	public static function uninstall( $config_or_namespace, array $args = array() ) {
+		return Uninstaller::from( $config_or_namespace, $args )->run();
+	}
+
+	/**
 	 * Returns the current access key (hashed license key or generated access key
 	 *
 	 * @see SiteAccess::get_access_key()

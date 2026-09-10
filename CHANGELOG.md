@@ -1,5 +1,9 @@
 ## Unreleased
 
+#### 🚀 Added
+
+- New `Client::uninstall( $config_or_namespace, $args )` static method for vendors to call from their plugin's `uninstall.php`. It deletes everything the SDK stores for one namespace: support users (with their meta and expiry events), the cloned support role, the cached webhook URL, the log salt, the pending SaaS-revoke queue, the brute-force and vendor-public-key rows, the login endpoint, and the namespace's log files. Data for other namespaces, stock roles, and the shared permalink flag are left alone. On multisite every site is cleaned by default. Do not hook it to deactivation: it deletes the cached webhook URL, which is only re-cached at the next grant, so a reactivated plugin would send no webhooks until then. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall).
+
 #### 🛠 Changed
 
 - The "Secured by TrustedLogin" badge on the Grant Access screen now links to a plain end-customer explainer of what TrustedLogin is. Same icon, same text, same styling — it just opens in a new tab.
