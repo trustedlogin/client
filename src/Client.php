@@ -213,6 +213,19 @@ final class Client {
 		$this->remote->init();
 		$this->cron->init();
 		$this->ajax->init();
+
+		add_action( 'admin_init', array( $this, 'reconcile_support_users' ) );
+	}
+
+	/**
+	 * Deletes support users whose access is no longer valid.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return void
+	 */
+	public function reconcile_support_users() {
+		$this->support_user->reconcile();
 	}
 
 	/**

@@ -32,6 +32,16 @@ final class SupportUser {
 	const ID_QUERY_PARAM = 'tlid';
 
 	/**
+	 * Seconds after registration during which {@see SupportUser::reconcile()}
+	 * leaves a support user alone.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @var int
+	 */
+	const RECONCILE_GRACE_PERIOD = 300;
+
+	/**
 	 * Config instance.
 	 *
 	 * @var Config $config
@@ -457,6 +467,62 @@ final class SupportUser {
 		return get_users( $args );
 	}
 
+
+	/**
+	 * Deletes support users whose access is no longer valid.
+	 *
+	 * {@see SupportUser::maybe_login()} makes the same check, but only when
+	 * someone follows a login link; this reaches grants nobody returns to.
+	 *
+	 * A user carrying no expiration counts as invalid: {@see SupportUser::setup()}
+	 * writes the expiration only when cron scheduling succeeded. Users registered
+	 * within RECONCILE_GRACE_PERIOD are left alone — setup() writes the identifier
+	 * before the expiration, so a grant running in another request looks the same
+	 * as one that never scheduled.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return int Number of support users deleted.
+	 */
+	public function reconcile() {
+
+		$deleted = 0;
+
+		foreach ( $this->get_all() as $support_user ) {
+
+			if ( $this->is_active( $support_user ) ) {
+				continue;
+			}
+
+			$registered = strtotime( $support_user->user_registered . ' UTC' );
+
+			if ( $registered && $registered > time() - self::RECONCILE_GRACE_PERIOD ) {
+				continue;
+			}
+
+			$user_identifier = get_user_option( $this->user_identifier_meta_key, $support_user->ID );
+
+			if ( ! $user_identifier ) {
+				continue;
+			}
+
+			// Role and endpoint are shared by the namespace; torn down after the loop.
+			$result = $this->delete( $user_identifier, false, false );
+
+			if ( true === $result ) {
+				$deleted ++;
+			}
+		}
+
+		if ( $deleted && ! $this->get_all() ) {
+			$this->role->delete();
+
+			$endpoint = new Endpoint( $this->config, $this->logging );
+			$endpoint->delete();
+		}
+
+		return $deleted;
+	}
 
 	/**
 	 * Returns the first support user active on the site, if any.
