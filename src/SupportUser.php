@@ -447,13 +447,6 @@ final class SupportUser {
 	 */
 	public function get_all() {
 
-		static $support_users = null;
-
-		// Only fetch once per process.
-		if ( ! is_null( $support_users ) ) {
-			return $support_users;
-		}
-
 		$args = array(
 			'number'       => - 1,
 			'meta_key'     => $this->user_identifier_meta_key,  // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
@@ -461,9 +454,7 @@ final class SupportUser {
 			'meta_value'   => '', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		);
 
-		$support_users = get_users( $args );
-
-		return $support_users;
+		return get_users( $args );
 	}
 
 
