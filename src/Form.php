@@ -706,7 +706,9 @@ final class Form {
 			return false;
 		}
 
-		return $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/create_ticket', false );
+		$has_webhook_url = '' !== Remote::get_webhook_url( $this->config );
+
+		return $has_webhook_url && $this->config->get_setting( 'webhook/create_ticket', false );
 	}
 
 	/**
@@ -716,7 +718,9 @@ final class Form {
 	 * @return bool
 	 */
 	private function is_debug_data_enabled() {
-		return $this->config->get_setting( 'webhook/url' ) && $this->config->get_setting( 'webhook/debug_data', false );
+		$has_webhook_url = '' !== Remote::get_webhook_url( $this->config );
+
+		return $has_webhook_url && $this->config->get_setting( 'webhook/debug_data', false );
 	}
 
 	/**
@@ -844,7 +848,7 @@ final class Form {
 	/**
 	 * Get the HTML for the debug data consent checkbox.
 	 *
-	 * This is only shown if the webhook/url is defined and webhook/debug_data setting is true.
+	 * Only shown when a webhook URL is set (Config or dashboard) and the webhook/debug_data setting is true.
 	 *
 	 * @since 1.4.0
 	 *
@@ -1092,6 +1096,18 @@ final class Form {
 			return str_repeat( '•', $len - $tail ) . substr( $value, -$tail );
 		};
 
+		// Webhook URLs are bearer secrets: show the host and where it
+		// came from, never the path or query.
+		$webhook_url = Remote::get_webhook_url( $this->config );
+		if ( '' === $webhook_url ) {
+			$webhook_row = '<code>' . esc_html__( '(Empty)', 'trustedlogin' ) . '</code>';
+		} else {
+			$webhook_source = '' !== Remote::get_config_webhook_url( $this->config )
+				? esc_html__( 'from Config (deprecated)', 'trustedlogin' )
+				: esc_html__( 'from the TrustedLogin dashboard', 'trustedlogin' );
+			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( Remote::redact_url( $webhook_url ) ), $webhook_source );
+		}
+
 		$items = array(
 			esc_html__( 'TrustedLogin Status', 'trustedlogin' ) => sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( 'https://status.trustedlogin.com' ), is_wp_error( wp_remote_request( 'https://app.trustedlogin.com/api/status' ) ) ? esc_html__( 'Offline', 'trustedlogin' ) : esc_html__( 'Online', 'trustedlogin' ) ),
 			esc_html__( 'API Key', 'trustedlogin' )     => sprintf( '<code>%s</code>', esc_html( $mask( $api_key ) ) ),
@@ -1100,7 +1116,7 @@ final class Form {
 				? esc_html__( '(Log path is outside ABSPATH; not exposing as URL.)', 'trustedlogin' )
 				: sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $log_url ), esc_html__( 'Download the log', 'trustedlogin' ) ),
 			esc_html__( 'Log Level', 'trustedlogin' )   => esc_html( (string) $this->config->get_setting( 'logging/threshold', __( '(Default)', 'trustedlogin' ) ) ),
-			esc_html__( 'Webhook URL', 'trustedlogin' ) => sprintf( '<code>%s</code>', esc_html( (string) $this->config->get_setting( 'webhook/url', '(Empty)' ) ) ),
+			esc_html__( 'Webhook URL', 'trustedlogin' ) => $webhook_row,
 			esc_html__( 'Vendor Public Key', 'trustedlogin' ) => sprintf( '<code>%s</code> (<a href="%s" target="_blank">%s</a>)', esc_html( (string) $encryption->get_vendor_public_key() ), esc_url( (string) $encryption->get_remote_encryption_key_url() ), esc_html__( 'Verify key', 'trustedlogin' ) ),
 		);
 
