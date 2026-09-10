@@ -166,7 +166,14 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 
 		$this->client_for( self::NS )->init();
 
-		$this->assertIsInt( wp_next_scheduled( $hook ), 'init() must schedule the sweep' );
+		$next = wp_next_scheduled( $hook );
+
+		$this->assertIsInt( $next, 'init() must schedule the sweep' );
+		$this->assertLessThanOrEqual(
+			time(),
+			$next,
+			'the first run must be due immediately; reactivation is when an orphaned grant is waiting'
+		);
 		$this->assertTrue( $this->sweep_is_hooked( $hook ), 'init() must register a callback for the sweep' );
 	}
 
@@ -181,7 +188,7 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 
 		$this->client_for( self::NS )->init();
 
-		$this->assertSame( 'daily', wp_get_schedule( $hook ), 'the sweep must recur, not fire once' );
+		$this->assertSame( 'hourly', wp_get_schedule( $hook ), 'the sweep must recur, not fire once' );
 	}
 
 	/**

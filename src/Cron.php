@@ -87,7 +87,7 @@ final class Cron {
 		add_action( $this->reconcile_hook_name, array( $this, 'reconcile' ), 1 );
 
 		if ( ! wp_next_scheduled( $this->reconcile_hook_name ) ) {
-			wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', $this->reconcile_hook_name );
+			wp_schedule_event( time(), 'hourly', $this->reconcile_hook_name );
 		}
 	}
 
@@ -96,7 +96,9 @@ final class Cron {
 	 *
 	 * Recurring, because WordPress reschedules a recurring event even when no
 	 * callback is listening. The single revoke event is consumed instead, so a
-	 * grant that expires while the plugin is inactive is never revoked.
+	 * grant that expires while the plugin is inactive is never revoked. The
+	 * first run is due immediately, since reactivation is when an orphaned
+	 * grant is most likely to be waiting.
 	 *
 	 * @since 1.11.0
 	 *
