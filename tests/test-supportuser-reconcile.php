@@ -154,54 +154,93 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The sweep is only reached if Client wires it to a request that runs.
+	 * The sweep is only reached if it is wired to something that runs.
 	 */
-	public function test_client_init_registers_the_sweep_on_admin_init() {
-		$config = new Config(
-			array(
-				'role'   => 'editor',
-				'auth'   => array(
-					'api_key' => '0123456789abcdef',
-				),
-				'vendor' => array(
-					'namespace'   => self::NS,
-					'title'       => self::NS,
-					'email'       => 'support+' . self::NS . '@example.test',
-					'website'     => 'https://' . self::NS . '.example.test',
-					'support_url' => 'https://' . self::NS . '.example.test/support/',
-				),
-			)
-		);
+	public function test_client_init_schedules_the_recurring_sweep() {
+		$hook = 'trustedlogin/' . self::NS . '/access/reconcile';
 
-		$client = new Client( $config, false );
+		wp_unschedule_hook( $hook );
 
-		$this->assertFalse(
-			has_action( 'admin_init' ) && $this->sweep_is_hooked(),
-			'fixture: the sweep must not be registered before init() runs'
-		);
+		$this->assertFalse( wp_next_scheduled( $hook ), 'fixture: the sweep must not be scheduled before init() runs' );
+		$this->assertFalse( $this->sweep_is_hooked( $hook ), 'fixture: no callback before init() runs' );
 
-		$client->init();
+		$this->client_for( self::NS )->init();
 
-		$this->assertTrue( $this->sweep_is_hooked(), 'Client::init() must register the sweep on admin_init' );
+		$this->assertIsInt( wp_next_scheduled( $hook ), 'init() must schedule the sweep' );
+		$this->assertTrue( $this->sweep_is_hooked( $hook ), 'init() must register a callback for the sweep' );
 	}
 
 	/**
-	 * Whether any admin_init callback is SupportUser::reconcile().
+	 * A recurring event survives firing with nothing listening; a single one
+	 * is consumed, which is why the revoke event cannot be relied on here.
+	 */
+	public function test_the_sweep_is_scheduled_as_a_recurring_event() {
+		$hook = 'trustedlogin/' . self::NS . '/access/reconcile';
+
+		wp_unschedule_hook( $hook );
+
+		$this->client_for( self::NS )->init();
+
+		$this->assertSame( 'daily', wp_get_schedule( $hook ), 'the sweep must recur, not fire once' );
+	}
+
+	/**
+	 * Nothing must be hooked to admin_init, so ordinary admin requests pay
+	 * nothing for the sweep.
+	 */
+	public function test_the_sweep_does_not_run_on_admin_init() {
+		$this->client_for( self::NS )->init();
+
+		$this->assertFalse( $this->sweep_is_hooked( 'admin_init' ), 'the sweep must not cost a query on every admin page load' );
+	}
+
+	/**
+	 * Builds a Client for a namespace without booting its hooks.
+	 *
+	 * @param string $ns Namespace.
+	 *
+	 * @return Client
+	 */
+	private function client_for( $ns ) {
+		return new Client(
+			new Config(
+				array(
+					'role'   => 'editor',
+					'auth'   => array(
+						'api_key' => '0123456789abcdef',
+					),
+					'vendor' => array(
+						'namespace'   => $ns,
+						'title'       => $ns,
+						'email'       => 'support+' . $ns . '@example.test',
+						'website'     => 'https://' . $ns . '.example.test',
+						'support_url' => 'https://' . $ns . '.example.test/support/',
+					),
+				)
+			),
+			false
+		);
+	}
+
+	/**
+	 * Whether any callback on $hook is the Cron sweep.
+	 *
+	 * @param string $hook Hook name.
 	 *
 	 * @return bool
 	 */
-	private function sweep_is_hooked() {
+	private function sweep_is_hooked( $hook ) {
 		global $wp_filter;
 
-		if ( empty( $wp_filter['admin_init'] ) ) {
+		if ( empty( $wp_filter[ $hook ] ) ) {
 			return false;
 		}
 
-		foreach ( $wp_filter['admin_init']->callbacks as $callbacks ) {
+		foreach ( $wp_filter[ $hook ]->callbacks as $callbacks ) {
 			foreach ( $callbacks as $callback ) {
 				if ( is_array( $callback['function'] )
-					&& $callback['function'][0] instanceof Client
-					&& 'reconcile_support_users' === $callback['function'][1] ) {
+					&& $callback['function'][0] instanceof Cron
+					&& 'reconcile' === $callback['function'][1] ) {
 					return true;
 				}
 			}

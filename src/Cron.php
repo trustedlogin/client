@@ -48,6 +48,13 @@ final class Cron {
 	private $retry_hook_name;
 
 	/**
+	 * The hook name for the recurring expired-access sweep.
+	 *
+	 * @var string
+	 */
+	private $reconcile_hook_name;
+
+	/**
 	 * Logging instance.
 	 *
 	 * @var null|\TrustedLogin\Logging $logging
@@ -64,8 +71,9 @@ final class Cron {
 		$this->config  = $config;
 		$this->logging = $logging;
 
-		$this->hook_name       = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
-		$this->retry_hook_name = 'trustedlogin/' . $this->config->ns() . '/site/retry_revoke';
+		$this->hook_name           = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+		$this->retry_hook_name     = 'trustedlogin/' . $this->config->ns() . '/site/retry_revoke';
+		$this->reconcile_hook_name = 'trustedlogin/' . $this->config->ns() . '/access/reconcile';
 	}
 
 	/**
@@ -76,6 +84,28 @@ final class Cron {
 	public function init() {
 		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
 		add_action( $this->retry_hook_name, array( $this, 'retry_saas_revoke' ), 1 );
+		add_action( $this->reconcile_hook_name, array( $this, 'reconcile' ), 1 );
+
+		if ( ! wp_next_scheduled( $this->reconcile_hook_name ) ) {
+			wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', $this->reconcile_hook_name );
+		}
+	}
+
+	/**
+	 * Deletes support users whose access is no longer valid.
+	 *
+	 * Recurring, because WordPress reschedules a recurring event even when no
+	 * callback is listening. The single revoke event is consumed instead, so a
+	 * grant that expires while the plugin is inactive is never revoked.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return void
+	 */
+	public function reconcile() {
+		$support_user = new SupportUser( $this->config, $this->logging );
+
+		$support_user->reconcile();
 	}
 
 	/**
