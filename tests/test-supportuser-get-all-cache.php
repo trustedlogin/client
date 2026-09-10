@@ -61,7 +61,7 @@ class SupportUserGetAllCacheTest extends WP_UnitTestCase {
 	private function seed_support_user( $ns ) {
 		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 
-		update_user_option( $user_id, 'tl_' . $ns . '_id', wp_generate_uuid4(), true );
+		update_user_option( $user_id, 'tl_' . $ns . '_id', md5( wp_generate_uuid4() ), true );
 
 		return $user_id;
 	}
