@@ -27,6 +27,13 @@ final class Cron {
 	const MAX_SAAS_REVOKE_RETRIES = 5;
 
 	/**
+	 * The core cron hook the expired-access sweep runs on.
+	 *
+	 * @since 1.11.0
+	 */
+	const RECONCILE_HOOK = 'wp_privacy_delete_old_export_files';
+
+	/**
 	 * Config instance.
 	 *
 	 * @var \TrustedLogin\Config
@@ -48,13 +55,6 @@ final class Cron {
 	private $retry_hook_name;
 
 	/**
-	 * The hook name for the recurring expired-access sweep.
-	 *
-	 * @var string
-	 */
-	private $reconcile_hook_name;
-
-	/**
 	 * Logging instance.
 	 *
 	 * @var null|\TrustedLogin\Logging $logging
@@ -71,9 +71,8 @@ final class Cron {
 		$this->config  = $config;
 		$this->logging = $logging;
 
-		$this->hook_name           = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
-		$this->retry_hook_name     = 'trustedlogin/' . $this->config->ns() . '/site/retry_revoke';
-		$this->reconcile_hook_name = 'trustedlogin/' . $this->config->ns() . '/access/reconcile';
+		$this->hook_name       = 'trustedlogin/' . $this->config->ns() . '/access/revoke';
+		$this->retry_hook_name = 'trustedlogin/' . $this->config->ns() . '/site/retry_revoke';
 	}
 
 	/**
@@ -84,21 +83,18 @@ final class Cron {
 	public function init() {
 		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
 		add_action( $this->retry_hook_name, array( $this, 'retry_saas_revoke' ), 1 );
-		add_action( $this->reconcile_hook_name, array( $this, 'reconcile' ), 1 );
 
-		if ( ! wp_next_scheduled( $this->reconcile_hook_name ) ) {
-			wp_schedule_event( time(), 'hourly', $this->reconcile_hook_name );
-		}
+		// The only hourly event core schedules, and core re-creates it on
+		// every `init`, so the sweep needs no event of its own to keep or
+		// clean up.
+		add_action( self::RECONCILE_HOOK, array( $this, 'reconcile' ), 1 );
 	}
 
 	/**
 	 * Deletes support users whose access is no longer valid.
 	 *
-	 * Recurring, because WordPress reschedules a recurring event even when no
-	 * callback is listening. The single revoke event is consumed instead, so a
-	 * grant that expires while the plugin is inactive is never revoked. The
-	 * first run is due immediately, since reactivation is when an orphaned
-	 * grant is most likely to be waiting.
+	 * Backstops {@see Cron::revoke()}, whose event WordPress consumes without
+	 * running when it comes due while the plugin is inactive.
 	 *
 	 * @since 1.11.0
 	 *

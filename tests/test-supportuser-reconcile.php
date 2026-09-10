@@ -156,49 +156,62 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	/**
 	 * The sweep is only reached if it is wired to something that runs.
 	 */
-	public function test_client_init_schedules_the_recurring_sweep() {
-		$hook = 'trustedlogin/' . self::NS . '/access/reconcile';
-
-		wp_unschedule_hook( $hook );
-
-		$this->assertFalse( wp_next_scheduled( $hook ), 'fixture: the sweep must not be scheduled before init() runs' );
-		$this->assertFalse( $this->sweep_is_hooked( $hook ), 'fixture: no callback before init() runs' );
+	public function test_init_registers_the_sweep_on_the_core_cron_hook() {
+		$this->assertFalse( $this->sweep_is_hooked( Cron::RECONCILE_HOOK ), 'fixture: no callback before init() runs' );
 
 		$this->client_for( self::NS )->init();
 
-		$next = wp_next_scheduled( $hook );
+		$this->assertTrue( $this->sweep_is_hooked( Cron::RECONCILE_HOOK ), 'init() must register the sweep on the core hook' );
+	}
 
-		$this->assertIsInt( $next, 'init() must schedule the sweep' );
-		$this->assertLessThanOrEqual(
-			time(),
-			$next,
-			'the first run must be due immediately; reactivation is when an orphaned grant is waiting'
+	/**
+	 * The sweep rides a core event, so the SDK must schedule nothing of its
+	 * own to keep, reschedule, or clear on uninstall.
+	 */
+	public function test_init_schedules_no_cron_event_of_its_own() {
+		$this->client_for( self::NS )->init();
+
+		$own = array();
+
+		foreach ( array_keys( (array) _get_cron_array() ) as $timestamp ) {
+			foreach ( array_keys( (array) _get_cron_array()[ $timestamp ] ) as $hook ) {
+				if ( 0 === strpos( $hook, 'trustedlogin/' ) ) {
+					$own[] = $hook;
+				}
+			}
+		}
+
+		$this->assertSame( array(), $own, 'init() must not schedule a TrustedLogin cron event' );
+	}
+
+	/**
+	 * Firing the core hook must actually remove an expired support user.
+	 */
+	public function test_firing_the_core_hook_deletes_an_expired_support_user() {
+		$user_id = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+
+		$this->client_for( self::NS )->init();
+
+		do_action( Cron::RECONCILE_HOOK );
+
+		$this->assertFalse( get_user_by( 'id', $user_id ), 'the core hook must drive the sweep end to end' );
+	}
+
+	/**
+	 * The sweep depends on core still scheduling this event. If a future
+	 * release drops or renames it, nothing would run and nothing would say so.
+	 */
+	public function test_core_still_schedules_the_hook_the_sweep_depends_on() {
+		wp_unschedule_hook( Cron::RECONCILE_HOOK );
+
+		$this->assertFalse( wp_next_scheduled( Cron::RECONCILE_HOOK ), 'fixture: the event must be gone before init fires' );
+
+		do_action( 'init' );
+
+		$this->assertIsInt(
+			wp_next_scheduled( Cron::RECONCILE_HOOK ),
+			'WordPress must still schedule ' . Cron::RECONCILE_HOOK . '; the sweep has no event of its own'
 		);
-		$this->assertTrue( $this->sweep_is_hooked( $hook ), 'init() must register a callback for the sweep' );
-	}
-
-	/**
-	 * A recurring event survives firing with nothing listening; a single one
-	 * is consumed, which is why the revoke event cannot be relied on here.
-	 */
-	public function test_the_sweep_is_scheduled_as_a_recurring_event() {
-		$hook = 'trustedlogin/' . self::NS . '/access/reconcile';
-
-		wp_unschedule_hook( $hook );
-
-		$this->client_for( self::NS )->init();
-
-		$this->assertSame( 'hourly', wp_get_schedule( $hook ), 'the sweep must recur, not fire once' );
-	}
-
-	/**
-	 * Nothing must be hooked to admin_init, so ordinary admin requests pay
-	 * nothing for the sweep.
-	 */
-	public function test_the_sweep_does_not_run_on_admin_init() {
-		$this->client_for( self::NS )->init();
-
-		$this->assertFalse( $this->sweep_is_hooked( 'admin_init' ), 'the sweep must not cost a query on every admin page load' );
 	}
 
 	/**
