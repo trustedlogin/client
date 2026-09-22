@@ -70,6 +70,21 @@ Sensitive areas in this codebase where hygiene matters most:
 - `src/SupportUser.php`, `src/SupportRole.php` — privilege boundary, capability grants
 - `src/Form.php` — user-facing rendering, escaping
 
+## WordPress scheduling and lifecycle facts this SDK depends on
+
+Each of these was asserted wrongly here first, then checked in WordPress core.
+
+- **Plugin updates do NOT fire deactivation hooks.** `Plugin_Upgrader::deactivate_plugin_before_upgrade()` calls `deactivate_plugins( $plugin, true )` — silent — and `deactivate_plugins()` only fires `deactivate_{$plugin}` when `! $silent`. Core's own comment says "Prevent deactivation hooks from running." Background cron updates skip deactivation entirely. So "an update would churn this" is not a reason to avoid `register_deactivation_hook`.
+- **WP-Cron unschedules a single event before firing it, and never checks that anyone is listening.** In `wp-cron.php`, recurring events are rescheduled first, then single events are unscheduled, then `do_action_ref_array()` runs. An event whose handler is not registered — because the plugin is inactive — is consumed and gone. Anything relying on a one-shot event to enforce expiry needs a backstop that survives the plugin being off.
+- **`wp_privacy_delete_old_export_files` is the only hourly event core schedules**, and `default-filters.php` re-creates it on every `init` guarded only by `wp_installing()`. Everything else core schedules is twicedaily or slower, and the two daily cleanup events are scheduled from `wp-admin/admin.php`, so they only exist once someone loads an admin page.
+
+## Testing traps
+
+- **`update_user_option()` prefixes the meta key with the blog name unless you pass `$global = true`.** `SupportUser::setup()` passes it for the identifier and site-hash keys but not for `expires`/`created_by`. A fixture that seeds meta without the flag writes `wp_tl_{ns}_id` while the code queries `tl_{ns}_id`, so `get_all()` returns nothing and the test fails for a reason that has nothing to do with the code under test.
+- **`SupportUser::get()` re-hashes any identifier longer than 32 characters.** `Encryption::hash()` emits exactly 32 (16 bytes hex), so a stored identifier passes through untouched — but a fixture seeded with `wp_generate_uuid4()` (36 chars) gets hashed again and never matches. Seed identifiers at 32 characters.
+- **`phpstan` must run inside the wp-env container.** On a PHP 8.4 host it fatals inside its own phar (`ReflectionClassConstant::IS_PUBLIC` type incompatibility) — a tooling failure that reads like a code error. Use `wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpstan analyse`.
+- **`phpcs` currently aborts on `src/SupportUser.php`** with `An error occurred during processing; checking has been aborted. (Internal.Exception)` from a sniff crash, so that file is not actually being linted. This predates any recent change; a clean phpcs run on it is not evidence the file is clean.
+
 ## Comment Discipline
 
 Code comments, docblocks, and commit messages are **public artifacts**: standalone documentation of what the code does today, never a journal of how it got there.
