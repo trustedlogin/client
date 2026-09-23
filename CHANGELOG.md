@@ -3,10 +3,17 @@
 #### 🚀 Added
 
 - New `Client::uninstall( $config_or_namespace, $args )` static method for vendors to call from their plugin's `uninstall.php`. It deletes everything the SDK stores for one namespace: support users (with their meta and expiry events), the cloned support role, the cached webhook URL, the log salt, the pending SaaS-revoke queue, the brute-force and vendor-public-key rows, the login endpoint, and the namespace's log files. Data for other namespaces, stock roles, and the shared permalink flag are left alone. On multisite every site is cleaned by default. Do not hook it to deactivation: it deletes the cached webhook URL, which is only re-cached at the next grant, so a reactivated plugin would send no webhooks until then. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall).
+- Support users whose access has expired are now removed within an hour, even if your plugin was inactive when their access ran out, for example during a plugin update. Previously such an account could outlive its access window. The check runs on an hourly event WordPress core already schedules, so the SDK adds no cron event of its own.
 
 #### 🛠 Changed
 
 - The "Secured by TrustedLogin" badge on the Grant Access screen now links to a plain end-customer explainer of what TrustedLogin is. Same icon, same text, same styling — it just opens in a new tab.
+- The support debug row now shows the webhook host and where the URL came from (config, dashboard, or legacy key) instead of "(Empty)". The full URL stays hidden because it works like a password.
+
+#### 🛠 Fixed
+
+- The Grant Access screen's support-message field and debug-data consent checkbox now appear when the webhook URL comes from the TrustedLogin dashboard or the legacy `webhook_url` key. Since 1.10.0, removing `webhook/url` from the config, as the migration guide says to, hid both, so tickets arrived without the customer's description or Site Health report.
+- On a site running more than one plugin that uses the SDK, each plugin now sees only its own support users. Previously the first plugin to list them could hand its users to the others for the rest of that page load.
 
 ## 1.10.1 (May 12, 2026)
 
