@@ -489,7 +489,6 @@ final class SupportUser {
 		$deleted = 0;
 
 		foreach ( $this->get_all() as $support_user ) {
-
 			if ( $this->is_active( $support_user ) ) {
 				continue;
 			}
@@ -510,7 +509,7 @@ final class SupportUser {
 			$result = $this->delete( $user_identifier, false, false );
 
 			if ( true === $result ) {
-				$deleted ++;
+				++$deleted;
 			}
 		}
 
