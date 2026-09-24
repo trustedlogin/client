@@ -34,6 +34,14 @@ final class Cron {
 	const RECONCILE_HOOK = 'wp_privacy_delete_old_export_files';
 
 	/**
+	 * Transient recording the last sweep run from `admin_init`, used only
+	 * when the core event is not scheduled. Formatted with the namespace.
+	 *
+	 * @since 1.11.0
+	 */
+	const RECONCILE_FALLBACK_TRANSIENT = 'tl_%s_reconcile_ran';
+
+	/**
 	 * Config instance.
 	 *
 	 * @var \TrustedLogin\Config
@@ -88,6 +96,10 @@ final class Cron {
 		// every `init`, so the sweep needs no event of its own to keep or
 		// clean up.
 		add_action( self::RECONCILE_HOOK, array( $this, 'reconcile' ), 1 );
+
+		// A plugin that turns off core's privacy tools can unschedule that
+		// event; admin page loads then run the sweep at most once an hour.
+		add_action( 'admin_init', array( $this, 'maybe_reconcile_without_core_event' ) );
 	}
 
 	/**
@@ -101,9 +113,77 @@ final class Cron {
 	 * @return void
 	 */
 	public function reconcile() {
-		$support_user = new SupportUser( $this->config, $this->logging );
 
-		$support_user->reconcile();
+		try {
+			$this->revoke_expired();
+		} catch ( \Exception $exception ) {
+			$this->logging->log( 'The expired-access sweep failed: ' . $exception->getMessage(), __METHOD__, 'error' );
+		} catch ( \Error $error ) {
+			$this->logging->log( 'The expired-access sweep failed: ' . $error->getMessage(), __METHOD__, 'error' );
+		}
+	}
+
+	/**
+	 * Runs the sweep from `admin_init` when core's hourly event is not
+	 * scheduled, at most once an hour per namespace.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return void
+	 */
+	public function maybe_reconcile_without_core_event() {
+
+		if ( wp_next_scheduled( self::RECONCILE_HOOK ) ) {
+			return;
+		}
+
+		$transient = sprintf( self::RECONCILE_FALLBACK_TRANSIENT, $this->config->ns() );
+
+		if ( get_transient( $transient ) ) {
+			return;
+		}
+
+		set_transient( $transient, time(), HOUR_IN_SECONDS );
+
+		$this->reconcile();
+	}
+
+	/**
+	 * Revokes each expired support user through {@see Client::revoke_access()},
+	 * the same path the expiry event takes, so TrustedLogin and the
+	 * `access/revoked` webhook are told. Falls back to deleting on this site
+	 * only when no Client can be built.
+	 *
+	 * @return void
+	 */
+	private function revoke_expired() {
+
+		$support_user = new SupportUser( $this->config, $this->logging );
+		$identifiers  = $support_user->get_expired_identifiers();
+
+		if ( empty( $identifiers ) ) {
+			return;
+		}
+
+		try {
+			$client = new Client( $this->config, false );
+		} catch ( \Exception $exception ) {
+			$this->logging->log( 'Deleting expired support users without notifying TrustedLogin: ' . $exception->getMessage(), __METHOD__, 'warning' );
+
+			$support_user->reconcile();
+
+			return;
+		}
+
+		foreach ( $identifiers as $identifier ) {
+			$this->logging->log( 'Access has expired; revoking.', __METHOD__, 'notice' );
+
+			$revoked = $client->revoke_access( $identifier );
+
+			if ( is_wp_error( $revoked ) ) {
+				$this->logging->log( 'Revoking expired access failed: ' . $revoked->get_error_message(), __METHOD__, 'error' );
+			}
+		}
 	}
 
 	/**

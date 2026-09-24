@@ -119,8 +119,9 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A grant running in another request writes the identifier before the
-	 * expiration. The sweep must not delete it in that window.
+	 * A grant whose cron event could not be scheduled has no expiration.
+	 * While the request that created it may still be syncing with
+	 * TrustedLogin, the sweep must leave it.
 	 */
 	public function test_sweep_keeps_a_just_created_user_that_has_no_expiration_yet() {
 		$user_id = $this->seed_support_user( self::NS, null, gmdate( 'Y-m-d H:i:s' ) );
@@ -267,6 +268,328 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 		}
 
 		return false;
+	}
+
+	// ---------------------------------------------------------------
+	// Revoking through the Client
+	// ---------------------------------------------------------------
+
+	/**
+	 * Seeds an expired support user carrying the site hash revoke_access()
+	 * needs to build the secret ID.
+	 *
+	 * @param string $ns Namespace.
+	 *
+	 * @return int User ID.
+	 */
+	private function seed_revocable_user( $ns ) {
+		$user_id = $this->seed_support_user( $ns, time() - HOUR_IN_SECONDS );
+
+		update_user_option( $user_id, 'tl_' . $ns . '_site_hash', str_repeat( 'b', 32 ), true );
+
+		return $user_id;
+	}
+
+	/**
+	 * Records requests to the TrustedLogin sites endpoint and answers them.
+	 *
+	 * @param array|\WP_Error $answer Response to return.
+	 *
+	 * @return \ArrayObject Recorded "METHOD url" strings.
+	 */
+	private function record_saas_requests( $answer ) {
+		$requests = new \ArrayObject();
+
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) use ( $requests, $answer ) {
+				if ( false === strpos( $url, '/sites' ) ) {
+					return $preempt;
+				}
+
+				$requests[] = $args['method'] . ' ' . $url;
+
+				return $answer;
+			},
+			10,
+			3
+		);
+
+		add_filter( 'trustedlogin/' . self::NS . '/meets_ssl_requirement', '__return_true' );
+
+		return $requests;
+	}
+
+	/**
+	 * The expiry event revokes at TrustedLogin and fires `access/revoked`;
+	 * the sweep that backstops it must do the same.
+	 */
+	public function test_core_hook_revokes_expired_access_at_trustedlogin_and_fires_revoked() {
+		$user_id  = $this->seed_revocable_user( self::NS );
+		$requests = $this->record_saas_requests(
+			array(
+				'response' => array( 'code' => 204, 'message' => 'No Content' ),
+				'body'     => '',
+				'headers'  => array(),
+				'cookies'  => array(),
+				'filename' => null,
+			)
+		);
+		$revoked  = 0;
+		add_action(
+			'trustedlogin/' . self::NS . '/access/revoked',
+			function () use ( &$revoked ) {
+				++$revoked;
+			}
+		);
+
+		$this->client_for( self::NS )->init();
+
+		do_action( Cron::RECONCILE_HOOK );
+
+		$this->assertFalse( get_user_by( 'id', $user_id ) );
+		$this->assertCount( 1, $requests, 'the sweep must tell TrustedLogin the access is revoked' );
+		$this->assertStringStartsWith( 'DELETE ', $requests[0] );
+		$this->assertSame( 1, $revoked, 'the sweep must fire access/revoked so the webhook is sent' );
+	}
+
+	/**
+	 * A failed TrustedLogin request queues the retry, as a normal revoke does.
+	 */
+	public function test_core_hook_queues_a_retry_when_trustedlogin_is_unreachable() {
+		$user_id = $this->seed_revocable_user( self::NS );
+		$this->record_saas_requests( new \WP_Error( 'http_request_failed', 'offline' ) );
+
+		$this->client_for( self::NS )->init();
+
+		do_action( Cron::RECONCILE_HOOK );
+
+		$this->assertFalse( get_user_by( 'id', $user_id ), 'local cleanup continues when TrustedLogin is unreachable' );
+		$this->assertNotEmpty( get_option( 'tl_' . self::NS . '_pending_saas_revoke' ), 'the revoke must be queued for retry' );
+
+		delete_option( 'tl_' . self::NS . '_pending_saas_revoke' );
+		wp_unschedule_hook( 'trustedlogin/' . self::NS . '/site/retry_revoke' );
+	}
+
+	/**
+	 * The sweep runs on a core hook at priority 1. An error from a
+	 * third-party delete hook must not stop core's own callback.
+	 */
+	public function test_core_hook_callbacks_still_run_when_a_delete_hook_throws() {
+		$this->seed_revocable_user( self::NS );
+		$this->record_saas_requests( new \WP_Error( 'http_request_failed', 'offline' ) );
+
+		$thrower = function () {
+			throw new \Error( 'third-party delete hook failed' );
+		};
+		add_action( 'delete_user', $thrower );
+
+		$later = 0;
+		add_action(
+			Cron::RECONCILE_HOOK,
+			function () use ( &$later ) {
+				++$later;
+			},
+			10
+		);
+
+		$this->client_for( self::NS )->init();
+
+		do_action( Cron::RECONCILE_HOOK );
+
+		remove_action( 'delete_user', $thrower );
+		delete_option( 'tl_' . self::NS . '_pending_saas_revoke' );
+		wp_unschedule_hook( 'trustedlogin/' . self::NS . '/site/retry_revoke' );
+
+		$this->assertSame( 1, $later, 'callbacks after the sweep must still run' );
+	}
+
+	// ---------------------------------------------------------------
+	// Fallback when core's event is not scheduled
+	// ---------------------------------------------------------------
+
+	public function test_admin_page_load_runs_the_sweep_once_an_hour_when_core_event_is_missing() {
+		$cron = new Cron( $this->config_for( self::NS ), new Logging( $this->config_for( self::NS ) ) );
+		wp_unschedule_hook( Cron::RECONCILE_HOOK );
+		delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
+
+		$first = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+		$cron->maybe_reconcile_without_core_event();
+
+		$this->assertFalse( get_user_by( 'id', $first ), 'with no core event, an admin page load must run the sweep' );
+
+		$second = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+		$cron->maybe_reconcile_without_core_event();
+
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $second ), 'the fallback runs at most once an hour' );
+
+		delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
+	}
+
+	public function test_admin_page_load_does_nothing_while_core_event_is_scheduled() {
+		$cron = new Cron( $this->config_for( self::NS ), new Logging( $this->config_for( self::NS ) ) );
+
+		if ( ! wp_next_scheduled( Cron::RECONCILE_HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', Cron::RECONCILE_HOOK );
+		}
+
+		$user_id = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+		$cron->maybe_reconcile_without_core_event();
+
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ), 'the core event runs the sweep; admin pages must not' );
+	}
+
+	// ---------------------------------------------------------------
+	// Shared role and endpoint
+	// ---------------------------------------------------------------
+
+	/**
+	 * A grant in progress holds the cloned role and has written the
+	 * endpoint, but not yet the identifier meta. Deleting an expired user
+	 * must not take the role or endpoint from under it.
+	 */
+	public function test_sweep_keeps_role_and_endpoint_used_by_a_grant_in_progress() {
+		$config  = $this->config_for( self::NS );
+		$logging = new Logging( $config );
+		$role    = ( new SupportRole( $config, $logging ) )->get();
+
+		$this->assertInstanceOf( \WP_Role::class, $role, 'fixture: the cloned role must exist' );
+
+		$expired = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+
+		self::factory()->user->create( array( 'role' => $role->name ) );
+
+		$endpoint = new Endpoint( $config, $logging );
+		$endpoint->update( 'in-progress-endpoint' );
+
+		$this->assertSame( 1, $this->support_user_for( self::NS )->reconcile() );
+		$this->assertFalse( get_user_by( 'id', $expired ) );
+		$this->assertInstanceOf( \WP_Role::class, get_role( $role->name ), 'the role held by a grant in progress must stay' );
+		$this->assertSame( 'in-progress-endpoint', $endpoint->get(), 'the endpoint written by a grant in progress must stay' );
+
+		$endpoint->delete();
+		remove_role( $role->name );
+	}
+
+	/**
+	 * With no one left holding the role or the endpoint, both go.
+	 */
+	public function test_sweep_removes_role_and_endpoint_when_nothing_uses_them() {
+		$config  = $this->config_for( self::NS );
+		$logging = new Logging( $config );
+		$role    = ( new SupportRole( $config, $logging ) )->get();
+
+		$expired = self::factory()->user->create(
+			array(
+				'role'            => $role->name,
+				'user_registered' => '2020-01-01 00:00:00',
+			)
+		);
+		update_user_option( $expired, 'tl_' . self::NS . '_id', md5( 'expired' ), true );
+		update_user_option( $expired, 'tl_' . self::NS . '_expires', time() - HOUR_IN_SECONDS );
+
+		$endpoint = new Endpoint( $config, $logging );
+		$endpoint->update( 'unused-endpoint' );
+
+		$this->assertSame( 1, $this->support_user_for( self::NS )->reconcile() );
+		$this->assertNull( get_role( $role->name ), 'an unused cloned role must be removed' );
+		$this->assertSame( '', $endpoint->get(), 'an unused endpoint must be removed' );
+	}
+
+	/**
+	 * Corrupt identifier meta must be skipped, not crash the sweep.
+	 */
+	public function test_sweep_skips_a_user_whose_identifier_is_not_a_string() {
+		$user_id = self::factory()->user->create(
+			array(
+				'role'            => 'editor',
+				'user_registered' => '2020-01-01 00:00:00',
+			)
+		);
+		update_user_option( $user_id, 'tl_' . self::NS . '_id', array( 'not', 'a', 'string' ), true );
+
+		$this->assertSame( 0, $this->support_user_for( self::NS )->reconcile() );
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ) );
+	}
+
+	// ---------------------------------------------------------------
+	// Multisite
+	// ---------------------------------------------------------------
+
+	/**
+	 * The expiration is stored per site. A support user added to a second
+	 * site has none there, and must not be deleted from the network by
+	 * that site's sweep while its grant is still valid.
+	 */
+	public function test_sweep_on_another_site_keeps_a_member_whose_grant_is_valid() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$user_id  = $this->seed_support_user( self::NS, time() + WEEK_IN_SECONDS );
+		$sub_site = self::factory()->blog->create();
+
+		add_user_to_blog( $sub_site, $user_id, 'editor' );
+
+		switch_to_blog( $sub_site );
+		$deleted = $this->support_user_for( self::NS )->reconcile();
+		restore_current_blog();
+
+		$this->assertSame( 0, $deleted );
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ), 'a valid grant must survive a sweep on another site it belongs to' );
+	}
+
+	/**
+	 * The endpoint is one network-wide option. Removing the last support
+	 * user on one site must keep it for a support user on another.
+	 */
+	public function test_sweep_keeps_the_endpoint_while_another_site_has_a_support_user() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$config   = $this->config_for( self::NS );
+		$endpoint = new Endpoint( $config, new Logging( $config ) );
+		$endpoint->update( 'shared-endpoint' );
+
+		$sub_site = self::factory()->blog->create();
+
+		switch_to_blog( $sub_site );
+		$this->seed_support_user( self::NS, time() + WEEK_IN_SECONDS );
+		restore_current_blog();
+
+		$expired = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+
+		$this->assertSame( 1, $this->support_user_for( self::NS )->reconcile() );
+		$this->assertFalse( get_user_by( 'id', $expired ) );
+		$this->assertSame( 'shared-endpoint', $endpoint->get(), 'the other site\'s support user still logs in through the endpoint' );
+
+		$endpoint->delete();
+	}
+
+	/**
+	 * Builds a Config for a namespace.
+	 *
+	 * @param string $ns Namespace.
+	 *
+	 * @return Config
+	 */
+	private function config_for( $ns ) {
+		return new Config(
+			array(
+				'role'   => 'editor',
+				'auth'   => array(
+					'api_key' => '0123456789abcdef',
+				),
+				'vendor' => array(
+					'namespace'   => $ns,
+					'title'       => $ns,
+					'email'       => 'support+' . $ns . '@example.test',
+					'website'     => 'https://' . $ns . '.example.test',
+					'support_url' => 'https://' . $ns . '.example.test/support/',
+				),
+			)
+		);
 	}
 
 	/**

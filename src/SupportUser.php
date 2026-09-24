@@ -469,24 +469,30 @@ final class SupportUser {
 
 
 	/**
-	 * Deletes support users whose access is no longer valid.
+	 * Returns the identifiers of support users on the current site whose
+	 * access is no longer valid.
 	 *
 	 * {@see SupportUser::maybe_login()} makes the same check, but only when
 	 * someone follows a login link; this reaches grants nobody returns to.
 	 *
 	 * A user carrying no expiration counts as invalid: {@see SupportUser::setup()}
-	 * writes the expiration only when cron scheduling succeeded. Users registered
-	 * within RECONCILE_GRACE_PERIOD are left alone — setup() writes the identifier
-	 * before the expiration, so a grant running in another request looks the same
-	 * as one that never scheduled.
+	 * writes the expiration only when cron scheduling succeeded, and writes it
+	 * before the identifier, so every user found here has finished setup().
+	 * Users registered within RECONCILE_GRACE_PERIOD are left alone while the
+	 * request that created them may still be syncing with TrustedLogin.
+	 *
+	 * On multisite the expiration is stored per site and the identifier
+	 * network-wide. A support user who is also a member of another site
+	 * carries no expiration on that site; the site holding its expiration
+	 * decides whether it has expired.
 	 *
 	 * @since 1.11.0
 	 *
-	 * @return int Number of support users deleted.
+	 * @return string[] User identifier hashes.
 	 */
-	public function reconcile() {
+	public function get_expired_identifiers() {
 
-		$deleted = 0;
+		$identifiers = array();
 
 		foreach ( $this->get_all() as $support_user ) {
 			if ( $this->is_active( $support_user ) ) {
@@ -499,28 +505,124 @@ final class SupportUser {
 				continue;
 			}
 
-			$user_identifier = get_user_option( $this->user_identifier_meta_key, $support_user->ID );
+			$has_expiration_here = (bool) $this->get_expiration( $support_user );
 
-			if ( ! $user_identifier ) {
+			if ( ! $has_expiration_here && $this->has_expiration_on_another_site( $support_user->ID ) ) {
 				continue;
 			}
 
-			// Role and endpoint are shared by the namespace; torn down after the loop.
-			$result = $this->delete( $user_identifier, false, false );
+			$user_identifier = get_user_option( $this->user_identifier_meta_key, $support_user->ID );
 
-			if ( true === $result ) {
+			if ( ! is_string( $user_identifier ) || '' === $user_identifier ) {
+				continue;
+			}
+
+			$identifiers[] = $user_identifier;
+		}
+
+		return $identifiers;
+	}
+
+	/**
+	 * Whether a user carries this namespace's expiration on a site other
+	 * than the current one.
+	 *
+	 * @param int $user_id User ID.
+	 *
+	 * @return bool
+	 */
+	private function has_expiration_on_another_site( $user_id ) {
+		global $wpdb;
+
+		if ( ! is_multisite() ) {
+			return false;
+		}
+
+		foreach ( array_keys( get_blogs_of_user( $user_id ) ) as $blog_id ) {
+			if ( get_current_blog_id() === (int) $blog_id ) {
+				continue;
+			}
+
+			$expiration = get_user_meta( $user_id, $wpdb->get_blog_prefix( $blog_id ) . $this->expires_meta_key, true );
+
+			if ( $expiration ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Deletes support users whose access is no longer valid, on this site
+	 * only. {@see Cron::reconcile()} revokes them through
+	 * {@see Client::revoke_access()} instead, which also notifies
+	 * TrustedLogin; this is its fallback when no Client can be built.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return int Number of support users deleted.
+	 */
+	public function reconcile() {
+
+		$deleted = 0;
+
+		foreach ( $this->get_expired_identifiers() as $user_identifier ) {
+			if ( true === $this->delete( $user_identifier ) ) {
 				++$deleted;
 			}
 		}
 
-		if ( $deleted && ! $this->get_all() ) {
-			$this->role->delete();
+		return $deleted;
+	}
 
-			$endpoint = new Endpoint( $this->config, $this->logging );
-			$endpoint->delete();
+	/**
+	 * Whether any user on the current site still holds the cloned support
+	 * role. A grant in progress has the role before it has the identifier
+	 * meta, so it is not in {@see SupportUser::get_all()} yet. A stock role
+	 * (`clone_role` false) is held by ordinary users and says nothing.
+	 *
+	 * @return bool
+	 */
+	private function cloned_role_has_users() {
+
+		if ( ! $this->config->get_setting( 'clone_role' ) ) {
+			return false;
 		}
 
-		return $deleted;
+		$holders = get_users(
+			array(
+				'role'   => $this->role->get_name(),
+				'number' => 1,
+				'fields' => 'ID',
+			)
+		);
+
+		return ! empty( $holders );
+	}
+
+	/**
+	 * Whether a support user for this namespace exists on any site. The
+	 * endpoint is a network-wide option, so it is shared by every site.
+	 *
+	 * @return bool
+	 */
+	private function has_support_users_on_network() {
+
+		$args = array(
+			'number'       => 1,
+			'fields'       => 'ID',
+			'meta_key'     => $this->user_identifier_meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_compare' => 'EXISTS',
+		);
+
+		if ( is_multisite() ) {
+			$args['blog_id'] = 0;
+		}
+
+		$user_ids = get_users( $args );
+
+		return ! empty( $user_ids );
 	}
 
 	/**
@@ -599,11 +701,17 @@ final class SupportUser {
 			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
-		if ( $delete_role ) {
+		// Another support user, or a grant still in progress, keeps the
+		// shared role and endpoint.
+		$role_in_use = $this->cloned_role_has_users();
+
+		if ( $delete_role && ! $role_in_use ) {
 			$this->role->delete();
 		}
 
-		if ( $delete_endpoint ) {
+		$endpoint_in_use = $role_in_use || $this->has_support_users_on_network();
+
+		if ( $delete_endpoint && ! $endpoint_in_use ) {
 			$endpoint = new Endpoint( $this->config, $this->logging );
 			$endpoint->delete();
 		}
