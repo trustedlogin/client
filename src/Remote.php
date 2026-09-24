@@ -62,14 +62,9 @@ final class Remote {
 	 */
 	public function init() {
 
-		// The first grant caches the dashboard URL before `access/created`
-		// fires, so the actions are skipped only once TrustedLogin has
-		// answered without one.
-		$has_webhook_url = '' !== self::get_webhook_url( $this->config ) || self::is_webhook_url_unknown( $this->config );
-		if ( ! $has_webhook_url ) {
-			return;
-		}
-
+		// Registered even with no URL known: a grant can cache the dashboard
+		// URL in the same request, before `access/created` fires.
+		// maybe_send_webhook() returns early when no URL is set.
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
