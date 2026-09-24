@@ -440,6 +440,9 @@ final class Form {
 	 * @since 1.0.0
 	 *
 	 * @return string HTML of the Auth screen
+	 *
+	 * @throws \Exception Re-thrown from the render after the support users are forgotten.
+	 * @throws \Error Re-thrown from the render after the support users are forgotten.
 	 */
 	public function get_auth_screen() {
 
@@ -447,6 +450,31 @@ final class Form {
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
 		self::$support_users[ $this->config->ns() ] = $this->support_user->get_all();
+
+		try {
+			$output = $this->render_auth_screen();
+		} catch ( \Exception $exception ) {
+			unset( self::$support_users[ $this->config->ns() ] );
+			throw $exception;
+		} catch ( \Error $error ) {
+			unset( self::$support_users[ $this->config->ns() ] );
+			throw $error;
+		}
+
+		unset( self::$support_users[ $this->config->ns() ] );
+
+		return $output;
+	}
+
+	/**
+	 * Builds the Auth screen HTML from the support users
+	 * {@see Form::get_auth_screen()} read for this render.
+	 *
+	 * @since TBD
+	 *
+	 * @return string HTML of the Auth screen
+	 */
+	private function render_auth_screen() {
 
 		// Handle the "Try again" link from a prior fallback screen — nonce
 		// verified, then clear the pubkey cache and let the pre-flight
@@ -554,11 +582,7 @@ final class Form {
 		 */
 		$auth_screen_template = apply_filters( 'trustedlogin/' . $this->config->ns() . '/template/auth', $auth_screen_template );
 
-		$output = $this->prepare_output( $auth_screen_template, $content );
-
-		unset( self::$support_users[ $this->config->ns() ] );
-
-		return $output;
+		return $this->prepare_output( $auth_screen_template, $content );
 	}
 
 	/**

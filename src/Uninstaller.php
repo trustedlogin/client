@@ -26,6 +26,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Uninstaller {
 
 	/**
+	 * Seconds each TrustedLogin revoke request may take.
+	 *
+	 * @since TBD
+	 */
+	const SAAS_REVOKE_TIMEOUT = 3;
+
+	/**
+	 * Seconds the run may spend on TrustedLogin revoke requests in total.
+	 * Revokes left once it is spent are reported, not sent.
+	 *
+	 * @since TBD
+	 */
+	const SAAS_REVOKE_BUDGET = 20;
+
+	/**
 	 * Config for the namespace being removed.
 	 *
 	 * @var Config
@@ -59,6 +74,21 @@ final class Uninstaller {
 	 * @var array
 	 */
 	private $report;
+
+	/**
+	 * When the run's first TrustedLogin revoke request started, or 0.
+	 *
+	 * @var float
+	 */
+	private $saas_revokes_started = 0.0;
+
+	/**
+	 * Whether a TrustedLogin revoke request failed during this run. Later
+	 * revokes are reported, not sent.
+	 *
+	 * @var bool
+	 */
+	private $saas_revoke_failed = false;
 
 	/**
 	 * Uninstaller constructor.
@@ -120,10 +150,14 @@ final class Uninstaller {
 	 *   log_files: int,
 	 *   sites: int,
 	 *   network_skipped: bool,
-	 *   saas_revokes: int
+	 *   saas_revokes: int,
+	 *   saas_revokes_failed: string[]
 	 * } What was deleted. `options` lists option rows removed on any site;
 	 *   `network_skipped` is true when a large network limited the run to the
-	 *   current site; `saas_revokes` counts revoke requests that did not fail.
+	 *   current site; `saas_revokes` counts revokes TrustedLogin confirmed;
+	 *   `saas_revokes_failed` lists the secret IDs not revoked at TrustedLogin,
+	 *   because a request failed, the SSL requirement was not met, or an
+	 *   earlier failure or the time limit stopped further requests.
 	 *
 	 * @throws \Exception When the namespace is empty, or when a site-level step throws.
 	 * @throws \Error Re-thrown from a site-level step.
@@ -135,16 +169,20 @@ final class Uninstaller {
 		}
 
 		$this->report = array(
-			'support_users'   => 0,
-			'role'            => false,
-			'endpoint'        => false,
-			'options'         => array(),
-			'cron_events'     => 0,
-			'log_files'       => 0,
-			'sites'           => 0,
-			'network_skipped' => false,
-			'saas_revokes'    => 0,
+			'support_users'       => 0,
+			'role'                => false,
+			'endpoint'            => false,
+			'options'             => array(),
+			'cron_events'         => 0,
+			'log_files'           => 0,
+			'sites'               => 0,
+			'network_skipped'     => false,
+			'saas_revokes'        => 0,
+			'saas_revokes_failed' => array(),
 		);
+
+		$this->saas_revokes_started = 0.0;
+		$this->saas_revoke_failed   = false;
 
 		// Logging would write a salt and log file back while they are deleted.
 		$silence = 'trustedlogin/' . $this->ns . '/logging/enabled';
@@ -153,8 +191,20 @@ final class Uninstaller {
 		try {
 			$endpoint       = new Endpoint( $this->config, $this->logging );
 			$endpoint_value = $endpoint->get();
+			$site_ids       = $this->site_ids();
 
-			foreach ( $this->site_ids() as $site_id ) {
+			// When every site is visited, every support user goes, so the
+			// endpoint can go first and a run cut short still removes it.
+			$visits_every_site = $this->visits_every_site();
+			$endpoint_deleted  = false;
+
+			if ( '' !== $endpoint_value && $visits_every_site ) {
+				$endpoint->delete();
+				$endpoint_deleted         = '' === $endpoint->get();
+				$this->report['endpoint'] = $endpoint_deleted;
+			}
+
+			foreach ( $site_ids as $site_id ) {
 				$this->clean_site( (int) $site_id, $endpoint_value );
 				++$this->report['sites'];
 			}
@@ -165,8 +215,7 @@ final class Uninstaller {
 			// on sites this run did not visit still log in through it.
 			$endpoint_in_use = array() !== $this->support_user_ids( true );
 
-			if ( '' !== $endpoint_value && ! $endpoint_in_use ) {
-				// A no-op when the support-user delete already removed it.
+			if ( '' !== $endpoint_value && ! $endpoint_in_use && ! $endpoint_deleted ) {
 				$endpoint->delete();
 				$this->report['endpoint'] = '' === $endpoint->get();
 			}
@@ -180,7 +229,8 @@ final class Uninstaller {
 
 		remove_filter( $silence, '__return_false', PHP_INT_MAX );
 
-		$this->report['options'] = array_values( array_unique( $this->report['options'] ) );
+		$this->report['options']             = array_values( array_unique( $this->report['options'] ) );
+		$this->report['saas_revokes_failed'] = array_values( array_unique( $this->report['saas_revokes_failed'] ) );
 
 		return $this->report;
 	}
@@ -217,6 +267,24 @@ final class Uninstaller {
 		}
 
 		return $site_ids;
+	}
+
+	/**
+	 * Whether the run visits every site: always on single-site, and on
+	 * multisite unless `network` is false or a large network limited the
+	 * run. Call after {@see site_ids()}.
+	 *
+	 * @since TBD
+	 *
+	 * @return bool
+	 */
+	private function visits_every_site() {
+
+		if ( ! is_multisite() ) {
+			return true;
+		}
+
+		return false !== $this->args['network'] && ! $this->report['network_skipped'];
 	}
 
 	/**
@@ -323,9 +391,10 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Deletes support users who belong to no site. A member of any site is
-	 * left to that site's cleanup: {@see wpmu_delete_user()} deletes a
-	 * member's posts without reassigning them.
+	 * Deletes support users who belong to no site, counting archived, spam
+	 * and deleted sites. A member of any site is left to that site's cleanup:
+	 * {@see wpmu_delete_user()} deletes a member's posts without reassigning
+	 * them.
 	 *
 	 * @return int Users deleted.
 	 */
@@ -347,7 +416,7 @@ final class Uninstaller {
 		$deleted = 0;
 
 		foreach ( $user_ids as $user_id ) {
-			$sites = get_blogs_of_user( $user_id );
+			$sites = get_blogs_of_user( $user_id, true );
 
 			if ( ! empty( $sites ) ) {
 				continue;
@@ -380,6 +449,11 @@ final class Uninstaller {
 
 	/**
 	 * Tells TrustedLogin a site secret is revoked. Needs `auth/api_key`.
+	 * Each request gets {@see SAAS_REVOKE_TIMEOUT} seconds. After a failure,
+	 * or once {@see SAAS_REVOKE_BUDGET} seconds are spent, no more requests
+	 * are sent. Secret IDs not revoked are added to `saas_revokes_failed`.
+	 *
+	 * @since TBD
 	 *
 	 * @param string $secret_id Site secret identifier.
 	 */
@@ -389,12 +463,35 @@ final class Uninstaller {
 			return;
 		}
 
+		if ( ! $this->config->meets_ssl_requirement() ) {
+			$this->report['saas_revokes_failed'][] = $secret_id;
+
+			return;
+		}
+
+		if ( 0.0 === $this->saas_revokes_started ) {
+			$this->saas_revokes_started = microtime( true );
+		}
+
+		$budget_spent = microtime( true ) - $this->saas_revokes_started >= self::SAAS_REVOKE_BUDGET;
+
+		if ( $this->saas_revoke_failed || $budget_spent ) {
+			$this->report['saas_revokes_failed'][] = $secret_id;
+
+			return;
+		}
+
 		$site_access = new SiteAccess( $this->config, $this->logging );
-		$revoked     = $site_access->revoke( $secret_id, new Remote( $this->config, $this->logging ) );
+		$revoked     = $site_access->revoke( $secret_id, new Remote( $this->config, $this->logging ), self::SAAS_REVOKE_TIMEOUT );
 
 		if ( true === $revoked ) {
 			++$this->report['saas_revokes'];
+
+			return;
 		}
+
+		$this->saas_revoke_failed              = true;
+		$this->report['saas_revokes_failed'][] = $secret_id;
 	}
 
 	/**
@@ -521,6 +618,7 @@ final class Uninstaller {
 			'tl-' . $this->ns . '-used_accesskeys',
 			'tl-' . $this->ns . '-in_lockdown',
 			sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
+			sprintf( Cron::RECONCILE_FAILURES_TRANSIENT, $this->ns ),
 		);
 	}
 
@@ -548,7 +646,7 @@ final class Uninstaller {
 		$directory = (string) $this->config->get_setting( 'logging/directory', '' );
 
 		if ( '' === $directory ) {
-			$upload_dir = wp_upload_dir();
+			$upload_dir = wp_upload_dir( null, false );
 
 			if ( ! empty( $upload_dir['error'] ) || empty( $upload_dir['basedir'] ) ) {
 				return 0;

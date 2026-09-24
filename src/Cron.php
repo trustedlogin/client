@@ -42,6 +42,22 @@ final class Cron {
 	const RECONCILE_FALLBACK_TRANSIENT = 'tl_%s_reconcile_ran';
 
 	/**
+	 * Transient, formatted with the namespace, holding the support users the
+	 * sweep failed to revoke: identifier => array( failures, retry_after ).
+	 *
+	 * @since TBD
+	 */
+	const RECONCILE_FAILURES_TRANSIENT = 'tl_%s_reconcile_failures';
+
+	/**
+	 * Longest wait, in seconds, before the sweep retries a support user it
+	 * failed to revoke. The wait doubles from two hours with each failure.
+	 *
+	 * @since TBD
+	 */
+	const RECONCILE_MAX_BACKOFF = DAY_IN_SECONDS;
+
+	/**
 	 * Config instance.
 	 *
 	 * @var \TrustedLogin\Config
@@ -121,7 +137,9 @@ final class Cron {
 
 	/**
 	 * Runs the sweep at most once an hour per namespace when core's hourly
-	 * event is not scheduled.
+	 * event is missing or more than an hour overdue, as on a site with
+	 * `DISABLE_WP_CRON` and no system cron. Runs only for a logged-in user
+	 * who can manage options, and never during an Ajax request.
 	 *
 	 * @since TBD
 	 *
@@ -129,7 +147,20 @@ final class Cron {
 	 */
 	public function maybe_reconcile_without_core_event() {
 
-		if ( wp_next_scheduled( self::RECONCILE_HOOK ) ) {
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+
+		$can_run = is_user_logged_in() && current_user_can( 'manage_options' );
+
+		if ( ! $can_run ) {
+			return;
+		}
+
+		$next_run    = wp_next_scheduled( self::RECONCILE_HOOK );
+		$is_on_track = $next_run && $next_run > time() - HOUR_IN_SECONDS;
+
+		if ( $is_on_track ) {
 			return;
 		}
 
@@ -146,8 +177,12 @@ final class Cron {
 
 	/**
 	 * Revokes each expired support user through {@see Client::revoke_access()},
-	 * which notifies TrustedLogin and fires `access/revoked`. Deletes them on
-	 * this site only when no Client can be built.
+	 * which notifies TrustedLogin and fires `access/revoked`. Each user is
+	 * checked again just before its revoke, so access extended while the
+	 * sweep runs is kept. A user whose revoke fails is retried after a
+	 * growing wait, and does not stop the others.
+	 *
+	 * @since TBD
 	 *
 	 * @return void
 	 */
@@ -160,25 +195,115 @@ final class Cron {
 			return;
 		}
 
-		try {
-			$client = new Client( $this->config, false );
-		} catch ( \Exception $exception ) {
-			$this->logging->log( 'Deleting expired support users without notifying TrustedLogin: ' . $exception->getMessage(), __METHOD__, 'warning' );
+		$client   = new Client( $this->config, false );
+		$failures = $this->get_reconcile_failures();
+		$changed  = false;
 
-			$support_user->reconcile();
+		foreach ( $identifiers as $identifier ) {
+			$is_backing_off = isset( $failures[ $identifier ] ) && $failures[ $identifier ]['retry_after'] > time();
+
+			if ( $is_backing_off ) {
+				continue;
+			}
+
+			$user = $support_user->get( $identifier );
+
+			if ( null === $user || $support_user->is_active( $user ) ) {
+				continue;
+			}
+
+			$this->logging->log( 'Access has expired; revoking.', __METHOD__, 'notice' );
+
+			$error = null;
+
+			try {
+				$revoked = $client->revoke_access( $identifier );
+
+				if ( is_wp_error( $revoked ) ) {
+					$error = $revoked->get_error_message();
+				}
+			} catch ( \Exception $exception ) {
+				$error = $exception->getMessage();
+			} catch ( \Error $exception ) {
+				$error = $exception->getMessage();
+			}
+
+			if ( null === $error ) {
+				if ( isset( $failures[ $identifier ] ) ) {
+					unset( $failures[ $identifier ] );
+					$changed = true;
+				}
+
+				continue;
+			}
+
+			$failure_count = isset( $failures[ $identifier ] ) ? $failures[ $identifier ]['count'] + 1 : 1;
+			$backoff       = (int) min( 2 * HOUR_IN_SECONDS * pow( 2, $failure_count - 1 ), self::RECONCILE_MAX_BACKOFF );
+
+			$failures[ $identifier ] = array(
+				'count'       => $failure_count,
+				'retry_after' => time() + $backoff,
+			);
+			$changed                 = true;
+
+			$this->logging->log( sprintf( 'Revoking expired access failed (attempt %d); retrying in %d seconds: %s', $failure_count, $backoff, $error ), __METHOD__, 'error' );
+		}
+
+		if ( $changed ) {
+			$this->save_reconcile_failures( $failures );
+		}
+	}
+
+	/**
+	 * Returns the sweep's failed revokes, keyed by identifier.
+	 *
+	 * @since TBD
+	 *
+	 * @return array<string, array{count: int, retry_after: int}>
+	 */
+	private function get_reconcile_failures() {
+
+		$stored   = Utils::get_transient( sprintf( self::RECONCILE_FAILURES_TRANSIENT, $this->config->ns() ) );
+		$failures = array();
+
+		if ( ! is_array( $stored ) ) {
+			return $failures;
+		}
+
+		foreach ( $stored as $identifier => $failure ) {
+			if ( ! is_array( $failure ) || ! isset( $failure['count'], $failure['retry_after'] ) ) {
+				continue;
+			}
+
+			$failures[ (string) $identifier ] = array(
+				'count'       => (int) $failure['count'],
+				'retry_after' => (int) $failure['retry_after'],
+			);
+		}
+
+		return $failures;
+	}
+
+	/**
+	 * Stores the sweep's failed revokes, or deletes the row when none remain.
+	 *
+	 * @since TBD
+	 *
+	 * @param array<string, array{count: int, retry_after: int}> $failures Failed revokes, keyed by identifier.
+	 *
+	 * @return void
+	 */
+	private function save_reconcile_failures( array $failures ) {
+
+		$transient = sprintf( self::RECONCILE_FAILURES_TRANSIENT, $this->config->ns() );
+
+		if ( empty( $failures ) ) {
+			Utils::delete_transient( $transient );
 
 			return;
 		}
 
-		foreach ( $identifiers as $identifier ) {
-			$this->logging->log( 'Access has expired; revoking.', __METHOD__, 'notice' );
-
-			$revoked = $client->revoke_access( $identifier );
-
-			if ( is_wp_error( $revoked ) ) {
-				$this->logging->log( 'Revoking expired access failed: ' . $revoked->get_error_message(), __METHOD__, 'error' );
-			}
-		}
+		Utils::set_transient( $transient, $failures, 2 * self::RECONCILE_MAX_BACKOFF );
 	}
 
 	/**
