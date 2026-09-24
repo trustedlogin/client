@@ -5,7 +5,7 @@ Support access now ends on time even when your plugin was inactive at expiry, an
 #### 🚀 Added
 
 - Expired support access is removed at the next hourly WordPress scheduled-task run, even if your plugin was inactive when it ran out (for example during a plugin update). WordPress runs these tasks when the site gets a visit, so on a quiet site the removal can come later than an hour. The TrustedLogin dashboard is updated and the `revoked` webhook is sent, the same as at normal expiry. Access that was extended in the meantime is kept. The check uses an hourly event WordPress already runs, so the SDK adds no scheduled task of its own.
-- `Client::uninstall()` for your plugin's `uninstall.php`. It removes the support users, role, login endpoint, settings, scheduled events and log files the SDK stored for your plugin, and leaves other plugins' data alone. Pass your Config (with its API key) to also revoke the removed access in your TrustedLogin dashboard.
+- `Client::uninstall()` for your plugin's `uninstall.php`. It removes the support users, role, login endpoint, settings, scheduled events and log files the SDK stored for your plugin, and leaves other plugins' data alone. Pass your Config (with its API key) to also revoke the removed access in your TrustedLogin dashboard. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall).
 
 #### 🛠 Changed
 
