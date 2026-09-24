@@ -547,28 +547,6 @@ final class SupportUser {
 	}
 
 	/**
-	 * Deletes expired support users on this site without notifying
-	 * TrustedLogin. {@see Cron::reconcile()} falls back to it when no Client
-	 * can be built.
-	 *
-	 * @since TBD
-	 *
-	 * @return int Number of support users deleted.
-	 */
-	public function reconcile() {
-
-		$deleted = 0;
-
-		foreach ( $this->get_expired_identifiers() as $user_identifier ) {
-			if ( true === $this->delete( $user_identifier ) ) {
-				++$deleted;
-			}
-		}
-
-		return $deleted;
-	}
-
-	/**
 	 * Whether a user on this site holds the cloned support role. A grant in
 	 * progress holds it before its identifier meta is written. Always false
 	 * for a stock role, which ordinary users hold too.
@@ -639,6 +617,13 @@ final class SupportUser {
 	 * @used-by SupportUser::maybe_login() Called when user access has expired, but the cron didn't run...
 	 * @used-by Client::revoke_access()
 	 *
+	 * On multisite the user is removed from the current site, and deleted from
+	 * the network only once they belong to no other site.
+	 *
+	 * The cloned role is kept while another user on this site holds it, and
+	 * the endpoint while any support user of this namespace exists on the
+	 * network. Both cases are logged.
+	 *
 	 * @param string $user_identifier Unique identifier of the user to delete.
 	 * @param bool   $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
 	 * @param bool   $delete_endpoint Should the TrustedLogin endpoint for the site be deleted also? Default: `true`.
@@ -674,17 +659,23 @@ final class SupportUser {
 		// Remove auto-cleanup hook.
 		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
-		// Delete first using wp_delete_user() to allow for reassignment of posts.
+		// On multisite this removes the user from the current site only,
+		// reassigning their posts here.
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
-		// Also delete the user from the all sites on the WP Multisite network.
-		$wpmu_deleted = \function_exists( 'wpmu_delete_user' ) ? wpmu_delete_user( $user->ID ) : false;
+		$wpmu_deleted = false;
+
+		if ( $deleted && is_multisite() ) {
+			$wpmu_deleted = $this->maybe_delete_from_network( $user->ID );
+		}
 
 		if ( $deleted ) {
 			$message = 'User: ' . $user->ID . ' deleted.';
 
 			if ( $wpmu_deleted ) {
 				$message .= ' Also deleted from the Multisite network.';
+			} elseif ( is_multisite() ) {
+				$message .= ' Kept on the network: the user still belongs to other sites.';
 			}
 
 			$this->logging->log( $message, __METHOD__, 'info' );
@@ -692,16 +683,20 @@ final class SupportUser {
 			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
-		// Kept while a grant in progress holds the role or any site still has a support user.
+		// A grant in progress holds the role before its identifier meta is written.
 		$role_in_use = $this->cloned_role_has_users();
 
-		if ( $delete_role && ! $role_in_use ) {
+		if ( $delete_role && $role_in_use ) {
+			$this->logging->log( 'The support role was kept: another user on this site holds it.', __METHOD__, 'notice' );
+		} elseif ( $delete_role ) {
 			$this->role->delete();
 		}
 
-		$endpoint_in_use = $role_in_use || $this->has_support_users_on_network();
+		$endpoint_in_use = $this->has_support_users_on_network();
 
-		if ( $delete_endpoint && ! $endpoint_in_use ) {
+		if ( $delete_endpoint && $endpoint_in_use ) {
+			$this->logging->log( 'The login endpoint was kept: a support user still exists on the network.', __METHOD__, 'notice' );
+		} elseif ( $delete_endpoint ) {
 			$endpoint = new Endpoint( $this->config, $this->logging );
 			$endpoint->delete();
 		}
@@ -720,6 +715,36 @@ final class SupportUser {
 		}
 
 		return $this->delete( $user_identifier, $delete_role, $delete_endpoint );
+	}
+
+	/**
+	 * Deletes a user from the network once they belong to no site, archived,
+	 * spam and deleted sites included. {@see wpmu_delete_user()} deletes a
+	 * member's posts on every site without reassigning them. A user who
+	 * stays loses this namespace's per-site options for the current site.
+	 *
+	 * @since TBD
+	 *
+	 * @param int $user_id User already removed from the current site.
+	 *
+	 * @return bool True when the user was deleted from the network.
+	 */
+	private function maybe_delete_from_network( $user_id ) {
+
+		$remaining_sites = get_blogs_of_user( $user_id, true );
+
+		if ( ! empty( $remaining_sites ) ) {
+			delete_user_option( $user_id, $this->expires_meta_key );
+			delete_user_option( $user_id, $this->created_by_meta_key );
+
+			return false;
+		}
+
+		if ( ! \function_exists( 'wpmu_delete_user' ) ) {
+			return false;
+		}
+
+		return (bool) wpmu_delete_user( $user_id );
 	}
 
 	/**

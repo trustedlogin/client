@@ -348,6 +348,8 @@ final class Client {
 		}
 
 		if ( empty( $did_setup ) ) {
+			$this->delete_unsynced_support_user( $support_user_id );
+
 			return new WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
 		}
 

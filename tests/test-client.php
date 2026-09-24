@@ -392,4 +392,36 @@ class TrustedLoginClientTest extends WP_UnitTestCase {
 			wp_set_current_user( 0 );
 		}
 	}
+
+	/**
+	 * @covers \TrustedLogin\Client::grant_access()
+	 *
+	 * When the identifier cannot be read back after setup, the grant fails
+	 * and the support user it created is removed, so no user without an
+	 * identifier is left holding the support role.
+	 */
+	public function test_grant_access_removes_the_user_when_the_identifier_is_not_saved() {
+		$admin = $this->factory->user->create_and_get( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin->ID );
+		if ( function_exists( 'grant_super_admin' ) ) {
+			grant_super_admin( $admin->ID );
+		}
+
+		$cleanup    = $this->_stub_saas_sites_post();
+		$identifier = 'get_user_option_tl_' . $this->config->ns() . '_id';
+		add_filter( $identifier, '__return_empty_string' );
+
+		try {
+			$client = new Client( $this->config, false );
+			$result = $client->grant_access();
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'support_user_setup_failed', $result->get_error_code() );
+			$this->assertFalse( email_exists( $this->config->get_setting( 'vendor/email' ) ), 'the support user created by the failed grant must be removed' );
+		} finally {
+			remove_filter( $identifier, '__return_empty_string' );
+			$cleanup();
+			wp_set_current_user( 0 );
+		}
+	}
 }
