@@ -274,6 +274,8 @@ final class Uninstaller {
 	 * multisite unless `network` is false or a large network limited the
 	 * run. Call after {@see site_ids()}.
 	 *
+	 * @since TBD
+	 *
 	 * @return bool
 	 */
 	private function visits_every_site() {
@@ -450,6 +452,8 @@ final class Uninstaller {
 	 * Each request gets {@see SAAS_REVOKE_TIMEOUT} seconds. After a failure,
 	 * or once {@see SAAS_REVOKE_BUDGET} seconds are spent, no more requests
 	 * are sent. Secret IDs not revoked are added to `saas_revokes_failed`.
+	 *
+	 * @since TBD
 	 *
 	 * @param string $secret_id Site secret identifier.
 	 */

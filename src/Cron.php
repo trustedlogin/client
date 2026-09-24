@@ -182,6 +182,8 @@ final class Cron {
 	 * sweep runs is kept. A user whose revoke fails is retried after a
 	 * growing wait, and does not stop the others.
 	 *
+	 * @since TBD
+	 *
 	 * @return void
 	 */
 	private function revoke_expired() {
@@ -255,6 +257,8 @@ final class Cron {
 	/**
 	 * Returns the sweep's failed revokes, keyed by identifier.
 	 *
+	 * @since TBD
+	 *
 	 * @return array<string, array{count: int, retry_after: int}>
 	 */
 	private function get_reconcile_failures() {
@@ -282,6 +286,8 @@ final class Cron {
 
 	/**
 	 * Stores the sweep's failed revokes, or deletes the row when none remain.
+	 *
+	 * @since TBD
 	 *
 	 * @param array<string, array{count: int, retry_after: int}> $failures Failed revokes, keyed by identifier.
 	 *
