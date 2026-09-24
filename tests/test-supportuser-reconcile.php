@@ -813,6 +813,52 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Rolling back a failed grant on one site must not delete a user who
+	 * still belongs to another site.
+	 */
+	public function test_failed_grant_rollback_keeps_a_member_of_another_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$sub_site = self::factory()->blog->create();
+		add_user_to_blog( $sub_site, $user_id, 'editor' );
+
+		$client   = $this->client_for( self::NS );
+		$rollback = new \ReflectionMethod( Client::class, 'delete_unsynced_support_user' );
+		$rollback->setAccessible( true );
+		$rollback->invoke( $client, $user_id );
+
+		clean_user_cache( $user_id );
+
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ), 'the network account must stay while the user belongs to another site' );
+		$this->assertArrayHasKey( $sub_site, get_blogs_of_user( $user_id, true ), 'the other site\'s membership must stay' );
+		$this->assertArrayNotHasKey( get_current_blog_id(), get_blogs_of_user( $user_id, true ), 'the user must be removed from the site that rolled back' );
+	}
+
+	/**
+	 * A rolled-back user who belongs to no other site is deleted from the
+	 * network, so the next grant can reuse the email address.
+	 */
+	public function test_failed_grant_rollback_deletes_a_user_on_no_other_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$client   = $this->client_for( self::NS );
+		$rollback = new \ReflectionMethod( Client::class, 'delete_unsynced_support_user' );
+		$rollback->setAccessible( true );
+		$rollback->invoke( $client, $user_id );
+
+		clean_user_cache( $user_id );
+
+		$this->assertFalse( get_user_by( 'id', $user_id ) );
+	}
+
+	/**
 	 * Nothing to do must cost nothing and report nothing.
 	 */
 	public function test_sweep_reports_zero_when_there_is_nothing_to_remove() {

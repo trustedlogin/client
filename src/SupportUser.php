@@ -729,7 +729,7 @@ final class SupportUser {
 	 *
 	 * @return bool True when the user was deleted from the network.
 	 */
-	private function maybe_delete_from_network( $user_id ) {
+	public function maybe_delete_from_network( $user_id ) {
 
 		$remaining_sites = get_blogs_of_user( $user_id, true );
 
