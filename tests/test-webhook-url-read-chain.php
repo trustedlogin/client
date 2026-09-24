@@ -203,9 +203,9 @@ class TrustedLoginWebhookUrlReadChainTest extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_init_skips_when_neither_config_nor_cached_set() {
-		$config  = $this->build_config_with_webhook_url( null );
-		delete_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, self::NS ) );
+	public function test_init_skips_when_trustedlogin_answered_without_a_url() {
+		$config = $this->build_config_with_webhook_url( null );
+		$this->set_cached_url( '' );
 
 		$logging = new Logging( $config );
 		$remote  = new Remote( $config, $logging );
@@ -213,7 +213,25 @@ class TrustedLoginWebhookUrlReadChainTest extends WP_UnitTestCase {
 
 		$this->assertFalse(
 			has_action( 'trustedlogin/' . self::NS . '/access/created' ),
-			'Hooks must NOT register when neither Config nor cached URL is set (existing perf optimization).'
+			'Hooks must NOT register once TrustedLogin has confirmed there is no dashboard URL.'
+		);
+	}
+
+	/**
+	 * The first grant caches the dashboard URL during the same request,
+	 * before `access/created` fires, so the hooks must already be there.
+	 */
+	public function test_init_registers_hooks_before_the_first_grant_has_synced() {
+		$config = $this->build_config_with_webhook_url( null );
+		delete_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, self::NS ) );
+
+		$logging = new Logging( $config );
+		$remote  = new Remote( $config, $logging );
+		$remote->init();
+
+		$this->assertTrue(
+			has_action( 'trustedlogin/' . self::NS . '/access/created' ) > 0,
+			'Hooks must register while the dashboard URL is not yet known.'
 		);
 	}
 

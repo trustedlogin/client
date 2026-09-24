@@ -129,6 +129,10 @@ class SiteAccess {
 			// Silent on null / empty / type-mismatch — preserves cache.
 		}
 
+		// An empty value records that TrustedLogin answered without a URL;
+		// add_option() leaves a cached URL untouched.
+		add_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ), '', '', false );
+
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/secret/synced',
 			array(
