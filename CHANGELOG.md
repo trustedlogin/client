@@ -7,7 +7,7 @@
 #### 🛠 Fixed
 
 - The error message on the Grant Access screen now lines up with the content above and below it, instead of running to the edges of the box.
-- The Grant Access error message now reads as a full sentence ending in a period, for example "There was an error granting access: Error rescheduling cron task." When the server gives no detail, it reads "There was an error granting access." instead of ending in a colon.
+- The Grant Access error message is now one translatable sentence, "There was an error granting access: %s", instead of a prefix joined to the reason in JavaScript. With no reason it reads "There was an error granting access." The reason shown when access cannot be extended is now translatable and reads "The access expiration could not be rescheduled."
 
 ## 1.10.1 (May 12, 2026)
 

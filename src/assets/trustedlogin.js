@@ -268,26 +268,20 @@
 				console.error( 'Request failed.', response );
 			}
 
-			// Joins the localized "There was an error granting access:" prefix
-			// to the server's detail as one sentence.
+			// Fills the localized "error granting access: %s" template with
+			// the server's reason, or uses the no-reason sentence.
 			var failedMessage = function ( detail ) {
-				var prefix = String( cfg.lang.status.failed.content || '' ).replace( /\s+$/, '' );
-
-				detail = String( detail || '' ).replace( /^\s+|\s+$/g, '' );
-
-				if ( '' === detail ) {
-					return prefix.replace( /:$/, '.' );
+				if ( ! detail ) {
+					return cfg.lang.status.failed.content;
 				}
 
-				if ( ! /[.!?]$/.test( detail ) ) {
-					detail += '.';
-				}
-
-				return prefix + ' ' + detail;
+				return cfg.lang.status.failed.detail.replace( '%s', function () {
+					return detail;
+				} );
 			};
 
 			// Build a user-facing message + structured error code.
-			var userMessage = failedMessage( '' );
+			var userMessage = cfg.lang.status.failed.content;
 			var errorCode   = 'unknown';
 
 			if ( response && response.statusText === 'timeout' ) {
@@ -296,7 +290,7 @@
 				// doesn't define a timeout-specific entry.
 				userMessage = ( cfg.lang.status.timeout && cfg.lang.status.timeout.content )
 					? cfg.lang.status.timeout.content
-					: failedMessage( '' );
+					: cfg.lang.status.failed.content;
 				errorCode = 'timeout';
 			} else if ( response && response.responseText === '0' ) {
 				userMessage = cfg.lang.status.failed_permissions.content;
