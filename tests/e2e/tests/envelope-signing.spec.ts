@@ -22,7 +22,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { wpCli } from './_helpers';
+import { wpCli, fillWpLogin } from './_helpers';
 
 type VendorState = {
     form_id: string;
@@ -57,8 +57,7 @@ async function loginAsClientAdmin( context: BrowserContext ) {
         await loginPage.close();
         return;
     }
-    await loginPage.locator( '#user_login' ).fill( 'admin' );
-    await loginPage.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( loginPage );
     await Promise.all( [
         loginPage.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         loginPage.locator( '#wp-submit' ).click(),
@@ -77,8 +76,7 @@ async function loginAsVendorAdmin( context: BrowserContext ) {
         await loginPage.close();
         return;
     }
-    await loginPage.locator( '#user_login' ).fill( 'admin' );
-    await loginPage.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( loginPage );
     await Promise.all( [
         loginPage.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         loginPage.locator( '#wp-submit' ).click(),

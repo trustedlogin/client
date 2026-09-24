@@ -18,7 +18,7 @@ import { test, expect, BrowserContext, Page } from '@playwright/test';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
+import { wpCli, resetClientState as resetClientStateShared, fillWpLogin } from './_helpers';
 
 // ---------------------------------------------------------------------------
 //  Fixtures + named constants (no magic numbers)
@@ -84,8 +84,7 @@ async function loginClientAdmin( ctx: BrowserContext ) {
 	const p = await ctx.newPage();
 	await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
 	if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-	await p.locator( '#user_login' ).fill( 'admin' );
-	await p.locator( '#user_pass' ).fill( 'admin' );
+	await fillWpLogin( p );
 	await Promise.all( [
 		p.waitForURL( /\/wp-admin\//, { timeout: NAV_TIMEOUT_MS } ),
 		p.locator( '#wp-submit' ).click(),

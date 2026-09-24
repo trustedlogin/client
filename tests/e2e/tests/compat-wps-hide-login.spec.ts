@@ -22,7 +22,7 @@ import { execSync } from 'child_process';
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { wpCli, E2E_DIR } from './_helpers';
+import { wpCli, E2E_DIR, fillWpLogin } from './_helpers';
 
 type VendorState = {
     form_id:       string;
@@ -48,8 +48,7 @@ async function loginClientAdmin( ctx: BrowserContext, loginPath = 'wp-login.php'
     const p = await ctx.newPage();
     await p.goto( `${ VENDOR_STATE.client_url }/${ loginPath }`, { waitUntil: 'domcontentloaded' } );
     if ( ! /\/wp-admin\//.test( p.url() ) ) {
-        await p.locator( '#user_login' ).fill( 'admin' );
-        await p.locator( '#user_pass' ).fill( 'admin' );
+        await fillWpLogin( p );
         await Promise.all( [
             p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
             p.locator( '#wp-submit' ).click(),

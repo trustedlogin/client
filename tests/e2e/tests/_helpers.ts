@@ -7,6 +7,7 @@
  */
 
 import { execSync, spawnSync } from 'child_process';
+import type { Page } from '@playwright/test';
 import * as path from 'path';
 
 export const E2E_DIR = path.resolve( __dirname, '..' );
@@ -152,4 +153,33 @@ export function flushCaches( container: 'wp-cli-client' | 'wp-cli-vendor' ): voi
         + `echo "flushed";`,
         'flushCaches:' + container,
     );
+}
+
+/**
+ * Fills the wp-login.php form. The login page runs a focus script about
+ * 200ms after load that can clear the password field, so this waits for
+ * that script, then fills both fields and checks the password is still
+ * there before returning.
+ */
+export async function fillWpLogin( page: Page, user = 'admin', pass = 'admin' ): Promise<void> {
+    await page.waitForLoadState( 'load' );
+
+    // The focus script moves focus to one of the two fields. Sites that
+    // turn it off never do, so the wait is bounded.
+    await page.waitForFunction(
+        () => [ 'user_login', 'user_pass' ].includes( document.activeElement?.id ?? '' ),
+        null,
+        { timeout: 2_000 }
+    ).catch( () => undefined );
+
+    for ( let attempt = 1; attempt <= 3; attempt++ ) {
+        await page.locator( '#user_login' ).fill( user );
+        await page.locator( '#user_pass' ).fill( pass );
+
+        if ( await page.locator( '#user_pass' ).inputValue() === pass ) {
+            return;
+        }
+    }
+
+    throw new Error( 'fillWpLogin: the password field was cleared after every fill.' );
 }

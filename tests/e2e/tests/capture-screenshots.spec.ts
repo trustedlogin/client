@@ -19,7 +19,7 @@ import { test, BrowserContext, Page } from '@playwright/test';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { wpCli, resetClientState as resetClientStateShared } from './_helpers';
+import { wpCli, resetClientState as resetClientStateShared, fillWpLogin } from './_helpers';
 
 const DEFAULT_DOCS_DIR = path.resolve(
     __dirname,
@@ -101,8 +101,7 @@ async function loginClientAdmin( ctx: BrowserContext ) {
     const p = await ctx.newPage();
     await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),
@@ -386,8 +385,7 @@ async function openGrantAccessPage( ctx: BrowserContext ): Promise<Page> {
     // Log in first — the Grant Support Access menu requires manage_options.
     await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( p.url().includes( 'wp-login.php' ) ) {
-        await p.locator( '#user_login' ).fill( 'admin' );
-        await p.locator( '#user_pass' ).fill( 'admin' );
+        await fillWpLogin( p );
         await p.locator( '#wp-submit' ).click( { noWaitAfter: true } );
         await p.waitForURL( /\/wp-admin\//, { timeout: 30_000, waitUntil: 'commit' } );
     }

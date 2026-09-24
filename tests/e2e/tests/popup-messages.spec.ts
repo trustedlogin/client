@@ -80,8 +80,7 @@ async function loginAsClientAdmin( context: BrowserContext ) {
         await loginPage.close();
         return;
     }
-    await loginPage.locator( '#user_login' ).fill( 'admin' );
-    await loginPage.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( loginPage );
     // Wait for the wp-admin redirect so we know cookies are committed.
     await Promise.all( [
         loginPage.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
@@ -99,7 +98,7 @@ async function readFakeSaaSState( page: Page ): Promise<any> {
     return await res.json();
 }
 
-import { wpCli } from './_helpers';
+import { wpCli, fillWpLogin } from './_helpers';
 
 /**
  * Nuke any existing trustedlogin support users on the client site via

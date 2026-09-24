@@ -28,7 +28,7 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { resetClientState } from './_helpers';
+import { resetClientState, fillWpLogin } from './_helpers';
 
 const VENDOR_STATE = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
@@ -43,8 +43,7 @@ async function loginWpAdmin( ctx: BrowserContext, base: string ): Promise<void> 
     const p = await ctx.newPage();
     await p.goto( `${ base }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),
@@ -117,8 +116,7 @@ test( 'WP detects TLS via X-Forwarded-Proto — secure cookies + https URLs', as
     // Playwright's cookie API would reveal that.
     const p = await ctx.newPage();
     await p.goto( `${ CLIENT_TLS_URL }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),

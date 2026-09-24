@@ -7,7 +7,7 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { wpCli, resetClientState } from './_helpers';
+import { wpCli, resetClientState, fillWpLogin } from './_helpers';
 
 const VENDOR_STATE = JSON.parse(
     fs.readFileSync( path.join( __dirname, '..', 'fixtures', '.cache-vendor-state.json' ), 'utf-8' )
@@ -17,8 +17,7 @@ async function loginClientAdmin( ctx: BrowserContext ) {
     const p = await ctx.newPage();
     await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),

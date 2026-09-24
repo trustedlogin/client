@@ -37,7 +37,7 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { wpCli } from './_helpers';
+import { wpCli, fillWpLogin } from './_helpers';
 
 type VendorState = {
     form_id: string;
@@ -130,8 +130,7 @@ async function loginAsClientAdmin( context: BrowserContext ) {
     const p = await context.newPage();
     await p.goto( `${ VENDOR_STATE.client_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),
@@ -145,8 +144,7 @@ async function loginAsVendorAdmin( context: BrowserContext ) {
     const p = await context.newPage();
     await p.goto( `${ VENDOR_STATE.vendor_url }/wp-login.php`, { waitUntil: 'domcontentloaded' } );
     if ( ! p.url().includes( 'wp-login.php' ) ) { await p.close(); return; }
-    await p.locator( '#user_login' ).fill( 'admin' );
-    await p.locator( '#user_pass' ).fill( 'admin' );
+    await fillWpLogin( p );
     await Promise.all( [
         p.waitForURL( /\/wp-admin\//, { timeout: 15_000 } ),
         p.locator( '#wp-submit' ).click(),
