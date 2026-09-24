@@ -240,7 +240,7 @@ class TrustedLoginWebhookUrlSaasCacheTest extends WP_UnitTestCase {
 		$result = $this->site_access->sync_secret( 's1', 'h1', 'create' );
 
 		// Diagnostic dump on failure.
-		if ( ! $this->assertFalse_silently( get_option( $this->option_key( self::NS ) ) ) ) {
+		if ( ! $this->assertEmptyString_silently( get_option( $this->option_key( self::NS ) ) ) ) {
 			$logs = $this->getCapturedLogs();
 			$this->fail( sprintf( 'sync_secret returned %s; logs: %s', wp_json_encode( $result ), wp_json_encode( array_map( function ( $l ) { return $l['level'] . ':' . $l['message']; }, $logs ) ) ) );
 		}
@@ -250,15 +250,15 @@ class TrustedLoginWebhookUrlSaasCacheTest extends WP_UnitTestCase {
 		$this->assertLogNotContains( 'SECRET-PATH-abc' );
 	}
 
-	private function assertFalse_silently( $value ) {
-		return false === $value;
+	private function assertEmptyString_silently( $value ) {
+		return '' === $value;
 	}
 
 	public function test_javascript_scheme_rejected() {
 		$this->stub_saas_webhook_response( 'javascript:alert(1)' );
 		$this->site_access->sync_secret( 's1', 'h1', 'create' );
 
-		$this->assertFalse( get_option( $this->option_key( self::NS ) ) );
+		$this->assertSame( '', get_option( $this->option_key( self::NS ) ), 'a rejected URL must not be cached; the empty value records that TrustedLogin answered' );
 		$this->assertLogContains( 'invalid webhookUrl', 'warning' );
 		// `javascript:` has no host — log should fall back to '[invalid-url]'.
 		$this->assertLogContains( 'host=[invalid-url]', 'warning' );
@@ -268,7 +268,7 @@ class TrustedLoginWebhookUrlSaasCacheTest extends WP_UnitTestCase {
 		$this->stub_saas_webhook_response( 'https://attacker:pass@hooks.example.com/zap/abc' );
 		$this->site_access->sync_secret( 's1', 'h1', 'create' );
 
-		$this->assertFalse( get_option( $this->option_key( self::NS ) ) );
+		$this->assertSame( '', get_option( $this->option_key( self::NS ) ), 'a rejected URL must not be cached; the empty value records that TrustedLogin answered' );
 	}
 
 	public function test_oversized_url_rejected() {
@@ -276,7 +276,7 @@ class TrustedLoginWebhookUrlSaasCacheTest extends WP_UnitTestCase {
 		$this->stub_saas_webhook_response( $oversize );
 		$this->site_access->sync_secret( 's1', 'h1', 'create' );
 
-		$this->assertFalse( get_option( $this->option_key( self::NS ) ) );
+		$this->assertSame( '', get_option( $this->option_key( self::NS ) ), 'a rejected URL must not be cached; the empty value records that TrustedLogin answered' );
 	}
 
 	// ---------------------------------------------------------------

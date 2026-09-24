@@ -67,6 +67,14 @@ final class Form {
 	private $logging;
 
 	/**
+	 * Support users read once for the Grant Access screen being rendered;
+	 * null outside {@see Form::get_auth_screen()}.
+	 *
+	 * @var \WP_User[]|null
+	 */
+	private $rendering_support_users = null;
+
+	/**
 	 * Form constructor.
 	 *
 	 * @param Config      $config Config object.
@@ -267,7 +275,7 @@ final class Form {
 	 * @return string
 	 */
 	public function get_auth_header_html() {
-		$support_users = $this->support_user->get_all();
+		$support_users = $this->get_support_users();
 
 		if ( empty( $support_users ) ) {
 			return '';
@@ -439,6 +447,8 @@ final class Form {
 		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
+		$this->rendering_support_users = $this->support_user->get_all();
+
 		// Handle the "Try again" link from a prior fallback screen — nonce
 		// verified, then clear the pubkey cache and let the pre-flight
 		// below re-fetch. Any admin can click the link; no capability
@@ -468,7 +478,7 @@ final class Form {
 		// button is replaced by a greyed-out version with a Contact +
 		// Retry pair, inside the normal auth template (no template fork).
 		$preflight_error = null;
-		if ( ! $this->support_user->get_all() ) {
+		if ( ! $this->get_support_users() ) {
 			$preflight_error = $this->get_preflight_error();
 		}
 
@@ -489,7 +499,7 @@ final class Form {
 
 		$content = array(
 			'ns'                      => $this->config->ns(),
-			'has_access_class'        => $this->support_user->get_all() ? 'has-access' : 'grant-access',
+			'has_access_class'        => $this->get_support_users() ? 'has-access' : 'grant-access',
 			'notices'                 => $this->get_notices_html(),
 			'header'                  => $this->get_header_html(),
 			'intro'                   => $this->get_intro(),
@@ -547,7 +557,23 @@ final class Form {
 
 		$output = $this->prepare_output( $auth_screen_template, $content );
 
+		$this->rendering_support_users = null;
+
 		return $output;
+	}
+
+	/**
+	 * Returns the support users, read once per Grant Access screen render.
+	 *
+	 * @return \WP_User[]
+	 */
+	private function get_support_users() {
+
+		if ( null !== $this->rendering_support_users ) {
+			return $this->rendering_support_users;
+		}
+
+		return $this->support_user->get_all();
 	}
 
 	/**
@@ -671,7 +697,7 @@ final class Form {
 	 */
 	private function get_intro() {
 
-		$has_access = $this->support_user->get_all();
+		$has_access = $this->get_support_users();
 
 		if ( $has_access ) {
 			foreach ( $has_access as $access ) {
@@ -706,9 +732,7 @@ final class Form {
 			return false;
 		}
 
-		$has_webhook_url = '' !== Remote::get_webhook_url( $this->config );
-
-		return $has_webhook_url && $this->config->get_setting( 'webhook/create_ticket', false );
+		return $this->may_have_webhook_url() && $this->config->get_setting( 'webhook/create_ticket', false );
 	}
 
 	/**
@@ -718,9 +742,19 @@ final class Form {
 	 * @return bool
 	 */
 	private function is_debug_data_enabled() {
-		$has_webhook_url = '' !== Remote::get_webhook_url( $this->config );
+		return $this->may_have_webhook_url() && $this->config->get_setting( 'webhook/debug_data', false );
+	}
 
-		return $has_webhook_url && $this->config->get_setting( 'webhook/debug_data', false );
+	/**
+	 * Whether a webhook may fire for this grant: a URL is set in Config or
+	 * cached from the dashboard, or no grant has synced yet, so the
+	 * dashboard URL is not known. The first grant caches it before its
+	 * webhook fires.
+	 *
+	 * @return bool
+	 */
+	private function may_have_webhook_url() {
+		return '' !== Remote::get_webhook_url( $this->config ) || Remote::is_webhook_url_unknown( $this->config );
 	}
 
 	/**
@@ -732,7 +766,7 @@ final class Form {
 	 */
 	private function get_details_html() {
 
-		$has_access = $this->support_user->get_all();
+		$has_access = $this->get_support_users();
 
 		// Has access.
 		if ( $has_access ) {
@@ -848,7 +882,7 @@ final class Form {
 	/**
 	 * Get the HTML for the debug data consent checkbox.
 	 *
-	 * Only shown when a webhook URL is set (Config or dashboard) and the webhook/debug_data setting is true.
+	 * Only shown when the webhook/debug_data setting is true and a webhook may fire ({@see Form::may_have_webhook_url()}).
 	 *
 	 * @since 1.4.0
 	 *
@@ -1047,6 +1081,26 @@ final class Form {
 	}
 
 	/**
+	 * Reduces a host to its last two labels, e.g. `….pipedream.net`.
+	 * IP addresses and two-label hosts are returned unchanged.
+	 *
+	 * @param string $host Host name.
+	 *
+	 * @return string
+	 */
+	private static function mask_host( $host ) {
+
+		$labels = explode( '.', $host );
+		$is_ip  = false !== filter_var( $host, FILTER_VALIDATE_IP );
+
+		if ( $is_ip || count( $labels ) <= 2 ) {
+			return $host;
+		}
+
+		return '….' . implode( '.', array_slice( $labels, -2 ) );
+	}
+
+	/**
 	 * Returns the HTML for helpful debug info in the Auth form.
 	 *
 	 * Only shown if ?debug is present in the URL and the user has `manage_options` capability.
@@ -1096,8 +1150,9 @@ final class Form {
 			return str_repeat( '•', $len - $tail ) . substr( $value, -$tail );
 		};
 
-		// Webhook URLs are bearer secrets: show the host and where it
-		// came from, never the path or query.
+		// Webhook URLs are bearer secrets, and some providers put the
+		// secret in a subdomain: show the parent domain and where the URL
+		// came from, never the full host, path or query.
 		$webhook_url = Remote::get_webhook_url( $this->config );
 		if ( '' === $webhook_url ) {
 			$webhook_row = '<code>' . esc_html__( '(Empty)', 'trustedlogin' ) . '</code>';
@@ -1105,7 +1160,7 @@ final class Form {
 			$webhook_source = '' !== Remote::get_config_webhook_url( $this->config )
 				? esc_html__( 'from Config (deprecated)', 'trustedlogin' )
 				: esc_html__( 'from the TrustedLogin dashboard', 'trustedlogin' );
-			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( Remote::redact_url( $webhook_url ) ), $webhook_source );
+			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( self::mask_host( Remote::redact_url( $webhook_url ) ) ), $webhook_source );
 		}
 
 		$items = array(
@@ -1500,7 +1555,7 @@ final class Form {
 			'tl-namespace' => $this->config->ns(),
 		);
 
-		if ( $this->support_user->get_all() ) {
+		if ( $this->get_support_users() ) {
 			$text                = '<span class="dashicons dashicons-update-alt dashicons--small"></span> ' . esc_html( $atts['exists_text'] );
 			$href                = admin_url( 'users.php?role=' . $this->support_user->role->get_name() );
 			$data_atts['access'] = 'extend';
@@ -1748,7 +1803,7 @@ final class Form {
 			$print_and_return = true;
 		}
 
-		$support_users = $this->support_user->get_all();
+		$support_users = $this->get_support_users();
 
 		if ( empty( $support_users ) ) {
 
@@ -1818,9 +1873,9 @@ EOD;
 				esc_html__( 'Copy the access key to your clipboard', 'trustedlogin' ),
 				// %8$s
 				// translators: %s is the display name of the TrustedLogin support user.
-				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $this->support_user->get_first()->display_name ) ),
+				sprintf( esc_html__( 'The access key is not a password; only %1$s will be able to access your site using this code. You may share this access key on support forums.', 'trustedlogin' ), esc_html( $support_users[0]->display_name ) ),
 				/* %9$s */
-				esc_attr( $this->support_user->get_expiration( $this->support_user->get_first() ) )
+				esc_attr( $this->support_user->get_expiration( $support_users[0] ) )
 			);
 		}
 

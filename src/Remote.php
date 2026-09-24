@@ -62,11 +62,11 @@ final class Remote {
 	 */
 	public function init() {
 
-		// If the webhook URL is not set anywhere — Config (current key
-		// or legacy alias) OR the SaaS-cached option — don't add the
-		// actions to speed up initialization.
-		$webhook_url = self::get_webhook_url( $this->config );
-		if ( '' === $webhook_url ) {
+		// Skip the actions only once TrustedLogin has confirmed there is
+		// no dashboard URL. Before the first grant nothing is cached yet,
+		// and that grant caches the URL before its `access/created` fires.
+		$has_webhook_url = '' !== self::get_webhook_url( $this->config ) || self::is_webhook_url_unknown( $this->config );
+		if ( ! $has_webhook_url ) {
 			return;
 		}
 
@@ -108,7 +108,7 @@ final class Remote {
 	 * TrustedLogin dashboard instead — but they still take precedence
 	 * over the dashboard value when set ({@see Remote::get_webhook_url}).
 	 *
-	 * @since 1.10.2
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -129,7 +129,7 @@ final class Remote {
 	 * {@see SiteAccess::sync_secret} writes the sanitized dashboard value
 	 * to the per-namespace option on every successful sync.
 	 *
-	 * @since 1.10.2
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -149,7 +149,7 @@ final class Remote {
 	 * so the Grant Access screen (ticket field, debug-data consent) and
 	 * {@see Remote::maybe_send_webhook} agree on the answer.
 	 *
-	 * @since 1.10.2
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -162,6 +162,30 @@ final class Remote {
 		}
 
 		return self::get_cached_webhook_url( $config );
+	}
+
+	/**
+	 * Whether the webhook URL cannot be known yet: none is set in Config
+	 * and TrustedLogin has not answered a grant on this site, so the
+	 * dashboard value has never been cached.
+	 *
+	 * {@see SiteAccess::sync_secret} stores an empty string when
+	 * TrustedLogin answers without a URL, which ends this state.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Config instance.
+	 *
+	 * @return bool
+	 */
+	public static function is_webhook_url_unknown( Config $config ) {
+		if ( '' !== self::get_config_webhook_url( $config ) ) {
+			return false;
+		}
+
+		$option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $config->ns() );
+
+		return false === get_option( $option_key, false );
 	}
 
 	/**

@@ -270,7 +270,10 @@ class TrustedLoginFormWebhookUrlReadChainTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( $this->debug_consent_marker(), $html );
 	}
 
-	public function test_surfaces_hidden_when_no_url_anywhere() {
+	public function test_surfaces_hidden_when_trustedlogin_answered_without_a_url() {
+		// SiteAccess::sync_secret() stores '' once TrustedLogin answers a
+		// grant without a dashboard URL.
+		$this->set_cached_url( '' );
 		$form = $this->build_form( $this->build_config( array(
 			'create_ticket' => true,
 			'debug_data'    => true,
@@ -281,6 +284,61 @@ class TrustedLoginFormWebhookUrlReadChainTest extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( $this->ticket_field_marker(), $html );
 		$this->assertStringNotContainsString( $this->debug_consent_marker(), $html );
 		$this->assertFalse( $this->get_button_settings( $form )['create_ticket'] );
+	}
+
+	/**
+	 * Before the first grant nothing is cached, so the dashboard URL is not
+	 * known yet. The first grant caches it before its webhook fires, so the
+	 * ticket message and debug data it collects are delivered.
+	 */
+	public function test_surfaces_shown_before_the_first_grant_has_synced() {
+		delete_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, self::NS ) );
+
+		$form = $this->build_form( $this->build_config( array(
+			'create_ticket' => true,
+			'debug_data'    => true,
+		) ) );
+
+		$html = $form->get_auth_screen();
+
+		$this->assertStringContainsString( $this->ticket_field_marker(), $html );
+		$this->assertStringContainsString( $this->debug_consent_marker(), $html );
+		$this->assertTrue( $this->get_button_settings( $form )['create_ticket'] );
+	}
+
+	/**
+	 * Providers such as Pipedream put the secret in the subdomain.
+	 */
+	public function test_admin_debug_row_masks_subdomains_of_the_webhook_host() {
+		$this->set_cached_url( 'https://eo1a2b3c4d5e6f.m.pipedream.net/' );
+		$form = $this->build_form( $this->build_config() );
+
+		$row = $this->get_webhook_debug_row( $form );
+
+		$this->assertStringContainsString( 'pipedream.net', $row );
+		$this->assertStringNotContainsString( 'eo1a2b3c4d5e6f', $row, 'a subdomain can carry the webhook secret' );
+	}
+
+	/**
+	 * The screen reads the support users once per render.
+	 */
+	public function test_auth_screen_queries_support_users_once() {
+		$this->set_cached_url( self::URL_CACHED );
+		$form = $this->build_form( $this->build_config( array( 'create_ticket' => true ) ) );
+
+		$queries = 0;
+		$counter = function ( $query ) use ( &$queries ) {
+			if ( 'tl_' . self::NS . '_id' === $query->get( 'meta_key' ) ) {
+				++$queries;
+			}
+		};
+		add_action( 'pre_get_users', $counter );
+
+		$form->get_auth_screen();
+
+		remove_action( 'pre_get_users', $counter );
+
+		$this->assertSame( 1, $queries );
 	}
 
 	public function test_surfaces_hidden_when_flags_false_with_dashboard_url_cached() {

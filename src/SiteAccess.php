@@ -129,6 +129,11 @@ class SiteAccess {
 			// Silent on null / empty / type-mismatch — preserves cache.
 		}
 
+		// Records that TrustedLogin has answered, so the Grant Access form
+		// stops offering webhook fields when the dashboard has no URL.
+		// add_option() leaves a cached URL untouched.
+		add_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ), '', '', false );
+
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/secret/synced',
 			array(
