@@ -588,4 +588,223 @@ class TrustedLoginUninstallTest extends WP_UnitTestCase {
 		$this->assertFalse( ms_is_switched() );
 		$this->assertFalse( has_filter( 'trustedlogin/' . $ns . '/logging/enabled', '__return_false' ), 'logging must be unsilenced before rethrowing' );
 	}
+
+	/**
+	 * Fails every DELETE to the TrustedLogin sites endpoint, recording the
+	 * URL and timeout of each. Runs after the SaaS stub so it wins.
+	 *
+	 * @return \ArrayObject Recorded array( url, timeout ) pairs.
+	 */
+	private function fail_saas_deletes() {
+		$requests = new \ArrayObject();
+
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) use ( $requests ) {
+				if ( 'DELETE' !== $args['method'] || false === strpos( $url, '/sites/' ) ) {
+					return $preempt;
+				}
+
+				$requests[] = array( $url, $args['timeout'] );
+
+				return new \WP_Error( 'http_request_failed', 'offline' );
+			},
+			20,
+			3
+		);
+
+		return $requests;
+	}
+
+	public function test_uninstall_stops_revoking_after_a_failed_request_and_reports_the_rest() {
+		$ns     = $this->unique_namespace( 'fail' );
+		$config = $this->build_config( $ns );
+		$this->grant( $config );
+		$this->seed_non_grant_rows( $config );
+
+		$requests = $this->fail_saas_deletes();
+
+		$report = Client::uninstall( $config );
+
+		$this->assertCount( 1, $requests, 'after one failure no further revoke may be sent' );
+		$this->assertSame( Uninstaller::SAAS_REVOKE_TIMEOUT, $requests[0][1], 'each revoke must use the short timeout' );
+		$this->assertSame( 0, $report['saas_revokes'] );
+		$this->assertCount( 2, $report['saas_revokes_failed'], 'both the grant and the queued revoke must be reported' );
+		$this->assertContains( 'secret-' . $ns, $report['saas_revokes_failed'] );
+		$this->assert_namespace_rows_absent( $ns, 'after: ' );
+	}
+
+	public function test_uninstall_sends_no_revoke_once_the_time_budget_is_spent() {
+		$ns     = $this->unique_namespace( 'budget' );
+		$config = $this->build_config( $ns );
+		add_filter( 'trustedlogin/' . $ns . '/meets_ssl_requirement', '__return_true' );
+		$this->ssl_filters[] = 'trustedlogin/' . $ns . '/meets_ssl_requirement';
+
+		$deletes = $this->record_saas_deletes();
+
+		$uninstaller = new Uninstaller( $config );
+		$reflection  = new \ReflectionClass( Uninstaller::class );
+
+		$report = $reflection->getProperty( 'report' );
+		$report->setAccessible( true );
+		$report->setValue(
+			$uninstaller,
+			array(
+				'saas_revokes'        => 0,
+				'saas_revokes_failed' => array(),
+			)
+		);
+
+		$started = $reflection->getProperty( 'saas_revokes_started' );
+		$started->setAccessible( true );
+		$started->setValue( $uninstaller, microtime( true ) - Uninstaller::SAAS_REVOKE_BUDGET - 1 );
+
+		$revoke = $reflection->getMethod( 'revoke_at_saas' );
+		$revoke->setAccessible( true );
+		$revoke->invoke( $uninstaller, 'secret-over-budget' );
+
+		$after = $report->getValue( $uninstaller );
+
+		$this->assertCount( 0, $deletes, 'no request may be sent once the budget is spent' );
+		$this->assertSame( array( 'secret-over-budget' ), $after['saas_revokes_failed'] );
+	}
+
+	public function test_uninstall_does_not_count_a_revoke_skipped_for_the_ssl_requirement() {
+		$ns     = $this->unique_namespace( 'nossl' );
+		$config = $this->build_config( $ns );
+		$this->grant( $config );
+
+		$hook = 'trustedlogin/' . $ns . '/meets_ssl_requirement';
+		remove_filter( $hook, '__return_true' );
+		add_filter( $hook, '__return_false' );
+
+		$deletes = $this->record_saas_deletes();
+
+		$report = Client::uninstall( $config );
+
+		remove_filter( $hook, '__return_false' );
+
+		$this->assertCount( 0, $deletes );
+		$this->assertSame( 0, $report['saas_revokes'], 'a revoke that was never sent is not a revoke' );
+		$this->assertCount( 1, $report['saas_revokes_failed'] );
+	}
+
+	public function test_uninstall_removes_the_endpoint_before_visiting_sites_when_every_site_is_visited() {
+		$ns     = $this->unique_namespace( 'epfirst' );
+		$config = $this->build_config( $ns );
+		$this->grant( $config );
+
+		$this->assertNotEmpty( get_site_option( 'tl_' . $ns . '_endpoint' ), 'fixture: the endpoint must exist' );
+
+		$seen   = new \ArrayObject();
+		$record = function () use ( $ns, $seen ) {
+			$seen[] = get_site_option( 'tl_' . $ns . '_endpoint' );
+		};
+		add_action( 'delete_user', $record );
+
+		$report = Client::uninstall( $config );
+
+		remove_action( 'delete_user', $record );
+
+		$this->assertNotEmpty( $seen, 'fixture: a support user must have been deleted' );
+		$this->assertFalse( $seen[0], 'the endpoint must be gone before the first support user is deleted' );
+		$this->assertTrue( $report['endpoint'] );
+	}
+
+	public function test_uninstall_deletes_the_sweep_failures_transient() {
+		$ns = $this->unique_namespace( 'fails' );
+
+		Utils::set_transient( sprintf( Cron::RECONCILE_FAILURES_TRANSIENT, $ns ), array( 'x' => array( 'count' => 1, 'retry_after' => time() ) ), HOUR_IN_SECONDS );
+
+		Client::uninstall( $ns );
+
+		$this->assertFalse( get_option( sprintf( Cron::RECONCILE_FAILURES_TRANSIENT, $ns ) ), 'the row must be gone, not just expired' );
+	}
+
+	/**
+	 * Seeds a support user of the namespace on the current site.
+	 *
+	 * @return int User ID.
+	 */
+	private function seed_support_user( $ns ) {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_option( $user_id, 'tl_' . $ns . '_id', md5( wp_generate_uuid4() ), true );
+
+		return $user_id;
+	}
+
+	public function test_uninstall_of_one_site_keeps_a_member_of_another_site_and_their_posts() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$ns       = $this->unique_namespace( 'member' );
+		$user_id  = $this->seed_support_user( $ns );
+		$sub_site = self::factory()->blog->create();
+
+		add_user_to_blog( $sub_site, $user_id, 'editor' );
+
+		switch_to_blog( $sub_site );
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		restore_current_blog();
+
+		$report = Client::uninstall( $ns, array( 'network' => false ) );
+
+		$this->assertSame( 1, $report['support_users'] );
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ), 'a member of a site not visited must stay on the network' );
+		$this->assertFalse( is_user_member_of_blog( $user_id, get_current_blog_id() ) );
+
+		switch_to_blog( $sub_site );
+		$post = get_post( $post_id );
+		restore_current_blog();
+
+		$this->assertInstanceOf( \WP_Post::class, $post, 'the user\'s post on the other site must survive' );
+	}
+
+	public function test_uninstall_keeps_a_support_user_whose_only_site_is_archived() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$ns       = $this->unique_namespace( 'archived' );
+		$user_id  = $this->seed_support_user( $ns );
+		$sub_site = self::factory()->blog->create();
+
+		add_user_to_blog( $sub_site, $user_id, 'editor' );
+		remove_user_from_blog( $user_id, get_current_blog_id() );
+		update_blog_status( $sub_site, 'archived', '1' );
+
+		$this->assertSame( array(), get_blogs_of_user( $user_id ), 'fixture: the default site list must skip the archived site' );
+
+		Client::uninstall( $ns, array( 'network' => false ) );
+
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ), 'a member of an archived site is not unclaimed' );
+
+		update_blog_status( $sub_site, 'archived', '0' );
+	}
+
+	public function test_uninstall_creates_no_upload_folders_on_the_sites_it_visits() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$ns       = $this->unique_namespace( 'uploads' );
+		$sub_site = self::factory()->blog->create();
+
+		switch_to_blog( $sub_site );
+		$uploads = wp_upload_dir( null, false );
+		restore_current_blog();
+
+		$this->assertFalse( is_dir( $uploads['path'] ), 'fixture: the new site has no upload folder yet' );
+
+		Client::uninstall( $ns );
+
+		$created = is_dir( $uploads['path'] );
+
+		if ( $created ) {
+			rmdir( $uploads['path'] );
+		}
+
+		$this->assertFalse( $created, 'uninstall must not create upload folders' );
+	}
 }

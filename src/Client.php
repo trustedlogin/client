@@ -238,7 +238,7 @@ final class Client {
 	 *     @type bool      $delete_logs Whether to delete this namespace's log files. Default true.
 	 * }
 	 *
-	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool, saas_revokes: int}
+	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool, saas_revokes: int, saas_revokes_failed: string[]}
 	 *               What was deleted. See {@see Uninstaller::run()}.
 	 *
 	 * @throws Exception When the namespace is empty.

@@ -131,6 +131,10 @@ if ( ! function_exists( 'delete_option' ) ) {
 if ( ! function_exists( 'is_multisite' ) ) {
 	function is_multisite() { return false; }
 }
+// Requests in the unit suite are plain HTTP.
+if ( ! function_exists( 'is_ssl' ) ) {
+	function is_ssl() { return false; }
+}
 if ( ! function_exists( 'flush_rewrite_rules' ) ) {
 	function flush_rewrite_rules( $hard = true ) {
 		$GLOBALS['tl_unit_rewrite_flushes'] = isset( $GLOBALS['tl_unit_rewrite_flushes'] ) ? $GLOBALS['tl_unit_rewrite_flushes'] + 1 : 1;
