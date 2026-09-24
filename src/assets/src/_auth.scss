@@ -126,7 +126,7 @@
 
 		.tl-#{$namespace}-auth__response_error {
 			padding: 20px;
-			margin-bottom: $vertical-spacing / 2;
+			margin: 0 ($gutter-width * 2) ($vertical-spacing / 2);
 			color: #23282D;
 			font-weight: 500;
 			vertical-align: top;
