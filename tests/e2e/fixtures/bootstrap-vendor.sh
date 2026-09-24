@@ -82,7 +82,16 @@ clone_with_token() {
     fi
     rm -rf "$dest"
     bold "  cloning $repo @ $branch → $dest"
-    git clone --branch "$branch" --depth=1 --quiet "$url" "$dest"
+    # init + fetch (instead of `git clone --branch "$branch"`) so $branch
+    # can be a branch name, tag, OR raw commit SHA. The connector-side
+    # cross-repo gate dispatches the PR head SHA, which `git clone
+    # --branch` rejects with "Remote branch <sha> not found". GitHub
+    # serves arbitrary SHAs over fetch (uploadpack.allowAnySHA1InWant
+    # is on by default) and writes them to FETCH_HEAD.
+    git init --quiet "$dest"
+    git -C "$dest" remote add origin "$url"
+    git -C "$dest" fetch origin "$branch" --depth=1 --quiet
+    git -C "$dest" reset --hard FETCH_HEAD --quiet
 }
 
 # ----- Clone plugins ----------------------------------------------------------
@@ -158,6 +167,27 @@ bold "Staging gravityforms"
 # the local checkout isn't present.
 LOCAL_GF="${LOCAL_GF:-$HOME/Local/dev/app/public/wp-content/plugins/gravityforms}"
 clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms" "$LOCAL_GF"
+
+# Gravity Forms loads the Jetpack Autoloader on line 161 of gravityforms.php,
+# and `/vendor` is gitignored in that repo — the release zip ships it, a clone
+# does not. Without this, `wp plugin activate gravityforms` dies with
+# "Failed opening required '.../vendor/autoload_packages.php'" and the whole
+# bootstrap step exits 255. jetpack-autoloader is already in GF's
+# config.allow-plugins, so a plain install generates the file.
+# The stamp records the checkout revision and dependency manifest the install
+# ran against, so a cached clone that moves to a new revision reinstalls. It
+# lives outside vendor/, which the composer container creates as root.
+GF_COMPOSER_STAMP="fixtures/.cache-gravityforms-composer-stamp"
+GF_MANIFEST_HASH="$( { cat fixtures/gravityforms/composer.json; if [[ -f fixtures/gravityforms/composer.lock ]]; then cat fixtures/gravityforms/composer.lock; fi; } | shasum -a 256 | cut -d' ' -f1 )"
+GF_COMPOSER_WANT="$(git -C fixtures/gravityforms rev-parse HEAD 2>/dev/null || echo no-git) ${GF_MANIFEST_HASH}"
+GF_COMPOSER_HAVE="$(cat "$GF_COMPOSER_STAMP" 2>/dev/null || true)"
+if [[ ! -f "fixtures/gravityforms/vendor/autoload_packages.php" || "$GF_COMPOSER_HAVE" != "$GF_COMPOSER_WANT" || "$REFRESH_PLUGINS" == "true" ]]; then
+    bold "  composer install inside gravityforms"
+    docker run --rm -v "$(pwd)/fixtures/gravityforms:/app" -w /app \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+        composer:2 install --no-dev --no-progress --no-interaction --prefer-dist \
+        && echo "$GF_COMPOSER_WANT" > "$GF_COMPOSER_STAMP"
+fi
 
 # Gravity Forms's dev branch ships source JS/CSS that only resolves after a
 # build. Without this step, assets 404 (theme-foundation.min.css, etc.) and

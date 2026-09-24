@@ -62,18 +62,9 @@ final class Remote {
 	 */
 	public function init() {
 
-		// If the webhook URL is not set anywhere — Config (current key
-		// or legacy alias) OR the SaaS-cached option — don't add the
-		// actions to speed up initialization.
-		$has_config_url = $this->config->get_setting( 'webhook/url' ) || $this->config->get_setting( 'webhook_url' );
-		$has_cached_url = (bool) get_option(
-			sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ),
-			''
-		);
-		if ( ! $has_config_url && ! $has_cached_url ) {
-			return;
-		}
-
+		// Registered even with no URL known: a grant can cache the dashboard
+		// URL in the same request, before `access/created` fires.
+		// maybe_send_webhook() returns early when no URL is set.
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/created', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/extended', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
 		add_action( 'trustedlogin/' . $this->config->ns() . '/access/revoked', array( $this, 'maybe_send_webhook' ) ); // @phpstan-ignore-line
@@ -102,6 +93,81 @@ final class Remote {
 	 */
 	public static function reset_deprecation_flag() {
 		self::$deprecation_logged = false;
+	}
+
+	/**
+	 * Returns the webhook URL set in Config: `webhook/url`, else the legacy
+	 * `webhook_url`. Both are deprecated but still override the dashboard URL.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Config instance.
+	 *
+	 * @return string The Config URL, or '' when neither key is set.
+	 */
+	public static function get_config_webhook_url( Config $config ) {
+		$url = $config->get_setting( 'webhook/url' );
+		if ( ! $url ) {
+			$url = $config->get_setting( 'webhook_url' );
+		}
+
+		return $url && is_scalar( $url ) ? (string) $url : '';
+	}
+
+	/**
+	 * Returns the webhook URL {@see SiteAccess::sync_secret} cached from the
+	 * TrustedLogin dashboard.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Config instance.
+	 *
+	 * @return string The cached URL, or '' when nothing is cached.
+	 */
+	public static function get_cached_webhook_url( Config $config ) {
+		$option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $config->ns() );
+
+		return (string) get_option( $option_key, '' );
+	}
+
+	/**
+	 * Returns the webhook URL delivery uses: Config first, then the dashboard.
+	 * Checks for "will a webhook fire?" must use it, so the Grant Access
+	 * screen and {@see Remote::maybe_send_webhook} agree.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Config instance.
+	 *
+	 * @return string The effective URL, or '' when no URL is set anywhere.
+	 */
+	public static function get_webhook_url( Config $config ) {
+		$config_url = self::get_config_webhook_url( $config );
+		if ( '' !== $config_url ) {
+			return $config_url;
+		}
+
+		return self::get_cached_webhook_url( $config );
+	}
+
+	/**
+	 * Whether the webhook URL is not known yet: none is set in Config and
+	 * TrustedLogin has not answered a grant on this site.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config $config Config instance.
+	 *
+	 * @return bool
+	 */
+	public static function is_webhook_url_unknown( Config $config ) {
+		if ( '' !== self::get_config_webhook_url( $config ) ) {
+			return false;
+		}
+
+		$option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $config->ns() );
+
+		return false === get_option( $option_key, false );
 	}
 
 	/**
@@ -166,7 +232,7 @@ final class Remote {
 	}
 
 	/**
-	 * POSTs to `webhook/url`, if defined in the configuration array.
+	 * POSTs the access event to the webhook URL, when one is set.
 	 *
 	 * @since 1.0.0
 	 * @since 1.4.0 $data now includes the `$access_key` and `$debug_data` keys.
@@ -196,15 +262,10 @@ final class Remote {
 		// When BOTH a Config-level URL AND the cached SaaS URL exist,
 		// Config wins AND a distinct shadowing log line fires so
 		// integrators can detect shadowing without grep ambiguity.
-		$config_url = $this->config->get_setting( 'webhook/url' );
-		if ( ! $config_url ) {
-			$config_url = $this->config->get_setting( 'webhook_url' );
-		}
+		$config_url = self::get_config_webhook_url( $this->config );
+		$cached_url = self::get_cached_webhook_url( $this->config );
 
-		$cached_option_key = sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() );
-		$cached_url        = (string) get_option( $cached_option_key, '' );
-
-		if ( $config_url ) {
+		if ( '' !== $config_url ) {
 			$webhook_url = $config_url;
 
 			if ( ! self::$deprecation_logged ) {

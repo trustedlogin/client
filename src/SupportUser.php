@@ -32,6 +32,16 @@ final class SupportUser {
 	const ID_QUERY_PARAM = 'tlid';
 
 	/**
+	 * Seconds after registration during which the expired-access sweep leaves
+	 * a support user alone.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @var int
+	 */
+	const RECONCILE_GRACE_PERIOD = 300;
+
+	/**
 	 * Config instance.
 	 *
 	 * @var Config $config
@@ -447,13 +457,6 @@ final class SupportUser {
 	 */
 	public function get_all() {
 
-		static $support_users = null;
-
-		// Only fetch once per process.
-		if ( ! is_null( $support_users ) ) {
-			return $support_users;
-		}
-
 		$args = array(
 			'number'       => - 1,
 			'meta_key'     => $this->user_identifier_meta_key,  // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
@@ -461,11 +464,135 @@ final class SupportUser {
 			'meta_value'   => '', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		);
 
-		$support_users = get_users( $args );
-
-		return $support_users;
+		return get_users( $args );
 	}
 
+
+	/**
+	 * Returns the identifiers of support users on the current site whose
+	 * access is no longer valid.
+	 *
+	 * A user with no expiration counts as expired: {@see SupportUser::setup()}
+	 * writes it only when cron scheduling succeeded. Users registered within
+	 * RECONCILE_GRACE_PERIOD are skipped while their grant may still be syncing.
+	 *
+	 * The expiration is stored per site, so a member of several sites is
+	 * judged by the site that holds it.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @return string[] User identifier hashes.
+	 */
+	public function get_expired_identifiers() {
+
+		$identifiers = array();
+
+		foreach ( $this->get_all() as $support_user ) {
+			if ( $this->is_active( $support_user ) ) {
+				continue;
+			}
+
+			$registered = strtotime( $support_user->user_registered . ' UTC' );
+
+			if ( $registered && $registered > time() - self::RECONCILE_GRACE_PERIOD ) {
+				continue;
+			}
+
+			$has_expiration_here = (bool) $this->get_expiration( $support_user );
+
+			if ( ! $has_expiration_here && $this->has_expiration_on_another_site( $support_user->ID ) ) {
+				continue;
+			}
+
+			$user_identifier = get_user_option( $this->user_identifier_meta_key, $support_user->ID );
+
+			if ( ! is_string( $user_identifier ) || '' === $user_identifier ) {
+				continue;
+			}
+
+			$identifiers[] = $user_identifier;
+		}
+
+		return $identifiers;
+	}
+
+	/**
+	 * Whether a user carries this namespace's expiration on a site other
+	 * than the current one.
+	 *
+	 * @param int $user_id User ID.
+	 *
+	 * @return bool
+	 */
+	private function has_expiration_on_another_site( $user_id ) {
+		global $wpdb;
+
+		if ( ! is_multisite() ) {
+			return false;
+		}
+
+		foreach ( array_keys( get_blogs_of_user( $user_id ) ) as $blog_id ) {
+			if ( get_current_blog_id() === (int) $blog_id ) {
+				continue;
+			}
+
+			$expiration = get_user_meta( $user_id, $wpdb->get_blog_prefix( $blog_id ) . $this->expires_meta_key, true );
+
+			if ( $expiration ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether a user on this site holds the cloned support role. A grant in
+	 * progress holds it before its identifier meta is written. Always false
+	 * for a stock role, which ordinary users hold too.
+	 *
+	 * @return bool
+	 */
+	private function cloned_role_has_users() {
+
+		if ( ! $this->config->get_setting( 'clone_role' ) ) {
+			return false;
+		}
+
+		$holders = get_users(
+			array(
+				'role'   => $this->role->get_name(),
+				'number' => 1,
+				'fields' => 'ID',
+			)
+		);
+
+		return ! empty( $holders );
+	}
+
+	/**
+	 * Whether this namespace has a support user on any site. The endpoint is
+	 * one network-wide option.
+	 *
+	 * @return bool
+	 */
+	private function has_support_users_on_network() {
+
+		$args = array(
+			'number'       => 1,
+			'fields'       => 'ID',
+			'meta_key'     => $this->user_identifier_meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_compare' => 'EXISTS',
+		);
+
+		if ( is_multisite() ) {
+			$args['blog_id'] = 0;
+		}
+
+		$user_ids = get_users( $args );
+
+		return ! empty( $user_ids );
+	}
 
 	/**
 	 * Returns the first support user active on the site, if any.
@@ -489,6 +616,13 @@ final class SupportUser {
 	 *
 	 * @used-by SupportUser::maybe_login() Called when user access has expired, but the cron didn't run...
 	 * @used-by Client::revoke_access()
+	 *
+	 * On multisite the user is removed from the current site, and deleted from
+	 * the network only once they belong to no other site.
+	 *
+	 * The cloned role is kept while another user on this site holds it, and
+	 * the endpoint while any support user of this namespace exists on the
+	 * network. Both cases are logged.
 	 *
 	 * @param string $user_identifier Unique identifier of the user to delete.
 	 * @param bool   $delete_role Should the TrustedLogin-created user role be deleted also? Default: `true`.
@@ -525,17 +659,23 @@ final class SupportUser {
 		// Remove auto-cleanup hook.
 		wp_clear_scheduled_hook( 'trustedlogin/' . $this->config->ns() . '/access/revoke', array( $user_identifier ) );
 
-		// Delete first using wp_delete_user() to allow for reassignment of posts.
+		// On multisite this removes the user from the current site only,
+		// reassigning their posts here.
 		$deleted = wp_delete_user( $user->ID, $reassign_id_or_null );
 
-		// Also delete the user from the all sites on the WP Multisite network.
-		$wpmu_deleted = \function_exists( 'wpmu_delete_user' ) ? wpmu_delete_user( $user->ID ) : false;
+		$wpmu_deleted = false;
+
+		if ( $deleted && is_multisite() ) {
+			$wpmu_deleted = $this->maybe_delete_from_network( $user->ID );
+		}
 
 		if ( $deleted ) {
 			$message = 'User: ' . $user->ID . ' deleted.';
 
 			if ( $wpmu_deleted ) {
 				$message .= ' Also deleted from the Multisite network.';
+			} elseif ( is_multisite() ) {
+				$message .= ' Kept on the network: the user still belongs to other sites.';
 			}
 
 			$this->logging->log( $message, __METHOD__, 'info' );
@@ -543,11 +683,20 @@ final class SupportUser {
 			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
-		if ( $delete_role ) {
+		// A grant in progress holds the role before its identifier meta is written.
+		$role_in_use = $this->cloned_role_has_users();
+
+		if ( $delete_role && $role_in_use ) {
+			$this->logging->log( 'The support role was kept: another user on this site holds it.', __METHOD__, 'notice' );
+		} elseif ( $delete_role ) {
 			$this->role->delete();
 		}
 
-		if ( $delete_endpoint ) {
+		$endpoint_in_use = $this->has_support_users_on_network();
+
+		if ( $delete_endpoint && $endpoint_in_use ) {
+			$this->logging->log( 'The login endpoint was kept: a support user still exists on the network.', __METHOD__, 'notice' );
+		} elseif ( $delete_endpoint ) {
 			$endpoint = new Endpoint( $this->config, $this->logging );
 			$endpoint->delete();
 		}
@@ -566,6 +715,44 @@ final class SupportUser {
 		}
 
 		return $this->delete( $user_identifier, $delete_role, $delete_endpoint );
+	}
+
+	/**
+	 * Deletes a user from the network once they belong to no site, archived,
+	 * spam and deleted sites included. {@see wpmu_delete_user()} deletes a
+	 * member's posts on every site without reassigning them. A user who
+	 * stays loses this namespace's per-site options for the current site,
+	 * and stops being a support user unless another site holds their grant.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param int $user_id User already removed from the current site.
+	 *
+	 * @return bool True when the user was deleted from the network.
+	 */
+	public function maybe_delete_from_network( $user_id ) {
+
+		$remaining_sites = get_blogs_of_user( $user_id, true );
+
+		if ( ! empty( $remaining_sites ) ) {
+			delete_user_option( $user_id, $this->expires_meta_key );
+			delete_user_option( $user_id, $this->created_by_meta_key );
+
+			// The identifier is network-wide; left in place, the other sites'
+			// sweeps would treat this member as an expired support user.
+			if ( ! $this->has_expiration_on_another_site( $user_id ) ) {
+				delete_user_option( $user_id, $this->user_identifier_meta_key, true );
+				delete_user_option( $user_id, $this->site_hash_meta_key, true );
+			}
+
+			return false;
+		}
+
+		if ( ! \function_exists( 'wpmu_delete_user' ) ) {
+			return false;
+		}
+
+		return (bool) wpmu_delete_user( $user_id );
 	}
 
 	/**
@@ -666,7 +853,7 @@ final class SupportUser {
 			return true;
 		}
 
-		return new \WP_Error( 'extend_failed', 'Error rescheduling cron task' );
+		return new \WP_Error( 'extend_failed', __( 'The access expiration could not be rescheduled.', 'trustedlogin' ) );
 	}
 
 	/**

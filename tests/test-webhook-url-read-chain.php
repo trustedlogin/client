@@ -8,7 +8,7 @@
  *   - Cached SaaS URL is the third-priority source.
  *   - Deprecation log fires AT MOST ONCE per request when Config is set.
  *   - Distinct shadowing log fires when BOTH Config AND cached are set.
- *   - `Remote::init()` registers hooks when only the cached URL exists.
+ *   - `Remote::init()` registers hooks whether or not a URL is known.
  *   - Webhook payload shape is locked: no signature header, no extra fields.
  *
  * @group integration
@@ -203,17 +203,73 @@ class TrustedLoginWebhookUrlReadChainTest extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_init_skips_when_neither_config_nor_cached_set() {
-		$config  = $this->build_config_with_webhook_url( null );
+	/**
+	 * A grant can cache a newly added dashboard URL in the same request,
+	 * after init() ran, so the hooks must be registered even when
+	 * TrustedLogin last answered without a URL.
+	 */
+	public function test_init_registers_hooks_after_trustedlogin_answered_without_a_url() {
+		$config = $this->build_config_with_webhook_url( null );
+		$this->set_cached_url( '' );
+
+		$logging = new Logging( $config );
+		$remote  = new Remote( $config, $logging );
+		$remote->init();
+
+		$this->assertTrue(
+			has_action( 'trustedlogin/' . self::NS . '/access/created' ) > 0,
+			'Hooks must register even when no URL is known yet.'
+		);
+
+		// The next grant's sync caches the URL the vendor just added.
+		$this->set_cached_url( self::URL_CACHED );
+
+		do_action(
+			'trustedlogin/' . self::NS . '/access/created',
+			array(
+				'url'    => 'https://example.test',
+				'ns'     => self::NS,
+				'action' => 'created',
+			)
+		);
+
+		$this->assertWebhookCount( 1 );
+		$this->assertWebhookFiredToUrl( self::URL_CACHED );
+	}
+
+	public function test_webhook_is_not_sent_when_no_url_is_set() {
+		$config = $this->build_config_with_webhook_url( null );
+		$this->set_cached_url( '' );
+
+		$remote = new Remote( $config, new Logging( $config ) );
+
+		$this->assertFalse(
+			$remote->maybe_send_webhook(
+				array(
+					'url'    => 'https://example.test',
+					'ns'     => self::NS,
+					'action' => 'created',
+				)
+			)
+		);
+		$this->assertWebhookCount( 0 );
+	}
+
+	/**
+	 * The first grant caches the dashboard URL during the same request,
+	 * before `access/created` fires, so the hooks must already be there.
+	 */
+	public function test_init_registers_hooks_before_the_first_grant_has_synced() {
+		$config = $this->build_config_with_webhook_url( null );
 		delete_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, self::NS ) );
 
 		$logging = new Logging( $config );
 		$remote  = new Remote( $config, $logging );
 		$remote->init();
 
-		$this->assertFalse(
-			has_action( 'trustedlogin/' . self::NS . '/access/created' ),
-			'Hooks must NOT register when neither Config nor cached URL is set (existing perf optimization).'
+		$this->assertTrue(
+			has_action( 'trustedlogin/' . self::NS . '/access/created' ) > 0,
+			'Hooks must register while the dashboard URL is not yet known.'
 		);
 	}
 

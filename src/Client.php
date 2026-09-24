@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.10.1';
+	const VERSION = '1.11.0';
 
 	/**
 	 * Instance of Config
@@ -216,6 +216,38 @@ final class Client {
 	}
 
 	/**
+	 * Deletes everything the SDK stored for one namespace. Call it from the
+	 * vendor plugin's `uninstall.php`, not on deactivation: a reactivated
+	 * plugin sends no webhooks until its next grant re-caches the URL.
+	 *
+	 * Needs no Client, so it runs when TrustedLogin is disabled by constant
+	 * or the site lacks sodium.
+	 *
+	 * @since 1.11.0
+	 *
+	 * @param Config|string $config_or_namespace The Config the plugin boots with, or its `vendor/namespace` value.
+	 *                                           Pass the Config when it sets `clone_role`, `role`,
+	 *                                           `logging/directory` or `auth/api_key`. `uninstall.php` loads
+	 *                                           without the plugin's main file, so role and option-name
+	 *                                           filters must be added there again.
+	 * @param array         $args {
+	 *     Optional run options.
+	 *
+	 *     @type bool|null $network     Multisite: null (default) cleans every site unless wp_is_large_network(),
+	 *                                  true cleans every site, false cleans the current site only.
+	 *     @type bool      $delete_logs Whether to delete this namespace's log files. Default true.
+	 * }
+	 *
+	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool, saas_revokes: int, saas_revokes_failed: string[]}
+	 *               What was deleted. See {@see Uninstaller::run()}.
+	 *
+	 * @throws Exception When the namespace is empty.
+	 */
+	public static function uninstall( $config_or_namespace, array $args = array() ) {
+		return Uninstaller::from( $config_or_namespace, $args )->run();
+	}
+
+	/**
 	 * Returns the current access key (hashed license key or generated access key
 	 *
 	 * @see SiteAccess::get_access_key()
@@ -316,6 +348,8 @@ final class Client {
 		}
 
 		if ( empty( $did_setup ) ) {
+			$this->delete_unsynced_support_user( $support_user_id );
+
 			return new WP_Error( 'support_user_setup_failed', 'Error updating user with identifier.', array( 'error_code' => 503 ) );
 		}
 
@@ -705,12 +739,9 @@ final class Client {
 	}
 
 	/**
-	 * Roll back a partially-created support user when the SaaS sync
-	 * fails mid-grant. Plain wp_delete_user() leaves the user record
-	 * in the network table on multisite — the user can no longer
-	 * log in, but a row remains in wp_users with the cloned
-	 * support-role caps in user_meta. wpmu_delete_user removes the
-	 * record from the network entirely.
+	 * Rolls back a support user whose grant failed partway. On multisite
+	 * the user is removed from the current site, and deleted from the
+	 * network only when they belong to no other site.
 	 *
 	 * @param int $support_user_id The user id to remove.
 	 *
@@ -727,10 +758,10 @@ final class Client {
 			require_once ABSPATH . 'wp-admin/includes/ms.php';
 		}
 
-		wp_delete_user( $support_user_id );
+		$deleted = wp_delete_user( $support_user_id );
 
-		if ( is_multisite() && function_exists( 'wpmu_delete_user' ) ) {
-			wpmu_delete_user( $support_user_id );
+		if ( $deleted && is_multisite() ) {
+			$this->support_user->maybe_delete_from_network( $support_user_id );
 		}
 	}
 

@@ -35,7 +35,6 @@ When landing a security fix, the commit message, comments, and PR body must desc
 
 - **Don't describe the pre-fix vulnerability.** No "previously allowed X", "the old code accepted Y", "scheme-loose check", "HTTP was mistakenly trusted". If a reader can reconstruct the bug from the commit alone, you've leaked it.
 - **Don't name exploit chains.** No "MITM → inject granted message", "confused-deputy → key harvest", "CSRF bypasses nonce". These are stepping stones for anyone doing patch-diff analysis on released versions.
-- **Don't cite audit finding IDs.** No "fixes audit P3 #1", "CodeRabbit finding B2", "see internal audit". Audit artifacts belong in private notes, not commit messages. They give searchers a handle to pivot from.
 - **Don't quote attacker capability.** No "an attacker who controls the parent origin could…", "a compromised proxy could inject…". Attacker capability descriptions are exploit recipes.
 - **Don't narrate pre-fix state in code comments either.** Comments ship with the code — a `// Previously we did X, which allowed Y` comment is a permanent exploit recipe for every future release.
 
@@ -50,34 +49,14 @@ Examples of the rewrite:
 | `security(role): add current_user_can() check — previously any logged-in user could revoke support access.` | `refactor(support-user): revoke flow requires the manage_options capability.` |
 | `// OLD: trusted the client-supplied nonce without verification` | *(delete the comment; let the code speak for itself)* |
 | `// Fixes CVE-YYYY-NNNN vulnerability from v1.2.x` | *(delete the comment; reference the CVE in private notes)* |
-
-**Technical detail for private audit notes.** When a fix is non-trivial and you need to record the reasoning, write it in `SECURITY.md` entries kept in a private repo, in internal audit notes, or in the CVE disclosure itself — never in the public commit or the source tree.
-
-**When in doubt, squash.** If a commit was written with exploit detail and you catch it before push, use `git commit --fixup=amend:<sha>` with a sanitized message and autosquash before the branch goes up. For already-pushed public history, coordinate with the team before force-push — some forks may already be tracking.
-
-### Internal-process references
-
-Code comments, docblocks, and commit messages are **public artifacts**. They must read as standalone documentation of what the code does today — never as a journal of how it got there.
-
-**Don't reference internal plans, specs, tickets, or review processes:**
-
-- No "Plan A / Plan B / Plan C" or any other internal codename for a feature delivery.
-- No "spec:" / "design doc:" / "see docs/superpowers/..." path pointers. The code is the source of truth — if a comment needs an off-tree document to make sense, the comment is wrong.
-- No CodeRabbit / Mockery / "review found" attributions. Apply the fix, write the comment from the perspective of the code's current behavior.
-- No JIRA / Linear / GitHub-issue numbers in code (`# fixes ABC-123`). Belong in PR descriptions, not source.
-- No "TODO(<initiative>-followup)" tags that reference internal Initiative names. Plain `TODO:` is fine when you describe the gap; an initiative name only the team recognises is noise.
-- No "future SaaS revision will…" or "when X lands we'll switch on…" speculation. If you can't make the change today, file a ticket; don't seed a code comment that will rot into a stale promise.
-
-**What to write instead:** factual description of *what the code does now*, with the trigger that made it non-obvious. "We use generic message X here so an attacker can't distinguish failure modes" is good — it stands on its own. "Per Plan B's spec section, …" is bad — the reader has no way to verify or even find the spec.
-
-| Avoid | Prefer |
-|---|---|
 | `// Plan A always returns client_ip_redacted; presenter passes through.` | `// Upstream returns the redacted IP only; presenter passes through.` |
 | `// Spec: docs/superpowers/specs/2026-04-27-foo.md` | *(delete; let the code stand)* |
 | `// TODO(planB-followup): test-harness fix needed` | `// TODO: form posts from about:blank end up at wp-login.php; need a different submit path.` |
 | `// When SaaS adds the admin-scoped IP, switch on $is_admin here.` | *(delete; if it's not feasible today, don't write speculative scaffolding into source)* |
 
-If the comment needs the reader to know about an internal artifact, the comment is paying down debt for a different artifact — write the documentation in the right place (the PR description, an internal `docs/`, the audit log) and let the code stand on its own.
+**Technical detail for private audit notes.** When a fix is non-trivial and you need to record the reasoning, write it in `SECURITY.md` entries kept in a private repo, in internal audit notes, or in the CVE disclosure itself — never in the public commit or the source tree.
+
+**Squash only for security fixes.** If a security commit was written with exploit detail and you catch it before push, use `git commit --fixup=amend:<sha>` with a sanitized message and autosquash before the branch goes up. For already-pushed public history, coordinate with the team before force-push — some forks may already be tracking.
 
 ### Why this matters for the client SDK specifically
 
@@ -90,3 +69,44 @@ Sensitive areas in this codebase where hygiene matters most:
 - `src/SiteAccess.php`, `src/Remote.php` — SaaS envelope exchange, auth tokens
 - `src/SupportUser.php`, `src/SupportRole.php` — privilege boundary, capability grants
 - `src/Form.php` — user-facing rendering, escaping
+
+## WordPress scheduling and lifecycle facts this SDK depends on
+
+Each of these was asserted wrongly here first, then checked in WordPress core.
+
+- **Plugin updates do NOT fire deactivation hooks.** `Plugin_Upgrader::deactivate_plugin_before_upgrade()` calls `deactivate_plugins( $plugin, true )` — silent — and `deactivate_plugins()` only fires `deactivate_{$plugin}` when `! $silent`. Core's own comment says "Prevent deactivation hooks from running." Background cron updates skip deactivation entirely. So "an update would churn this" is not a reason to avoid `register_deactivation_hook`.
+- **WP-Cron unschedules a single event before firing it, and never checks that anyone is listening.** In `wp-cron.php`, recurring events are rescheduled first, then single events are unscheduled, then `do_action_ref_array()` runs. An event whose handler is not registered — because the plugin is inactive — is consumed and gone. Anything relying on a one-shot event to enforce expiry needs a backstop that survives the plugin being off.
+- **`wp_privacy_delete_old_export_files` is the only hourly event core schedules**, and `default-filters.php` re-creates it on every `init` guarded only by `wp_installing()`. Everything else core schedules is twicedaily or slower, and the two daily cleanup events are scheduled from `wp-admin/admin.php`, so they only exist once someone loads an admin page.
+
+## Testing traps
+
+- **`update_user_option()` prefixes the meta key with the blog name unless you pass `$global = true`.** `SupportUser::setup()` passes it for the identifier and site-hash keys but not for `expires`/`created_by`. A fixture that seeds meta without the flag writes `wp_tl_{ns}_id` while the code queries `tl_{ns}_id`, so `get_all()` returns nothing and the test fails for a reason that has nothing to do with the code under test.
+- **`SupportUser::get()` re-hashes any identifier longer than 32 characters.** `Encryption::hash()` emits exactly 32 (16 bytes hex), so a stored identifier passes through untouched — but a fixture seeded with `wp_generate_uuid4()` (36 chars) gets hashed again and never matches. Seed identifiers at 32 characters.
+- **`phpstan` must run inside the wp-env container.** On a PHP 8.4 host it fatals inside its own phar (`ReflectionClassConstant::IS_PUBLIC` type incompatibility) — a tooling failure that reads like a code error. Use `wp-env run tests-cli --env-cwd=wp-content/plugins/client vendor/bin/phpstan analyse`.
+- **`phpcs` currently aborts on `src/SupportUser.php`** with `An error occurred during processing; checking has been aborted. (Internal.Exception)` from a sniff crash, so that file is not actually being linted. This predates any recent change; a clean phpcs run on it is not evidence the file is clean.
+
+## Comment Discipline
+
+Code comments, docblocks, and commit messages are **public artifacts**: standalone documentation of what the code does today, never a journal of how it got there.
+
+Default to writing no comments. A well-named identifier and the code that follows it should carry the meaning. Add a comment only when the *why* is non-obvious to a future reader.
+
+**Don't write meta-narrative.** Comments that explain the developer's reasoning — "Defense in depth:", "Belt-and-suspenders:", "Cheaper than the alternative because…", "We do this instead of X because Y" — are narrative *about* the code, not part of it. PR descriptions and commit messages are the right home for that voice. Comments that survive in source become stale signal that rots faster than the code does.
+
+**Don't restate the obvious.** A comment immediately above `update_user_meta(...)` saying "Update the user meta" wastes everyone's time. If the call doesn't read clearly, fix the names — don't paper over with prose.
+
+**Don't reference the audit, review, task, PR, or ticket that prompted the code.** No audit finding IDs ("fixes audit P3 #1", "see internal audit"), no CodeRabbit / Mockery / "review found" attributions, no "added for issue #66" / "per review feedback" / "this was the fix in PR #142", no JIRA / Linear / GitHub-issue numbers in code (`# fixes ABC-123` belongs in the PR description). Those handles rot the moment the PR is closed, and audit references give searchers a handle to pivot from — audit artifacts belong in private notes. The thing the comment cared about is in `git blame` and in the PR body — leave it there.
+
+**Don't reference internal plans or specs.** No "Plan A / Plan B / Plan C" or other internal codenames, no "spec:" / "design doc:" / "see docs/superpowers/..." path pointers, no "TODO(<initiative>-followup)" tags — plain `TODO:` describing the gap is fine. The code is the source of truth; if a comment needs an off-tree document to make sense, the comment is wrong.
+
+**Don't write speculation.** No "future SaaS revision will…" or "when X lands we'll switch on…". If you can't make the change today, file a ticket; don't seed a code comment that will rot into a stale promise.
+
+**Don't narrate version-target trade-offs at the call site.** A comment like "we duplicate the cleanup here because the SDK targets PHP 5.3 (no `finally` until 5.5)" is meta narrative about *why the file looks this way*. A reader can see it looks that way; the *why* belongs in this file, not at every call site.
+
+**Do keep comments** that describe a hidden constraint, a subtle invariant, a workaround for a specific bug, or a surprising behavior — things a reader would otherwise have to discover the hard way. These earn their place.
+
+**What to write instead:** factual description of *what the code does now*, with the trigger that made it non-obvious. "We use generic message X here so an attacker can't distinguish failure modes" is good — it stands on its own. "Per Plan B's spec section, …" is bad — the reader has no way to verify or even find the spec. If the comment needs the reader to know about an internal artifact, write the documentation in the right place (the PR description, an internal `docs/`, the audit log) and let the code stand on its own. Rewrite examples: the Avoid/Prefer table in **Security Commit & Comment Hygiene** above.
+
+### PHP version target
+
+The SDK runtime supports **PHP 5.3+** (per `composer.json` and `.phpcs.xml.dist`'s `testVersion`). New code must run on 5.3 — no `\Throwable`, no `finally`, no `static function () {}`, no `??` null coalesce, no return-type hints, no arrow functions. Build/test environments are PHP 7.4+ (PHPStan `phpVersion: 70400`, PHPUnit on 8.2), but anything the SDK actually ships has to clear the 5.3 bar.

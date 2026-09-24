@@ -129,6 +129,10 @@ class SiteAccess {
 			// Silent on null / empty / type-mismatch — preserves cache.
 		}
 
+		// An empty value records that TrustedLogin answered without a URL;
+		// add_option() leaves a cached URL untouched.
+		add_option( sprintf( Config::WEBHOOK_URL_OPTION_KEY_TEMPLATE, $this->config->ns() ), '', '', false );
+
 		do_action(
 			'trustedlogin/' . $this->config->ns() . '/secret/synced',
 			array(
@@ -230,12 +234,15 @@ class SiteAccess {
 	/**
 	 * Revoke a site in TrustedLogin
 	 *
-	 * @param string $secret_id ID of site secret identifier to be removed from TrustedLogin.
-	 * @param Remote $remote Instance of the Remote class.
+	 * @since 1.11.0 Added the `$timeout` parameter.
 	 *
-	 * @return true|\WP_Error Was the sync to TrustedLogin successful?
+	 * @param string   $secret_id ID of site secret identifier to be removed from TrustedLogin.
+	 * @param Remote   $remote Instance of the Remote class.
+	 * @param int|null $timeout Optional. Request timeout in seconds. Default: null, the {@see Remote::send()} default.
+	 *
+	 * @return true|\WP_Error Was the sync to TrustedLogin successful? True without a request when the site does not meet the SSL requirement.
 	 */
-	public function revoke( $secret_id, Remote $remote ) {
+	public function revoke( $secret_id, Remote $remote, $timeout = null ) {
 
 		if ( ! $this->config->meets_ssl_requirement() ) {
 			$this->logging->log( 'Not notifying TrustedLogin about revoked site due to SSL requirements.', __METHOD__, 'info' );
@@ -243,7 +250,7 @@ class SiteAccess {
 			return true;
 		}
 
-		$api_response = $remote->send( 'sites/' . $secret_id, array(), 'DELETE' );
+		$api_response = $remote->send( 'sites/' . $secret_id, array(), 'DELETE', array(), $timeout );
 
 		if ( is_wp_error( $api_response ) ) {
 			return $api_response;
