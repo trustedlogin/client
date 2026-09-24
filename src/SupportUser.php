@@ -721,7 +721,8 @@ final class SupportUser {
 	 * Deletes a user from the network once they belong to no site, archived,
 	 * spam and deleted sites included. {@see wpmu_delete_user()} deletes a
 	 * member's posts on every site without reassigning them. A user who
-	 * stays loses this namespace's per-site options for the current site.
+	 * stays loses this namespace's per-site options for the current site,
+	 * and stops being a support user unless another site holds their grant.
 	 *
 	 * @since 1.11.0
 	 *
@@ -736,6 +737,13 @@ final class SupportUser {
 		if ( ! empty( $remaining_sites ) ) {
 			delete_user_option( $user_id, $this->expires_meta_key );
 			delete_user_option( $user_id, $this->created_by_meta_key );
+
+			// The identifier is network-wide; left in place, the other sites'
+			// sweeps would treat this member as an expired support user.
+			if ( ! $this->has_expiration_on_another_site( $user_id ) ) {
+				delete_user_option( $user_id, $this->user_identifier_meta_key, true );
+				delete_user_option( $user_id, $this->site_hash_meta_key, true );
+			}
 
 			return false;
 		}

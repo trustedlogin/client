@@ -859,6 +859,40 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A support user who is also a member of another site stops being a
+	 * support user once their grant is revoked, so that site's sweep keeps
+	 * them and their content.
+	 */
+	public function test_other_sites_sweep_keeps_a_member_after_their_grant_is_revoked() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$user_id  = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
+		$sub_site = self::factory()->blog->create();
+		add_user_to_blog( $sub_site, $user_id, 'editor' );
+
+		switch_to_blog( $sub_site );
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		restore_current_blog();
+
+		$this->assertSame( 1, $this->sweep( self::NS ), 'fixture: the main site revokes the expired grant' );
+
+		switch_to_blog( $sub_site );
+		$deleted_on_sub = $this->sweep( self::NS );
+		$post           = get_post( $post_id );
+		restore_current_blog();
+
+		clean_user_cache( $user_id );
+
+		$this->assertSame( 0, $deleted_on_sub, 'the other site must not treat the member as an expired support user' );
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $user_id ) );
+		$this->assertArrayHasKey( $sub_site, get_blogs_of_user( $user_id, true ) );
+		$this->assertInstanceOf( \WP_Post::class, $post, 'the member\'s content on the other site must stay' );
+		$this->assertSame( $user_id, (int) $post->post_author );
+	}
+
+	/**
 	 * Nothing to do must cost nothing and report nothing.
 	 */
 	public function test_sweep_reports_zero_when_there_is_nothing_to_remove() {
