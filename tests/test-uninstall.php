@@ -521,12 +521,12 @@ class TrustedLoginUninstallTest extends WP_UnitTestCase {
 	public function test_uninstall_deletes_the_sweep_fallback_transient() {
 		$ns = $this->unique_namespace( 'trans' );
 
-		set_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ), time(), HOUR_IN_SECONDS );
-		$this->assertNotFalse( get_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ), 'fixture: the transient must exist' );
+		Utils::set_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ), time(), HOUR_IN_SECONDS );
+		$this->assertNotFalse( get_option( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ), 'fixture: the transient row must exist' );
 
 		Client::uninstall( $ns );
 
-		$this->assertFalse( get_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ) );
+		$this->assertFalse( get_option( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ), 'the row must be gone, not just expired' );
 	}
 
 	/**

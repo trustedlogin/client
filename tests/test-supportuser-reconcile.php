@@ -411,7 +411,7 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 	public function test_admin_page_load_runs_the_sweep_once_an_hour_when_core_event_is_missing() {
 		$cron = new Cron( $this->config_for( self::NS ), new Logging( $this->config_for( self::NS ) ) );
 		wp_unschedule_hook( Cron::RECONCILE_HOOK );
-		delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
+		Utils::delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
 
 		$first = $this->seed_support_user( self::NS, time() - HOUR_IN_SECONDS );
 		$cron->maybe_reconcile_without_core_event();
@@ -423,7 +423,7 @@ class SupportUserReconcileTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( \WP_User::class, get_user_by( 'id', $second ), 'the fallback runs at most once an hour' );
 
-		delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
+		Utils::delete_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, self::NS ) );
 	}
 
 	public function test_admin_page_load_does_nothing_while_core_event_is_scheduled() {

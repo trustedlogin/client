@@ -56,7 +56,7 @@ Examples of the rewrite:
 
 **Technical detail for private audit notes.** When a fix is non-trivial and you need to record the reasoning, write it in `SECURITY.md` entries kept in a private repo, in internal audit notes, or in the CVE disclosure itself — never in the public commit or the source tree.
 
-**When in doubt, squash.** If a commit was written with exploit detail and you catch it before push, use `git commit --fixup=amend:<sha>` with a sanitized message and autosquash before the branch goes up. For already-pushed public history, coordinate with the team before force-push — some forks may already be tracking.
+**Squash only for security fixes.** If a security commit was written with exploit detail and you catch it before push, use `git commit --fixup=amend:<sha>` with a sanitized message and autosquash before the branch goes up. For already-pushed public history, coordinate with the team before force-push — some forks may already be tracking.
 
 ### Why this matters for the client SDK specifically
 

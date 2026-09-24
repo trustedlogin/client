@@ -67,12 +67,12 @@ final class Form {
 	private $logging;
 
 	/**
-	 * Support users read once for the Grant Access screen being rendered;
-	 * null outside {@see Form::get_auth_screen()}.
+	 * Support users for each namespace whose Grant Access screen is being
+	 * rendered, keyed by namespace.
 	 *
-	 * @var \WP_User[]|null
+	 * @var array<string, \WP_User[]>
 	 */
-	private $rendering_support_users = null;
+	private static $support_users = array();
 
 	/**
 	 * Form constructor.
@@ -447,7 +447,7 @@ final class Form {
 		// If the CSS has not already been printed, make sure it's enqueued.
 		wp_enqueue_style( 'trustedlogin-' . $this->config->ns() );
 
-		$this->rendering_support_users = $this->support_user->get_all();
+		self::$support_users[ $this->config->ns() ] = $this->support_user->get_all();
 
 		// Handle the "Try again" link from a prior fallback screen — nonce
 		// verified, then clear the pubkey cache and let the pre-flight
@@ -557,7 +557,7 @@ final class Form {
 
 		$output = $this->prepare_output( $auth_screen_template, $content );
 
-		$this->rendering_support_users = null;
+		unset( self::$support_users[ $this->config->ns() ] );
 
 		return $output;
 	}
@@ -569,8 +569,8 @@ final class Form {
 	 */
 	private function get_support_users() {
 
-		if ( null !== $this->rendering_support_users ) {
-			return $this->rendering_support_users;
+		if ( isset( self::$support_users[ $this->config->ns() ] ) ) {
+			return self::$support_users[ $this->config->ns() ];
 		}
 
 		return $this->support_user->get_all();
@@ -1153,14 +1153,18 @@ final class Form {
 		// Webhook URLs are bearer secrets, and some providers put the
 		// secret in a subdomain: show the parent domain and where the URL
 		// came from, never the full host, path or query.
-		$webhook_url = Remote::get_webhook_url( $this->config );
+		$webhook_url        = Remote::get_webhook_url( $this->config );
+		$config_webhook_url = Remote::get_config_webhook_url( $this->config );
+		$webhook_domain     = self::mask_host( Remote::redact_url( $webhook_url ) );
+
 		if ( '' === $webhook_url ) {
-			$webhook_row = '<code>' . esc_html__( '(Empty)', 'trustedlogin' ) . '</code>';
+			$webhook_row = '<code>' . esc_html_x( '(Empty)', 'Webhook URL in the debug panel when none is set', 'trustedlogin' ) . '</code>';
+		} elseif ( '' !== $config_webhook_url ) {
+			$webhook_source = esc_html_x( 'from Config (deprecated)', 'Where the webhook URL in the debug panel is set', 'trustedlogin' );
+			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( $webhook_domain ), $webhook_source );
 		} else {
-			$webhook_source = '' !== Remote::get_config_webhook_url( $this->config )
-				? esc_html__( 'from Config (deprecated)', 'trustedlogin' )
-				: esc_html__( 'from the TrustedLogin dashboard', 'trustedlogin' );
-			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( self::mask_host( Remote::redact_url( $webhook_url ) ) ), $webhook_source );
+			$webhook_source = esc_html_x( 'from the TrustedLogin dashboard', 'Where the webhook URL in the debug panel is set', 'trustedlogin' );
+			$webhook_row    = sprintf( '<code>%s</code> (%s)', esc_html( $webhook_domain ), $webhook_source );
 		}
 
 		$items = array(

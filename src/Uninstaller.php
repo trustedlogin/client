@@ -558,8 +558,7 @@ final class Uninstaller {
 			(string) $vendor_public_key_option,
 			'tl-' . $this->ns . '-used_accesskeys',
 			'tl-' . $this->ns . '-in_lockdown',
-			'_transient_' . sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
-			'_transient_timeout_' . sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
+			sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
 		);
 	}
 

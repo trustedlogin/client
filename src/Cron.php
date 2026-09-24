@@ -139,11 +139,11 @@ final class Cron {
 
 		$transient = sprintf( self::RECONCILE_FALLBACK_TRANSIENT, $this->config->ns() );
 
-		if ( get_transient( $transient ) ) {
+		if ( Utils::get_transient( $transient ) ) {
 			return;
 		}
 
-		set_transient( $transient, time(), HOUR_IN_SECONDS );
+		Utils::set_transient( $transient, time(), HOUR_IN_SECONDS );
 
 		$this->reconcile();
 	}
