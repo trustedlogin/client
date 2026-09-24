@@ -174,11 +174,18 @@ clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms
 # "Failed opening required '.../vendor/autoload_packages.php'" and the whole
 # bootstrap step exits 255. jetpack-autoloader is already in GF's
 # config.allow-plugins, so a plain install generates the file.
-if [[ ! -f "fixtures/gravityforms/vendor/autoload_packages.php" || "$REFRESH_PLUGINS" == "true" ]]; then
+# The stamp records the checkout revision and dependency manifest the install
+# ran against, so a cached clone that moves to a new revision reinstalls.
+GF_COMPOSER_STAMP="fixtures/gravityforms/vendor/.tl-composer-stamp"
+GF_MANIFEST_HASH="$( { cat fixtures/gravityforms/composer.json; if [[ -f fixtures/gravityforms/composer.lock ]]; then cat fixtures/gravityforms/composer.lock; fi; } | shasum -a 256 | cut -d' ' -f1 )"
+GF_COMPOSER_WANT="$(git -C fixtures/gravityforms rev-parse HEAD 2>/dev/null || echo no-git) ${GF_MANIFEST_HASH}"
+GF_COMPOSER_HAVE="$(cat "$GF_COMPOSER_STAMP" 2>/dev/null || true)"
+if [[ ! -f "fixtures/gravityforms/vendor/autoload_packages.php" || "$GF_COMPOSER_HAVE" != "$GF_COMPOSER_WANT" || "$REFRESH_PLUGINS" == "true" ]]; then
     bold "  composer install inside gravityforms"
     docker run --rm -v "$(pwd)/fixtures/gravityforms:/app" -w /app \
         -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
-        composer:2 install --no-dev --no-progress --no-interaction --prefer-dist
+        composer:2 install --no-dev --no-progress --no-interaction --prefer-dist \
+        && echo "$GF_COMPOSER_WANT" > "$GF_COMPOSER_STAMP"
 fi
 
 # Gravity Forms's dev branch ships source JS/CSS that only resolves after a
