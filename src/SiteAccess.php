@@ -234,7 +234,7 @@ class SiteAccess {
 	/**
 	 * Revoke a site in TrustedLogin
 	 *
-	 * @since TBD Added the `$timeout` parameter.
+	 * @since 1.11.0 Added the `$timeout` parameter.
 	 *
 	 * @param string   $secret_id ID of site secret identifier to be removed from TrustedLogin.
 	 * @param Remote   $remote Instance of the Remote class.

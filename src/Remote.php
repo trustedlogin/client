@@ -99,7 +99,7 @@ final class Remote {
 	 * Returns the webhook URL set in Config: `webhook/url`, else the legacy
 	 * `webhook_url`. Both are deprecated but still override the dashboard URL.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -118,7 +118,7 @@ final class Remote {
 	 * Returns the webhook URL {@see SiteAccess::sync_secret} cached from the
 	 * TrustedLogin dashboard.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -135,7 +135,7 @@ final class Remote {
 	 * Checks for "will a webhook fire?" must use it, so the Grant Access
 	 * screen and {@see Remote::maybe_send_webhook} agree.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -154,7 +154,7 @@ final class Remote {
 	 * Whether the webhook URL is not known yet: none is set in Config and
 	 * TrustedLogin has not answered a grant on this site.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param Config $config Config instance.
 	 *

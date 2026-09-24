@@ -39,7 +39,7 @@ final class Client {
 	 * @var string The current SDK version.
 	 * @since 1.0.0
 	 */
-	const VERSION = '1.10.1';
+	const VERSION = '1.11.0';
 
 	/**
 	 * Instance of Config
@@ -223,7 +223,7 @@ final class Client {
 	 * Needs no Client, so it runs when TrustedLogin is disabled by constant
 	 * or the site lacks sodium.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param Config|string $config_or_namespace The Config the plugin boots with, or its `vendor/namespace` value.
 	 *                                           Pass the Config when it sets `clone_role`, `role`,

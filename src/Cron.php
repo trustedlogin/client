@@ -29,7 +29,7 @@ final class Cron {
 	/**
 	 * Core cron hook the expired-access sweep runs on.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const RECONCILE_HOOK = 'wp_privacy_delete_old_export_files';
 
@@ -37,7 +37,7 @@ final class Cron {
 	 * Transient, formatted with the namespace, that limits the `admin_init`
 	 * sweep to once an hour.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const RECONCILE_FALLBACK_TRANSIENT = 'tl_%s_reconcile_ran';
 
@@ -45,7 +45,7 @@ final class Cron {
 	 * Transient, formatted with the namespace, holding the support users the
 	 * sweep failed to revoke: identifier => array( failures, retry_after ).
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const RECONCILE_FAILURES_TRANSIENT = 'tl_%s_reconcile_failures';
 
@@ -53,7 +53,7 @@ final class Cron {
 	 * Longest wait, in seconds, before the sweep retries a support user it
 	 * failed to revoke. The wait doubles from two hours with each failure.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const RECONCILE_MAX_BACKOFF = DAY_IN_SECONDS;
 
@@ -120,7 +120,7 @@ final class Cron {
 	 * {@see Cron::revoke()}: WordPress consumes that event without running
 	 * it while the plugin is inactive.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return void
 	 */
@@ -141,7 +141,7 @@ final class Cron {
 	 * `DISABLE_WP_CRON` and no system cron. Runs only for a logged-in user
 	 * who can manage options, and never during an Ajax request.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return void
 	 */
@@ -182,7 +182,7 @@ final class Cron {
 	 * sweep runs is kept. A user whose revoke fails is retried after a
 	 * growing wait, and does not stop the others.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return void
 	 */
@@ -257,7 +257,7 @@ final class Cron {
 	/**
 	 * Returns the sweep's failed revokes, keyed by identifier.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return array<string, array{count: int, retry_after: int}>
 	 */
@@ -287,7 +287,7 @@ final class Cron {
 	/**
 	 * Stores the sweep's failed revokes, or deletes the row when none remain.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param array<string, array{count: int, retry_after: int}> $failures Failed revokes, keyed by identifier.
 	 *

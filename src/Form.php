@@ -470,7 +470,7 @@ final class Form {
 	 * Builds the Auth screen HTML from the support users
 	 * {@see Form::get_auth_screen()} read for this render.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return string HTML of the Auth screen
 	 */

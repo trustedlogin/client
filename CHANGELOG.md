@@ -1,30 +1,34 @@
-## Unreleased
+## 1.11.0 (September 24, 2026)
+
+Support access now ends on time even when your plugin was inactive at expiry, and a new `Client::uninstall()` removes everything the SDK stored when your plugin is deleted. This release also brings back the Grant Access message and debug-data fields for webhooks set in the TrustedLogin dashboard, and keeps each plugin's support users separate on sites running more than one TrustedLogin integration.
 
 #### 🚀 Added
 
-- New `Client::uninstall( $config_or_namespace, $args )` static method for vendors to call from their plugin's `uninstall.php`. It deletes everything the SDK stores for one namespace: support users (with their meta and expiry events), the cloned support role, the cached webhook URL, the log salt, the pending SaaS-revoke queue, the brute-force and vendor-public-key rows, the login endpoint, and the namespace's log files. Data for other namespaces, stock roles, and the shared permalink flag are left alone. On multisite every site is cleaned by default; with `network => false`, support users on other sites are left in place. When the Config you pass carries your API key, each removed grant and any queued revoke is also revoked in the TrustedLogin dashboard. `uninstall.php` loads without your plugin's main file, so add any role or option-name filters there before calling it. Do not hook it to deactivation: it deletes the cached webhook URL, which is only re-cached at the next grant, so a reactivated plugin would send no webhooks until then. Each revoke request gets 3 seconds, and the run spends at most 20 seconds on them; after the first failure no more are sent. The result's `saas_revokes_failed` lists the secret IDs that were not revoked in the TrustedLogin dashboard, so you can remove those sites there. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall).
-- Support users whose access has expired are removed within an hour, even if your plugin was inactive when their access ran out, for example during a plugin update. They are revoked the same way as at expiry: the TrustedLogin dashboard is updated and the `revoked` webhook is sent. Each user's expiration is checked again just before the revoke, so access extended in the meantime is kept. If revoking one user fails, the others are still revoked, and that user is retried after 2 hours, then 4, 8 and so on, up to once a day. The check runs on an hourly event WordPress core already schedules, so the SDK adds no cron event of its own. If that event is missing or more than an hour overdue, the check runs when an administrator loads an admin page instead, at most once an hour.
+- Expired support access is removed within an hour, even if your plugin was inactive when it ran out (for example during a plugin update). The TrustedLogin dashboard is updated and the `revoked` webhook is sent, the same as at normal expiry. Access that was extended in the meantime is kept. The check uses an hourly event WordPress already runs, so the SDK adds no scheduled task of its own.
+- `Client::uninstall()` for your plugin's `uninstall.php`. It removes the support users, role, login endpoint, settings, scheduled events and log files the SDK stored for your plugin, and leaves other plugins' data alone. Pass your Config (with its API key) to also revoke the removed access in your TrustedLogin dashboard. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall).
 
 #### 🛠 Changed
 
-- The "Secured by TrustedLogin" badge on the Grant Access screen now links to a plain end-customer explainer of what TrustedLogin is. Same icon, same text, same styling — it just opens in a new tab.
-- The support debug row now shows the webhook's domain and where the URL came from (config, dashboard, or legacy key) instead of "(Empty)". The full URL and any subdomain stay hidden, because some providers put the secret there.
+- The "Secured by TrustedLogin" badge on the Grant Access screen links to a short explainer of what TrustedLogin is, for customers who haven't heard of it.
+- The debug panel on the Grant Access screen shows the webhook's domain and whether the URL comes from your config or your TrustedLogin dashboard. The full URL stays hidden.
+- On multisite, revoking a support user removes them from the current site only. They are deleted from the network once they belong to no other site, so their content on other sites is kept.
 
-#### 🛠 Fixed
+#### 🐛 Fixed
 
-- The Grant Access screen's support-message field and debug-data consent checkbox appear when your config enables them and the webhook URL comes from the TrustedLogin dashboard or the legacy `webhook_url` key, including on a site's first grant, before the dashboard URL is known. They are hidden once TrustedLogin has answered a grant on the site without a URL, until a later grant returns one. With the customer's consent, debug data is sent to the webhook URL set in your TrustedLogin dashboard.
-- Webhooks are sent for every grant once the TrustedLogin dashboard has a webhook URL, including the first grant on a site and the first grant after the URL is added.
-- On multisite, revoking a support user removes them from the current site, reassigning their posts there when `reassign_posts` is set. The user is deleted from the network only once they belong to no other site, so their posts on other sites are kept.
-- The login endpoint is kept while a support user exists on any site of the network, and removed once none does, even if another user holds the support role. `SupportUser::delete()` logs when it keeps the role or the endpoint.
-- `Client::uninstall()` no longer fails on single-site WordPress when the site's rewrite rules still contain the login endpoint.
-- On a site running more than one plugin that uses the SDK, each plugin sees only its own support users. `SupportUser::get_all()` reads the users on every call.
-- A grant that fails while saving the support user's identifier removes the user it created.
-- `Client::uninstall()` creates no upload folders on the sites it visits, and on multisite it keeps support users who still belong to an archived, spam or deleted site.
+- The Grant Access screen shows the support-message field and the debug-data consent checkbox again when your webhook URL is set in the TrustedLogin dashboard, as the 1.10.0 migration guide recommends.
+- Webhooks set in the TrustedLogin dashboard are sent for every grant, including the first grant on a site.
+- On multisite, removing the last support user on one site no longer ends access for support users on other sites.
+- On sites running more than one plugin that uses TrustedLogin, each plugin sees only its own support users.
+- A grant that fails partway through no longer leaves an unused support user behind.
+- The Grant Access error message lines up with the rest of the screen, reads as one complete sentence, and can be translated.
 
-#### 🛠 Fixed
+#### 💻 Developer Updates
 
-- The error message on the Grant Access screen now lines up with the content above and below it, instead of running to the edges of the box.
-- The Grant Access error message is now one translatable sentence, "There was an error granting access: %s", instead of a prefix joined to the reason in JavaScript. With no reason it reads "There was an error granting access." The reason shown when access cannot be extended is now translatable and reads "The access expiration could not be rescheduled."
+- New `Client::uninstall( $config_or_namespace, $args )` static method. `$args` takes `network` (multisite scope) and `delete_logs`. It returns what was removed, including `saas_revokes_failed`, the secret IDs that could not be revoked in your dashboard. `uninstall.php` loads without your plugin's main file, so re-add any `trustedlogin/{namespace}/support_role` or `trustedlogin/{namespace}/options/*` filters there before calling it. Don't call it on deactivation: it deletes the cached webhook URL.
+- `SupportUser::get_all()` no longer caches its result, so each call returns current data for its own namespace.
+- `SupportUser::delete()` keeps the support role while another user on the site holds it, and keeps the login endpoint while any support user remains on the network. It logs when it does either.
+- The `trustedlogin/{namespace}/access/created`, `/extended`, `/revoked` and `/logged_in` webhook listeners are registered whether or not a webhook URL is known yet.
+- New public helpers: `Remote::get_webhook_url()`, `Remote::get_config_webhook_url()` and `Remote::get_cached_webhook_url()` return the effective, Config and dashboard webhook URLs.
 
 ## 1.10.1 (May 12, 2026)
 

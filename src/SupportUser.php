@@ -35,7 +35,7 @@ final class SupportUser {
 	 * Seconds after registration during which the expired-access sweep leaves
 	 * a support user alone.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @var int
 	 */
@@ -479,7 +479,7 @@ final class SupportUser {
 	 * The expiration is stored per site, so a member of several sites is
 	 * judged by the site that holds it.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return string[] User identifier hashes.
 	 */
@@ -723,7 +723,7 @@ final class SupportUser {
 	 * member's posts on every site without reassigning them. A user who
 	 * stays loses this namespace's per-site options for the current site.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param int $user_id User already removed from the current site.
 	 *

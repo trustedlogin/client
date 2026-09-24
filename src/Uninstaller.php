@@ -21,14 +21,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * shared `tl_permalinks_flushed` flag and other namespaces' rows are left.
  * Entry point: {@see Client::uninstall()}.
  *
- * @since TBD
+ * @since 1.11.0
  */
 final class Uninstaller {
 
 	/**
 	 * Seconds each TrustedLogin revoke request may take.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const SAAS_REVOKE_TIMEOUT = 3;
 
@@ -36,7 +36,7 @@ final class Uninstaller {
 	 * Seconds the run may spend on TrustedLogin revoke requests in total.
 	 * Revokes left once it is spent are reported, not sent.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 */
 	const SAAS_REVOKE_BUDGET = 20;
 
@@ -274,7 +274,7 @@ final class Uninstaller {
 	 * multisite unless `network` is false or a large network limited the
 	 * run. Call after {@see site_ids()}.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @return bool
 	 */
@@ -453,7 +453,7 @@ final class Uninstaller {
 	 * or once {@see SAAS_REVOKE_BUDGET} seconds are spent, no more requests
 	 * are sent. Secret IDs not revoked are added to `saas_revokes_failed`.
 	 *
-	 * @since TBD
+	 * @since 1.11.0
 	 *
 	 * @param string $secret_id Site secret identifier.
 	 */
