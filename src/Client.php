@@ -231,16 +231,21 @@ final class Client {
 	 *
 	 * @param Config|string $config_or_namespace The Config the plugin boots with, or its `vendor/namespace` value.
 	 *                                           Pass the Config when it sets `clone_role`, `role`,
-	 *                                           `logging/directory`, or the role / endpoint option names are filtered.
+	 *                                           `logging/directory`, or `auth/api_key` (needed to revoke
+	 *                                           access at TrustedLogin). `uninstall.php` runs without the
+	 *                                           plugin's main file, so add any `support_role`,
+	 *                                           `options/endpoint` or `options/vendor_public_key` filters
+	 *                                           again before calling this.
 	 * @param array         $args {
 	 *     Optional run options.
 	 *
 	 *     @type bool|null $network     Multisite: null (default) cleans every site unless wp_is_large_network()
 	 *                                  is true, true cleans every site regardless, false cleans the current site only.
+	 *                                  Support users on sites not cleaned are left in place.
 	 *     @type bool      $delete_logs Whether to delete this namespace's log files. Default true.
 	 * }
 	 *
-	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool}
+	 * @return array{support_users: int, role: bool, endpoint: bool, options: string[], cron_events: int, log_files: int, sites: int, network_skipped: bool, saas_revokes: int}
 	 *               What was deleted. See {@see Uninstaller::run()}.
 	 *
 	 * @throws Exception When the namespace is empty.

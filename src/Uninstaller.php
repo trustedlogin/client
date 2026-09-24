@@ -25,11 +25,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * the transient-style rows `tl_{ns}_vendor_public_key`,
  * `tl-{ns}-used_accesskeys`, `tl-{ns}-in_lockdown` (expiry is enforced
  * only on read, so unread rows never go away on their own); the
+ * `tl_{ns}_reconcile_ran` transient; the
  * `trustedlogin/{ns}/site/retry_revoke` cron event; this namespace's
  * default-named `client-debug-*.log` files.
  *
+ * When the Config carries `auth/api_key`, each deleted support user and
+ * each queued SaaS revoke is also revoked at TrustedLogin before its rows
+ * go. A failed request is not retried; the rows are deleted regardless.
+ *
  * Deleted once, as a site option (network-wide on multisite): the
- * `tl_{ns}_endpoint` login endpoint hash.
+ * `tl_{ns}_endpoint` login endpoint hash, unless support users remain on
+ * sites the run did not visit.
  *
  * Never touched: a stock role named in Config, `tl_permalinks_flushed`
  * (shared by every namespace), the `trustedlogin-logs/` directory and
@@ -102,7 +108,12 @@ final class Uninstaller {
 	 * A namespace string is enough for the default setup (cloned role,
 	 * unfiltered option names). Pass the same Config the plugin boots
 	 * the Client with when it sets `clone_role`, `role`,
-	 * `logging/directory`, or filters the role or endpoint option names.
+	 * `logging/directory`, or `auth/api_key` (needed to revoke access at
+	 * TrustedLogin). `uninstall.php` runs without the plugin's main file,
+	 * so filters the plugin adds on `trustedlogin/{ns}/support_role`,
+	 * `trustedlogin/{ns}/options/endpoint` or
+	 * `trustedlogin/{ns}/options/vendor_public_key` must be added again in
+	 * `uninstall.php` before the call.
 	 *
 	 * @param Config|string $config_or_namespace Config instance, or the `vendor/namespace` value.
 	 * @param array         $args                Run options. See {@see Client::uninstall()}.
@@ -140,13 +151,16 @@ final class Uninstaller {
 	 *   cron_events: int,
 	 *   log_files: int,
 	 *   sites: int,
-	 *   network_skipped: bool
+	 *   network_skipped: bool,
+	 *   saas_revokes: int
 	 * } What was deleted. `options` lists the option rows removed on any
 	 *   site. `sites` is how many sites were visited. `network_skipped`
 	 *   is true when a large network (see wp_is_large_network()) limited
-	 *   the run to the current site.
+	 *   the run to the current site. `saas_revokes` counts the revoke
+	 *   requests that did not fail.
 	 *
 	 * @throws \Exception When the namespace is empty, or when a site-level step throws.
+	 * @throws \Error Re-thrown from a site-level step.
 	 */
 	public function run() {
 
@@ -163,6 +177,7 @@ final class Uninstaller {
 			'log_files'       => 0,
 			'sites'           => 0,
 			'network_skipped' => false,
+			'saas_revokes'    => 0,
 		);
 
 		$silence = 'trustedlogin/' . $this->ns . '/logging/enabled';
@@ -179,7 +194,11 @@ final class Uninstaller {
 
 			$this->report['support_users'] += $this->delete_unclaimed_support_users();
 
-			if ( '' !== $endpoint_value ) {
+			// The endpoint is one network-wide option; support users left
+			// on sites this run did not visit still log in through it.
+			$endpoint_in_use = array() !== $this->support_user_ids( true );
+
+			if ( '' !== $endpoint_value && ! $endpoint_in_use ) {
 				// The support-user delete path may have removed the site
 				// option already; delete() is a no-op then.
 				$endpoint->delete();
@@ -188,6 +207,9 @@ final class Uninstaller {
 		} catch ( \Exception $exception ) {
 			remove_filter( $silence, '__return_false', PHP_INT_MAX );
 			throw $exception;
+		} catch ( \Error $error ) {
+			remove_filter( $silence, '__return_false', PHP_INT_MAX );
+			throw $error;
 		}
 
 		remove_filter( $silence, '__return_false', PHP_INT_MAX );
@@ -200,7 +222,8 @@ final class Uninstaller {
 	/**
 	 * Sites to visit. The plugin is removed from the whole network, so
 	 * every site is cleaned unless `network` is false or the network is
-	 * large enough that a full sweep could time out.
+	 * large enough that a full sweep could time out. Support users on
+	 * sites not visited are left in place.
 	 *
 	 * @return int[]
 	 */
@@ -239,6 +262,7 @@ final class Uninstaller {
 	 * @param string $endpoint_value Endpoint hash captured before any deletion.
 	 *
 	 * @throws \Exception Re-thrown from any step after the site switch is undone.
+	 * @throws \Error Re-thrown from any step after the site switch is undone.
 	 */
 	private function clean_site( $site_id, $endpoint_value ) {
 
@@ -250,6 +274,7 @@ final class Uninstaller {
 
 		try {
 			$this->delete_support_users();
+			$this->revoke_pending_saas_revokes();
 			$this->delete_role();
 			$this->clear_cron_events();
 			$this->flush_stale_rewrite_rules( $endpoint_value );
@@ -265,6 +290,11 @@ final class Uninstaller {
 				restore_current_blog();
 			}
 			throw $exception;
+		} catch ( \Error $error ) {
+			if ( $switched ) {
+				restore_current_blog();
+			}
+			throw $error;
 		}
 
 		if ( $switched ) {
@@ -274,8 +304,7 @@ final class Uninstaller {
 
 	/**
 	 * Support users for this namespace, by the identifier meta every
-	 * grant writes. A fresh query each time: SupportUser::get_all()
-	 * caches its first result for the whole process.
+	 * grant writes.
 	 *
 	 * @param bool $network_wide On multisite, ignore site membership and return every matching user on the network.
 	 *
@@ -315,6 +344,12 @@ final class Uninstaller {
 				continue;
 			}
 
+			$secret_id = $support_user->get_secret_id( $identifier );
+
+			if ( is_string( $secret_id ) && '' !== $secret_id ) {
+				$this->revoke_at_saas( $secret_id );
+			}
+
 			// Role and endpoint are handled separately by the run.
 			$deleted = $support_user->delete( $identifier, false, false );
 
@@ -327,6 +362,9 @@ final class Uninstaller {
 	/**
 	 * Multisite: a support user removed from every site but never deleted
 	 * from the network still carries the identifier meta. Delete those too.
+	 * A user who is still a member of any site is left to that site's
+	 * cleanup, which reassigns their posts; {@see wpmu_delete_user()}
+	 * deletes a member's posts on every site without reassigning them.
 	 *
 	 * @return int Users deleted.
 	 */
@@ -348,7 +386,11 @@ final class Uninstaller {
 		$deleted = 0;
 
 		foreach ( $user_ids as $user_id ) {
-			wp_delete_user( $user_id );
+			$sites = get_blogs_of_user( $user_id );
+
+			if ( ! empty( $sites ) ) {
+				continue;
+			}
 
 			if ( function_exists( 'wpmu_delete_user' ) && wpmu_delete_user( $user_id ) ) {
 				++$deleted;
@@ -356,6 +398,42 @@ final class Uninstaller {
 		}
 
 		return $deleted;
+	}
+
+	/**
+	 * Sends the revokes queued after a failed request, before the queue
+	 * option is deleted.
+	 */
+	private function revoke_pending_saas_revokes() {
+
+		$queue = get_option( 'tl_' . $this->ns . '_pending_saas_revoke', array() );
+
+		if ( ! is_array( $queue ) ) {
+			return;
+		}
+
+		foreach ( array_keys( $queue ) as $secret_id ) {
+			$this->revoke_at_saas( (string) $secret_id );
+		}
+	}
+
+	/**
+	 * Tells TrustedLogin a site secret is revoked. Needs `auth/api_key`.
+	 *
+	 * @param string $secret_id Site secret identifier.
+	 */
+	private function revoke_at_saas( $secret_id ) {
+
+		if ( '' === $secret_id || ! $this->config->get_setting( 'auth/api_key' ) ) {
+			return;
+		}
+
+		$site_access = new SiteAccess( $this->config, $this->logging );
+		$revoked     = $site_access->revoke( $secret_id, new Remote( $this->config, $this->logging ) );
+
+		if ( true === $revoked ) {
+			++$this->report['saas_revokes'];
+		}
 	}
 
 	/**
@@ -443,9 +521,20 @@ final class Uninstaller {
 
 		$has_endpoint_rule = false !== strpos( implode( "\n", array_keys( $rules ) ), $endpoint_value );
 
-		if ( $has_endpoint_rule ) {
-			flush_rewrite_rules( false );
+		if ( ! $has_endpoint_rule ) {
+			return;
 		}
+
+		// After switch_to_blog() the global rewrite object still describes
+		// the original site, so a flush would write its rules here. Deleting
+		// the option makes WordPress rebuild them on this site's next request.
+		if ( ms_is_switched() ) {
+			delete_option( 'rewrite_rules' );
+
+			return;
+		}
+
+		flush_rewrite_rules( false );
 	}
 
 	/**
@@ -469,6 +558,8 @@ final class Uninstaller {
 			(string) $vendor_public_key_option,
 			'tl-' . $this->ns . '-used_accesskeys',
 			'tl-' . $this->ns . '-in_lockdown',
+			'_transient_' . sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
+			'_transient_timeout_' . sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $this->ns ),
 		);
 	}
 

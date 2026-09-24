@@ -172,8 +172,7 @@ class TrustedLoginUninstallTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Network-wide support-user lookup that bypasses SupportUser::get_all()'s
-	 * process-static cache and multisite blog scoping.
+	 * Network-wide support-user lookup that ignores multisite blog scoping.
 	 *
 	 * @return int[]
 	 */
@@ -435,14 +434,16 @@ class TrustedLoginUninstallTest extends WP_UnitTestCase {
 		$this->assertFalse( get_option( 'tl_' . $ns . '_webhook_url' ), 'before: the main site has no cached webhook URL' );
 		$this->assertCount( 1, $this->support_user_ids( $ns ), 'before: support user exists network-wide' );
 
-		// Current site only: the sub-site's option rows stay, but support
-		// users are network accounts and are always removed network-wide.
+		// Current site only: the sub-site's rows, its support user and the
+		// shared endpoint the user logs in through all stay.
 		$scoped = Client::uninstall( $ns, array( 'network' => false ) );
 
 		$this->assertSame( self::WEBHOOK_URL, get_blog_option( $sub_site, 'tl_' . $ns . '_webhook_url' ), 'network=false: sub-site rows must be untouched' );
 		$this->assertSame( 1, $scoped['sites'] );
-		$this->assertSame( array(), $this->support_user_ids( $ns ), 'network=false: the support user must still be deleted network-wide' );
-		$this->assertSame( 1, $scoped['support_users'] );
+		$this->assertCount( 1, $this->support_user_ids( $ns ), 'network=false: a support user on a site not visited must be left in place' );
+		$this->assertSame( 0, $scoped['support_users'] );
+		$this->assertNotEmpty( get_site_option( 'tl_' . $ns . '_endpoint' ), 'network=false: the endpoint the remaining support user logs in through must stay' );
+		$this->assertFalse( $scoped['endpoint'] );
 
 		// Default: every site.
 		$report = Client::uninstall( $ns );
@@ -457,7 +458,134 @@ class TrustedLoginUninstallTest extends WP_UnitTestCase {
 		restore_current_blog();
 
 		$this->assertGreaterThanOrEqual( 2, $report['sites'] );
-		$this->assertSame( 0, $report['support_users'], 'after: the network sweep on the first run already deleted the user' );
+		$this->assertSame( 1, $report['support_users'], 'after: the default run deletes the sub-site support user' );
+		$this->assertSame( array(), $this->support_user_ids( $ns ), 'after: no support user remains on the network' );
 		unset( $sub_grant );
+	}
+
+	/**
+	 * Records DELETE requests to the TrustedLogin sites endpoint without
+	 * answering them; the SaaS stub answers.
+	 *
+	 * @return \ArrayObject
+	 */
+	private function record_saas_deletes() {
+		$requests = new \ArrayObject();
+
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) use ( $requests ) {
+				if ( 'DELETE' === $args['method'] && false !== strpos( $url, '/sites/' ) ) {
+					$requests[] = $url;
+				}
+
+				return $preempt;
+			},
+			1,
+			3
+		);
+
+		return $requests;
+	}
+
+	public function test_uninstall_revokes_at_trustedlogin_when_the_config_has_an_api_key() {
+		$ns     = $this->unique_namespace( 'saas' );
+		$config = $this->build_config( $ns );
+		$this->grant( $config );
+		$this->seed_non_grant_rows( $config );
+
+		$deletes = $this->record_saas_deletes();
+
+		$report = Client::uninstall( $config );
+
+		$this->assert_namespace_rows_absent( $ns, 'after: ' );
+		$this->assertCount( 2, $deletes, 'the support user and the queued revoke must both be revoked at TrustedLogin' );
+		$this->assertContains( Remote::API_URL . 'sites/secret-' . $ns, (array) $deletes, 'the queued revoke must be sent before the queue is deleted' );
+		$this->assertSame( 2, $report['saas_revokes'] );
+	}
+
+	public function test_uninstall_by_namespace_alone_sends_no_request() {
+		$ns     = $this->unique_namespace( 'nokey' );
+		$config = $this->build_config( $ns );
+		$this->grant( $config );
+		$this->seed_non_grant_rows( $config );
+
+		$deletes = $this->record_saas_deletes();
+
+		$report = Client::uninstall( $ns );
+
+		$this->assertCount( 0, $deletes, 'with no API key there is nothing to authenticate a revoke with' );
+		$this->assertSame( 0, $report['saas_revokes'] );
+	}
+
+	public function test_uninstall_deletes_the_sweep_fallback_transient() {
+		$ns = $this->unique_namespace( 'trans' );
+
+		set_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ), time(), HOUR_IN_SECONDS );
+		$this->assertNotFalse( get_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ), 'fixture: the transient must exist' );
+
+		Client::uninstall( $ns );
+
+		$this->assertFalse( get_transient( sprintf( Cron::RECONCILE_FALLBACK_TRANSIENT, $ns ) ) );
+	}
+
+	/**
+	 * After switch_to_blog() the rewrite object still describes the main
+	 * site. A sub-site's stale rules must be cleared for WordPress to
+	 * rebuild on that site, not overwritten with the main site's.
+	 */
+	public function test_uninstall_clears_rather_than_rebuilds_rewrite_rules_on_other_sites() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$ns       = $this->unique_namespace( 'rw' );
+		$config   = $this->build_config( $ns );
+		$grant    = $this->grant( $config );
+		$sub_site = self::factory()->blog->create();
+
+		update_blog_option( $sub_site, 'rewrite_rules', array( $grant['endpoint'] . '/?$' => 'index.php?tl=1' ) );
+
+		Client::uninstall( $ns );
+
+		$this->assertFalse( get_blog_option( $sub_site, 'rewrite_rules' ), 'the sub-site rules must be deleted so that site rebuilds its own' );
+	}
+
+	/**
+	 * A PHP Error from a third-party hook must not leave the request
+	 * switched to another site.
+	 */
+	public function test_uninstall_restores_the_current_site_when_a_hook_throws_an_error() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$ns       = $this->unique_namespace( 'err' );
+		$config   = $this->build_config( $ns );
+		$sub_site = self::factory()->blog->create();
+
+		switch_to_blog( $sub_site );
+		$this->grant( $config );
+		restore_current_blog();
+
+		$main    = get_current_blog_id();
+		$thrower = function () {
+			throw new \Error( 'third-party delete hook failed' );
+		};
+		add_action( 'delete_user', $thrower );
+
+		$caught = null;
+		try {
+			Client::uninstall( $ns );
+		} catch ( \Error $error ) {
+			$caught = $error;
+		}
+
+		remove_action( 'delete_user', $thrower );
+
+		$this->assertInstanceOf( \Error::class, $caught, 'fixture: the hook must have thrown during the run' );
+		$this->assertSame( $main, get_current_blog_id(), 'the run must switch back before rethrowing' );
+		$this->assertFalse( ms_is_switched() );
+		$this->assertFalse( has_filter( 'trustedlogin/' . $ns . '/logging/enabled', '__return_false' ), 'logging must be unsilenced before rethrowing' );
 	}
 }
