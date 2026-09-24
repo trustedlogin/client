@@ -268,6 +268,18 @@
 				console.error( 'Request failed.', response );
 			}
 
+			// Fills the localized "error granting access: %s" template with
+			// the server's reason, or uses the no-reason sentence.
+			var failedMessage = function ( detail ) {
+				if ( ! detail ) {
+					return cfg.lang.status.failed.content;
+				}
+
+				return cfg.lang.status.failed.detail.replace( '%s', function () {
+					return detail;
+				} );
+			};
+
 			// Build a user-facing message + structured error code.
 			var userMessage = cfg.lang.status.failed.content;
 			var errorCode   = 'unknown';
@@ -284,13 +296,13 @@
 				userMessage = cfg.lang.status.failed_permissions.content;
 				errorCode   = 'permissions';
 			} else if ( response && typeof response.data === 'object' && response.data ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.data.message || '' );
+				userMessage = failedMessage( response.data.message );
 				errorCode   = response.data.code || 'failed';
 			} else if ( response && typeof response.responseJSON === 'object' && response.responseJSON && response.responseJSON.data ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.responseJSON.data.message || '' );
+				userMessage = failedMessage( response.responseJSON.data.message );
 				errorCode   = response.responseJSON.data.code || 'failed';
 			} else if ( response && response.statusText === 'parsererror' ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.responseText || '' );
+				userMessage = failedMessage( response.responseText );
 				errorCode   = 'parser';
 			}
 

@@ -1664,7 +1664,9 @@ final class Form {
 				),
 				'failed'             => array(
 					'title'   => esc_html__( 'Support Access Was Not Granted', 'trustedlogin' ),
-					'content' => esc_html__( 'There was an error granting access: ', 'trustedlogin' ),
+					'content' => esc_html__( 'There was an error granting access.', 'trustedlogin' ),
+					// translators: %s is the reason access was not granted, a full sentence from the server.
+					'detail'  => esc_html__( 'There was an error granting access: %s', 'trustedlogin' ),
 				),
 				'failed_permissions' => array(
 					'content' => esc_html__( 'Your authorized session has expired. Please refresh the page.', 'trustedlogin' ),

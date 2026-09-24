@@ -666,7 +666,7 @@ final class SupportUser {
 			return true;
 		}
 
-		return new \WP_Error( 'extend_failed', 'Error rescheduling cron task' );
+		return new \WP_Error( 'extend_failed', __( 'The access expiration could not be rescheduled.', 'trustedlogin' ) );
 	}
 
 	/**
