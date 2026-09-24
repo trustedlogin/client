@@ -32,10 +32,10 @@ final class SupportUser {
 	const ID_QUERY_PARAM = 'tlid';
 
 	/**
-	 * Seconds after registration during which {@see SupportUser::reconcile()}
-	 * leaves a support user alone.
+	 * Seconds after registration during which the expired-access sweep leaves
+	 * a support user alone.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @var int
 	 */
@@ -472,21 +472,14 @@ final class SupportUser {
 	 * Returns the identifiers of support users on the current site whose
 	 * access is no longer valid.
 	 *
-	 * {@see SupportUser::maybe_login()} makes the same check, but only when
-	 * someone follows a login link; this reaches grants nobody returns to.
+	 * A user with no expiration counts as expired: {@see SupportUser::setup()}
+	 * writes it only when cron scheduling succeeded. Users registered within
+	 * RECONCILE_GRACE_PERIOD are skipped while their grant may still be syncing.
 	 *
-	 * A user carrying no expiration counts as invalid: {@see SupportUser::setup()}
-	 * writes the expiration only when cron scheduling succeeded, and writes it
-	 * before the identifier, so every user found here has finished setup().
-	 * Users registered within RECONCILE_GRACE_PERIOD are left alone while the
-	 * request that created them may still be syncing with TrustedLogin.
+	 * The expiration is stored per site, so a member of several sites is
+	 * judged by the site that holds it.
 	 *
-	 * On multisite the expiration is stored per site and the identifier
-	 * network-wide. A support user who is also a member of another site
-	 * carries no expiration on that site; the site holding its expiration
-	 * decides whether it has expired.
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @return string[] User identifier hashes.
 	 */
@@ -554,12 +547,11 @@ final class SupportUser {
 	}
 
 	/**
-	 * Deletes support users whose access is no longer valid, on this site
-	 * only. {@see Cron::reconcile()} revokes them through
-	 * {@see Client::revoke_access()} instead, which also notifies
-	 * TrustedLogin; this is its fallback when no Client can be built.
+	 * Deletes expired support users on this site without notifying
+	 * TrustedLogin. {@see Cron::reconcile()} falls back to it when no Client
+	 * can be built.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @return int Number of support users deleted.
 	 */
@@ -577,10 +569,9 @@ final class SupportUser {
 	}
 
 	/**
-	 * Whether any user on the current site still holds the cloned support
-	 * role. A grant in progress has the role before it has the identifier
-	 * meta, so it is not in {@see SupportUser::get_all()} yet. A stock role
-	 * (`clone_role` false) is held by ordinary users and says nothing.
+	 * Whether a user on this site holds the cloned support role. A grant in
+	 * progress holds it before its identifier meta is written. Always false
+	 * for a stock role, which ordinary users hold too.
 	 *
 	 * @return bool
 	 */
@@ -602,8 +593,8 @@ final class SupportUser {
 	}
 
 	/**
-	 * Whether a support user for this namespace exists on any site. The
-	 * endpoint is a network-wide option, so it is shared by every site.
+	 * Whether this namespace has a support user on any site. The endpoint is
+	 * one network-wide option.
 	 *
 	 * @return bool
 	 */
@@ -701,8 +692,7 @@ final class SupportUser {
 			$this->logging->log( 'User: ' . $user->ID . ' was NOT deleted.', __METHOD__, 'error' );
 		}
 
-		// Another support user, or a grant still in progress, keeps the
-		// shared role and endpoint.
+		// Kept while a grant in progress holds the role or any site still has a support user.
 		$role_in_use = $this->cloned_role_has_users();
 
 		if ( $delete_role && ! $role_in_use ) {

@@ -62,9 +62,9 @@ final class Remote {
 	 */
 	public function init() {
 
-		// Skip the actions only once TrustedLogin has confirmed there is
-		// no dashboard URL. Before the first grant nothing is cached yet,
-		// and that grant caches the URL before its `access/created` fires.
+		// The first grant caches the dashboard URL before `access/created`
+		// fires, so the actions are skipped only once TrustedLogin has
+		// answered without one.
 		$has_webhook_url = '' !== self::get_webhook_url( $this->config ) || self::is_webhook_url_unknown( $this->config );
 		if ( ! $has_webhook_url ) {
 			return;
@@ -101,14 +101,10 @@ final class Remote {
 	}
 
 	/**
-	 * Returns the webhook URL set in Config: `webhook/url`, else the
-	 * legacy `webhook_url` alias.
+	 * Returns the webhook URL set in Config: `webhook/url`, else the legacy
+	 * `webhook_url`. Both are deprecated but still override the dashboard URL.
 	 *
-	 * Both keys are deprecated since 1.10.0 — register the URL in the
-	 * TrustedLogin dashboard instead — but they still take precedence
-	 * over the dashboard value when set ({@see Remote::get_webhook_url}).
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -124,12 +120,10 @@ final class Remote {
 	}
 
 	/**
-	 * Returns the webhook URL cached from the TrustedLogin dashboard.
+	 * Returns the webhook URL {@see SiteAccess::sync_secret} cached from the
+	 * TrustedLogin dashboard.
 	 *
-	 * {@see SiteAccess::sync_secret} writes the sanitized dashboard value
-	 * to the per-namespace option on every successful sync.
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -142,14 +136,11 @@ final class Remote {
 	}
 
 	/**
-	 * Returns the webhook URL delivery will use: Config first, then the
-	 * dashboard-cached value.
+	 * Returns the webhook URL delivery uses: Config first, then the dashboard.
+	 * Checks for "will a webhook fire?" must use it, so the Grant Access
+	 * screen and {@see Remote::maybe_send_webhook} agree.
 	 *
-	 * Every check for "will a webhook fire?" must go through this method
-	 * so the Grant Access screen (ticket field, debug-data consent) and
-	 * {@see Remote::maybe_send_webhook} agree on the answer.
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @param Config $config Config instance.
 	 *
@@ -165,14 +156,10 @@ final class Remote {
 	}
 
 	/**
-	 * Whether the webhook URL cannot be known yet: none is set in Config
-	 * and TrustedLogin has not answered a grant on this site, so the
-	 * dashboard value has never been cached.
+	 * Whether the webhook URL is not known yet: none is set in Config and
+	 * TrustedLogin has not answered a grant on this site.
 	 *
-	 * {@see SiteAccess::sync_secret} stores an empty string when
-	 * TrustedLogin answers without a URL, which ends this state.
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @param Config $config Config instance.
 	 *

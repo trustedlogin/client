@@ -27,17 +27,17 @@ final class Cron {
 	const MAX_SAAS_REVOKE_RETRIES = 5;
 
 	/**
-	 * The core cron hook the expired-access sweep runs on.
+	 * Core cron hook the expired-access sweep runs on.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 */
 	const RECONCILE_HOOK = 'wp_privacy_delete_old_export_files';
 
 	/**
-	 * Transient recording the last sweep run from `admin_init`, used only
-	 * when the core event is not scheduled. Formatted with the namespace.
+	 * Transient, formatted with the namespace, that limits the `admin_init`
+	 * sweep to once an hour.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 */
 	const RECONCILE_FALLBACK_TRANSIENT = 'tl_%s_reconcile_ran';
 
@@ -92,23 +92,19 @@ final class Cron {
 		add_action( $this->hook_name, array( $this, 'revoke' ), 1 );
 		add_action( $this->retry_hook_name, array( $this, 'retry_saas_revoke' ), 1 );
 
-		// The only hourly event core schedules, and core re-creates it on
-		// every `init`, so the sweep needs no event of its own to keep or
-		// clean up.
+		// Core's only hourly event, re-created on every `init`.
 		add_action( self::RECONCILE_HOOK, array( $this, 'reconcile' ), 1 );
 
-		// A plugin that turns off core's privacy tools can unschedule that
-		// event; admin page loads then run the sweep at most once an hour.
+		// Covers sites where a plugin that turns off privacy tools has unscheduled that event.
 		add_action( 'admin_init', array( $this, 'maybe_reconcile_without_core_event' ) );
 	}
 
 	/**
-	 * Deletes support users whose access is no longer valid.
+	 * Revokes support users whose access has expired. Backstops
+	 * {@see Cron::revoke()}: WordPress consumes that event without running
+	 * it while the plugin is inactive.
 	 *
-	 * Backstops {@see Cron::revoke()}, whose event WordPress consumes without
-	 * running when it comes due while the plugin is inactive.
-	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @return void
 	 */
@@ -124,10 +120,10 @@ final class Cron {
 	}
 
 	/**
-	 * Runs the sweep from `admin_init` when core's hourly event is not
-	 * scheduled, at most once an hour per namespace.
+	 * Runs the sweep at most once an hour per namespace when core's hourly
+	 * event is not scheduled.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @return void
 	 */
@@ -150,9 +146,8 @@ final class Cron {
 
 	/**
 	 * Revokes each expired support user through {@see Client::revoke_access()},
-	 * the same path the expiry event takes, so TrustedLogin and the
-	 * `access/revoked` webhook are told. Falls back to deleting on this site
-	 * only when no Client can be built.
+	 * which notifies TrustedLogin and fires `access/revoked`. Deletes them on
+	 * this site only when no Client can be built.
 	 *
 	 * @return void
 	 */

@@ -216,32 +216,25 @@ final class Client {
 	}
 
 	/**
-	 * Deletes everything the SDK stored for one namespace. Call it from
-	 * the vendor plugin's `uninstall.php`; nothing else deletes these rows.
+	 * Deletes everything the SDK stored for one namespace. Call it from the
+	 * vendor plugin's `uninstall.php`, not on deactivation: a reactivated
+	 * plugin sends no webhooks until its next grant re-caches the URL.
 	 *
-	 * Runs without constructing a Client, so it works when
-	 * `TRUSTEDLOGIN_DISABLE` or `TRUSTEDLOGIN_DISABLE_{NS}` is set and
-	 * when the site lacks sodium. Deletes only rows keyed by this
-	 * namespace. Idempotent. Not for deactivation: it deletes the cached
-	 * webhook URL, which is only re-cached at the next grant, so a
-	 * reactivated plugin would send no webhooks until then. See
-	 * {@see Uninstaller} for the full list of what is removed and kept.
+	 * Needs no Client, so it runs when TrustedLogin is disabled by constant
+	 * or the site lacks sodium.
 	 *
-	 * @since 1.11.0
+	 * @since TBD
 	 *
 	 * @param Config|string $config_or_namespace The Config the plugin boots with, or its `vendor/namespace` value.
 	 *                                           Pass the Config when it sets `clone_role`, `role`,
-	 *                                           `logging/directory`, or `auth/api_key` (needed to revoke
-	 *                                           access at TrustedLogin). `uninstall.php` runs without the
-	 *                                           plugin's main file, so add any `support_role`,
-	 *                                           `options/endpoint` or `options/vendor_public_key` filters
-	 *                                           again before calling this.
+	 *                                           `logging/directory` or `auth/api_key`. `uninstall.php` loads
+	 *                                           without the plugin's main file, so role and option-name
+	 *                                           filters must be added there again.
 	 * @param array         $args {
 	 *     Optional run options.
 	 *
-	 *     @type bool|null $network     Multisite: null (default) cleans every site unless wp_is_large_network()
-	 *                                  is true, true cleans every site regardless, false cleans the current site only.
-	 *                                  Support users on sites not cleaned are left in place.
+	 *     @type bool|null $network     Multisite: null (default) cleans every site unless wp_is_large_network(),
+	 *                                  true cleans every site, false cleans the current site only.
 	 *     @type bool      $delete_logs Whether to delete this namespace's log files. Default true.
 	 * }
 	 *

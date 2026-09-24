@@ -15,36 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Removes everything the SDK stores for one vendor namespace. Entry
- * point for vendors is {@see Client::uninstall()}.
+ * Deletes everything the SDK stores for one vendor namespace on the sites
+ * it visits: support users, the cloned role, the login endpoint, cron events,
+ * the namespace's options and its default-named log files. Stock roles, the
+ * shared `tl_permalinks_flushed` flag and other namespaces' rows are left.
+ * Entry point: {@see Client::uninstall()}.
  *
- * Deleted on each site visited: support users carrying `tl_{ns}_id`
- * meta (and their meta and expiry cron events); the cloned support role
- * when it carries the TrustedLogin flag capability; the options
- * `tl_{ns}_webhook_url`, `tl_{ns}_log_salt`, `tl_{ns}_pending_saas_revoke`;
- * the transient-style rows `tl_{ns}_vendor_public_key`,
- * `tl-{ns}-used_accesskeys`, `tl-{ns}-in_lockdown` (expiry is enforced
- * only on read, so unread rows never go away on their own); the
- * `tl_{ns}_reconcile_ran` transient; the
- * `trustedlogin/{ns}/site/retry_revoke` cron event; this namespace's
- * default-named `client-debug-*.log` files.
- *
- * When the Config carries `auth/api_key`, each deleted support user and
- * each queued SaaS revoke is also revoked at TrustedLogin before its rows
- * go. A failed request is not retried; the rows are deleted regardless.
- *
- * Deleted once, as a site option (network-wide on multisite): the
- * `tl_{ns}_endpoint` login endpoint hash, unless support users remain on
- * sites the run did not visit.
- *
- * Never touched: a stock role named in Config, `tl_permalinks_flushed`
- * (shared by every namespace), the `trustedlogin-logs/` directory and
- * its `index.html`, and rows belonging to any other namespace.
- *
- * Logging is silenced while the run executes so no log file or salt is
- * written back during the delete.
- *
- * @since 1.11.0
+ * @since TBD
  */
 final class Uninstaller {
 
@@ -103,17 +80,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Builds an Uninstaller from either a Config or a bare namespace string.
-	 *
-	 * A namespace string is enough for the default setup (cloned role,
-	 * unfiltered option names). Pass the same Config the plugin boots
-	 * the Client with when it sets `clone_role`, `role`,
-	 * `logging/directory`, or `auth/api_key` (needed to revoke access at
-	 * TrustedLogin). `uninstall.php` runs without the plugin's main file,
-	 * so filters the plugin adds on `trustedlogin/{ns}/support_role`,
-	 * `trustedlogin/{ns}/options/endpoint` or
-	 * `trustedlogin/{ns}/options/vendor_public_key` must be added again in
-	 * `uninstall.php` before the call.
+	 * Builds an Uninstaller from a Config or a bare namespace string. See
+	 * {@see Client::uninstall()} for when a namespace is not enough.
 	 *
 	 * @param Config|string $config_or_namespace Config instance, or the `vendor/namespace` value.
 	 * @param array         $args                Run options. See {@see Client::uninstall()}.
@@ -153,11 +121,9 @@ final class Uninstaller {
 	 *   sites: int,
 	 *   network_skipped: bool,
 	 *   saas_revokes: int
-	 * } What was deleted. `options` lists the option rows removed on any
-	 *   site. `sites` is how many sites were visited. `network_skipped`
-	 *   is true when a large network (see wp_is_large_network()) limited
-	 *   the run to the current site. `saas_revokes` counts the revoke
-	 *   requests that did not fail.
+	 * } What was deleted. `options` lists option rows removed on any site;
+	 *   `network_skipped` is true when a large network limited the run to the
+	 *   current site; `saas_revokes` counts revoke requests that did not fail.
 	 *
 	 * @throws \Exception When the namespace is empty, or when a site-level step throws.
 	 * @throws \Error Re-thrown from a site-level step.
@@ -180,6 +146,7 @@ final class Uninstaller {
 			'saas_revokes'    => 0,
 		);
 
+		// Logging would write a salt and log file back while they are deleted.
 		$silence = 'trustedlogin/' . $this->ns . '/logging/enabled';
 		add_filter( $silence, '__return_false', PHP_INT_MAX );
 
@@ -199,8 +166,7 @@ final class Uninstaller {
 			$endpoint_in_use = array() !== $this->support_user_ids( true );
 
 			if ( '' !== $endpoint_value && ! $endpoint_in_use ) {
-				// The support-user delete path may have removed the site
-				// option already; delete() is a no-op then.
+				// A no-op when the support-user delete already removed it.
 				$endpoint->delete();
 				$this->report['endpoint'] = '' === $endpoint->get();
 			}
@@ -220,10 +186,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Sites to visit. The plugin is removed from the whole network, so
-	 * every site is cleaned unless `network` is false or the network is
-	 * large enough that a full sweep could time out. Support users on
-	 * sites not visited are left in place.
+	 * Sites to visit: every site, unless `network` is false or the network is
+	 * large enough that a full sweep could time out.
 	 *
 	 * @return int[]
 	 */
@@ -329,9 +293,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Deletes the support users that belong to the current site through
-	 * the same path a revoke uses, so posts are reassigned and multisite
-	 * rows are removed the same way.
+	 * Deletes this site's support users through {@see SupportUser::delete()},
+	 * which reassigns their posts.
 	 */
 	private function delete_support_users() {
 
@@ -360,11 +323,9 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Multisite: a support user removed from every site but never deleted
-	 * from the network still carries the identifier meta. Delete those too.
-	 * A user who is still a member of any site is left to that site's
-	 * cleanup, which reassigns their posts; {@see wpmu_delete_user()}
-	 * deletes a member's posts on every site without reassigning them.
+	 * Deletes support users who belong to no site. A member of any site is
+	 * left to that site's cleanup: {@see wpmu_delete_user()} deletes a
+	 * member's posts without reassigning them.
 	 *
 	 * @return int Users deleted.
 	 */
@@ -438,8 +399,7 @@ final class Uninstaller {
 
 	/**
 	 * Removes the cloned support role on the current site.
-	 * {@see SupportRole::delete()} refuses stock and protected roles and
-	 * any role without the TrustedLogin flag capability.
+	 * {@see SupportRole::delete()} refuses stock, protected and unflagged roles.
 	 */
 	private function delete_role() {
 
@@ -501,9 +461,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Flushes this site's rewrite rules only when they still carry the
-	 * login endpoint. The endpoint rule is added on the site that
-	 * handled a login, which is not always the site running the uninstall.
+	 * Clears this site's rewrite rules when they still carry the login
+	 * endpoint, which is added on whichever site handled a login.
 	 *
 	 * @param string $endpoint_value Endpoint hash captured before any deletion.
 	 */
@@ -563,10 +522,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Deletes the namespace's option rows on the current site.
-	 * delete_option() reads the table directly, so rows written by
-	 * {@see Utils::set_transient()} (which bypasses the options cache)
-	 * are found too.
+	 * Deletes the namespace's option rows on the current site, including rows
+	 * {@see Utils::set_transient()} writes outside the options cache.
 	 */
 	private function delete_options() {
 
@@ -578,10 +535,8 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Deletes this namespace's default-named log files in the log
-	 * directory. The filename hash is derived from the stored salt, so
-	 * this runs before the salt option is deleted. A file name changed
-	 * through `logging/options` is not matched.
+	 * Deletes this namespace's default-named log files. Runs before the salt
+	 * option is deleted, because the file name hash is derived from it.
 	 *
 	 * @return int Files deleted.
 	 */

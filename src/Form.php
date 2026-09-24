@@ -67,8 +67,7 @@ final class Form {
 	private $logging;
 
 	/**
-	 * Support users for each namespace whose Grant Access screen is being
-	 * rendered, keyed by namespace.
+	 * Support users of each Grant Access screen being rendered, keyed by namespace.
 	 *
 	 * @var array<string, \WP_User[]>
 	 */
@@ -746,10 +745,8 @@ final class Form {
 	}
 
 	/**
-	 * Whether a webhook may fire for this grant: a URL is set in Config or
-	 * cached from the dashboard, or no grant has synced yet, so the
-	 * dashboard URL is not known. The first grant caches it before its
-	 * webhook fires.
+	 * Whether a webhook may fire for this grant. True before the first grant
+	 * has synced, when the dashboard URL is not known yet.
 	 *
 	 * @return bool
 	 */
@@ -1081,8 +1078,8 @@ final class Form {
 	}
 
 	/**
-	 * Reduces a host to its last two labels, e.g. `….pipedream.net`.
-	 * IP addresses and two-label hosts are returned unchanged.
+	 * Reduces a host to its last two labels (`….pipedream.net`). IP addresses
+	 * and two-label hosts are returned unchanged.
 	 *
 	 * @param string $host Host name.
 	 *
@@ -1150,9 +1147,8 @@ final class Form {
 			return str_repeat( '•', $len - $tail ) . substr( $value, -$tail );
 		};
 
-		// Webhook URLs are bearer secrets, and some providers put the
-		// secret in a subdomain: show the parent domain and where the URL
-		// came from, never the full host, path or query.
+		// Webhook URLs are bearer secrets, and some providers put the secret
+		// in a subdomain, so only the parent domain is shown.
 		$webhook_url        = Remote::get_webhook_url( $this->config );
 		$config_webhook_url = Remote::get_config_webhook_url( $this->config );
 		$webhook_domain     = self::mask_host( Remote::redact_url( $webhook_url ) );
