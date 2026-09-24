@@ -116,7 +116,25 @@ if ( ! function_exists( 'get_site_url' ) ) {
 	function get_site_url() { return 'https://example.test'; }
 }
 if ( ! function_exists( 'get_option' ) ) {
-	function get_option( $name, $default = false ) { return $default; }
+	// Tests seed values in $GLOBALS['tl_unit_options'].
+	function get_option( $name, $default = false ) {
+		return isset( $GLOBALS['tl_unit_options'][ $name ] ) ? $GLOBALS['tl_unit_options'][ $name ] : $default;
+	}
+}
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $name ) {
+		unset( $GLOBALS['tl_unit_options'][ $name ] );
+		return true;
+	}
+}
+// Single-site WordPress: ms_is_switched() is deliberately not defined.
+if ( ! function_exists( 'is_multisite' ) ) {
+	function is_multisite() { return false; }
+}
+if ( ! function_exists( 'flush_rewrite_rules' ) ) {
+	function flush_rewrite_rules( $hard = true ) {
+		$GLOBALS['tl_unit_rewrite_flushes'] = isset( $GLOBALS['tl_unit_rewrite_flushes'] ) ? $GLOBALS['tl_unit_rewrite_flushes'] + 1 : 1;
+	}
 }
 if ( ! function_exists( 'update_option' ) ) {
 	function update_option( $name, $value ) { return true; }

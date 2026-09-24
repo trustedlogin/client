@@ -487,7 +487,10 @@ final class Uninstaller {
 		// After switch_to_blog() the global rewrite object still describes
 		// the original site, so a flush would write its rules here. Deleting
 		// the option makes WordPress rebuild them on this site's next request.
-		if ( ms_is_switched() ) {
+		// ms_is_switched() is only loaded on multisite.
+		$is_switched = is_multisite() && ms_is_switched();
+
+		if ( $is_switched ) {
 			delete_option( 'rewrite_rules' );
 
 			return;

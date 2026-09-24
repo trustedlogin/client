@@ -15,6 +15,7 @@
 - The Grant Access screen's support-message field and debug-data consent checkbox now appear when the webhook URL comes from the TrustedLogin dashboard or the legacy `webhook_url` key, including on a site's first grant. Since 1.10.0, removing `webhook/url` from the config, as the migration guide says to, hid both, so tickets arrived without the customer's description or Site Health report.
 - The first grant on a site now sends its `created` webhook when the URL is set only in the TrustedLogin dashboard.
 - On multisite, removing the last support user on one site no longer removes the login endpoint that support users on other sites still use.
+- `Client::uninstall()` no longer fails on single-site WordPress when the site's rewrite rules still contain the login endpoint.
 - On a site running more than one plugin that uses the SDK, each plugin now sees only its own support users. Previously the first plugin to list them could hand its users to the others for the rest of that page load.
 
 #### 🛠 Fixed
