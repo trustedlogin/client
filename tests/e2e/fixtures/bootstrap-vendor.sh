@@ -175,8 +175,9 @@ clone_with_token "gravityforms/gravityforms" "$GF_BRANCH" "fixtures/gravityforms
 # bootstrap step exits 255. jetpack-autoloader is already in GF's
 # config.allow-plugins, so a plain install generates the file.
 # The stamp records the checkout revision and dependency manifest the install
-# ran against, so a cached clone that moves to a new revision reinstalls.
-GF_COMPOSER_STAMP="fixtures/gravityforms/vendor/.tl-composer-stamp"
+# ran against, so a cached clone that moves to a new revision reinstalls. It
+# lives outside vendor/, which the composer container creates as root.
+GF_COMPOSER_STAMP="fixtures/.cache-gravityforms-composer-stamp"
 GF_MANIFEST_HASH="$( { cat fixtures/gravityforms/composer.json; if [[ -f fixtures/gravityforms/composer.lock ]]; then cat fixtures/gravityforms/composer.lock; fi; } | shasum -a 256 | cut -d' ' -f1 )"
 GF_COMPOSER_WANT="$(git -C fixtures/gravityforms rev-parse HEAD 2>/dev/null || echo no-git) ${GF_MANIFEST_HASH}"
 GF_COMPOSER_HAVE="$(cat "$GF_COMPOSER_STAMP" 2>/dev/null || true)"
