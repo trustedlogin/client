@@ -268,8 +268,26 @@
 				console.error( 'Request failed.', response );
 			}
 
+			// Joins the localized "There was an error granting access:" prefix
+			// to the server's detail as one sentence.
+			var failedMessage = function ( detail ) {
+				var prefix = String( cfg.lang.status.failed.content || '' ).replace( /\s+$/, '' );
+
+				detail = String( detail || '' ).replace( /^\s+|\s+$/g, '' );
+
+				if ( '' === detail ) {
+					return prefix.replace( /:$/, '.' );
+				}
+
+				if ( ! /[.!?]$/.test( detail ) ) {
+					detail += '.';
+				}
+
+				return prefix + ' ' + detail;
+			};
+
 			// Build a user-facing message + structured error code.
-			var userMessage = cfg.lang.status.failed.content;
+			var userMessage = failedMessage( '' );
 			var errorCode   = 'unknown';
 
 			if ( response && response.statusText === 'timeout' ) {
@@ -278,19 +296,19 @@
 				// doesn't define a timeout-specific entry.
 				userMessage = ( cfg.lang.status.timeout && cfg.lang.status.timeout.content )
 					? cfg.lang.status.timeout.content
-					: cfg.lang.status.failed.content;
+					: failedMessage( '' );
 				errorCode = 'timeout';
 			} else if ( response && response.responseText === '0' ) {
 				userMessage = cfg.lang.status.failed_permissions.content;
 				errorCode   = 'permissions';
 			} else if ( response && typeof response.data === 'object' && response.data ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.data.message || '' );
+				userMessage = failedMessage( response.data.message );
 				errorCode   = response.data.code || 'failed';
 			} else if ( response && typeof response.responseJSON === 'object' && response.responseJSON && response.responseJSON.data ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.responseJSON.data.message || '' );
+				userMessage = failedMessage( response.responseJSON.data.message );
 				errorCode   = response.responseJSON.data.code || 'failed';
 			} else if ( response && response.statusText === 'parsererror' ) {
-				userMessage = cfg.lang.status.failed.content + ' ' + ( response.responseText || '' );
+				userMessage = failedMessage( response.responseText );
 				errorCode   = 'parser';
 			}
 
