@@ -5,7 +5,7 @@ Support access now ends on time even if your plugin is inactive at expiry; a new
 #### 🚀 Added
 
 - Expired support access is removed at the next hourly WordPress scheduled-task run, even if your plugin was inactive when it ran out (for example during a plugin update).
-- `Client::uninstall()`, to be used inside your plugin's `uninstall.php`. It removes the support users, role, login endpoint, settings, scheduled events and log files the SDK stored for your plugin, and leaves other plugins' data alone. Pass your Config (with its API key) to also revoke the removed access in your TrustedLogin dashboard.
+- `Client::uninstall()`, to be used inside your plugin's `uninstall.php`. It removes the support users, role, login endpoint, settings, scheduled events and log files the SDK stored for your plugin, and leaves other plugins' data alone. Pass your Config (with its API key) to also revoke the removed access in your TrustedLogin dashboard. [Learn how to set it up](https://docs.trustedlogin.com/Client/uninstall#add-the-call-to-uninstallphp).
 
 #### 🛠 Changed
 
@@ -24,7 +24,7 @@ Support access now ends on time even if your plugin is inactive at expiry; a new
 
 #### 💻 Developer Updates
 
-- New `Client::uninstall( $config_or_namespace, $args )` static method.
+- New `Client::uninstall( $config_or_namespace, $args )` static method. See the [Client uninstall guide](https://docs.trustedlogin.com/Client/uninstall) for the arguments, [return value](https://docs.trustedlogin.com/Client/uninstall#return-value) and [multisite options](https://docs.trustedlogin.com/Client/uninstall#multisite).
 - `SupportUser::delete()` no longer removes the cloned support role if any other user on the site still has the role. It keeps the login endpoint while any support user remains on the network, and logs when it keeps either.
 - The `trustedlogin/{namespace}/access/created`, `/extended`, `/revoked` and `/logged_in` webhook listeners are registered whether or not a webhook URL is known yet.
 - New public helpers: `Remote::get_webhook_url()`, `Remote::get_config_webhook_url()` and `Remote::get_cached_webhook_url()` return the effective, Config and dashboard webhook URLs.
